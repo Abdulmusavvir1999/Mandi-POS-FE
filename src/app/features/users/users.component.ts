@@ -416,7 +416,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     <div class="user-identity-cell">
                       <div class="avatar-wrapper">
                         <div class="user-avatar-bubble">
-                          {{ getInitials(u.name) }}
+                          <img
+                            *ngIf="u.image_url"
+                            class="row-avatar-img"
+                            [src]="settingsService.assetUrl(u.image_url)"
+                            [alt]="u.name"
+                          />
+                          <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
                         </div>
                         <span class="avatar-status-dot" [class.is-active]="u.status === 'ACTIVE'" [class.is-inactive]="u.status !== 'ACTIVE'"></span>
                       </div>
@@ -763,6 +769,49 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               />
             </div>
 
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                Staff Photo (Optional)
+              </label>
+              <div class="image-upload-row">
+                <div class="image-upload-preview" [class.is-empty]="!userForm.image_url">
+                  <img *ngIf="userForm.image_url" [src]="settingsService.assetUrl(userForm.image_url)" alt="Staff Photo preview" />
+                  <span *ngIf="!userForm.image_url" class="material-symbols-outlined">add_a_photo</span>
+                </div>
+                <div class="image-upload-actions">
+                  <input
+                    type="file"
+                    hidden
+                    #staffPicker
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    (change)="onPhotoFile($event, staffPicker)"
+                    title="Choose staff photo"
+                  />
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      [disabled]="isUploadingImage"
+                      (click)="staffPicker.click()"
+                    >
+                      <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
+                      <span>{{ isUploadingImage ? 'Uploading…' : (userForm.image_url ? 'Replace' : 'Choose Photo') }}</span>
+                    </button>
+                    <button
+                      *ngIf="userForm.image_url && !isUploadingImage"
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      (click)="userForm.image_url = ''"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
+                </div>
+              </div>
+            </div>
+
             <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
@@ -973,6 +1022,7 @@ export class UsersComponent implements OnInit {
     username: '',
     email: '',
     phone: '',
+    image_url: '',
     roleId: null,
     password: '',
     status: 'ACTIVE',
@@ -1257,6 +1307,59 @@ export class UsersComponent implements OnInit {
 
   get paginationEnd(): number {
     return Math.min(this.currentPage * this.pageSize, this.filteredUsers.length);
+  }
+
+  public isUploadingImage = false;
+
+  private static readonly IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  private static readonly IMAGE_MAX_MB = 2;
+
+  /**
+   * Reads the picked file and uploads it straight away, so the form only ever
+   * carries a stored URL. The server re-checks type and size; these checks are
+   * here to fail fast without a round trip.
+   */
+  onPhotoFile(event: Event, picker: HTMLInputElement): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    // Cleared straight away so re-picking the same file after a failure still fires.
+    picker.value = '';
+    if (!file) return;
+
+    const types = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!types.includes(file.type)) {
+      this.notify.error('Staff photo must be a PNG, JPG, WEBP or GIF.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.notify.error(`Staff photo is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is 2 MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      this.isUploadingImage = false;
+      this.notify.error(`Could not read ${file.name}.`);
+    };
+    reader.onload = () => {
+      this.userService.uploadUserImage(String(reader.result)).subscribe({
+        next: (res) => {
+          this.isUploadingImage = false;
+          if (res.success && res.data?.url) {
+            this.userForm.image_url = res.data.url;
+            this.notify.success('Photo uploaded — save to apply it.');
+          } else {
+            this.notify.error(res?.message || 'Photo upload failed.');
+          }
+        },
+        error: (err) => {
+          this.isUploadingImage = false;
+          this.notify.error(err?.error?.message || 'Photo upload failed.');
+        },
+      });
+    };
+
+    this.isUploadingImage = true;
+    reader.readAsDataURL(file);
   }
 
   getInitials(name: string): string {

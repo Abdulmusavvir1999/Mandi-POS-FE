@@ -34,6 +34,7 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
+  image_url?: string;
   role: RoleName;
   role_id?: number;
   role_name?: string;
@@ -59,6 +60,12 @@ export interface ProductVariant {
   id: number;
   product_id?: number;
   name: string;
+  /** Ledger item this portion draws from; null uses the dish's common source. */
+  stock_item_id?: number | null;
+  stock_item_name?: string;
+  stock_item_code?: string;
+  stock_item_unit?: string;
+  stock_item_quantity?: number;
   selling_price: number;
   stock_consumption: number;
   display_order?: number;
@@ -89,6 +96,10 @@ export interface Product {
   linked_stock_quantity?: number;
   linked_unit_type?: string;
   linked_stock_code?: string;
+  /** Dish-level (COMMON mode) source, and which mode the editor is in. */
+  stock_item_id?: number | null;
+  variant_stock_mode?: 'COMMON' | 'EACH';
+  resolved_stock_item_id?: number | null;
   linked_avg_cost?: number;
   linked_min_alert?: number;
   linked_stock_status?: string;
@@ -104,6 +115,7 @@ export interface Customer {
   phone: string;
   email?: string;
   address?: string;
+  image_url?: string;
   notes?: string;
   status: 'ACTIVE' | 'INACTIVE';
   total_visits: number;

@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrderService } from '../../core/services/order.service';
@@ -259,7 +259,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
     if (status === 'CANCELLED') return 'Cancelled';
     const mins = this.getElapsedMinutes(createdAt);
     const timeStr = this.getElapsedFormatted(createdAt);
-    if (mins >= 20) return `ðŸ”¥ DELAYED ${timeStr}`;
+    if (mins >= 20) return `🔥 DELAYED ${timeStr}`;
     if (status === 'PENDING') return `Waiting ${timeStr}`;
     if (status === 'IN_PROGRESS') return `Cooking ${timeStr}`;
     return timeStr;

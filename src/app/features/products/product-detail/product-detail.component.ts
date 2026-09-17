@@ -141,6 +141,9 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
             <h2 class="detail-section-title">
               <span class="material-symbols-outlined">lunch_dining</span>
               <span>Stock &amp; Variant Details</span>
+              <span class="mode-chip" *ngIf="hasVariants">
+                {{ isEachMode ? 'Each portion has its own source' : 'Common source' }}
+              </span>
             </h2>
             <span class="detail-section-note">
               What one sale of each portion takes out of
@@ -152,11 +155,12 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
             <table class="saas-data-table">
               <thead>
                 <tr>
-                  <th style="width: 22%;">Dish Variant</th>
-                  <th style="width: 16%;">Price</th>
-                  <th style="width: 18%; text-align: right;">Stock Consumption</th>
-                  <th style="width: 18%; text-align: right;">Remaining Stock</th>
-                  <th style="width: 26%; text-align: right;">Servings Possible</th>
+                  <th style="width: 18%;">Dish Variant</th>
+                  <th style="width: 22%;">Stock Source</th>
+                  <th style="width: 12%;">Price</th>
+                  <th style="width: 16%; text-align: right;">Stock Consumption</th>
+                  <th style="width: 16%; text-align: right;">Remaining Stock</th>
+                  <th style="width: 16%; text-align: right;">Servings Possible</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,6 +168,10 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
                   <td>
                     <span class="variant-name">{{ v.name }}</span>
                     <span class="variant-default" *ngIf="v.is_default">Default</span>
+                  </td>
+                  <td>
+                    <span class="source-name">{{ sourceName(v) }}</span>
+                    <span class="source-code" *ngIf="sourceCode(v)">{{ sourceCode(v) }}</span>
                   </td>
                   <td class="font-mono font-bold">{{ v.selling_price | appCurrency:'1.0-2' }}</td>
                   <td class="font-mono" style="text-align: right;">
@@ -436,6 +444,28 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 
       .variant-name { font-weight: 800; color: var(--text-main, #2E1065); font-size: 0.8125rem; }
 
+      .source-name { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-main, #2E1065); }
+
+      .source-code {
+        display: block;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.625rem;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .mode-chip {
+        margin-left: 0.5rem;
+        padding: 0.05rem 0.5rem;
+        border-radius: 999px;
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--text-muted, #6B7280);
+        font-size: 0.5625rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: none;
+      }
+
       .variant-default {
         display: inline-block;
         margin-left: 0.4rem;
@@ -567,6 +597,23 @@ export class ProductDetailComponent implements OnInit {
 
   get hasVariants(): boolean {
     return (this.product?.variants?.length || 0) > 0;
+  }
+
+  get isEachMode(): boolean {
+    return this.product?.variant_stock_mode === 'EACH';
+  }
+
+  /**
+   * A portion draws from its own stock item in EACH mode, otherwise from the
+   * dish's common one. Falls back to the dish name so the column is never blank.
+   */
+  sourceName(variant: ProductVariant): string {
+    if (variant.stock_item_name) return variant.stock_item_name;
+    return this.product?.linked_stock_code ? this.product.name : 'Dish stock item';
+  }
+
+  sourceCode(variant: ProductVariant): string {
+    return variant.stock_item_code || this.product?.linked_stock_code || '';
   }
 
   /** Unit of the linked ledger item — what every quantity on this page is in. */

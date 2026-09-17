@@ -22,6 +22,11 @@ export class CustomerService {
     return this.http.get<ApiResponse<Customer>>(`${this.API_URL}/${id}`);
   }
 
+  /** Uploads a customer photo as a data URL and returns its stored path. */
+  public uploadCustomerImage(dataUrl: string): Observable<ApiResponse<{ url: string; fileName: string; bytes: number }>> {
+    return this.http.post<ApiResponse<{ url: string; fileName: string; bytes: number }>>(`${this.API_URL}/image`, { dataUrl });
+  }
+
   public createCustomer(data: any): Observable<ApiResponse<Customer>> {
     return this.http.post<ApiResponse<Customer>>(this.API_URL, data);
   }

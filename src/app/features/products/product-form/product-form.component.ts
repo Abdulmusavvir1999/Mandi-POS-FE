@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ProductService } from '../../../core/services/product.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { StockService } from '../../../core/services/stock.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SettingsService } from '../../../core/services/settings.service';
-import { Category, Product, ProductVariant } from '../../../core/models';
+import { Category, Product, ProductVariant, StockItem } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
 
 /**
@@ -261,19 +262,66 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
                 linked stock item one sale consumes — e.g. Full uses 4, Half uses 2.
               </p>
             </div>
-            <button
-              type="button"
-              class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs shrink-0"
-              (click)="addVariant()"
-            >
-              <span class="material-symbols-outlined">add</span>
-              <span>Add</span>
-            </button>
+            <div class="variant-header-controls">
+              <div class="mode-switch" role="group" aria-label="Stock source mode">
+                <button
+                  type="button"
+                  class="mode-btn"
+                  [class.is-active]="form.variantStockMode === 'COMMON'"
+                  (click)="setStockMode('COMMON')"
+                  title="All portions draw from one stock item"
+                >
+                  <span class="material-symbols-outlined">inventory_2</span>
+                  <span>Common</span>
+                </button>
+                <button
+                  type="button"
+                  class="mode-btn"
+                  [class.is-active]="form.variantStockMode === 'EACH'"
+                  (click)="setStockMode('EACH')"
+                  title="Each portion picks its own stock item"
+                >
+                  <span class="material-symbols-outlined">list</span>
+                  <span>Each</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs shrink-0"
+                (click)="addVariant()"
+              >
+                <span class="material-symbols-outlined">add</span>
+                <span>Add</span>
+              </button>
+            </div>
           </div>
 
-          <div class="variant-rows" *ngIf="form.variants.length > 0">
+          <!-- COMMON: one source for every portion -->
+          <div class="form-group mb-0" *ngIf="form.variantStockMode === 'COMMON'">
+            <label class="form-label">Stock Master Item — every portion consumes this</label>
+            <app-custom-dropdown
+              [options]="stockItemOptions"
+              [(ngModel)]="form.stockItemId"
+              name="stockItemId"
+              [searchable]="true"
+              placeholder="Select stock master item…"
+              minWidth="100%"
+            ></app-custom-dropdown>
+            <p class="form-hint" *ngIf="selectedStockItem">
+              Balance {{ selectedStockItem.current_quantity }} {{ selectedStockItem.unit_type }}
+              · code {{ selectedStockItem.stock_code }}
+            </p>
+          </div>
+
+          <div
+            class="variant-rows"
+            [class.is-each]="form.variantStockMode === 'EACH'"
+            *ngIf="form.variants.length > 0"
+          >
             <div class="variant-row-head">
               <span>Portion name</span>
+              <span *ngIf="form.variantStockMode === 'EACH'">Stock master item</span>
               <span>Price</span>
               <span>Uses</span>
               <span></span>
@@ -287,6 +335,15 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
                 class="form-control text-sm"
                 title="Portion name"
               />
+              <app-custom-dropdown
+                *ngIf="form.variantStockMode === 'EACH'"
+                [options]="stockItemOptions"
+                [(ngModel)]="v.stockItemId"
+                [name]="'variantStock' + i"
+                [searchable]="true"
+                placeholder="Select stock item…"
+                minWidth="100%"
+              ></app-custom-dropdown>
               <input
                 type="number"
                 min="0"
@@ -450,12 +507,62 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
       .image-upload-actions { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
 
       /* Variant editor */
+      .variant-header-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        flex-shrink: 0;
+      }
+
+      /* Common / Each switch */
+      .mode-switch {
+        display: inline-flex;
+        padding: 3px;
+        border-radius: 999px;
+        background: var(--bg-app, #FAF5FF);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+      }
+
+      .mode-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.32rem 0.8rem;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--text-muted, #6B7280);
+        font-family: inherit;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+          background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .mode-btn .material-symbols-outlined { font-size: 15px; }
+
+      .mode-btn.is-active {
+        background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+        color: #FFFFFF;
+        box-shadow: 0 3px 10px -4px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      }
+
       .variant-rows { display: flex; flex-direction: column; gap: 0.5rem; }
 
       .variant-row-head,
       .variant-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.28fr) minmax(6rem, 0.22fr) 2.25rem;
+      }
+
+      /* EACH mode inserts the source column between name and price */
+      .variant-rows.is-each .variant-row-head,
+      .variant-rows.is-each .variant-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(7rem, 0.26fr) minmax(6rem, 0.2fr) 2.25rem;
         gap: 0.5rem;
         align-items: center;
       }
@@ -504,6 +611,7 @@ export class ProductFormComponent implements OnInit {
   public settingsService = inject(SettingsService);
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
+  private stockService = inject(StockService);
   private notify = inject(NotificationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -524,8 +632,36 @@ export class ProductFormComponent implements OnInit {
     costPrice: 0,
     taxRate: 5,
     status: 'ACTIVE',
+    stockItemId: null as number | null,
+    variantStockMode: 'COMMON' as 'COMMON' | 'EACH',
     variants: [] as any[],
   };
+
+  public stockItems: StockItem[] = [];
+
+  get stockItemOptions(): DropdownOption[] {
+    return this.stockItems.map((s) => ({
+      value: s.id,
+      label: `${s.name} (${s.stock_code})`,
+      icon: 'inventory_2',
+      badge: s.unit_type,
+      description: `Balance: ${s.current_quantity} ${s.unit_type}`,
+    }));
+  }
+
+  get selectedStockItem(): StockItem | undefined {
+    return this.stockItems.find((s) => s.id === Number(this.form.stockItemId));
+  }
+
+  /**
+   * COMMON — every portion consumes the one stock item chosen for the dish.
+   * EACH   — a portion names its own, for a dish whose sizes draw on different
+   *          raw materials. Switching does not clear the other mode's choice,
+   *          so flipping back and forth is not destructive.
+   */
+  setStockMode(mode: 'COMMON' | 'EACH'): void {
+    this.form.variantStockMode = mode;
+  }
 
   public statusOptions: DropdownOption[] = [
     { value: 'ACTIVE', label: 'ACTIVE', icon: 'check_circle', description: 'Item available on POS menu' },
@@ -550,6 +686,7 @@ export class ProductFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCategories();
+    this.loadStockItems();
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
@@ -574,6 +711,18 @@ export class ProductFormComponent implements OnInit {
     });
   }
 
+  private loadStockItems(): void {
+    this.stockService.getStock(1, 200, undefined, undefined, false, 'active').subscribe({
+      next: (res) => {
+        if (res.success) this.stockItems = res.data;
+      },
+      error: () => {
+        // The dropdown simply stays empty; the dish can still be saved and the
+        // legacy per-product stock link continues to apply.
+      },
+    });
+  }
+
   private loadProduct(id: number): void {
     this.isLoading = true;
     this.productService.getProductById(id).subscribe({
@@ -595,8 +744,11 @@ export class ProductFormComponent implements OnInit {
           costPrice: p.cost_price,
           taxRate: p.tax_rate,
           status: p.status,
+          stockItemId: p.stock_item_id ?? p.resolved_stock_item_id ?? null,
+          variantStockMode: p.variant_stock_mode || 'COMMON',
           variants: (p.variants || []).map((v: ProductVariant) => ({
             name: v.name,
+            stockItemId: v.stock_item_id ?? null,
             sellingPrice: Number(v.selling_price),
             stockConsumption: Number(v.stock_consumption),
           })),
@@ -613,6 +765,9 @@ export class ProductFormComponent implements OnInit {
   addVariant(): void {
     this.form.variants.push({
       name: '',
+      // A new row inherits the dish-level source so EACH mode starts somewhere
+      // sensible rather than empty.
+      stockItemId: this.form.stockItemId ?? null,
       sellingPrice: Number(this.form.sellingPrice) || 0,
       stockConsumption: 1,
     });
@@ -688,7 +843,26 @@ export class ProductFormComponent implements OnInit {
       return;
     }
 
-    const payload = { ...this.form, variants };
+    if (this.form.variantStockMode === 'EACH') {
+      const missing = variants.find((v: any) => !v.stockItemId);
+      if (missing) {
+        this.notify.error(`Portion "${missing.name}" needs a stock master item.`);
+        return;
+      }
+    } else if (variants.length > 0 && !this.form.stockItemId) {
+      this.notify.error('Choose the stock master item every portion consumes.');
+      return;
+    }
+
+    // In COMMON mode the per-row choices are irrelevant; clearing them keeps
+    // the stored data honest about which mode produced it.
+    const payload = {
+      ...this.form,
+      variants: variants.map((v: any) => ({
+        ...v,
+        stockItemId: this.form.variantStockMode === 'EACH' ? v.stockItemId : null,
+      })),
+    };
     this.isSaving = true;
 
     const done = (message: string) => {

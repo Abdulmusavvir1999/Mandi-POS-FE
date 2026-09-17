@@ -4098,4 +4098,68 @@ html {
 }
 
 
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 106. IMAGE PICKER & ROW AVATAR                                      */
+/* The same picker now appears in four forms — category, dish,         */
+/* customer and staff — so it lives here rather than being repeated in */
+/* each component's scoped styles.                                     */
+/* ═══════════════════════════════════════════════════════════════════ */
 
+.image-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.image-upload-preview {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex-shrink: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-app, #FAF5FF);
+  border: 1.5px solid var(--card-border, #E9D5FF);
+  color: var(--primary, #7E22CE);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.image-upload-preview.is-empty {
+  border-style: dashed;
+}
+
+.image-upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-upload-preview .material-symbols-outlined {
+  font-size: 26px;
+  opacity: 0.55;
+}
+
+.image-upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.image-upload-hint {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--text-muted, #6B7280);
+}
+
+/* A photo filling an existing initials chip in a table row. */
+.row-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}

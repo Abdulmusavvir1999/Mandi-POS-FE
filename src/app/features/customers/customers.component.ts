@@ -327,7 +327,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <td>
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-[#F3E8FF] border border-[#E9D5FF] flex items-center justify-center font-black text-xs text-[#7E22CE] shrink-0 shadow-xs">
-                      {{ getInitials(c.name) }}
+                      <img
+                        *ngIf="c.image_url"
+                        class="row-avatar-img"
+                        [src]="settingsService.assetUrl(c.image_url)"
+                        [alt]="c.name"
+                      />
+                      <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
                     </div>
                     <div class="min-w-0">
                       <div class="font-bold text-[#2E1065] text-xs truncate">{{ c.name }}</div>
@@ -617,6 +623,49 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               />
             </div>
 
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                Customer Photo (Optional)
+              </label>
+              <div class="image-upload-row">
+                <div class="image-upload-preview" [class.is-empty]="!form.image_url">
+                  <img *ngIf="form.image_url" [src]="settingsService.assetUrl(form.image_url)" alt="Customer Photo preview" />
+                  <span *ngIf="!form.image_url" class="material-symbols-outlined">add_a_photo</span>
+                </div>
+                <div class="image-upload-actions">
+                  <input
+                    type="file"
+                    hidden
+                    #custPicker
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    (change)="onPhotoFile($event, custPicker)"
+                    title="Choose customer photo"
+                  />
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      [disabled]="isUploadingImage"
+                      (click)="custPicker.click()"
+                    >
+                      <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
+                      <span>{{ isUploadingImage ? 'Uploading…' : (form.image_url ? 'Replace' : 'Choose Photo') }}</span>
+                    </button>
+                    <button
+                      *ngIf="form.image_url && !isUploadingImage"
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      (click)="form.image_url = ''"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
+                </div>
+              </div>
+            </div>
+
             <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
@@ -679,6 +728,7 @@ export class CustomersComponent implements OnInit {
     phone: '',
     email: '',
     address: '',
+    image_url: '',
   };
 
   public historyCustomer: Customer | null = null;
@@ -790,6 +840,59 @@ export class CustomersComponent implements OnInit {
     return Math.min(this.currentPage * this.pageSize, this.filteredCustomers.length);
   }
 
+  public isUploadingImage = false;
+
+  private static readonly IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  private static readonly IMAGE_MAX_MB = 2;
+
+  /**
+   * Reads the picked file and uploads it straight away, so the form only ever
+   * carries a stored URL. The server re-checks type and size; these checks are
+   * here to fail fast without a round trip.
+   */
+  onPhotoFile(event: Event, picker: HTMLInputElement): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    // Cleared straight away so re-picking the same file after a failure still fires.
+    picker.value = '';
+    if (!file) return;
+
+    const types = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!types.includes(file.type)) {
+      this.notify.error('Customer photo must be a PNG, JPG, WEBP or GIF.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.notify.error(`Customer photo is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is 2 MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      this.isUploadingImage = false;
+      this.notify.error(`Could not read ${file.name}.`);
+    };
+    reader.onload = () => {
+      this.customerService.uploadCustomerImage(String(reader.result)).subscribe({
+        next: (res) => {
+          this.isUploadingImage = false;
+          if (res.success && res.data?.url) {
+            this.form.image_url = res.data.url;
+            this.notify.success('Photo uploaded — save to apply it.');
+          } else {
+            this.notify.error(res?.message || 'Photo upload failed.');
+          }
+        },
+        error: (err) => {
+          this.isUploadingImage = false;
+          this.notify.error(err?.error?.message || 'Photo upload failed.');
+        },
+      });
+    };
+
+    this.isUploadingImage = true;
+    reader.readAsDataURL(file);
+  }
+
   getInitials(name: string): string {
     if (!name) return 'G';
     const parts = name.trim().split(' ');
@@ -851,13 +954,15 @@ export class CustomersComponent implements OnInit {
 
   openAddModal(): void {
     this.editingCustomerId = null;
-    this.form = { name: '', phone: '', email: '', address: '' };
+    this.form = { name: '', phone: '', email: '', address: '', image_url: '' };
+    this.isUploadingImage = false;
     this.showModal = true;
   }
 
   openEditModal(c: Customer): void {
     this.editingCustomerId = c.id;
-    this.form = { name: c.name, phone: c.phone, email: c.email, address: c.address };
+    this.form = { name: c.name, phone: c.phone, email: c.email, address: c.address, image_url: c.image_url || '' };
+    this.isUploadingImage = false;
     this.showModal = true;
   }
 

@@ -1,4 +1,13 @@
-﻿import { Component, OnInit, HostListener, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  HostListener,
+  ViewChild,
+  ElementRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -12,6 +21,7 @@ import { CheckoutService } from '../../core/services/checkout.service';
 import { BillService } from '../../core/services/bill.service';
 import { OrderService } from '../../core/services/order.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { Product, ProductVariant, Category, Customer, DiningTable, DraftBill, Order, OrderType, PaymentMethod } from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
@@ -100,42 +110,87 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <span class="accent-orange font-bold">{{ categories.length }}+</span> Categories available for instant billing
               </p>
             </div>
-            <button
-              (click)="selectCategory(null)"
-              class="section-link-btn"
-              [class.is-active-link]="selectedCategoryId === null"
-            >
-              <span>View all</span>
-              <span class="material-symbols-outlined text-sm">chevron_right</span>
-            </button>
           </div>
 
-          <div class="categories-circles-track no-scrollbar">
-            <!-- All Categories Circle -->
+          <!-- Scroll-to-view rail: the same prev/next pattern the staff role
+               filter uses, but shown at every width because this strip
+               overflows on desktop too. Each button is disabled at its end of
+               the track, and the pair hides entirely when nothing overflows. -->
+          <div class="cat-scroll-container">
             <button
               type="button"
-              (click)="selectCategory(null)"
-              class="cat-circle-card"
-              [class.is-selected]="selectedCategoryId === null"
+              class="cat-scroll-arrow prev"
+              [class.is-hidden]="!catCanScroll"
+              [disabled]="!catCanScrollLeft"
+              (click)="scrollCategories(-320)"
+              aria-label="Scroll categories left"
+              title="Scroll left"
             >
-              <div class="cat-avatar-bubble">
-                <span class="cat-avatar-icon">ðŸ½️</span>
-              </div>
-              <span class="cat-circle-label">All</span>
+              <span class="material-symbols-outlined">chevron_left</span>
             </button>
 
-            <!-- Dynamic Category Circles -->
+            <div
+              class="categories-circles-track no-scrollbar"
+              [class.is-dragging]="isDraggingCats"
+              #catTrack
+              (scroll)="updateCatScrollState()"
+              (pointerdown)="onCatPointerDown($event)"
+              (pointermove)="onCatPointerMove($event)"
+              (pointerup)="onCatPointerEnd($event)"
+              (pointercancel)="onCatPointerEnd($event)"
+            >
+              <!-- All Categories Circle -->
+              <button
+                type="button"
+                (click)="selectCategory(null)"
+                class="cat-circle-card"
+                [class.is-selected]="selectedCategoryId === null"
+              >
+                <div class="cat-avatar-bubble">
+                  <span class="cat-avatar-icon">🍽️</span>
+                </div>
+                <span class="cat-circle-label">All</span>
+              </button>
+
+              <!-- Dynamic Category Circles -->
+              <button
+                type="button"
+                *ngFor="let cat of categories"
+                (click)="selectCategory(cat.id)"
+                class="cat-circle-card"
+                [class.is-selected]="selectedCategoryId === cat.id"
+                [title]="cat.name"
+              >
+                <div class="cat-avatar-bubble" [class.has-image]="hasCategoryImage(cat)">
+                  <!-- The uploaded category thumbnail when there is one; the
+                       name-matched emoji is the fallback, and also what a
+                       broken image URL falls back to. -->
+                  <img
+                    *ngIf="hasCategoryImage(cat)"
+                    class="cat-avatar-image"
+                    [src]="settingsService.assetUrl(cat.image_url || '')"
+                    [alt]="cat.name"
+                    loading="lazy"
+                    (error)="onCategoryImageError(cat)"
+                  />
+                  <span *ngIf="!hasCategoryImage(cat)" class="cat-avatar-icon">
+                    {{ getCategoryAvatar(cat.name) }}
+                  </span>
+                </div>
+                <span class="cat-circle-label">{{ cat.name }}</span>
+              </button>
+            </div>
+
             <button
               type="button"
-              *ngFor="let cat of categories"
-              (click)="selectCategory(cat.id)"
-              class="cat-circle-card"
-              [class.is-selected]="selectedCategoryId === cat.id"
+              class="cat-scroll-arrow next"
+              [class.is-hidden]="!catCanScroll"
+              [disabled]="!catCanScrollRight"
+              (click)="scrollCategories(320)"
+              aria-label="Scroll categories right"
+              title="Scroll right"
             >
-              <div class="cat-avatar-bubble">
-                <span class="cat-avatar-icon">{{ getCategoryAvatar(cat.name) }}</span>
-              </div>
-              <span class="cat-circle-label">{{ cat.name }}</span>
+              <span class="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
         </div>
@@ -144,15 +199,25 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <div class="pos-section-block">
           <div class="section-title-row">
             <div>
-              <h2 class="section-heading">Popular Dishes</h2>
+              <h2 class="section-heading">
+                {{ selectedCategoryId ? getSelectedCategoryName() : 'Popular Dishes' }}
+              </h2>
               <p class="section-subtext">
-                <span class="accent-orange font-bold">{{ filteredProducts.length }}+</span> Delicious dishes ready to serve
+                <span class="accent-orange font-bold">{{ filteredProducts.length }}</span> {{ selectedCategoryId ? 'dishes in this category' : 'Delicious dishes ready to serve' }}
               </p>
             </div>
-            <span class="section-link-btn" (click)="searchQuery = ''; selectCategory(null)">
-              <span>View More</span>
-              <span class="material-symbols-outlined text-sm">chevron_right</span>
-            </span>
+            <div class="flex items-center gap-2">
+              <span *ngIf="selectedCategoryId" class="popular-dish-side-tag">
+                <span class="dot-indicator"></span>
+                <span>{{ getSelectedCategoryName() }}</span>
+                <button type="button" (click)="selectCategory(null)" class="tag-clear-btn" title="Show All Dishes">
+                  <span class="material-symbols-outlined text-xs">close</span>
+                </button>
+              </span>
+              <span *ngIf="!selectedCategoryId" class="popular-dish-side-tag is-all">
+                <span>All Dishes ({{ products.length }})</span>
+              </span>
+            </div>
           </div>
 
           <!-- Empty State -->
@@ -1193,6 +1258,116 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-size: 2rem;
     }
 
+    /* A category with an uploaded thumbnail shows it full-bleed, so the bubble
+       drops its own padding-ish tint and lets the photo fill the circle. */
+    .cat-avatar-bubble.has-image {
+      overflow: hidden;
+      background: var(--card-bg, #FFFFFF);
+    }
+
+    .cat-avatar-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: inherit;
+    }
+
+    /* ── Scroll rail ──────────────────────────────────────────────── */
+    .cat-scroll-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      width: 100%;
+    }
+
+    .cat-scroll-arrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 10px;
+      background: var(--card-bg, #FFFFFF);
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      color: var(--primary, #7E22CE);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(46, 16, 101, 0.06);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      outline: none;
+    }
+
+    .cat-scroll-arrow:hover:not(:disabled) {
+      border-color: var(--primary, #7E22CE);
+      background: var(--primary-light, rgba(126, 34, 206, 0.08));
+      transform: scale(1.08);
+      box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.18));
+    }
+
+    .cat-scroll-arrow:active:not(:disabled) {
+      transform: scale(0.92);
+    }
+
+    /* Kept in the layout when it cannot scroll further, so the strip does not
+       shift sideways as the ends are reached. */
+    .cat-scroll-arrow:disabled {
+      opacity: 0.35;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    /* Nothing overflows: no reason for the controls to be there at all. */
+    .cat-scroll-arrow.is-hidden {
+      display: none;
+    }
+
+    .cat-scroll-arrow .material-symbols-outlined {
+      font-size: 20px;
+    }
+
+    .cat-scroll-container .categories-circles-track {
+      flex: 1 1 auto;
+      min-width: 0;
+      cursor: grab;
+      /* Touch keeps native horizontal scrolling and its momentum; only the
+         mouse is given drag-to-scroll. */
+      touch-action: pan-x;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .cat-scroll-container .categories-circles-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Smooth scrolling would fight a drag, so it is off while one is running. */
+    .cat-scroll-container .categories-circles-track.is-dragging {
+      cursor: grabbing;
+      scroll-behavior: auto;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .cat-scroll-container .categories-circles-track.is-dragging .cat-circle-card {
+      cursor: grabbing;
+    }
+
+    .cat-scroll-container .categories-circles-track img {
+      -webkit-user-drag: none;
+      user-select: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cat-scroll-container .categories-circles-track {
+        scroll-behavior: auto;
+      }
+    }
+
     .cat-circle-label {
       font-size: 0.78rem;
       font-weight: 700;
@@ -1206,6 +1381,48 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .cat-circle-card.is-selected .cat-circle-label {
       color: var(--primary, #7E22CE);
       font-weight: 900;
+    }
+
+    /* POPULAR DISHES SIDE TAG */
+    .popular-dish-side-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid var(--card-border, #E9D5FF);
+      color: var(--primary, #7E22CE);
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      box-shadow: 0 2px 6px rgba(126, 34, 206, 0.08);
+    }
+    .popular-dish-side-tag.is-all {
+      color: var(--text-dark, #2E1065);
+      background: rgba(255, 255, 255, 0.75);
+    }
+    .dot-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: var(--accent, #EA580C);
+    }
+    .tag-clear-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 9999px;
+      background: rgba(126, 34, 206, 0.12);
+      border: none;
+      color: var(--primary, #7E22CE);
+      cursor: pointer;
+      margin-left: 0.2rem;
+      transition: background 0.15s ease;
+    }
+    .tag-clear-btn:hover {
+      background: rgba(126, 34, 206, 0.25);
     }
 
     /* 3. POPULAR DISHES (HERO CARDS) */
@@ -1944,9 +2161,198 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       from { transform: translateY(100%); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       GLASS LAYER
+       ───────────────────────────────────────────────────────────────────
+       Restyles surfaces defined earlier in this file as real glass. Kept as
+       one block, last, so it can be reviewed or removed in one piece.
+
+       Glass only reads as glass when there is something behind it to
+       refract, so the container gets an ambient colour wash and the panels
+       blur whatever sits underneath them.
+
+       Every surface is driven by the custom properties below, so the two
+       degraded modes — no backdrop-filter support, and the OS asking for
+       reduced transparency — are a handful of reassignments at the end
+       rather than a second copy of every rule.
+
+       backdrop-filter is applied ONLY to leaf surfaces, never to
+       .pos-fullscreen-container or .pos-main-content: a filtered element
+       becomes the containing block for position: fixed descendants, which
+       would break the mobile cart drawer and its backdrop.
+       ═══════════════════════════════════════════════════════════════════ */
+    .pos-fullscreen-container {
+      position: relative;
+      isolation: isolate;
+
+      --g-blur: blur(26px) saturate(200%) brightness(1.06);
+      --g-blur-sm: blur(14px) saturate(170%);
+      --g-dish: linear-gradient(145deg, rgba(126, 34, 206, 0.58) 0%, rgba(107, 33, 168, 0.42) 100%);
+      --g-cat: linear-gradient(135deg, rgba(126, 34, 206, 0.62) 0%, rgba(107, 33, 168, 0.42) 100%);
+      --g-pill: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.42) 100%);
+      --g-avatar: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.62) 100%);
+      --g-edge: 1px solid rgba(255, 255, 255, 0.4);
+      --g-scrim: linear-gradient(180deg, rgba(23, 8, 51, 0.04) 0%, rgba(23, 8, 51, 0.16) 45%, rgba(23, 8, 51, 0.34) 100%);
+      --g-wash: 1;
+    }
+
+    /* Ambient wash: the colour pools the panels refract. */
+    .pos-fullscreen-container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: var(--g-wash);
+      background:
+        radial-gradient(30rem 30rem at 6% -6%, rgba(126, 34, 206, 0.55) 0%, transparent 65%),
+        radial-gradient(26rem 26rem at 99% 4%, rgba(234, 88, 12, 0.42) 0%, transparent 65%),
+        radial-gradient(32rem 32rem at 78% 52%, rgba(147, 51, 234, 0.45) 0%, transparent 66%),
+        radial-gradient(28rem 28rem at 18% 88%, rgba(107, 33, 168, 0.42) 0%, transparent 66%),
+        radial-gradient(22rem 22rem at 46% 24%, rgba(234, 88, 12, 0.22) 0%, transparent 70%);
+    }
+
+    /* The scroll area must not paint over the wash. */
+    .pos-main-content { background: transparent; }
+
+    .pos-search-pill {
+      background: var(--g-pill);
+      -webkit-backdrop-filter: var(--g-blur-sm);
+      backdrop-filter: var(--g-blur-sm);
+      border: var(--g-edge);
+      box-shadow:
+        0 8px 24px -6px rgba(46, 16, 101, 0.18),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.75);
+    }
+
+    .pos-search-pill:focus-within {
+      border-color: rgba(255, 255, 255, 0.85);
+      box-shadow:
+        0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.18)),
+        0 10px 28px -6px rgba(46, 16, 101, 0.24),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    .cat-avatar-bubble {
+      background: var(--g-cat);
+      -webkit-backdrop-filter: var(--g-blur-sm);
+      backdrop-filter: var(--g-blur-sm);
+      border: var(--g-edge);
+      box-shadow:
+        0 8px 20px -6px var(--primary-glow, rgba(126, 34, 206, 0.45)),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -6px 14px -6px rgba(0, 0, 0, 0.18);
+    }
+
+    .cat-circle-card.is-selected .cat-avatar-bubble {
+      border-color: rgba(255, 255, 255, 0.85);
+      box-shadow:
+        0 0 0 3px var(--accent-light, rgba(234, 88, 12, 0.35)),
+        0 10px 24px -6px var(--primary-glow, rgba(126, 34, 206, 0.5)),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    /* Tinted rather than clear glass: the labels inside are white, and clear
+       glass over a light page would leave them unreadable. */
+    .dish-hero-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--g-dish);
+      -webkit-backdrop-filter: var(--g-blur);
+      backdrop-filter: var(--g-blur);
+      border: var(--g-edge);
+      box-shadow:
+        0 12px 32px -10px rgba(46, 16, 101, 0.42),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -22px 34px -24px rgba(0, 0, 0, 0.55);
+      text-shadow: 0 1px 2px rgba(23, 8, 51, 0.35);
+    }
+
+    /* Readability scrim. Where the wash behind a card is pale the glass goes
+       pale with it, which would leave white labels barely legible.
+       backdrop-filter makes the card a stacking context, so z-index: -1 puts
+       this above the card's own tint but below its text. Tinted, not grey, so
+       it reads as depth in the glass rather than dirt. */
+    .dish-hero-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: var(--g-scrim);
+    }
+
+    /* Specular highlight — the bright band real glass catches. Sweeps on hover. */
+    .dish-hero-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 55%;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.28) 45%, transparent 100%);
+      transform: skewX(-18deg);
+      transition: left 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dish-hero-card:hover::after { left: 115%; }
+    .dish-hero-card.is-out-of-stock::after { display: none; }
+
+    .dish-hero-card:hover {
+      border-color: rgba(255, 255, 255, 0.55);
+      box-shadow:
+        0 18px 40px -10px rgba(46, 16, 101, 0.5),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .dish-floating-avatar {
+      background: var(--g-avatar);
+      -webkit-backdrop-filter: blur(12px) saturate(170%);
+      backdrop-filter: blur(12px) saturate(170%);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow:
+        0 8px 18px -6px rgba(46, 16, 101, 0.35),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.95);
+    }
+
+    /* Degraded modes. Without backdrop-filter the panels would be flat
+       translucent washes with nothing behind them; with reduced transparency
+       the user has asked not to have them at all. Both revert to the solid
+       surfaces this page had before, by reassigning the tokens above. */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .pos-fullscreen-container {
+        --g-dish: linear-gradient(145deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
+        --g-cat: var(--primary, #7E22CE);
+        --g-pill: var(--card-bg, #FFFFFF);
+        --g-avatar: var(--card-bg, #FFFFFF);
+        --g-scrim: none;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .pos-fullscreen-container {
+        --g-blur: none;
+        --g-blur-sm: none;
+        --g-dish: linear-gradient(145deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
+        --g-cat: var(--primary, #7E22CE);
+        --g-pill: var(--card-bg, #FFFFFF);
+        --g-avatar: var(--card-bg, #FFFFFF);
+        --g-scrim: none;
+        --g-wash: 0;
+      }
+      .pos-main-content { background: var(--bg-app, #FAF5FF); }
+      .dish-hero-card { text-shadow: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dish-hero-card::after { transition: none; }
+      .dish-hero-card:hover::after { left: -60%; }
+    }
   `],
 })
-export class PosComponent implements OnInit {
+export class PosComponent implements OnInit, AfterViewInit {
   public cartService = inject(CartService);
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
@@ -1957,6 +2363,17 @@ export class PosComponent implements OnInit {
   private billService = inject(BillService);
   private orderService = inject(OrderService);
   private notify = inject(NotificationService);
+  public settingsService = inject(SettingsService);
+
+  /** Horizontal rail for the category circles; see scrollCategories(). */
+  @ViewChild('catTrack') private catTrackRef?: ElementRef<HTMLElement>;
+
+  public catCanScroll = false;
+  public catCanScrollLeft = false;
+  public catCanScrollRight = false;
+
+  /** Categories whose thumbnail failed to load, so they fall back to an emoji. */
+  private brokenCategoryImages = new Set<number>();
 
   public isMobileCartOpen = false;
 
@@ -2008,6 +2425,11 @@ export class PosComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPosData();
+  }
+
+  ngAfterViewInit(): void {
+    // First measurement of the category rail, once the track element exists.
+    setTimeout(() => this.updateCatScrollState());
   }
 
   /**
@@ -2090,6 +2512,9 @@ export class PosComponent implements OnInit {
       next: (res) => {
         if (res.success) this.categories = res.data;
         this.settleCriticalLoad();
+        // The circles have not been laid out yet in this tick, so the rail's
+        // scrollWidth is still stale; measure once the DOM has caught up.
+        setTimeout(() => this.updateCatScrollState());
       },
       error: (err) => this.settleCriticalLoad(err),
     });
@@ -2133,8 +2558,134 @@ export class PosComponent implements OnInit {
   }
 
   selectCategory(categoryId: number | null): void {
+    // The click that ends a drag is swallowed here rather than by the buttons,
+    // so every entry point to the rail is covered by one guard.
+    if (this.suppressCatClick) {
+      this.suppressCatClick = false;
+      return;
+    }
     this.selectedCategoryId = categoryId;
     this.filterProducts();
+  }
+
+  // ── Drag-to-scroll ────────────────────────────────────────────────
+  //
+  // A touchscreen already scrolls this rail natively, with momentum, so touch
+  // is left alone — intercepting it would replace something good with
+  // something worse. A mouse has no such gesture, and reaching for the arrows
+  // every time is slow, so the mouse gets click-and-drag instead.
+
+  public isDraggingCats = false;
+  private catDragStartX = 0;
+  private catDragStartScroll = 0;
+  private catDragDistance = 0;
+  private suppressCatClick = false;
+
+  /** Movement under this is a click, not a drag. */
+  private static readonly CAT_DRAG_THRESHOLD_PX = 5;
+
+  onCatPointerDown(event: PointerEvent): void {
+    // Touch and pen keep their native scrolling; left mouse button only.
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+
+    const track = this.catTrackRef?.nativeElement;
+    if (!track) return;
+
+    this.isDraggingCats = true;
+    this.catDragStartX = event.clientX;
+    this.catDragStartScroll = track.scrollLeft;
+    this.catDragDistance = 0;
+
+    // Capture keeps the drag alive when the cursor leaves the rail.
+    track.setPointerCapture(event.pointerId);
+  }
+
+  onCatPointerMove(event: PointerEvent): void {
+    if (!this.isDraggingCats) return;
+
+    const track = this.catTrackRef?.nativeElement;
+    if (!track) return;
+
+    const dx = event.clientX - this.catDragStartX;
+    this.catDragDistance = Math.max(this.catDragDistance, Math.abs(dx));
+    track.scrollLeft = this.catDragStartScroll - dx;
+
+    // Stops the browser starting a native image drag from a category thumbnail.
+    event.preventDefault();
+  }
+
+  onCatPointerEnd(event: PointerEvent): void {
+    if (!this.isDraggingCats) return;
+    this.isDraggingCats = false;
+
+    const track = this.catTrackRef?.nativeElement;
+    if (track?.hasPointerCapture(event.pointerId)) {
+      track.releasePointerCapture(event.pointerId);
+    }
+
+    if (this.catDragDistance > PosComponent.CAT_DRAG_THRESHOLD_PX) {
+      this.suppressCatClick = true;
+      // Cleared on the next macrotask, which runs after the click this drag
+      // produced — so a drag ending on empty space cannot swallow a later click.
+      setTimeout(() => (this.suppressCatClick = false));
+    }
+
+    this.updateCatScrollState();
+  }
+
+  // ── Category rail ─────────────────────────────────────────────────
+
+  /** Steps the category strip by one screenful-ish; CSS handles the easing. */
+  scrollCategories(amount: number): void {
+    const track = this.catTrackRef?.nativeElement;
+    if (!track) return;
+    track.scrollBy({ left: amount, behavior: 'smooth' });
+    // scrollBy is animated, so the (scroll) handler updates the arrows as it
+    // travels; this just covers the case where it cannot move at all.
+    this.updateCatScrollState();
+  }
+
+  /**
+   * Recomputes whether the rail overflows and which ends it has reached, so
+   * each arrow can be disabled at its end and the pair hidden when everything
+   * already fits. Called on scroll, on resize, and after categories arrive.
+   */
+  updateCatScrollState(): void {
+    const track = this.catTrackRef?.nativeElement;
+    if (!track) {
+      this.catCanScroll = false;
+      return;
+    }
+
+    // Sub-pixel layout means scrollLeft rarely hits the exact maximum, so the
+    // ends are treated as reached within a pixel or two.
+    const EPS = 2;
+    const max = track.scrollWidth - track.clientWidth;
+
+    this.catCanScroll = max > EPS;
+    this.catCanScrollLeft = track.scrollLeft > EPS;
+    this.catCanScrollRight = track.scrollLeft < max - EPS;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateCatScrollState();
+  }
+
+  /** True when the category has a usable thumbnail that has not failed to load. */
+  hasCategoryImage(cat: Category): boolean {
+    return !!cat.image_url && !this.brokenCategoryImages.has(cat.id);
+  }
+
+  /** A 404 or broken upload falls back to the name-matched emoji. */
+  onCategoryImageError(cat: Category): void {
+    this.brokenCategoryImages.add(cat.id);
+  }
+
+  getSelectedCategoryName(): string {
+    if (!this.selectedCategoryId) return 'All Dishes';
+    const found = this.categories.find((c) => c.id === this.selectedCategoryId);
+    return found ? found.name : 'Selected Category';
   }
 
   filterProducts(): void {
@@ -2449,34 +3000,34 @@ export class PosComponent implements OnInit {
 
   getCategoryAvatar(name: string): string {
     const n = (name || '').toLowerCase();
-    if (n.includes('burger')) return 'ðŸ”';
-    if (n.includes('pizza')) return 'ðŸ•';
-    if (n.includes('mandi') || n.includes('rice') || n.includes('biryani')) return 'ðŸ—';
-    if (n.includes('taco')) return 'ðŸŒ®';
-    if (n.includes('sushi')) return 'ðŸ£';
-    if (n.includes('gratin') || n.includes('bake')) return 'ðŸ²';
-    if (n.includes('dessert') || n.includes('sweet') || n.includes('cake')) return 'ðŸ°';
-    if (n.includes('drink') || n.includes('beverage') || n.includes('juice')) return 'ðŸ¥¤';
-    if (n.includes('starter') || n.includes('snack')) return 'ðŸ¥Ÿ';
-    return 'ðŸ¥˜';
+    if (n.includes('burger')) return '🍔';
+    if (n.includes('pizza')) return '🍕';
+    if (n.includes('mandi') || n.includes('rice') || n.includes('biryani')) return '🍗';
+    if (n.includes('taco')) return '🌮';
+    if (n.includes('sushi')) return '🍣';
+    if (n.includes('gratin') || n.includes('bake')) return '🍲';
+    if (n.includes('dessert') || n.includes('sweet') || n.includes('cake')) return '🍰';
+    if (n.includes('drink') || n.includes('beverage') || n.includes('juice')) return '🥤';
+    if (n.includes('starter') || n.includes('snack')) return '🥟';
+    return '🥘';
   }
 
   getProductEmoji(name: string, categoryId?: number): string {
     const n = (name || '').toLowerCase();
-    if (n.includes('burger')) return 'ðŸ”';
-    if (n.includes('pizza') || n.includes('pepperoni')) return 'ðŸ•';
-    if (n.includes('sushi')) return 'ðŸ£';
-    if (n.includes('gratin')) return 'ðŸ²';
-    if (n.includes('taco')) return 'ðŸŒ®';
-    if (n.includes('mandi')) return 'ðŸ—';
-    if (n.includes('biryani')) return 'ðŸ¥˜';
-    if (n.includes('pudding') || n.includes('sweet') || n.includes('umali')) return 'ðŸ®';
-    if (n.includes('chicken')) return 'ðŸ—';
-    if (n.includes('mutton')) return 'ðŸ–';
-    if (n.includes('soup')) return 'ðŸ¥£';
-    if (n.includes('salad')) return 'ðŸ¥—';
-    if (n.includes('juice') || n.includes('shake')) return 'ðŸ¥¤';
-    return 'ðŸ½️';
+    if (n.includes('burger')) return '🍔';
+    if (n.includes('pizza') || n.includes('pepperoni')) return '🍕';
+    if (n.includes('sushi')) return '🍣';
+    if (n.includes('gratin')) return '🍲';
+    if (n.includes('taco')) return '🌮';
+    if (n.includes('mandi')) return '🍗';
+    if (n.includes('biryani')) return '🥘';
+    if (n.includes('pudding') || n.includes('sweet') || n.includes('umali')) return '🍮';
+    if (n.includes('chicken')) return '🍗';
+    if (n.includes('mutton')) return '🍖';
+    if (n.includes('soup')) return '🥣';
+    if (n.includes('salad')) return '🥗';
+    if (n.includes('juice') || n.includes('shake')) return '🥤';
+    return '🍽️';
   }
 }
 

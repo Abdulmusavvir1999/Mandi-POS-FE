@@ -26,6 +26,11 @@ export class UserService {
     return this.http.get<ApiResponse<User[]>>(this.API_URL, { params });
   }
 
+  /** Uploads a staff photo as a data URL and returns its stored path. */
+  public uploadUserImage(dataUrl: string): Observable<ApiResponse<{ url: string; fileName: string; bytes: number }>> {
+    return this.http.post<ApiResponse<{ url: string; fileName: string; bytes: number }>>(`${this.API_URL}/image`, { dataUrl });
+  }
+
   public createUser(data: any): Observable<ApiResponse<User>> {
     return this.http.post<ApiResponse<User>>(this.API_URL, data);
   }
