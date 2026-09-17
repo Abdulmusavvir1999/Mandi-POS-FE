@@ -15,12 +15,12 @@ import { NotificationService } from '../../../core/services/notification.service
         [style.color]="'var(--text-main, #2E1065)'"
       >
         <div class="flex items-center gap-3.5 mb-4">
-          <div
-            class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm"
-            [ngClass]="modal.isDestructive ? 'bg-red-50 text-[#DC2626] border border-red-200' : 'bg-orange-50 text-[#EA580C] border border-orange-200'"
+          <span
+            class="modal-icon-badge"
+            [ngClass]="modal.isDestructive ? 'is-danger' : 'is-warning'"
           >
-            <span class="material-symbols-outlined text-[24px]">{{ modal.isDestructive ? 'warning' : 'priority_high' }}</span>
-          </div>
+            <span class="material-symbols-outlined">{{ modal.isDestructive ? 'warning' : 'priority_high' }}</span>
+          </span>
           <div>
             <h3 class="text-base font-black" [style.color]="'var(--text-main, #2E1065)'">{{ modal.title }}</h3>
             <p class="text-xs mt-0.5 font-medium" [style.color]="'var(--text-muted, #6B7280)'">{{ modal.message }}</p>

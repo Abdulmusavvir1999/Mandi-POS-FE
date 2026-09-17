@@ -226,12 +226,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Primary Brand Color"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_PRIMARY_COLOR']"
                     (ngModelChange)="onColorChanged('primary', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Primary Brand Color"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_PRIMARY_COLOR']"
                     (ngModelChange)="onColorChanged('primary', $event)"
@@ -248,12 +250,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Primary Hover State"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_PRIMARY_HOVER']"
                     (ngModelChange)="onColorChanged('primaryHover', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Primary Hover State"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_PRIMARY_HOVER']"
                     (ngModelChange)="onColorChanged('primaryHover', $event)"
@@ -270,12 +274,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Active Nav Highlight"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_SIDEBAR_ACCENT']"
                     (ngModelChange)="onColorChanged('sidebarActiveAccent', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Active Nav Highlight"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_SIDEBAR_ACCENT']"
                     (ngModelChange)="onColorChanged('sidebarActiveAccent', $event)"
@@ -300,12 +306,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Sidebar & Nav Background"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_SIDEBAR_BG']"
                     (ngModelChange)="onColorChanged('sidebarBg', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Sidebar & Nav Background"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_SIDEBAR_BG']"
                     (ngModelChange)="onColorChanged('sidebarBg', $event)"
@@ -322,12 +330,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Sidebar Text & Icons"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_SIDEBAR_TEXT']"
                     (ngModelChange)="onColorChanged('sidebarText', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Sidebar Text & Icons"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_SIDEBAR_TEXT']"
                     (ngModelChange)="onColorChanged('sidebarText', $event)"
@@ -344,12 +354,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Application Canvas Background"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_APP_BG']"
                     (ngModelChange)="onColorChanged('bgApp', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Application Canvas Background"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_APP_BG']"
                     (ngModelChange)="onColorChanged('bgApp', $event)"
@@ -374,12 +386,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Success / Available"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_SUCCESS_COLOR']"
                     (ngModelChange)="onColorChanged('success', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Success / Available"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_SUCCESS_COLOR']"
                     (ngModelChange)="onColorChanged('success', $event)"
@@ -396,12 +410,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Warning / In-Progress"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_WARNING_COLOR']"
                     (ngModelChange)="onColorChanged('warning', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Warning / In-Progress"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_WARNING_COLOR']"
                     (ngModelChange)="onColorChanged('warning', $event)"
@@ -418,12 +434,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </div>
                 <div class="token-controls">
                   <input
+                    title="Danger / Stock Alert"
                     type="color"
                     [(ngModel)]="settingsMap['THEME_DANGER_COLOR']"
                     (ngModelChange)="onColorChanged('danger', $event)"
                     class="color-picker-input"
                   />
                   <input
+                    title="Danger / Stock Alert"
                     type="text"
                     [(ngModel)]="settingsMap['THEME_DANGER_COLOR']"
                     (ngModelChange)="onColorChanged('danger', $event)"
@@ -643,6 +661,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             <div class="control-box">
               <label class="control-label">Duration (ms)</label>
               <input
+                title="Duration (ms)"
                 type="number"
                 step="500"
                 min="1000"
@@ -808,17 +827,17 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
             <div class="form-vertical-group">
               <label class="control-label">Business Name</label>
-              <input type="text" [(ngModel)]="settingsMap['BUSINESS_NAME']" class="control-input font-bold" />
+              <input title="Business Name" type="text" [(ngModel)]="settingsMap['BUSINESS_NAME']" class="control-input font-bold" />
             </div>
 
             <div class="two-input-row">
               <div class="form-vertical-group">
                 <label class="control-label">Phone Numbers</label>
-                <input type="text" [(ngModel)]="settingsMap['BUSINESS_PHONE']" class="control-input" />
+                <input title="Phone Numbers" type="text" [(ngModel)]="settingsMap['BUSINESS_PHONE']" class="control-input" />
               </div>
               <div class="form-vertical-group">
                 <label class="control-label">Email Address</label>
-                <input type="email" [(ngModel)]="settingsMap['BUSINESS_EMAIL']" class="control-input" />
+                <input title="Email Address" type="email" [(ngModel)]="settingsMap['BUSINESS_EMAIL']" class="control-input" />
               </div>
             </div>
 
@@ -830,11 +849,11 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             <div class="two-input-row">
               <div class="form-vertical-group">
                 <label class="control-label">GSTIN / Tax ID</label>
-                <input type="text" [(ngModel)]="settingsMap['BUSINESS_GSTIN']" class="control-input font-mono font-bold" />
+                <input title="GSTIN / Tax ID" type="text" [(ngModel)]="settingsMap['BUSINESS_GSTIN']" class="control-input font-mono font-bold" />
               </div>
               <div class="form-vertical-group">
                 <label class="control-label">Currency Symbol</label>
-                <input type="text" [(ngModel)]="settingsMap['CURRENCY_SYMBOL']" class="control-input font-mono font-bold text-purple" />
+                <input title="Currency Symbol" type="text" [(ngModel)]="settingsMap['CURRENCY_SYMBOL']" class="control-input font-mono font-bold text-purple" />
               </div>
             </div>
           </div>
@@ -862,11 +881,11 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             <div class="two-input-row">
               <div class="form-vertical-group">
                 <label class="control-label">Standard Tax Rate (%)</label>
-                <input type="number" [(ngModel)]="settingsMap['TAX_PERCENTAGE']" class="control-input font-mono font-bold text-purple" />
+                <input title="Standard Tax Rate (%)" type="number" [(ngModel)]="settingsMap['TAX_PERCENTAGE']" class="control-input font-mono font-bold text-purple" />
               </div>
               <div class="form-vertical-group">
                 <label class="control-label">Tax Display Label</label>
-                <input type="text" [(ngModel)]="settingsMap['TAX_NAME']" class="control-input font-bold" />
+                <input title="Tax Display Label" type="text" [(ngModel)]="settingsMap['TAX_NAME']" class="control-input font-bold" />
               </div>
             </div>
 
@@ -909,6 +928,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           <div class="form-vertical-group">
             <label class="control-label">Window / Browser Tab Title</label>
             <input
+              title="Window / Browser Tab Title"
               type="text"
               [(ngModel)]="settingsMap['BRANDING_APP_TITLE']"
               placeholder="Project X — POS & Management System"
@@ -937,6 +957,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
               <div class="branding-actions">
                 <input
+                  title="Choose image file"
                   type="file"
                   hidden
                   #picker
@@ -997,7 +1018,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
             <div class="form-vertical-group">
               <label class="control-label">Receipt Tagline / Subtitle</label>
-              <input type="text" [(ngModel)]="settingsMap['RECEIPT_TAGLINE']" class="control-input font-mono" placeholder="Authentic Dum Mandi & Arabian Delicacies" />
+              <input title="Receipt Tagline / Subtitle" type="text" [(ngModel)]="settingsMap['RECEIPT_TAGLINE']" class="control-input font-mono" placeholder="Authentic Dum Mandi & Arabian Delicacies" />
             </div>
 
             <div class="form-vertical-group">

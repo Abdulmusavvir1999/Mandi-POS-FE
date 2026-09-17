@@ -69,6 +69,7 @@ import { SettingsService } from '../../core/services/settings.service';
                 <div class="input-wrapper" [class.is-focused]="usernameFocused">
                   <span class="material-symbols-outlined field-icon">person</span>
                   <input
+                    title="Email or Username"
                     type="text"
                     [(ngModel)]="emailOrUsername"
                     name="emailOrUsername"
@@ -91,6 +92,7 @@ import { SettingsService } from '../../core/services/settings.service';
                 <div class="input-wrapper" [class.is-focused]="passwordFocused">
                   <span class="material-symbols-outlined field-icon">lock</span>
                   <input
+                    title="Password"
                     [type]="showPassword ? 'text' : 'password'"
                     [(ngModel)]="password"
                     name="password"

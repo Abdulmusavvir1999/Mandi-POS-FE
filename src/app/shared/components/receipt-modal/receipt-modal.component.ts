@@ -13,10 +13,12 @@ import { AppCurrencyPipe } from '../../pipes/app-currency.pipe';
         <!-- Header Controls -->
         <div class="flex items-center justify-between p-4 bg-[var(--sidebar-bg)] text-[var(--sidebar-text)] border-b border-[var(--sidebar-border)]">
           <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[20px] text-[var(--sidebar-active-accent)]">print</span>
+            <span class="modal-icon-badge is-on-dark">
+            <span class="material-symbols-outlined">print</span>
+          </span>
             <span class="font-bold text-sm tracking-wide">Receipt Preview — {{ printData?.bill?.bill_number }}</span>
           </div>
-          <button (click)="close.emit()" class="text-[var(--sidebar-text-muted)] hover:text-white">
+          <button (click)="close.emit()" class="modal-close-btn is-on-dark" title="Close" aria-label="Close">
             <span class="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+﻿import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -20,7 +20,7 @@ import { ConfirmationDialogComponent } from '../../shared/components/confirmatio
   ],
   template: `
     <div
-      class="flex h-screen w-screen overflow-hidden select-none"
+      class="flex h-screen w-screen overflow-hidden"
       [style.background-color]="isPosRoute ? '#F4F7F6' : 'var(--bg-app, #FAF5FF)'"
       [style.color]="'var(--text-main, #2E1065)'"
     >

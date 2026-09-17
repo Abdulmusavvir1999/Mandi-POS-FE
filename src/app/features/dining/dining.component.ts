@@ -370,79 +370,101 @@ const DwellRail = {
       <!-- 5. ADD / EDIT TABLE MODAL                                       -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showTableModal">
-        <div class="modal-content max-w-md">
-          <div class="modal-header-bar">
-            <div class="flex-align-center gap-2">
-              <span class="material-symbols-outlined icon-purple">
-                {{ editingTableId ? 'edit_square' : 'add_circle' }}
+        <div class="modal-content p-6 max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">{{ editingTableId ? 'edit_square' : 'add_circle' }}</span>
               </span>
-              <h3 class="modal-title">
-                {{ editingTableId ? 'Edit Dining Table' : 'Add Dining Table' }}
-              </h3>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                  {{ editingTableId ? 'Edit Dining Table' : 'Add Dining Table' }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure floor layout, seating capacity, and table code</p>
+              </div>
             </div>
-            <button type="button" (click)="showTableModal = false" class="modal-close-btn" aria-label="Close">
+            <button
+              type="button"
+              (click)="showTableModal = false"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
+            >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveTable()" class="modal-body-form">
-            <div class="two-input-grid">
-              <div class="form-group-box">
-                <label class="modal-label">Table Number / Code</label>
+          <form (ngSubmit)="saveTable()" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Table Number / Code
+                </label>
                 <input
+                  title="Table Number / Code"
                   type="text"
                   [(ngModel)]="tableForm.tableNumber"
                   name="tableNumber"
-                  class="modal-input font-mono"
+                  class="form-control font-mono text-sm w-full"
                   placeholder="e.g. T-07"
                   required
                 />
               </div>
-              <div class="form-group-box">
-                <label class="modal-label">Display Name</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Display Name
+                </label>
                 <input
+                  title="Display Name"
                   type="text"
                   [(ngModel)]="tableForm.name"
                   name="name"
-                  class="modal-input"
+                  class="form-control text-sm w-full"
                   placeholder="e.g. VIP Majlis 1"
                   required
                 />
               </div>
             </div>
 
-            <div class="form-group-box">
-              <label class="modal-label">Section / Dining Area</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Section / Dining Area
+              </label>
               <input
+                title="Section / Dining Area"
                 type="text"
                 [(ngModel)]="tableForm.section"
                 name="section"
-                class="modal-input"
+                class="form-control text-sm w-full"
                 placeholder="e.g. Main Hall, VIP Section, Outdoor Terrace"
                 list="diningSectionOptions"
                 required
               />
-              <!-- Existing sections offered as suggestions, so a typo does not -->
-              <!-- silently create a second section with almost the same name.  -->
               <datalist id="diningSectionOptions">
                 <option *ngFor="let sec of sections" [value]="sec"></option>
               </datalist>
             </div>
 
-            <div class="two-input-grid">
-              <div class="form-group-box">
-                <label class="modal-label">Seating Capacity</label>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Seating Capacity
+                </label>
                 <input
+                  title="Seating Capacity"
                   type="number"
                   min="1"
                   [(ngModel)]="tableForm.capacity"
                   name="capacity"
-                  class="modal-input font-mono"
+                  class="form-control font-mono text-sm w-full"
+                  placeholder="4"
                 />
               </div>
-              <div class="form-group-box">
-                <label class="modal-label">Status</label>
-                <select [(ngModel)]="tableForm.status" name="status" class="modal-select">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Status
+                </label>
+                <select [(ngModel)]="tableForm.status" name="status" class="form-control text-sm w-full">
                   <option value="AVAILABLE">AVAILABLE</option>
                   <option value="OCCUPIED">OCCUPIED</option>
                   <option value="UNAVAILABLE">UNAVAILABLE</option>
@@ -450,22 +472,28 @@ const DwellRail = {
               </div>
             </div>
 
-            <div class="modal-footer-bar">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 *ngIf="editingTableId"
                 type="button"
                 (click)="deleteTable(editingTableId)"
                 class="action-btn btn-outline-danger mr-auto"
               >
-                <span class="material-symbols-outlined">delete</span>
+                <span class="material-symbols-outlined text-[16px]">delete</span>
                 <span>Delete Table</span>
               </button>
-              <button type="button" (click)="showTableModal = false" class="action-btn btn-outline-purple">
+              <button
+                type="button"
+                (click)="showTableModal = false"
+                class="action-btn btn-outline-purple"
+              >
                 Cancel
               </button>
-              <button type="submit" class="action-btn btn-gradient-purple">
-                <span class="material-symbols-outlined">check_circle</span>
-                <span>{{ editingTableId ? 'Save Changes' : 'Create Table' }}</span>
+              <button
+                type="submit"
+                class="action-btn btn-gradient-purple"
+              >
+                {{ editingTableId ? 'Save Changes ✓' : 'Add Dining Table ✓' }}
               </button>
             </div>
           </form>
@@ -1172,27 +1200,6 @@ const DwellRail = {
           background: var(--card-bg, #ffffff);
           border-color: var(--card-border, #E9D5FF);
         }
-      }
-
-      /* ─── Modal bits the global sheet does not define ─── */
-      .modal-close-btn {
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 9px;
-        background: transparent;
-        border: 1.5px solid transparent;
-        color: var(--text-muted, #6B7280);
-        cursor: pointer;
-        transition: all 0.18s ease;
-      }
-
-      .modal-close-btn:hover {
-        background: var(--bg-app, #FAF5FF);
-        border-color: var(--card-border, #E9D5FF);
-        color: var(--text-main, #2E1065);
       }
 
       .two-input-grid {

@@ -202,6 +202,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search audit log"
               type="text"
               [(ngModel)]="searchAction"
               (ngModelChange)="onSearchChanged()"

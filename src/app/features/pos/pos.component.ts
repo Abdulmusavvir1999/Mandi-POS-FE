@@ -30,6 +30,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
         <div class="pos-top-search-row">
           <div class="pos-search-pill">
             <input
+              title="Search menu items"
               id="pos-search-input"
               type="text"
               [(ngModel)]="searchQuery"
@@ -380,6 +381,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
         <!-- PROMOTION CODE / COUPON INPUT -->
         <div class="promo-code-box">
           <input
+            title="Promotion Code"
             type="text"
             [(ngModel)]="promoCode"
             placeholder="Promotion Code"
@@ -435,18 +437,23 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 1. SETTLEMENT & PAYMENT MODAL                                   -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showPaymentModal">
-      <div class="modal-content p-6 max-w-lg bg-white border border-teal-100 shadow-2xl text-slate-800 rounded-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 class="text-lg font-black text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[#008080]">point_of_sale</span>
-            <span>Settlement & Checkout</span>
-          </h3>
-          <button (click)="showPaymentModal = false" class="text-slate-400 hover:text-slate-700">
-            <span class="material-symbols-outlined text-[20px]">close</span>
+      <div class="modal-content p-6 max-w-lg shadow-2xl">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge is-teal">
+              <span class="material-symbols-outlined text-2xl">point_of_sale</span>
+            </span>
+            <div>
+              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Settlement & Checkout</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Select payment mode, record tender, and print receipt</p>
+            </div>
+          </div>
+          <button (click)="showPaymentModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div class="space-y-4 py-4">
+        <div class="space-y-4">
           <!-- Total Display -->
           <div class="p-4 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
             <span class="text-xs font-bold uppercase text-teal-900">Total Payable</span>
@@ -457,14 +464,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <!-- Payment Methods Selector -->
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Payment Mode</label>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Payment Mode</label>
             <div class="grid grid-cols-4 gap-2">
               <button
                 type="button"
                 *ngFor="let method of ['CASH', 'UPI', 'CARD', 'OTHER']"
                 (click)="selectedPaymentMethod = method"
                 class="py-2.5 px-3 rounded-xl font-bold transition-all text-xs border"
-                [ngClass]="selectedPaymentMethod === method ? 'bg-[#008080] text-white border-transparent shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'"
+                [ngClass]="selectedPaymentMethod === method ? 'bg-[#7E22CE] text-white border-transparent shadow-sm' : 'bg-[#FAF5FF] text-[#2E1065] border-[#E9D5FF] hover:bg-[#F3E8FF]'"
               >
                 {{ method }}
               </button>
@@ -472,14 +479,15 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
 
           <!-- Cash Tendered & Quick Notes -->
-          <div *ngIf="selectedPaymentMethod === 'CASH'" class="space-y-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div *ngIf="selectedPaymentMethod === 'CASH'" class="space-y-3 p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF]">
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Amount Tendered</label>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Amount Tendered</label>
               <input
+                title="Amount Tendered"
                 type="number"
                 [(ngModel)]="tenderedAmount"
                 (ngModelChange)="calcChange()"
-                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-lg font-mono font-bold text-emerald-700 bg-white"
+                class="form-control text-lg font-mono font-bold text-emerald-700 w-full"
               />
             </div>
 
@@ -489,15 +497,15 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 type="button"
                 *ngFor="let amt of [cartService.grandTotal(), 500, 1000, 2000]"
                 (click)="setTendered(amt)"
-                class="flex-1 py-1 text-xs font-mono font-bold rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                class="flex-1 py-1.5 text-xs font-mono font-bold rounded-lg bg-white border border-[#DDD6FE] text-[#6B21A8] hover:bg-[#F3E8FF]"
               >
                 {{ amt | appCurrency:'1.0-0' }}
               </button>
             </div>
 
             <!-- Change Return -->
-            <div class="flex items-center justify-between pt-2 border-t border-slate-200">
-              <span class="text-xs font-bold text-slate-600">Change Due:</span>
+            <div class="flex items-center justify-between pt-2 border-t border-[#E9D5FF]">
+              <span class="text-xs font-bold text-[#6B7280]">Change Due:</span>
               <span class="text-base font-black font-mono text-emerald-700">
                 {{ changeDue | appCurrency:'1.2-2' }}
               </span>
@@ -505,29 +513,30 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
 
           <!-- Reference Number (for UPI / Card) -->
-          <div *ngIf="selectedPaymentMethod !== 'CASH'">
-            <label class="block text-xs font-bold text-slate-700 mb-1">Transaction Reference # (Optional)</label>
+          <div *ngIf="selectedPaymentMethod !== 'CASH'" class="form-group mb-0">
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Transaction Reference # (Optional)</label>
             <input
+              title="Transaction Reference # (Optional)"
               type="text"
               [(ngModel)]="paymentReference"
               placeholder="e.g. UPI Ref / Auth Code"
-              class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+              class="form-control text-sm w-full font-mono"
             />
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-          <button (click)="showPaymentModal = false" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50">
+        <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+          <button (click)="showPaymentModal = false" class="action-btn btn-outline-purple">
             Cancel
           </button>
           <button
             (click)="executeCheckout()"
             [disabled]="isCheckingOut"
-            class="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-variant)] text-white font-extrabold text-xs shadow-md flex items-center gap-1.5"
+            class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined text-[18px]">receipt_long</span>
             <span *ngIf="isCheckingOut">Processing Payment...</span>
-            <span *ngIf="!isCheckingOut">Complete & Print Bill</span>
+            <span *ngIf="!isCheckingOut">Complete & Print Bill ✓</span>
           </button>
         </div>
       </div>
@@ -537,21 +546,23 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 2. DINING TABLE SELECTOR MODAL                                  -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showTableModal">
-      <div class="modal-content p-6 max-w-2xl bg-white border border-slate-100 shadow-2xl text-slate-800 rounded-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div>
-            <h3 class="text-lg font-black text-slate-900 flex items-center gap-2">
-              <span class="material-symbols-outlined text-[var(--primary)]">table_restaurant</span>
-              <span>Select Dining Table</span>
-            </h3>
-            <p class="text-xs text-slate-500 font-medium">Assign POS order to a dining table</p>
+      <div class="modal-content p-6 max-w-2xl shadow-2xl">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge">
+              <span class="material-symbols-outlined text-2xl">table_restaurant</span>
+            </span>
+            <div>
+              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Select Dining Table</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Assign current POS order to an available dining table</p>
+            </div>
           </div>
-          <button (click)="showTableModal = false" class="text-slate-400 hover:text-slate-700">
-            <span class="material-symbols-outlined text-[20px]">close</span>
+          <button (click)="showTableModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div class="py-4 grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto">
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto">
           <div
             *ngFor="let table of diningTables"
             (click)="selectTable(table)"
@@ -563,7 +574,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             }"
           >
             <div class="flex items-center justify-between">
-              <span class="text-sm font-extrabold text-slate-900">{{ table.table_number }}</span>
+              <span class="text-sm font-extrabold text-[#2E1065]">{{ table.table_number }}</span>
               <span
                 class="text-[9px] py-0.5 px-1.5 rounded-full font-bold uppercase"
                 [ngClass]="table.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
@@ -571,8 +582,8 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 {{ table.status }}
               </span>
             </div>
-            <div class="text-[11px] text-slate-600 mt-2 font-medium">{{ table.section }}</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Cap: {{ table.capacity }} Seats</div>
+            <div class="text-[11px] text-[#6B7280] mt-2 font-medium">{{ table.section }}</div>
+            <div class="text-[10px] text-[#9CA3AF] mt-0.5">Cap: {{ table.capacity }} Seats</div>
           </div>
         </div>
       </div>
@@ -582,62 +593,70 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 3. CUSTOMER SELECTOR / ADD MODAL                                -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showCustomerModal">
-      <div class="modal-content p-6 max-w-md bg-white border border-slate-100 shadow-2xl text-slate-800 rounded-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 class="text-lg font-black text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[var(--primary)]">person</span>
-            <span>Customer & Delivery Details</span>
-          </h3>
-          <button (click)="showCustomerModal = false" class="text-slate-400 hover:text-slate-700">
-            <span class="material-symbols-outlined text-[20px]">close</span>
+      <div class="modal-content p-6 max-w-md shadow-2xl">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge">
+              <span class="material-symbols-outlined text-2xl">person</span>
+            </span>
+            <div>
+              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Customer & Delivery Details</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Attach guest profile or delivery address to order</p>
+            </div>
+          </div>
+          <button (click)="showCustomerModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div class="space-y-4 py-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+        <div class="space-y-4">
+          <div class="form-group mb-0">
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Phone Number</label>
             <div class="flex gap-2">
               <input
+                title="Phone Number"
                 type="tel"
                 [(ngModel)]="customerPhone"
                 placeholder="10-digit mobile number"
-                class="flex-1 px-3 py-2 rounded-lg border border-slate-300 font-mono text-sm"
+                class="form-control font-mono text-sm flex-1"
               />
-              <button (click)="searchCustomerByPhone()" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1">
+              <button (click)="searchCustomerByPhone()" class="action-btn btn-outline-purple !py-1.5 !px-3 text-xs flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px]">search</span>
                 <span>Lookup</span>
               </button>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Customer Name</label>
+          <div class="form-group mb-0">
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Customer Name</label>
             <input
+              title="Customer Name"
               type="text"
               [(ngModel)]="customerName"
               placeholder="e.g. Jamsed Jhon"
-              class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+              class="form-control text-sm w-full"
             />
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Delivery Address (Optional)</label>
+          <div class="form-group mb-0">
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Delivery Address (Optional)</label>
             <input
+              title="Delivery Address (Optional)"
               type="text"
               [(ngModel)]="customerAddress"
               placeholder="Po.1478, Street No. 52 West New York"
-              class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+              class="form-control text-sm w-full"
             />
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-          <button (click)="showCustomerModal = false" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50">
+        <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+          <button (click)="showCustomerModal = false" class="action-btn btn-outline-purple">
             Cancel
           </button>
-          <button (click)="saveAndSelectCustomer()" class="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-variant)] text-white font-bold text-xs flex items-center gap-1.5">
+          <button (click)="saveAndSelectCustomer()" class="action-btn btn-gradient-purple">
             <span class="material-symbols-outlined text-[18px]">check</span>
-            <span>Apply to Cart</span>
+            <span>Apply to Cart ✓</span>
           </button>
         </div>
       </div>
@@ -647,39 +666,44 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 4. DRAFT BILLS MODAL                                            -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showDraftsModal">
-      <div class="modal-content p-6 max-w-lg bg-white border border-slate-100 shadow-2xl text-slate-800 rounded-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 class="text-lg font-black text-slate-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[var(--primary)]">drafts</span>
-            <span>Held / Draft Bills</span>
-          </h3>
-          <button (click)="showDraftsModal = false" class="text-slate-400 hover:text-slate-700">
-            <span class="material-symbols-outlined text-[20px]">close</span>
+      <div class="modal-content p-6 max-w-lg shadow-2xl">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge">
+              <span class="material-symbols-outlined text-2xl">drafts</span>
+            </span>
+            <div>
+              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Held / Draft Bills</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Resume parked transactions and pending tables</p>
+            </div>
+          </div>
+          <button (click)="showDraftsModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div class="py-4 space-y-2.5 max-h-[60vh] overflow-y-auto">
-          <div *ngIf="draftBills.length === 0" class="text-xs text-slate-400 text-center py-8">
+        <div class="space-y-2.5 max-h-[60vh] overflow-y-auto">
+          <div *ngIf="draftBills.length === 0" class="text-xs text-[#9CA3AF] text-center py-8">
             No active draft bills on hold.
           </div>
 
           <div
             *ngFor="let draft of draftBills"
-            class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-[var(--primary)] transition-colors"
+            class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] flex items-center justify-between gap-3 hover:border-[var(--primary)] transition-colors"
           >
             <div>
               <div class="flex items-center gap-2">
                 <span class="font-bold text-xs text-[var(--primary)] font-mono">{{ draft.draft_number }}</span>
-                <span class="text-[9px] py-0.5 px-1.5 rounded-full bg-slate-200 text-slate-700 font-bold uppercase">{{ draft.order_type }}</span>
+                <span class="text-[9px] py-0.5 px-2 rounded-full bg-[#EDE9FE] text-[#6B21A8] font-bold uppercase">{{ draft.order_type }}</span>
               </div>
-              <div class="text-[11px] text-slate-500 mt-1 font-medium">
+              <div class="text-[11px] text-[#6B7280] mt-1 font-medium">
                 {{ draft.item_count }} items • {{ draft.created_at | date:'HH:mm' }}
                 <span *ngIf="draft.customer_name"> • {{ draft.customer_name }}</span>
               </div>
             </div>
 
             <div class="flex items-center gap-2">
-              <button (click)="resumeDraft(draft.id)" class="px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-bold flex items-center gap-1">
+              <button (click)="resumeDraft(draft.id)" class="action-btn btn-gradient-purple !py-1.5 !px-3 text-xs flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">play_arrow</span>
                 <span>Resume</span>
               </button>

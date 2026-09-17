@@ -220,6 +220,7 @@
       <div class="kds-search-wrapper">
         <span class="material-symbols-outlined search-icon">search</span>
         <input
+          title="Search orders"
           type="text"
           [(ngModel)]="searchQuery"
           placeholder="Search order #, table or item..."
@@ -748,7 +749,7 @@
           </p>
         </div>
 
-        <button type="button" (click)="closeDrawer()" class="drawer-close-btn" title="Close drawer">
+        <button type="button" (click)="closeDrawer()" class="modal-close-btn" title="Close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>

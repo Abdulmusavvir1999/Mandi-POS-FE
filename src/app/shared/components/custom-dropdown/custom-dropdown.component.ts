@@ -33,7 +33,13 @@ export interface DropdownOption {
     },
   ],
   template: `
-    <div class="custom-dropdown-container" [class.is-open]="isOpen" [style.min-width]="minWidth || '220px'">
+    <div
+      class="custom-dropdown-container"
+      [class.is-open]="isOpen"
+      [class.w-full]="minWidth === '100%'"
+      [style.min-width]="minWidth || '220px'"
+      [style.width]="minWidth === '100%' ? '100%' : 'auto'"
+    >
       <!-- Dropdown Trigger Button -->
       <button
         type="button"
@@ -67,6 +73,7 @@ export interface DropdownOption {
         <div *ngIf="searchable || options.length > 7" class="dropdown-search-wrapper" (click)="$event.stopPropagation()">
           <span class="material-symbols-outlined search-icon">search</span>
           <input
+            title="Search options"
             type="text"
             [(ngModel)]="searchQuery"
             (click)="$event.stopPropagation()"
@@ -122,9 +129,15 @@ export interface DropdownOption {
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+      }
+
       .custom-dropdown-container {
         position: relative;
-        display: inline-block;
+        display: block;
+        width: 100%;
         font-family: 'Plus Jakarta Sans', sans-serif;
         user-select: none;
       }
@@ -136,29 +149,31 @@ export interface DropdownOption {
         align-items: center;
         justify-content: space-between;
         gap: 0.65rem;
-        padding: 0.55rem 0.85rem;
+        padding: 0.625rem 0.875rem;
+        min-height: 42px;
         background: var(--card-bg, #ffffff);
-        border: 1.5px solid var(--card-border, #E2E8F0);
-        border-radius: 12px;
-        color: var(--text-main, #1E293B);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        border-radius: var(--radius-md, 12px);
+        color: var(--text-main, #2E1065);
         font-family: inherit;
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
         font-weight: 600;
         cursor: pointer;
         outline: none;
+        box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 1px 3px rgba(46, 16, 101, 0.04);
       }
 
       .dropdown-trigger:hover:not(:disabled) {
         border-color: var(--primary, #7E22CE);
         background: var(--card-bg, #ffffff);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 2px 8px rgba(126, 34, 206, 0.08);
       }
 
       .custom-dropdown-container.is-open .dropdown-trigger {
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15)), 0 4px 12px rgba(0,0,0,0.06);
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15)), 0 4px 12px rgba(46, 16, 101, 0.06);
       }
 
       .trigger-left {
@@ -200,7 +215,7 @@ export interface DropdownOption {
 
       .chevron-icon {
         font-size: 19px;
-        color: var(--text-muted, #64748B);
+        color: var(--text-muted, #6B7280);
         transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
@@ -215,14 +230,13 @@ export interface DropdownOption {
         top: calc(100% + 6px);
         left: 0;
         min-width: 100%;
-        width: max-content;
-        max-width: 320px;
+        max-width: 480px;
         background: var(--card-bg, #ffffff);
-        border: 1.5px solid var(--card-border, #E2E8F0);
+        border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 14px;
         padding: 0.4rem;
         z-index: 1000;
-        box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.16), 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 16px 36px -4px rgba(46, 16, 101, 0.16), 0 6px 12px -2px rgba(46, 16, 101, 0.08);
         animation: dropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       }
 

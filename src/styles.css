@@ -177,21 +177,59 @@ svg {
 .justify-start { justify-content: flex-start !important; }
 .justify-end { justify-content: flex-end !important; }
 
+/* === GAP UTILITIES (ALL SIZES & FRACTIONS FOR WHOLE PROJECT) === */
+.gap-0 { gap: 0px !important; }
+.gap-0\.5 { gap: 0.125rem !important; }
 .gap-1 { gap: 0.25rem !important; }
 .gap-1\.5 { gap: 0.375rem !important; }
 .gap-2 { gap: 0.5rem !important; }
 .gap-2\.5 { gap: 0.625rem !important; }
 .gap-3 { gap: 0.75rem !important; }
+.gap-3\.5 { gap: 0.875rem !important; }
 .gap-4 { gap: 1rem !important; }
+.gap-4\.5 { gap: 1.125rem !important; }
 .gap-5 { gap: 1.25rem !important; }
 .gap-6 { gap: 1.5rem !important; }
+.gap-7 { gap: 1.75rem !important; }
 .gap-8 { gap: 2rem !important; }
+.gap-10 { gap: 2.5rem !important; }
+.gap-12 { gap: 3rem !important; }
+.gap-16 { gap: 4rem !important; }
+
+/* Column Gap (X-axis) */
+.gap-x-0 { column-gap: 0px !important; }
+.gap-x-0\.5 { column-gap: 0.125rem !important; }
+.gap-x-1 { column-gap: 0.25rem !important; }
+.gap-x-1\.5 { column-gap: 0.375rem !important; }
+.gap-x-2 { column-gap: 0.5rem !important; }
+.gap-x-2\.5 { column-gap: 0.625rem !important; }
+.gap-x-3 { column-gap: 0.75rem !important; }
+.gap-x-3\.5 { column-gap: 0.875rem !important; }
+.gap-x-4 { column-gap: 1rem !important; }
+.gap-x-5 { column-gap: 1.25rem !important; }
+.gap-x-6 { column-gap: 1.5rem !important; }
+.gap-x-8 { column-gap: 2rem !important; }
+
+/* Row Gap (Y-axis) */
+.gap-y-0 { row-gap: 0px !important; }
+.gap-y-0\.5 { row-gap: 0.125rem !important; }
+.gap-y-1 { row-gap: 0.25rem !important; }
+.gap-y-1\.5 { row-gap: 0.375rem !important; }
+.gap-y-2 { row-gap: 0.5rem !important; }
+.gap-y-2\.5 { row-gap: 0.625rem !important; }
+.gap-y-3 { row-gap: 0.75rem !important; }
+.gap-y-3\.5 { row-gap: 0.875rem !important; }
+.gap-y-4 { row-gap: 1rem !important; }
+.gap-y-5 { row-gap: 1.25rem !important; }
+.gap-y-6 { row-gap: 1.5rem !important; }
+.gap-y-8 { row-gap: 2rem !important; }
 
 .grid { display: grid !important; }
 .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
 .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+.grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
 .grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
 .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
 
@@ -521,8 +559,11 @@ svg {
   border-radius: var(--radius-md);
   color: var(--text-main, #2E1065);
   font-size: 0.875rem;
+  font-family: inherit;
+  min-height: 42px;
+  box-sizing: border-box;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
 }
 
 .form-control:focus {
@@ -532,6 +573,35 @@ svg {
 
 .form-control::placeholder {
   color: var(--text-dim, #9CA3AF);
+}
+
+/* Custom Select Dropdown Styling */
+select.form-control,
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--card-bg, #ffffff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%237E22CE' stroke-width='2.25'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.125rem;
+  padding-right: 2.25rem !important;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+select.form-control:hover,
+select:hover {
+  border-color: var(--primary, #7E22CE);
+}
+
+select.form-control option,
+select option {
+  padding: 0.6rem 0.85rem;
+  background-color: #ffffff;
+  color: #2E1065;
+  font-size: 0.875rem;
 }
 
 /* Badges */
@@ -849,25 +919,7 @@ svg {
   padding-bottom: 2.5rem;
 }
 
-/* Breadcrumbs */
-.breadcrumbs-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--text-muted, #6B7280);
-  font-weight: 600;
-}
-
-.breadcrumb-separator {
-  color: var(--primary, #C084FC);
-  font-weight: 700;
-}
-
-.breadcrumb-current {
-  color: var(--text-main, #2E1065);
-  font-weight: 800;
-}
+/* Breadcrumbs — see section 103 at the end of this file */
 
 /* Page Wrappers */
 .audit-page-wrapper, .users-page-wrapper, .module-page-wrapper {
@@ -1612,15 +1664,44 @@ svg {
 }
 
 .modal-icon-badge {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   background: var(--primary-light, #F3E8FF);
   color: var(--primary, #7E22CE);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--card-border, #D8B4FE);
+  border: 1px solid var(--card-border, #E9D5FF);
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(46, 16, 101, 0.04);
+}
+
+.modal-icon-badge.is-success {
+  background: #DCFCE7;
+  color: #16A34A;
+  border-color: #BBF7D0;
+}
+
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted, #6B7280);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.modal-close-btn:hover {
+  background: var(--primary-light, #F3E8FF);
+  color: var(--primary, #7E22CE);
+  border-color: var(--card-border, #E9D5FF);
 }
 
 .modal-title {
@@ -1629,6 +1710,7 @@ svg {
   font-weight: 800;
   color: var(--text-main, #2E1065);
   margin: 0;
+  line-height: 1.25;
 }
 
 .modal-body-form {
@@ -1902,3 +1984,844 @@ svg {
 .italic        { font-style: italic !important; }
 .line-through  { text-decoration: line-through !important; }
 .hover\:underline:hover { text-decoration: underline !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 99. TEXT SELECTION POLICY                                            */
+/* Content text — headings, labels, table data, computed values — is    */
+/* selectable so it can be highlighted and copied. Interactive chrome   */
+/* (buttons, tabs, icon glyphs) stays non-selectable so a double-click  */
+/* does not highlight a caption, and so copying a table row never drags */
+/* Material Symbol ligature names like "delete" into the clipboard.     */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+html,
+body {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button,
+.btn,
+.action-btn,
+.custom-btn,
+.tab-btn,
+.nav-tab-pill,
+.module-tab-btn,
+.material-symbols-outlined,
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Selection highlight tuned to the royal purple theme */
+::selection {
+  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+  color: var(--text-main, #2E1065);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 100. MODAL / DRAWER CLOSE BUTTON — single source of truth           */
+/* Soft squircle that blooms into the brand gradient on hover, lifts   */
+/* on a layered purple shadow, and spins the glyph a quarter turn.     */
+/* Used by every modal, drawer and side panel in the app.              */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.modal-close-btn {
+  --close-size: 2.25rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--close-size);
+  height: var(--close-size);
+  padding: 0;
+  border-radius: 12px;
+  border: 1.5px solid var(--card-border, #E9D5FF);
+  background: var(--card-bg, #FFFFFF);
+  color: var(--text-muted, #6B7280);
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  box-shadow:
+    0 1px 2px rgba(46, 16, 101, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Brand gradient wash that scales out from the centre on hover */
+.modal-close-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.24s ease,
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-close-btn .material-symbols-outlined {
+  position: relative;
+  z-index: 1;
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-close-btn:hover {
+  color: #FFFFFF;
+  border-color: transparent;
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 18px -5px var(--primary-glow, rgba(126, 34, 206, 0.35)),
+    0 3px 8px -2px rgba(46, 16, 101, 0.14);
+}
+
+.modal-close-btn:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.modal-close-btn:hover .material-symbols-outlined {
+  transform: rotate(90deg);
+}
+
+.modal-close-btn:active {
+  transform: translateY(0) scale(0.93);
+  box-shadow: 0 2px 6px -2px var(--primary-glow, rgba(126, 34, 206, 0.35));
+  transition-duration: 0.09s;
+}
+
+.modal-close-btn:focus-visible {
+  border-color: var(--primary, #7E22CE);
+  box-shadow:
+    0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1)),
+    0 6px 16px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+}
+
+/* Variant for close buttons sitting on a dark header bar */
+.modal-close-btn.is-on-dark {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sidebar-text-muted, #D8B4FE);
+  box-shadow: none;
+}
+
+.modal-close-btn.is-on-dark::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+}
+
+.modal-close-btn.is-on-dark:hover {
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-close-btn,
+  .modal-close-btn::before,
+  .modal-close-btn .material-symbols-outlined {
+    transition-duration: 0.01ms;
+  }
+
+  .modal-close-btn:hover,
+  .modal-close-btn:hover .material-symbols-outlined,
+  .modal-close-btn:hover::before {
+    transform: none;
+  }
+
+  .modal-close-btn:hover::before {
+    opacity: 1;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 101. MODAL HEADER ICON BADGE — single source of truth               */
+/* Companion to .modal-close-btn at the other end of the header bar:   */
+/* same squircle, same brand gradient, same layered glow. Pops in when */
+/* the modal opens and lifts on hover.                                 */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.modal-icon-badge {
+  --badge-size: 2.5rem;
+  --badge-from: var(--primary, #7E22CE);
+  --badge-to: var(--primary-hover, #9333EA);
+  --badge-glow: var(--primary-glow, rgba(126, 34, 206, 0.35));
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--badge-size);
+  height: var(--badge-size);
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--badge-from), var(--badge-to));
+  color: #FFFFFF;
+  overflow: hidden;
+  box-shadow:
+    0 6px 16px -6px var(--badge-glow),
+    0 2px 5px -1px rgba(46, 16, 101, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-icon-pop 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Diagonal gloss so the squircle reads as a lit surface, not a flat chip */
+.modal-icon-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+.modal-icon-badge .material-symbols-outlined {
+  position: relative;
+  z-index: 1;
+  font-size: 22px;
+  line-height: 1;
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-icon-badge:hover {
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 10px 22px -7px var(--badge-glow),
+    0 3px 8px -2px rgba(46, 16, 101, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.modal-icon-badge:hover .material-symbols-outlined {
+  transform: scale(1.08);
+}
+
+@keyframes modal-icon-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.72) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* ── Semantic variants ── */
+.modal-icon-badge.is-success {
+  --badge-from: #16A34A;
+  --badge-to: #22C55E;
+  --badge-glow: rgba(22, 163, 74, 0.38);
+}
+
+.modal-icon-badge.is-teal {
+  --badge-from: #008080;
+  --badge-to: #0D9488;
+  --badge-glow: rgba(13, 148, 136, 0.38);
+}
+
+.modal-icon-badge.is-danger {
+  --badge-from: #DC2626;
+  --badge-to: #EF4444;
+  --badge-glow: rgba(220, 38, 38, 0.38);
+}
+
+.modal-icon-badge.is-warning {
+  --badge-from: #EA580C;
+  --badge-to: #F97316;
+  --badge-glow: rgba(234, 88, 12, 0.38);
+}
+
+/* For header bars that are already dark */
+.modal-icon-badge.is-on-dark {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.modal-icon-badge.is-on-dark:hover {
+  box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-icon-badge {
+    animation: none;
+  }
+
+  .modal-icon-badge,
+  .modal-icon-badge .material-symbols-outlined {
+    transition-duration: 0.01ms;
+  }
+
+  .modal-icon-badge:hover,
+  .modal-icon-badge:hover .material-symbols-outlined {
+    transform: none;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 102. BACK BUTTON — single source of truth                           */
+/* Third member of the header-control family alongside                 */
+/* .modal-close-btn and .modal-icon-badge: same squircle, same brand   */
+/* gradient bloom, same layered glow. The arrow slides left on hover   */
+/* — the directional cue for "back", mirroring the close button's      */
+/* quarter turn.                                                       */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.back-btn {
+  --back-size: 2.5rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--back-size);
+  height: var(--back-size);
+  padding: 0;
+  border-radius: 14px;
+  border: 1.5px solid var(--card-border, #E9D5FF);
+  background: var(--card-bg, #FFFFFF);
+  color: var(--primary, #7E22CE);
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  box-shadow:
+    0 1px 2px rgba(46, 16, 101, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.back-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.24s ease,
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.back-btn .material-symbols-outlined {
+  position: relative;
+  z-index: 1;
+  font-size: 21px;
+  line-height: 1;
+  transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.back-btn:hover {
+  color: #FFFFFF;
+  border-color: transparent;
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 18px -5px var(--primary-glow, rgba(126, 34, 206, 0.35)),
+    0 3px 8px -2px rgba(46, 16, 101, 0.14);
+}
+
+.back-btn:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Directional cue: the arrow pulls toward where it will take you */
+.back-btn:hover .material-symbols-outlined {
+  transform: translateX(-3px);
+}
+
+.back-btn:active {
+  transform: translateY(0) scale(0.93);
+  box-shadow: 0 2px 6px -2px var(--primary-glow, rgba(126, 34, 206, 0.35));
+  transition-duration: 0.09s;
+}
+
+.back-btn:focus-visible {
+  border-color: var(--primary, #7E22CE);
+  box-shadow:
+    0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1)),
+    0 6px 16px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-btn,
+  .back-btn::before,
+  .back-btn .material-symbols-outlined {
+    transition-duration: 0.01ms;
+  }
+
+  .back-btn:hover,
+  .back-btn:hover .material-symbols-outlined {
+    transform: none;
+  }
+
+  .back-btn:hover::before {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 103. BREADCRUMBS — single source of truth                           */
+/* The flat text row becomes a floating glass pill that shares the     */
+/* header-control family's squircle, glow and easing. Crumbs stagger   */
+/* in on load, links grow a tinted chip on hover, and the trailing     */
+/* "you are here" crumb sits in a solid brand chip.                    */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.breadcrumbs-row {
+  align-self: flex-start;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--card-border, #E9D5FF);
+  background: color-mix(in srgb, var(--card-bg, #FFFFFF) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  backdrop-filter: blur(10px) saturate(1.4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted, #6B7280);
+  flex-wrap: wrap;
+  row-gap: 0.2rem;
+  box-shadow:
+    0 2px 10px -4px rgba(46, 16, 101, 0.16),
+    0 1px 2px rgba(46, 16, 101, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition:
+    box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: breadcrumbs-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.breadcrumbs-row:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary, #7E22CE) 30%, var(--card-border, #E9D5FF));
+  box-shadow:
+    0 8px 22px -8px var(--primary-glow, rgba(126, 34, 206, 0.35)),
+    0 2px 6px -1px rgba(46, 16, 101, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Each crumb drifts in from the left, one after the next */
+.breadcrumbs-row > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  animation: breadcrumb-item-in 0.44s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.breadcrumbs-row > *:nth-child(1) { animation-delay: 0.06s; }
+.breadcrumbs-row > *:nth-child(2) { animation-delay: 0.11s; }
+.breadcrumbs-row > *:nth-child(3) { animation-delay: 0.16s; }
+.breadcrumbs-row > *:nth-child(4) { animation-delay: 0.21s; }
+.breadcrumbs-row > *:nth-child(5) { animation-delay: 0.26s; }
+.breadcrumbs-row > *:nth-child(6) { animation-delay: 0.31s; }
+.breadcrumbs-row > *:nth-child(7) { animation-delay: 0.36s; }
+.breadcrumbs-row > *:nth-child(8) { animation-delay: 0.41s; }
+.breadcrumbs-row > *:nth-child(9) { animation-delay: 0.46s; }
+
+.breadcrumb-separator {
+  padding: 0 0.1rem;
+  color: color-mix(in srgb, var(--primary, #7E22CE) 45%, transparent);
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.breadcrumbs-row:hover .breadcrumb-separator {
+  color: var(--primary, #7E22CE);
+}
+
+/* Navigable crumbs: a tinted chip wipes in behind the label */
+.breadcrumbs-row a,
+.breadcrumb-link {
+  position: relative;
+  color: var(--text-muted, #6B7280);
+  text-decoration: none;
+  cursor: pointer;
+  isolation: isolate;
+  transition:
+    color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.breadcrumbs-row a::after,
+.breadcrumb-link::after {
+  content: '';
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  bottom: 0.08rem;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--primary, #7E22CE);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.breadcrumbs-row a:hover,
+.breadcrumb-link:hover {
+  color: var(--primary, #7E22CE);
+  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+}
+
+.breadcrumbs-row a:hover::after,
+.breadcrumb-link:hover::after {
+  transform: scaleX(1);
+}
+
+.breadcrumbs-row a:focus-visible,
+.breadcrumb-link:focus-visible {
+  outline: none;
+  color: var(--primary, #7E22CE);
+  box-shadow: 0 0 0 2.5px var(--primary-light, rgba(126, 34, 206, 0.1));
+}
+
+/* "You are here" — the only crumb that carries a solid chip */
+.breadcrumb-current {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+  color: #FFFFFF;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 3px 10px -4px var(--primary-glow, rgba(126, 34, 206, 0.35)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+@keyframes breadcrumbs-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes breadcrumb-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breadcrumbs-row,
+  .breadcrumbs-row > * {
+    animation: none;
+  }
+
+  .breadcrumbs-row,
+  .breadcrumbs-row a,
+  .breadcrumb-link,
+  .breadcrumbs-row a::after,
+  .breadcrumb-link::after {
+    transition-duration: 0.01ms;
+  }
+
+  .breadcrumbs-row:hover {
+    transform: none;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 104. BUTTON FAMILY — single source of truth                         */
+/* Part A gives every <button> in the app the family's press feedback  */
+/* and focus ring. Part B gives the action buttons the full            */
+/* .modal-close-btn treatment: a brand gradient that blooms out from   */
+/* the centre, a lift on layered glow, and a tactile press.            */
+/* Bloom colour is driven by --btn-bloom-* so a variant only has to    */
+/* restate three custom properties.                                    */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+/* ── A. Universal interaction layer ── */
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1));
+}
+
+/* ── B. Action buttons ── */
+
+.btn,
+.action-btn,
+.audit-btn,
+.action-icon-btn,
+.page-nav-btn,
+.page-num-btn,
+.page-pill-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The bloom sits above the button's own background but below its text:
+   a negative stack level inside the button's own isolated context. */
+.btn::before,
+.action-btn::before,
+.audit-btn::before,
+.action-icon-btn::before,
+.page-nav-btn::before,
+.page-num-btn::before,
+.page-pill-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    var(--btn-bloom-from, var(--primary, #7E22CE)),
+    var(--btn-bloom-to, var(--primary-hover, #9333EA))
+  );
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.24s ease,
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn:hover:not(:disabled)::before,
+.action-btn:hover:not(:disabled)::before,
+.audit-btn:hover:not(:disabled)::before,
+.action-icon-btn:hover:not(:disabled)::before,
+.page-nav-btn:hover:not(:disabled)::before,
+.page-num-btn:hover:not(:disabled)::before,
+.page-pill-btn:hover:not(:disabled)::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.btn .material-symbols-outlined,
+.action-btn .material-symbols-outlined,
+.audit-btn .material-symbols-outlined,
+.action-icon-btn .material-symbols-outlined,
+.page-nav-btn .material-symbols-outlined,
+.page-num-btn .material-symbols-outlined,
+.page-pill-btn .material-symbols-outlined {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn:hover:not(:disabled),
+.action-btn:hover:not(:disabled),
+.audit-btn:hover:not(:disabled),
+.action-icon-btn:hover:not(:disabled),
+.page-nav-btn:hover:not(:disabled),
+.page-num-btn:hover:not(:disabled),
+.page-pill-btn:hover:not(:disabled) {
+  color: #FFFFFF;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 18px -5px var(--btn-bloom-glow, var(--primary-glow, rgba(126, 34, 206, 0.35))),
+    0 3px 8px -2px rgba(46, 16, 101, 0.14);
+}
+
+.btn:hover:not(:disabled) .material-symbols-outlined,
+.action-btn:hover:not(:disabled) .material-symbols-outlined,
+.audit-btn:hover:not(:disabled) .material-symbols-outlined,
+.action-icon-btn:hover:not(:disabled) .material-symbols-outlined,
+.page-nav-btn:hover:not(:disabled) .material-symbols-outlined,
+.page-num-btn:hover:not(:disabled) .material-symbols-outlined,
+.page-pill-btn:hover:not(:disabled) .material-symbols-outlined {
+  transform: scale(1.12);
+}
+
+/* Press: must sit after the hover rules — same specificity, later wins */
+.btn:not(:disabled):active,
+.action-btn:not(:disabled):active,
+.audit-btn:not(:disabled):active,
+.action-icon-btn:not(:disabled):active,
+.page-nav-btn:not(:disabled):active,
+.page-num-btn:not(:disabled):active,
+.page-pill-btn:not(:disabled):active {
+  transform: translateY(0) scale(0.95);
+  transition-duration: 0.09s;
+}
+
+.btn:focus-visible,
+.action-btn:focus-visible,
+.audit-btn:focus-visible,
+.action-icon-btn:focus-visible,
+.page-nav-btn:focus-visible,
+.page-num-btn:focus-visible,
+.page-pill-btn:focus-visible {
+  outline: none;
+  border-color: var(--primary, #7E22CE);
+  box-shadow:
+    0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1)),
+    0 6px 16px -6px var(--btn-bloom-glow, var(--primary-glow, rgba(126, 34, 206, 0.35)));
+}
+
+/* The filled variant blooms one step brighter than it already is */
+.btn-gradient-purple {
+  --btn-bloom-from: var(--primary-hover, #9333EA);
+  --btn-bloom-to: var(--secondary-hover, #A855F7);
+}
+
+/* ── C. Row action icon buttons (view / edit / delete in tables) ── */
+
+.action-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: var(--primary, #7E22CE);
+}
+
+.action-icon-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.action-icon-btn.is-danger {
+  color: var(--danger, #DC2626);
+  --btn-bloom-from: #DC2626;
+  --btn-bloom-to: #EF4444;
+  --btn-bloom-glow: rgba(220, 38, 38, 0.38);
+}
+
+.action-icon-btn.is-success {
+  color: var(--success, #16A34A);
+  --btn-bloom-from: #16A34A;
+  --btn-bloom-to: #22C55E;
+  --btn-bloom-glow: rgba(22, 163, 74, 0.38);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .action-btn,
+  .audit-btn,
+  .action-icon-btn,
+  .page-nav-btn,
+  .page-num-btn,
+  .page-pill-btn,
+  .btn::before,
+  .action-btn::before,
+  .audit-btn::before,
+  .action-icon-btn::before,
+  .page-nav-btn::before,
+  .page-num-btn::before,
+  .page-pill-btn::before {
+    transition-duration: 0.01ms;
+  }
+
+  button:not(:disabled):active,
+  .btn:hover:not(:disabled),
+  .action-btn:hover:not(:disabled),
+  .audit-btn:hover:not(:disabled),
+  .action-icon-btn:hover:not(:disabled),
+  .page-nav-btn:hover:not(:disabled),
+  .page-num-btn:hover:not(:disabled),
+  .page-pill-btn:hover:not(:disabled),
+  .btn:hover:not(:disabled) .material-symbols-outlined,
+  .action-btn:hover:not(:disabled) .material-symbols-outlined,
+  .audit-btn:hover:not(:disabled) .material-symbols-outlined,
+  .action-icon-btn:hover:not(:disabled) .material-symbols-outlined {
+    transform: none;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 105. CLICKABLE TABLE ROWS                                           */
+/* A row that opens a view page. Built for touch first: there is no    */
+/* hover on a touchscreen, so :active carries the feedback and the     */
+/* native tap highlight is replaced with a deliberate one. The row is  */
+/* a convenience target — every such row still carries an explicit     */
+/* View button, which is what keyboard and screen-reader users use.    */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.saas-data-table tbody tr.clickable-row,
+.saas-table tbody tr.clickable-row {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.saas-data-table tbody tr.clickable-row:hover,
+.saas-table tbody tr.clickable-row:hover {
+  background: var(--card-hover, #FDF4FF);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--primary, #7E22CE) 16%, transparent);
+}
+
+/* Press feedback — the only feedback a touchscreen ever gets */
+.saas-data-table tbody tr.clickable-row:active,
+.saas-table tbody tr.clickable-row:active {
+  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--primary, #7E22CE) 30%, transparent);
+}
+
+/* The actions cell opts out: its buttons stop propagation in the
+   template, and it should not look like part of the row target. */
+.saas-data-table tbody tr.clickable-row td.row-actions-cell,
+.saas-table tbody tr.clickable-row td.row-actions-cell {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saas-data-table tbody tr.clickable-row,
+  .saas-table tbody tr.clickable-row {
+    transition-duration: 0.01ms;
+  }
+}

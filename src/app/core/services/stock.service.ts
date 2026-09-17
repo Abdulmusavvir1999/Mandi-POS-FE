@@ -51,6 +51,8 @@ export class StockService {
     minStockAlert?: number;
     productId?: number | null;
     initialQuantity?: number;
+    multiplier?: number;
+    initialTotalPrice?: number;
     initialPrice?: number;
   }): Observable<ApiResponse<StockItem>> {
     return this.http.post<ApiResponse<StockItem>>(`${this.API_URL}/items`, data);

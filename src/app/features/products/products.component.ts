@@ -234,6 +234,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search dishes"
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
@@ -315,6 +316,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               <tr>
                 <th style="width: 44px; text-align: center;">
                   <input
+                    title="Select all dishes"
                     type="checkbox"
                     [(ngModel)]="selectAll"
                     (change)="toggleSelectAll()"
@@ -341,6 +343,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 <!-- Checkbox -->
                 <td style="text-align: center;">
                   <input
+                    title="Select this dish"
                     type="checkbox"
                     [(ngModel)]="p.selected"
                     class="rounded border-[#E9D5FF] text-[#7E22CE]"
@@ -422,7 +425,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     <button
                       type="button"
                       (click)="openEditModal(p)"
-                      class="action-icon-btn text-[#7E22CE] hover:bg-[#F3E8FF]"
+                      class="action-icon-btn"
                       title="Edit Dish"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
@@ -430,7 +433,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     <button
                       type="button"
                       (click)="deleteProduct(p)"
-                      class="action-icon-btn text-[#DC2626] hover:bg-[#FEE2E2]"
+                      class="action-icon-btn is-danger"
                       title="Delete Dish"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
@@ -507,136 +510,168 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 7. ADD / EDIT PRODUCT MODAL                                     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showProductModal">
-        <div class="modal-content p-6 max-w-xl">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">
-                {{ editingProductId ? 'edit' : 'restaurant' }}
+        <div class="modal-content p-6 max-w-xl shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">{{ editingProductId ? 'edit' : 'restaurant' }}</span>
               </span>
-              <h3 class="text-lg font-black text-[#2E1065]">
-                {{ editingProductId ? 'Edit Product Dish' : 'Add New Menu Dish' }}
-              </h3>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                  {{ editingProductId ? 'Edit Product Dish' : 'Add New Menu Dish' }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure menu item pricing, tax, category, and inventory alerts</p>
+              </div>
             </div>
             <button
               type="button"
               (click)="showProductModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveProduct()" class="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group">
-                <label class="form-label">Dish Name</label>
+          <form (ngSubmit)="saveProduct()" class="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Dish Name
+                </label>
                 <input
+                  title="Dish Name"
                   type="text"
                   [(ngModel)]="productForm.name"
                   name="name"
                   placeholder="e.g. Mutton Mandi Full"
-                  class="form-control"
+                  class="form-control text-sm w-full"
                   required
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">SKU / Item Code</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  SKU / Item Code
+                </label>
                 <input
+                  title="SKU / Item Code"
                   type="text"
                   [(ngModel)]="productForm.sku"
                   name="sku"
                   placeholder="e.g. MND-MUT-F"
-                  class="form-control font-mono font-bold"
+                  class="form-control font-mono font-bold text-sm w-full"
                   required
                 />
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group">
-                <label class="form-label">Category</label>
-                <select [(ngModel)]="productForm.categoryId" name="categoryId" class="form-control" required>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Category
+                </label>
+                <select [(ngModel)]="productForm.categoryId" name="categoryId" class="form-control text-sm w-full" required>
                   <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">Status</label>
-                <select [(ngModel)]="productForm.status" name="status" class="form-control">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Status
+                </label>
+                <select [(ngModel)]="productForm.status" name="status" class="form-control text-sm w-full">
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
                 </select>
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Description</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Description
+              </label>
               <textarea
                 [(ngModel)]="productForm.description"
                 name="description"
                 rows="2"
                 placeholder="Fragrant basmati rice served with roasted spiced meat..."
-                class="form-control"
+                class="form-control text-sm w-full"
               ></textarea>
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
-              <div class="form-group">
-                <label class="form-label">Selling Price ({{ settingsService.currencySymbol() }})</label>
+            <div class="grid grid-cols-3 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Selling Price ({{ settingsService.currencySymbol() }})
+                </label>
                 <input
+                  title="Selling Price ({{ settingsService.currencySymbol() }})"
                   type="number"
                   min="0"
                   [(ngModel)]="productForm.sellingPrice"
                   name="sellingPrice"
-                  class="form-control font-mono font-bold text-[#7E22CE]"
+                  class="form-control font-mono font-bold text-[#7E22CE] text-sm w-full"
                   required
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">Cost Price ({{ settingsService.currencySymbol() }})</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Cost Price ({{ settingsService.currencySymbol() }})
+                </label>
                 <input
+                  title="Cost Price ({{ settingsService.currencySymbol() }})"
                   type="number"
                   min="0"
                   [(ngModel)]="productForm.costPrice"
                   name="costPrice"
-                  class="form-control font-mono"
+                  class="form-control font-mono text-sm w-full"
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">Tax Rate (%)</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Tax Rate (%)
+                </label>
                 <input
+                  title="Tax Rate (%)"
                   type="number"
                   min="0"
                   [(ngModel)]="productForm.taxRate"
                   name="taxRate"
-                  class="form-control font-mono"
+                  class="form-control font-mono text-sm w-full"
                 />
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3" *ngIf="!editingProductId">
-              <div class="form-group">
-                <label class="form-label">Initial Stock Quantity</label>
+            <div class="grid grid-cols-2 gap-4 items-start" *ngIf="!editingProductId">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Initial Stock Quantity
+                </label>
                 <input
+                  title="Initial Stock Quantity"
                   type="number"
                   min="0"
                   [(ngModel)]="productForm.initialStock"
                   name="initialStock"
-                  class="form-control font-mono"
+                  class="form-control font-mono text-sm w-full"
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">Low Stock Alert Level</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Low Stock Alert Level
+                </label>
                 <input
+                  title="Low Stock Alert Level"
                   type="number"
                   min="1"
                   [(ngModel)]="productForm.lowStockThreshold"
                   name="lowStockThreshold"
-                  class="form-control font-mono"
+                  class="form-control font-mono text-sm w-full"
                 />
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showProductModal = false"
@@ -648,7 +683,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 type="submit"
                 class="action-btn btn-gradient-purple"
               >
-                Save Product
+                Save Product ✓
               </button>
             </div>
           </form>
@@ -658,18 +693,6 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
   `,
   styles: [
     `
-      .action-icon-btn {
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
     `
   ]
 })

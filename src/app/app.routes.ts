@@ -94,6 +94,13 @@ export const routes: Routes = [
         data: { permission: 'stock.view' },
       },
       {
+        path: 'stock/:id',
+        loadComponent: () =>
+          import('./features/stock/stock-detail/stock-detail.component').then((m) => m.StockDetailComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'stock.view' },
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/customers/customers.component').then((m) => m.CustomersComponent),

@@ -1,17 +1,19 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { StockService } from '../../core/services/stock.service';
 import { ProductService } from '../../core/services/product.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { StockItem, StockEntry, StockMovement, Product, StockUnitType } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
+import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -239,6 +241,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search stock items"
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
@@ -256,36 +259,24 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
 
           <!-- Unit Type filter (for Master tab) -->
-          <select
+          <app-custom-dropdown
             *ngIf="activeTab === 'MASTER'"
+            [options]="unitFilterOptions"
             [(ngModel)]="selectedUnitType"
-            (ngModelChange)="currentPage = 1; loadStockMaster()"
-            class="form-control !w-auto text-xs py-1.5"
-          >
-            <option value="">All Units</option>
-            <option value="piece">Piece (pcs)</option>
-            <option value="kg">Kilogram (kg)</option>
-            <option value="liter">Liter (L)</option>
-            <option value="gram">Gram (g)</option>
-            <option value="portion">Portion</option>
-            <option value="box">Box</option>
-            <option value="packet">Packet</option>
-          </select>
+            (valueChange)="currentPage = 1; loadStockMaster()"
+            placeholder="All Units"
+            minWidth="160px"
+          ></app-custom-dropdown>
 
           <!-- Movement Type filter (for Movements tab) -->
-          <select
+          <app-custom-dropdown
             *ngIf="activeTab === 'MOVEMENTS'"
+            [options]="movementFilterOptions"
             [(ngModel)]="selectedMovementType"
-            (ngModelChange)="currentPage = 1; loadStockMovements()"
-            class="form-control !w-auto text-xs py-1.5"
-          >
-            <option value="all">All Movement Types</option>
-            <option value="in">IN (Purchases / Additions)</option>
-            <option value="out">OUT (Sales / Deductions)</option>
-            <option value="adjustment">ADJUSTMENT (Audit)</option>
-            <option value="wastage">WASTAGE (Kitchen Prep / Spoilage)</option>
-            <option value="return">RETURN</option>
-          </select>
+            (valueChange)="currentPage = 1; loadStockMovements()"
+            placeholder="All Movement Types"
+            minWidth="200px"
+          ></app-custom-dropdown>
 
           <!-- Meta Record Count -->
           <span class="toolbar-meta-count hidden sm:inline-block">
@@ -336,7 +327,12 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of paginatedMasterItems">
+              <tr
+                *ngFor="let item of paginatedMasterItems"
+                class="clickable-row"
+                (click)="viewItemHistory(item)"
+                title="Open stock ledger view"
+              >
                 <!-- Stock Code -->
                 <td>
                   <span class="font-mono text-xs font-bold text-[var(--primary)] bg-[var(--bg-app)] px-2.5 py-1 rounded-md border border-[var(--card-border)]">
@@ -347,7 +343,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 <!-- Name & Alert Status -->
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-[var(--primary-light)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--primary)] shrink-0 shadow-xs">
+                    <div
+                      class="w-9 h-9 rounded-xl bg-[var(--primary-light)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--primary)] shrink-0 shadow-xs"
+                    >
                       <span class="material-symbols-outlined" style="font-size: 20px;">inventory_2</span>
                     </div>
                     <div class="min-w-0">
@@ -406,7 +404,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 </td>
 
                 <!-- Actions -->
-                <td style="text-align: center;">
+                <td style="text-align: center;" class="row-actions-cell" (click)="$event.stopPropagation()">
                   <div class="flex items-center justify-center gap-1.5">
                     <button
                       type="button"
@@ -630,7 +628,12 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of paginatedLowStockList">
+              <tr
+                *ngFor="let item of paginatedLowStockList"
+                class="clickable-row"
+                (click)="viewItemHistory(item)"
+                title="Open stock ledger view"
+              >
                 <td>
                   <span class="font-mono text-xs font-bold text-[#DC2626] bg-[#FEE2E2] px-2.5 py-1 rounded-md border border-[#FECACA]">
                     {{ item.stock_code }}
@@ -638,11 +641,15 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 </td>
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-[#FEE2E2] border border-[#FECACA] flex items-center justify-center font-bold text-xs text-[#DC2626] shrink-0 shadow-xs">
+                    <div
+                      class="w-9 h-9 rounded-xl bg-[#FEE2E2] border border-[#FECACA] flex items-center justify-center font-bold text-xs text-[#DC2626] shrink-0 shadow-xs"
+                    >
                       <span class="material-symbols-outlined" style="font-size: 20px;">warning</span>
                     </div>
                     <div class="min-w-0">
-                      <div class="font-bold text-[var(--text-main)] text-xs truncate">{{ item.name }}</div>
+                      <div class="font-bold text-[var(--text-main)] text-xs truncate">
+                        {{ item.name }}
+                      </div>
                       <div class="text-[10px] text-[#DC2626] font-semibold">Critical Restock Needed</div>
                     </div>
                   </div>
@@ -660,14 +667,24 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     {{ item.current_value | appCurrency:'1.0-2' }}
                   </span>
                 </td>
-                <td style="text-align: center;">
-                  <button
-                    type="button"
-                    (click)="quickPurchaseEntry(item)"
-                    class="action-btn btn-gradient-purple !py-1 !px-3 !text-xs"
-                  >
-                    + Restock
-                  </button>
+                <td style="text-align: center;" class="row-actions-cell" (click)="$event.stopPropagation()">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      (click)="quickPurchaseEntry(item)"
+                      class="action-btn btn-gradient-purple !py-1 !px-2.5 !text-xs"
+                    >
+                      + Restock
+                    </button>
+                    <button
+                      type="button"
+                      (click)="viewItemHistory(item)"
+                      class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
+                      title="View Details & Ledger"
+                    >
+                      <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
 
@@ -731,64 +748,85 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showPurchaseModal">
         <div class="modal-content p-6 max-w-lg">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#16A34A] text-2xl">add_shopping_cart</span>
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge is-success">
+                <span class="material-symbols-outlined">add_shopping_cart</span>
+              </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065]">Stock Purchase / Addition Entry</h3>
-                <p class="text-xs text-[var(--text-muted)]">Calculates Quantity × Multiplier and updates Weighted Average Cost</p>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">Stock Purchase / Addition Entry</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Calculates Quantity × Multiplier and updates Weighted Average Cost</p>
               </div>
             </div>
             <button
               type="button"
               (click)="showPurchaseModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="submitPurchaseEntry()" class="space-y-4 py-4">
+          <form (ngSubmit)="submitPurchaseEntry()" class="space-y-4">
             <!-- Select Master Item -->
-            <div class="form-group">
-              <label class="form-label">Select Stock Item Master</label>
-              <select [(ngModel)]="purchaseForm.stockItemId" name="stockItemId" class="form-control" required>
-                <option *ngFor="let item of stockItems" [ngValue]="item.id">
-                  {{ item.name }} ({{ item.stock_code }}) — Current: {{ item.current_quantity }} {{ item.unit_type }} &#64; {{ item.average_unit_price | appCurrency:'1.0-2' }}
-                </option>
-              </select>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Select Stock Item Master
+              </label>
+              <app-custom-dropdown
+                [options]="stockItemOptions"
+                [(ngModel)]="purchaseForm.stockItemId"
+                name="stockItemId"
+                [searchable]="true"
+                minWidth="100%"
+                placeholder="Select Stock Item..."
+              ></app-custom-dropdown>
             </div>
 
-            <!-- Formula Grid: Quantity & Multiplier -->
-            <div class="p-3.5 bg-[#F9F5FF] border border-[#E9D5FF] rounded-xl space-y-3">
-              <div class="text-xs font-bold text-[#6B21A8] flex items-center gap-1.5">
-                <span class="material-symbols-outlined" style="font-size: 16px;">calculate</span>
-                <span>Purchase Formula: Quantity × Multiplier</span>
+            <!-- Formula Section: Quantity × Multiplier -->
+            <div class="pt-4 border-t border-[#E9D5FF] space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-bold text-[#6B21A8] flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[#7E22CE]" style="font-size: 18px;">calculate</span>
+                  <span class="uppercase tracking-wider">Purchase Formula: Quantity × Multiplier</span>
+                </div>
+                <span class="text-[10px] font-bold text-[#7E22CE] bg-[#F3E8FF] border border-[#DDD6FE] px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                  3-Tier Stock Ledger
+                </span>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
-                <div class="form-group">
-                  <label class="form-label">Base Quantity</label>
+              <!-- Base Quantity & Multiplier Grid -->
+              <div class="grid grid-cols-2 gap-4 items-start">
+                <div class="form-group mb-0">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                    Base Quantity
+                  </label>
                   <input
+                    title="Base Quantity"
                     type="number"
                     min="0.001"
                     step="any"
                     [(ngModel)]="purchaseForm.quantity"
                     name="quantity"
-                    class="form-control font-mono font-bold text-lg"
+                    class="form-control font-mono font-bold text-base w-full"
                     placeholder="e.g. 5"
                     required
                   />
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Multiplier</label>
+                <div class="form-group mb-0">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                    Multiplier
+                  </label>
                   <input
+                    title="Multiplier"
                     type="number"
                     min="0.001"
                     step="any"
                     [(ngModel)]="purchaseForm.multiplier"
                     name="multiplier"
-                    class="form-control font-mono font-bold text-lg"
+                    class="form-control font-mono font-bold text-base w-full"
                     placeholder="e.g. 4"
                     required
                   />
@@ -796,58 +834,75 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </div>
 
               <!-- Live Total Quantity Display -->
-              <div class="flex items-center justify-between p-2.5 bg-white border border-[#DDD6FE] rounded-lg text-xs">
-                <span class="text-[#6B7280] font-medium">Calculated Total Quantity:</span>
-                <span class="font-mono font-black text-sm text-[#16A34A]">
+              <div class="flex items-center justify-between p-3 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl text-xs shadow-xs w-full">
+                <span class="text-[#4B5563] font-semibold flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[#16A34A]" style="font-size: 18px;">inventory_2</span>
+                  <span>Calculated Total Quantity:</span>
+                </span>
+                <span class="font-mono font-black text-sm text-[#16A34A] bg-[#DCFCE7] border border-[#86EFAC] px-3 py-1 rounded-lg">
                   {{ calculatedTotalQuantity | number:'1.0-3' }} {{ selectedPurchaseItem?.unit_type || 'units' }}
                 </span>
               </div>
 
-              <!-- Total Purchase Price -->
-              <div class="form-group">
-                <label class="form-label">Total Purchase Price (₹ / SAR)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  [(ngModel)]="purchaseForm.totalPrice"
-                  name="totalPrice"
-                  class="form-control font-mono font-black text-lg text-purple-950"
-                  placeholder="e.g. 2000"
-                  required
-                />
+              <!-- Price Grid: Total Purchase Price vs Resulting Unit Cost -->
+              <div class="grid grid-cols-2 gap-4 items-end">
+                <div class="form-group mb-0">
+                  <div class="flex items-center justify-between min-h-[20px] mb-2">
+                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                      Total Purchase Price (₹ / SAR)
+                    </label>
+                  </div>
+                  <input
+                    title="Total Purchase Price (₹ / SAR)"
+                    type="number"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="purchaseForm.totalPrice"
+                    name="totalPrice"
+                    class="form-control font-mono font-bold text-[#2E1065] w-full"
+                    placeholder="e.g. 2000"
+                    required
+                  />
+                </div>
+                <div class="form-group mb-0">
+                  <div class="flex items-center justify-between min-h-[20px] mb-2">
+                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                      Resulting Unit Cost
+                    </label>
+                    <span class="text-[9px] text-[#7E22CE] font-bold bg-[#F3E8FF] px-1.5 py-0.5 rounded border border-[#DDD6FE] whitespace-nowrap">
+                      Auto-calculated
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between px-3.5 py-2.5 bg-[#F3F4F6] border border-[#D1D5DB] rounded-xl text-sm font-mono font-bold text-[#4B5563] min-h-[42px] w-full">
+                    <span>{{ calculatedUnitPrice | appCurrency:'1.0-4' }}</span>
+                    <span class="text-[10px] font-normal text-[#6B7280]">/ {{ selectedPurchaseItem?.unit_type || 'unit' }}</span>
+                  </div>
+                </div>
               </div>
 
-              <!-- Live Unit Price Calculation -->
-              <div class="flex items-center justify-between p-2.5 bg-white border border-[#DDD6FE] rounded-lg text-xs">
-                <span class="text-[#6B7280] font-medium">Resulting Unit Cost:</span>
-                <span class="font-mono font-black text-sm text-[#7E22CE]">
-                  {{ calculatedUnitPrice | appCurrency:'1.0-4' }} <span class="text-[10px] font-normal text-[#6B7280]">/ {{ selectedPurchaseItem?.unit_type || 'unit' }}</span>
-                </span>
-              </div>
-            </div>
-
-            <!-- Impact Simulation Card -->
-            <div *ngIf="selectedPurchaseItem" class="p-3 bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl text-xs space-y-1.5">
-              <div class="font-bold text-[#065F46] flex items-center gap-1">
-                <span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span>
-                <span>Projected Master Stock Balance Update:</span>
-              </div>
-              <div class="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1">
-                <div>Current: <strong>{{ selectedPurchaseItem.current_quantity }}</strong> {{ selectedPurchaseItem.unit_type }} &#64; {{ selectedPurchaseItem.average_unit_price | appCurrency:'1.0-2' }}</div>
-                <div class="text-[#047857]">Adding: <strong>+{{ calculatedTotalQuantity }}</strong> &#64; {{ calculatedUnitPrice | appCurrency:'1.0-2' }}</div>
-              </div>
-              <div class="pt-1 border-t border-[#A7F3D0] flex items-center justify-between font-mono font-black text-[#065F46]">
-                <span>New Balance: {{ projectedQuantity | number:'1.0-3' }} {{ selectedPurchaseItem.unit_type }}</span>
-                <span>New Avg Cost: {{ projectedAvgPrice | appCurrency:'1.0-4' }}</span>
+              <!-- Impact Simulation Card -->
+              <div *ngIf="selectedPurchaseItem" class="p-3 bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl text-xs space-y-1.5 w-full">
+                <div class="font-bold text-[#065F46] flex items-center gap-1">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span>
+                  <span>Projected Master Stock Balance Update:</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1">
+                  <div>Current: <strong>{{ selectedPurchaseItem.current_quantity }}</strong> {{ selectedPurchaseItem.unit_type }} &#64; {{ selectedPurchaseItem.average_unit_price | appCurrency:'1.0-2' }}</div>
+                  <div class="text-[#047857]">Adding: <strong>+{{ calculatedTotalQuantity }}</strong> &#64; {{ calculatedUnitPrice | appCurrency:'1.0-2' }}</div>
+                </div>
+                <div class="pt-1 border-t border-[#A7F3D0] flex items-center justify-between font-mono font-black text-[#065F46]">
+                  <span>New Balance: {{ projectedQuantity | number:'1.0-3' }} {{ selectedPurchaseItem.unit_type }}</span>
+                  <span>New Avg Cost: {{ projectedAvgPrice | appCurrency:'1.0-4' }}</span>
+                </div>
               </div>
             </div>
 
             <!-- Supplier & Invoice Details -->
             <div class="grid grid-cols-2 gap-3">
-              <div class="form-group">
-                <label class="form-label">Supplier Name</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Supplier Name</label>
                 <input
+                  title="Supplier Name"
                   type="text"
                   [(ngModel)]="purchaseForm.supplier"
                   name="supplier"
@@ -855,9 +910,10 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                   class="form-control text-xs"
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">Invoice / Bill #</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Invoice / Bill #</label>
                 <input
+                  title="Invoice / Bill #"
                   type="text"
                   [(ngModel)]="purchaseForm.invoiceNumber"
                   name="invoiceNumber"
@@ -867,9 +923,10 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Notes (Optional)</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Notes (Optional)</label>
               <input
+                title="Notes (Optional)"
                 type="text"
                 [(ngModel)]="purchaseForm.notes"
                 name="notes"
@@ -878,7 +935,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showPurchaseModal = false"
@@ -903,44 +960,52 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showAdjustModal">
         <div class="modal-content p-6 max-w-md">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">tune</span>
-              <h3 class="text-lg font-black text-[#2E1065]">Stock Adjustment / Wastage</h3>
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined">tune</span>
+              </span>
+              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Stock Adjustment / Wastage</h3>
             </div>
             <button
               type="button"
               (click)="showAdjustModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="submitAdjust()" class="space-y-4 py-4">
-            <div class="form-group">
-              <label class="form-label">Select Stock Master Item</label>
-              <select [(ngModel)]="adjustForm.stockItemId" name="stockItemId" class="form-control" required>
-                <option *ngFor="let item of stockItems" [ngValue]="item.id">
-                  {{ item.name }} (Current: {{ item.current_quantity }} {{ item.unit_type }})
-                </option>
-              </select>
+          <form (ngSubmit)="submitAdjust()" class="space-y-4">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Select Stock Master Item</label>
+              <app-custom-dropdown
+                [options]="stockItemOptions"
+                [(ngModel)]="adjustForm.stockItemId"
+                name="stockItemId"
+                [searchable]="true"
+                minWidth="100%"
+                placeholder="Select Stock Item..."
+              ></app-custom-dropdown>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group">
-                <label class="form-label">Movement / Reason Type</label>
-                <select [(ngModel)]="adjustForm.adjustmentType" name="adjustmentType" class="form-control">
-                  <option value="adjustment">Manual Adjustment</option>
-                  <option value="wastage">Kitchen Wastage / Spoilage</option>
-                  <option value="return">Return to Supplier</option>
-                  <option value="INCREASE">INCREASE (+ Audit)</option>
-                  <option value="DECREASE">DECREASE (- Audit)</option>
-                </select>
+            <div class="grid grid-cols-2 gap-3 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Movement / Reason Type</label>
+                <app-custom-dropdown
+                  [options]="adjustmentTypeOptions"
+                  [(ngModel)]="adjustForm.adjustmentType"
+                  name="adjustmentType"
+                  minWidth="100%"
+                  placeholder="Select Reason..."
+                ></app-custom-dropdown>
               </div>
-              <div class="form-group">
-                <label class="form-label">Quantity</label>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Quantity</label>
                 <input
+                  title="Quantity"
                   type="number"
                   min="0.001"
                   step="any"
@@ -952,9 +1017,10 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Mandatory Audit Reason</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Mandatory Audit Reason</label>
               <input
+                title="Mandatory Audit Reason"
                 type="text"
                 [(ngModel)]="adjustForm.reason"
                 name="reason"
@@ -964,7 +1030,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showAdjustModal = false"
@@ -987,104 +1053,202 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 9. MODAL: CREATE NEW STOCK MASTER ITEM                          -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showCreateMasterModal">
-        <div class="modal-content p-6 max-w-md">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">add_box</span>
-              <h3 class="text-lg font-black text-[#2E1065]">Create Stock Master Item</h3>
+        <div class="modal-content p-6 w-full max-w-[620px] shadow-2xl" style="max-width: 620px; width: 100%;">
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">add_box</span>
+              </span>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">Create Stock Master Item</h3>
+                <p class="text-xs text-[#6B7280] mt-0.5">Define master raw materials, batch units, and opening balances</p>
+              </div>
             </div>
             <button
               type="button"
               (click)="showCreateMasterModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="submitCreateMaster()" class="space-y-4 py-4">
-            <div class="form-group">
-              <label class="form-label">Stock Item Name</label>
+          <form (ngSubmit)="submitCreateMaster()" class="space-y-4">
+            <!-- Row 1: Stock Item Name -->
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Stock Item Name
+              </label>
               <input
+                title="Stock Item Name"
                 type="text"
                 [(ngModel)]="masterForm.name"
                 name="name"
                 placeholder="e.g. Fresh Chicken, Mutton Meat, Basmati Rice"
-                class="form-control"
+                class="form-control text-sm w-full"
                 required
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group">
-                <label class="form-label">Stock Code (Optional)</label>
+            <!-- Row 2: Stock Code & Unit Type Grid -->
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Stock Code (Optional)
+                </label>
                 <input
+                  title="Stock Code (Optional)"
                   type="text"
                   [(ngModel)]="masterForm.stockCode"
                   name="stockCode"
                   placeholder="Auto-generated if blank"
-                  class="form-control font-mono text-xs"
+                  class="form-control font-mono text-xs w-full"
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">Unit Type</label>
-                <select [(ngModel)]="masterForm.unitType" name="unitType" class="form-control">
-                  <option value="piece">Piece (pcs)</option>
-                  <option value="kg">Kilogram (kg)</option>
-                  <option value="liter">Liter (L)</option>
-                  <option value="gram">Gram (g)</option>
-                  <option value="portion">Portion</option>
-                  <option value="box">Box</option>
-                  <option value="packet">Packet</option>
-                  <option value="other">Other</option>
-                </select>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Unit Type
+                </label>
+                <app-custom-dropdown
+                  [options]="unitTypeOptions"
+                  [(ngModel)]="masterForm.unitType"
+                  name="unitType"
+                  minWidth="100%"
+                  placeholder="Select Unit Type"
+                ></app-custom-dropdown>
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Minimum Stock Alert Threshold</label>
+            <!-- Row 3: Minimum Stock Alert Threshold -->
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Minimum Stock Alert Threshold
+              </label>
               <input
+                title="Minimum Stock Alert Threshold"
                 type="number"
                 min="0"
                 step="any"
                 [(ngModel)]="masterForm.minStockAlert"
                 name="minStockAlert"
-                class="form-control font-mono"
+                class="form-control font-mono text-sm w-full"
                 placeholder="10"
               />
             </div>
 
-            <div class="p-3 bg-[#F9F5FF] border border-[#E9D5FF] rounded-xl space-y-3">
-              <div class="text-xs font-bold text-[#6B21A8]">Opening Balance (Optional)</div>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="form-group">
-                  <label class="form-label">Initial Quantity</label>
+            <!-- Row 4: Opening Balance Section Header & Divider -->
+            <div class="pt-4 border-t border-[#E9D5FF] space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-bold text-[#6B21A8] flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[#7E22CE]" style="font-size: 18px;">calculate</span>
+                  <span class="uppercase tracking-wider">Opening Balance (Optional): Quantity × Multiplier</span>
+                </div>
+                <span class="text-[10px] font-bold text-[#7E22CE] bg-[#F3E8FF] border border-[#DDD6FE] px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                  3-Tier Stock Ledger
+                </span>
+              </div>
+
+              <!-- Initial Quantity & Multiplier Grid -->
+              <div class="grid grid-cols-2 gap-4 items-start">
+                <div class="form-group mb-0">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                    Initial Quantity (Base)
+                  </label>
                   <input
+                    title="Initial Quantity (Base)"
                     type="number"
                     min="0"
                     step="any"
                     [(ngModel)]="masterForm.initialQuantity"
+                    (ngModelChange)="onMasterFormQuantityChange()"
                     name="initialQuantity"
-                    class="form-control font-mono"
+                    class="form-control font-mono font-bold w-full"
                     placeholder="0"
                   />
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Initial Unit Cost</label>
+                <div class="form-group mb-0">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                    Multiplier
+                  </label>
                   <input
+                    title="Multiplier"
                     type="number"
-                    min="0"
+                    min="0.001"
                     step="any"
-                    [(ngModel)]="masterForm.initialPrice"
-                    name="initialPrice"
-                    class="form-control font-mono"
-                    placeholder="0.00"
+                    [(ngModel)]="masterForm.multiplier"
+                    (ngModelChange)="onMasterFormQuantityChange()"
+                    name="multiplier"
+                    class="form-control font-mono font-bold w-full"
+                    placeholder="1"
                   />
                 </div>
               </div>
+
+              <!-- Live Initial Total Quantity Badge -->
+              <div class="flex items-center justify-between p-3 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl text-xs shadow-xs w-full">
+                <span class="text-[#4B5563] font-semibold flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[#16A34A]" style="font-size: 18px;">inventory_2</span>
+                  <span>Calculated Total Quantity:</span>
+                </span>
+                <span class="font-mono font-black text-sm text-[#16A34A] bg-[#DCFCE7] border border-[#86EFAC] px-3 py-1 rounded-lg">
+                  {{ masterCalculatedTotalQty | number:'1.0-3' }} {{ masterForm.unitType || 'units' }}
+                </span>
+              </div>
+
+              <!-- Cost Grid: Total Cost vs Unit Price with Synchronized Baseline Alignment -->
+              <div class="grid grid-cols-2 gap-4 items-end">
+                <div class="form-group mb-0">
+                  <div class="flex items-center justify-between min-h-[20px] mb-2">
+                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                      Initial Total Cost / Price (₹)
+                    </label>
+                  </div>
+                  <input
+                    title="Initial Total Cost / Price (₹)"
+                    type="number"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="masterForm.initialTotalPrice"
+                    (ngModelChange)="onMasterFormTotalPriceChange()"
+                    name="initialTotalPrice"
+                    class="form-control font-mono font-bold text-[#2E1065] w-full"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div class="form-group mb-0">
+                  <div class="flex items-center justify-between min-h-[20px] mb-2">
+                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                      Initial Unit Cost (₹)
+                    </label>
+                    <span class="text-[9px] text-[#7E22CE] font-bold bg-[#F3E8FF] px-1.5 py-0.5 rounded border border-[#DDD6FE] whitespace-nowrap">
+                      Auto-calculated
+                    </span>
+                  </div>
+                  <input
+                    title="Initial Unit Cost (₹)"
+                    type="number"
+                    [value]="masterCalculatedUnitCost"
+                    name="initialPrice"
+                    class="form-control font-mono font-bold bg-[#F3F4F6] text-[#4B5563] cursor-not-allowed border-[#D1D5DB] w-full"
+                    placeholder="0.00"
+                    disabled
+                    readonly
+                  />
+                </div>
+              </div>
+
+              <!-- Live Summary Strip -->
+              <div *ngIf="masterCalculatedTotalQty > 0" class="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs flex items-center justify-between font-mono w-full">
+                <span class="text-purple-900 font-medium">Total Valuation: <strong class="text-purple-950 font-black">{{ (masterForm.initialTotalPrice || 0) | appCurrency:'1.0-2' }}</strong></span>
+                <span class="text-purple-700 font-medium">Unit Rate: <strong class="text-purple-900 font-black">{{ masterCalculatedUnitCost | appCurrency:'1.0-4' }}</strong> / {{ masterForm.unitType || 'unit' }}</span>
+              </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <!-- Modal Footer Actions -->
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showCreateMasterModal = false"
@@ -1110,9 +1274,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
         <div class="modal-content p-6 max-w-2xl max-h-[85vh] overflow-y-auto">
           <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-bold text-purple-700 shadow-xs">
+              <span class="modal-icon-badge">
                 <span class="material-symbols-outlined">inventory_2</span>
-              </div>
+              </span>
               <div>
                 <h3 class="text-lg font-black text-[#2E1065]">{{ selectedItemDetail.name }}</h3>
                 <div class="text-xs text-[#6B7280] font-mono">{{ selectedItemDetail.stock_code }} • Unit: {{ selectedItemDetail.unit_type }}</div>
@@ -1121,7 +1285,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             <button
               type="button"
               (click)="showItemDetailModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn" title="Close" aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -1224,18 +1388,6 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
   `,
   styles: [
     `
-      .action-icon-btn {
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
     `
   ]
 })
@@ -1246,6 +1398,7 @@ export class StockComponent implements OnInit {
   private stockService = inject(StockService);
   private productService = inject(ProductService);
   private notify = inject(NotificationService);
+  private router = inject(Router);
 
   public activeTab: 'MASTER' | 'ENTRIES' | 'MOVEMENTS' | 'LOW_STOCK' = 'MASTER';
 
@@ -1262,6 +1415,56 @@ export class StockComponent implements OnInit {
   public selectedMovementType = 'all';
   public pageSize = 10;
   public currentPage = 1;
+
+  // Dropdown Options
+  public unitTypeOptions: DropdownOption[] = [
+    { value: 'piece', label: 'Piece (pcs)', icon: 'category' },
+    { value: 'kg', label: 'Kilogram (kg)', icon: 'scale' },
+    { value: 'liter', label: 'Liter (L)', icon: 'water_drop' },
+    { value: 'gram', label: 'Gram (g)', icon: 'grain' },
+    { value: 'portion', label: 'Portion', icon: 'restaurant' },
+    { value: 'box', label: 'Box', icon: 'inventory_2' },
+    { value: 'packet', label: 'Packet', icon: 'package_2' },
+    { value: 'other', label: 'Other', icon: 'widgets' },
+  ];
+
+  public unitFilterOptions: DropdownOption[] = [
+    { value: '', label: 'All Units', icon: 'apps' },
+    { value: 'piece', label: 'Piece (pcs)', icon: 'category' },
+    { value: 'kg', label: 'Kilogram (kg)', icon: 'scale' },
+    { value: 'liter', label: 'Liter (L)', icon: 'water_drop' },
+    { value: 'gram', label: 'Gram (g)', icon: 'grain' },
+    { value: 'portion', label: 'Portion', icon: 'restaurant' },
+    { value: 'box', label: 'Box', icon: 'inventory_2' },
+    { value: 'packet', label: 'Packet', icon: 'package_2' },
+  ];
+
+  public movementFilterOptions: DropdownOption[] = [
+    { value: 'all', label: 'All Movement Types', icon: 'history' },
+    { value: 'in', label: 'IN (Purchases / Additions)', icon: 'add_circle' },
+    { value: 'out', label: 'OUT (Sales / Deductions)', icon: 'remove_circle' },
+    { value: 'adjustment', label: 'ADJUSTMENT (Audit Correction)', icon: 'tune' },
+    { value: 'wastage', label: 'WASTAGE (Kitchen Loss)', icon: 'delete' },
+    { value: 'return', label: 'RETURN', icon: 'reply' },
+  ];
+
+  public adjustmentTypeOptions: DropdownOption[] = [
+    { value: 'adjustment', label: 'Manual Adjustment', icon: 'tune', description: 'Correction from physical audit' },
+    { value: 'wastage', label: 'Kitchen Wastage / Spoilage', icon: 'delete', description: 'Trimming loss, spoiled, expired' },
+    { value: 'return', label: 'Return to Supplier', icon: 'reply', description: 'Returned items to vendor' },
+    { value: 'INCREASE', label: 'INCREASE (+ Audit)', icon: 'arrow_upward', description: 'Found excess stock on audit' },
+    { value: 'DECREASE', label: 'DECREASE (- Audit)', icon: 'arrow_downward', description: 'Stock deficit adjustment' },
+  ];
+
+  get stockItemOptions(): DropdownOption[] {
+    return this.stockItems.map((item) => ({
+      value: item.id,
+      label: `${item.name} (${item.stock_code})`,
+      description: `Current: ${item.current_quantity} ${item.unit_type}s`,
+      badge: `${item.unit_type}`,
+      icon: 'inventory_2',
+    }));
+  }
 
   // Modals state
   public showPurchaseModal = false;
@@ -1296,8 +1499,40 @@ export class StockComponent implements OnInit {
     unitType: 'piece',
     minStockAlert: 10,
     initialQuantity: 0,
+    multiplier: 1,
+    initialTotalPrice: 0,
     initialPrice: 0,
   };
+
+  get masterCalculatedTotalQty(): number {
+    const qty = Number(this.masterForm.initialQuantity) || 0;
+    const mult = Number(this.masterForm.multiplier) || 1;
+    return qty * mult;
+  }
+
+  get masterCalculatedUnitCost(): number {
+    const totQty = this.masterCalculatedTotalQty;
+    const totPrice = Number(this.masterForm.initialTotalPrice) || 0;
+    return totQty > 0 ? +(totPrice / totQty).toFixed(4) : 0;
+  }
+
+  onMasterFormQuantityChange(): void {
+    const totQty = this.masterCalculatedTotalQty;
+    if (totQty > 0 && this.masterForm.initialTotalPrice > 0) {
+      this.masterForm.initialPrice = this.masterCalculatedUnitCost;
+    } else {
+      this.masterForm.initialPrice = 0;
+    }
+  }
+
+  onMasterFormTotalPriceChange(): void {
+    const totQty = this.masterCalculatedTotalQty;
+    if (totQty > 0 && this.masterForm.initialTotalPrice !== undefined && this.masterForm.initialTotalPrice !== null) {
+      this.masterForm.initialPrice = this.masterCalculatedUnitCost;
+    } else {
+      this.masterForm.initialPrice = 0;
+    }
+  }
 
   ngOnInit(): void {
     this.loadStockMaster();
@@ -1546,20 +1781,15 @@ export class StockComponent implements OnInit {
       unitType: 'piece',
       minStockAlert: 10,
       initialQuantity: 0,
+      multiplier: 1,
+      initialTotalPrice: 0,
       initialPrice: 0,
     };
     this.showCreateMasterModal = true;
   }
 
   viewItemHistory(item: StockItem): void {
-    this.stockService.getStockItemById(item.id).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.selectedItemDetail = res.data;
-          this.showItemDetailModal = true;
-        }
-      },
-    });
+    this.router.navigate(['/stock', item.id]);
   }
 
   // ── Form Submissions ────────────────────────────────────────────────
@@ -1610,7 +1840,15 @@ export class StockComponent implements OnInit {
       return;
     }
 
-    this.stockService.createStockItem(this.masterForm).subscribe({
+    const payload = {
+      ...this.masterForm,
+      initialQuantity: Number(this.masterForm.initialQuantity) || 0,
+      multiplier: Number(this.masterForm.multiplier) || 1,
+      initialTotalPrice: Number(this.masterForm.initialTotalPrice) || 0,
+      initialPrice: Number(this.masterForm.initialPrice) || 0,
+    };
+
+    this.stockService.createStockItem(payload).subscribe({
       next: (res) => {
         this.notify.success(`Created master item: ${res.data.name} (${res.data.stock_code})`);
         this.showCreateMasterModal = false;

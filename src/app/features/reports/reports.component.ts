@@ -216,6 +216,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="flex items-center gap-1.5 text-xs text-[#6B7280]">
             <span class="font-bold">From:</span>
             <input
+              title="From date"
               type="date"
               [(ngModel)]="dateFrom"
               (ngModelChange)="loadActiveReport()"
@@ -227,6 +228,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="flex items-center gap-1.5 text-xs text-[#6B7280]">
             <span class="font-bold">To:</span>
             <input
+              title="To date"
               type="date"
               [(ngModel)]="dateTo"
               (ngModelChange)="loadActiveReport()"

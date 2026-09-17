@@ -707,7 +707,6 @@
   border-radius: 6px;
   font-size: 0.775rem;
   transition: background-color 0.12s ease;
-  user-select: none;
 }
 
 .order-item-row:hover {
@@ -959,24 +958,7 @@
   margin: 0.2rem 0 0;
 }
 
-.drawer-close-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--card-border, #E2E8F0);
-  background: var(--card-bg, #ffffff);
-  color: var(--text-muted, #64748B);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
 
-.drawer-close-btn:hover {
-  background: var(--bg-app, #F8FAFC);
-  color: var(--text-main, #0F172A);
-}
 
 .drawer-body {
   flex: 1;

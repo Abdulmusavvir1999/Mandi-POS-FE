@@ -213,6 +213,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search users"
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
@@ -276,6 +277,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               <tr>
                 <th style="width: 44px; text-align: center;">
                   <input
+                    title="Select all users"
                     type="checkbox"
                     [(ngModel)]="selectAll"
                     (change)="toggleSelectAll()"
@@ -295,6 +297,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 <!-- Checkbox -->
                 <td style="text-align: center;">
                   <input
+                    title="Select this user"
                     type="checkbox"
                     [(ngModel)]="u.selected"
                     class="custom-checkbox"
@@ -437,97 +440,130 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
       <!-- MODAL DIALOG                                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content max-w-md">
-          <div class="modal-header-bar">
-            <div class="flex-align-center gap-2">
-              <span class="material-symbols-outlined text-[var(--primary)]">person_add</span>
-              <h3 class="modal-title">
-                {{ editingUserId ? 'Edit Staff Account' : 'Create New Staff Account' }}
-              </h3>
+        <div class="modal-content p-6 max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">person_add</span>
+              </span>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                  {{ editingUserId ? 'Edit Staff Account' : 'Create New Staff Account' }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Manage operator permissions, roles, and credentials</p>
+              </div>
             </div>
-            <button type="button" (click)="showModal = false" class="modal-close-btn">
+            <button
+              type="button"
+              (click)="showModal = false"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
+            >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveUser()" class="modal-body-form">
-            <div class="form-group-box">
-              <label class="modal-label">Full Name</label>
+          <form (ngSubmit)="saveUser()" class="space-y-4">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Full Name
+              </label>
               <input
+                title="Full Name"
                 type="text"
                 [(ngModel)]="form.name"
                 name="name"
                 placeholder="e.g. Aamir Khan"
-                class="modal-input"
+                class="form-control text-sm w-full"
                 required
               />
             </div>
 
-            <div class="two-input-grid">
-              <div class="form-group-box">
-                <label class="modal-label">Username</label>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Username
+                </label>
                 <input
+                  title="Username"
                   type="text"
                   [(ngModel)]="form.username"
                   name="username"
                   placeholder="cashier1"
-                  class="modal-input font-mono"
+                  class="form-control font-mono text-sm w-full"
                   [disabled]="!!editingUserId"
                   required
                 />
               </div>
-              <div class="form-group-box">
-                <label class="modal-label">Staff Role</label>
-                <select [(ngModel)]="form.roleId" name="roleId" class="modal-select font-bold">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Staff Role
+                </label>
+                <select [(ngModel)]="form.roleId" name="roleId" class="form-control text-sm w-full font-bold">
                   <option *ngFor="let r of roles" [ngValue]="r.id">{{ r.name }}</option>
                 </select>
               </div>
             </div>
 
-            <div class="form-group-box">
-              <label class="modal-label">Email Address</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Email Address
+              </label>
               <input
+                title="Email Address"
                 type="email"
                 [(ngModel)]="form.email"
                 name="email"
                 placeholder="user@projectx.com"
-                class="modal-input"
+                class="form-control text-sm w-full"
                 [disabled]="!!editingUserId"
                 required
               />
             </div>
 
-            <div class="form-group-box">
-              <label class="modal-label">Phone Number (Optional)</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Phone Number (Optional)
+              </label>
               <input
+                title="Phone Number (Optional)"
                 type="tel"
                 [(ngModel)]="form.phone"
                 name="phone"
                 placeholder="+91 98765 00000"
-                class="modal-input"
+                class="form-control font-mono text-sm w-full"
               />
             </div>
 
-            <div class="form-group-box">
-              <label class="modal-label">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
                 {{ editingUserId ? 'New Password (Leave blank to keep unchanged)' : 'Password' }}
               </label>
               <input
+                [title]="editingUserId ? 'New Password (Leave blank to keep unchanged)' : 'Password'"
                 type="password"
                 [(ngModel)]="form.password"
                 name="password"
                 placeholder="••••••••"
-                class="modal-input font-mono"
+                class="form-control font-mono text-sm w-full"
                 [required]="!editingUserId"
               />
             </div>
 
-            <div class="modal-footer-bar">
-              <button type="button" (click)="showModal = false" class="action-btn btn-outline-purple">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+              <button
+                type="button"
+                (click)="showModal = false"
+                class="action-btn btn-outline-purple"
+              >
                 Cancel
               </button>
-              <button type="submit" class="action-btn btn-gradient-purple">
-                {{ editingUserId ? 'Save Changes' : 'Create Account' }}
+              <button
+                type="submit"
+                class="action-btn btn-gradient-purple"
+              >
+                {{ editingUserId ? 'Save Changes ✓' : 'Create Account ✓' }}
               </button>
             </div>
           </form>

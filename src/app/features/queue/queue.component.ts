@@ -333,58 +333,75 @@ import { SettingsService } from '../../core/services/settings.service';
       <!-- 5. ISSUE TOKEN MODAL                                            -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showIssueModal">
-        <div class="modal-content p-6 max-w-md">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">confirmation_number</span>
-              <h3 class="text-lg font-black text-[#2E1065]">Issue Takeaway Token</h3>
+        <div class="modal-content p-6 max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">confirmation_number</span>
+              </span>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">Issue Takeaway Token</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Generate queue token for live kitchen display & SMS</p>
+              </div>
             </div>
             <button
               type="button"
               (click)="showIssueModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="issueToken()" class="space-y-4 py-4">
-            <div class="form-group">
-              <label class="form-label">Customer Name</label>
+          <form (ngSubmit)="issueToken()" class="space-y-4">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Customer Name
+              </label>
               <input
+                title="Customer Name"
                 type="text"
                 [(ngModel)]="tokenForm.customerName"
                 name="customerName"
-                class="form-control"
+                class="form-control text-sm w-full"
                 placeholder="e.g. Sultan Al-Rashid"
                 required
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Customer Phone (Optional)</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Customer Phone (Optional)
+              </label>
               <input
+                title="Customer Phone (Optional)"
                 type="tel"
                 [(ngModel)]="tokenForm.customerPhone"
                 name="customerPhone"
-                class="form-control font-mono"
+                class="form-control font-mono text-sm w-full"
                 placeholder="Mobile number for SMS notification"
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Estimated Prep Minutes</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Estimated Prep Minutes
+              </label>
               <input
+                title="Estimated Prep Minutes"
                 type="number"
                 min="5"
                 max="60"
                 [(ngModel)]="tokenForm.estimatedMinutes"
                 name="estimatedMinutes"
-                class="form-control font-mono font-bold text-[#7E22CE]"
+                class="form-control font-mono font-bold text-[#7E22CE] text-sm w-full"
+                placeholder="15"
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showIssueModal = false"

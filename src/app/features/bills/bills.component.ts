@@ -221,6 +221,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search bills"
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1; loadBills(1)"
@@ -248,6 +249,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <!-- Date Filter -->
           <input
+            title="Filter by date"
             type="date"
             [(ngModel)]="selectedDate"
             (ngModelChange)="currentPage = 1; loadBills(1)"

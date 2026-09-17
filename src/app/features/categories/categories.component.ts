@@ -207,6 +207,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search categories"
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
@@ -279,6 +280,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               <tr>
                 <th style="width: 44px; text-align: center;">
                   <input
+                    title="Select all categories"
                     type="checkbox"
                     [checked]="isAllSelected"
                     (change)="toggleSelectAll($event)"
@@ -297,6 +299,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 <!-- Checkbox -->
                 <td style="text-align: center;">
                   <input
+                    title="Select this category"
                     type="checkbox"
                     [checked]="selectedIds.has(cat.id)"
                     (change)="toggleSelection(cat.id)"
@@ -353,7 +356,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                     <button
                       type="button"
                       (click)="openEditModal(cat)"
-                      class="action-icon-btn text-[#7E22CE] hover:bg-[#F3E8FF]"
+                      class="action-icon-btn"
                       title="Edit Category"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
@@ -361,7 +364,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                     <button
                       type="button"
                       (click)="deleteCategory(cat)"
-                      class="action-icon-btn text-[#DC2626] hover:bg-[#FEE2E2]"
+                      class="action-icon-btn is-danger"
                       title="Delete Category"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
@@ -438,69 +441,86 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
       <!-- 7. ADD / EDIT CATEGORY MODAL                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content p-6 max-w-md">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">
-                {{ editingCategoryId ? 'edit' : 'category' }}
+        <div class="modal-content p-6 max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">{{ editingCategoryId ? 'edit' : 'category' }}</span>
               </span>
-              <h3 class="text-lg font-black text-[#2E1065]">
-                {{ editingCategoryId ? 'Edit Category' : 'Add New Category' }}
-              </h3>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                  {{ editingCategoryId ? 'Edit Category' : 'Add New Category' }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure menu classification and catalog sorting</p>
+              </div>
             </div>
             <button
               type="button"
               (click)="showModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveCategory()" class="space-y-4 py-4">
-            <div class="form-group">
-              <label class="form-label">Category Name</label>
+          <form (ngSubmit)="saveCategory()" class="space-y-4">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Category Name
+              </label>
               <input
+                title="Category Name"
                 type="text"
                 [(ngModel)]="form.name"
                 name="name"
                 placeholder="e.g. Mandi Specials"
-                class="form-control"
+                class="form-control text-sm w-full"
                 required
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Description</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Description
+              </label>
               <input
+                title="Description"
                 type="text"
                 [(ngModel)]="form.description"
                 name="description"
                 placeholder="Aromatic traditional rice dishes..."
-                class="form-control"
+                class="form-control text-sm w-full"
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group">
-                <label class="form-label">Display Order</label>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Display Order
+                </label>
                 <input
+                  title="Display Order"
                   type="number"
                   [(ngModel)]="form.display_order"
                   name="display_order"
-                  class="form-control font-mono font-bold"
+                  class="form-control font-mono font-bold text-sm w-full"
+                  placeholder="1"
                 />
               </div>
-              <div class="form-group">
-                <label class="form-label">Status</label>
-                <select [(ngModel)]="form.status" name="status" class="form-control">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                  Status
+                </label>
+                <select [(ngModel)]="form.status" name="status" class="form-control text-sm w-full">
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
                 </select>
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showModal = false"
@@ -512,7 +532,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 type="submit"
                 class="action-btn btn-gradient-purple"
               >
-                Save Category
+                Save Category ✓
               </button>
             </div>
           </form>
@@ -522,18 +542,6 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
   `,
   styles: [
     `
-      .action-icon-btn {
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
     `
   ]
 })

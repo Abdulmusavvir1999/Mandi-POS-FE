@@ -222,6 +222,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="search-input-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
+              title="Search guests"
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
@@ -285,6 +286,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               <tr>
                 <th style="width: 44px; text-align: center;">
                   <input
+                    title="Select all guests"
                     type="checkbox"
                     [(ngModel)]="selectAll"
                     (change)="toggleSelectAll()"
@@ -305,6 +307,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 <!-- Checkbox -->
                 <td style="text-align: center;">
                   <input
+                    title="Select this guest"
                     type="checkbox"
                     [(ngModel)]="c.selected"
                     class="rounded border-[#E9D5FF] text-[#7E22CE]"
@@ -364,7 +367,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     <button
                       type="button"
                       (click)="viewHistory(c)"
-                      class="action-icon-btn text-[#16A34A] hover:bg-[#DCFCE7]"
+                      class="action-icon-btn is-success"
                       title="View Invoices"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">receipt_long</span>
@@ -372,7 +375,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     <button
                       type="button"
                       (click)="openEditModal(c)"
-                      class="action-icon-btn text-[#7E22CE] hover:bg-[#F3E8FF]"
+                      class="action-icon-btn"
                       title="Edit Customer"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
@@ -380,7 +383,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     <button
                       type="button"
                       (click)="deleteCustomer(c)"
-                      class="action-icon-btn text-[#DC2626] hover:bg-[#FEE2E2]"
+                      class="action-icon-btn is-danger"
                       title="Delete Customer"
                     >
                       <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
@@ -457,25 +460,29 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 7. PURCHASE HISTORY DRAWER MODAL                                -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="historyCustomer">
-        <div class="modal-content p-6 max-w-xl">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">receipt_long</span>
+        <div class="modal-content p-6 max-w-xl shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">receipt_long</span>
+              </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065]">Purchase History — {{ historyCustomer.name }}</h3>
-                <p class="text-xs text-[#6B7280] font-mono">{{ historyCustomer.phone }}</p>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">Purchase History — {{ historyCustomer.name }}</h3>
+                <p class="text-xs text-[#6B7280] font-mono mt-0.5">{{ historyCustomer.phone }}</p>
               </div>
             </div>
             <button
               type="button"
               (click)="historyCustomer = null"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <div class="py-4 space-y-3 max-h-[60vh] overflow-y-auto">
+          <div class="space-y-3 max-h-[60vh] overflow-y-auto">
             <div *ngIf="purchaseHistory.length === 0" class="text-center py-8 text-[#6B7280] text-xs">
               <span class="material-symbols-outlined text-4xl text-[#D8B4FE] block mb-2">receipt_long</span>
               No previous bills recorded for this customer.
@@ -502,7 +509,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </div>
           </div>
 
-          <div class="pt-4 border-t border-[#E9D5FF] flex justify-end">
+          <div class="pt-5 mt-4 border-t border-[#E9D5FF] flex justify-end">
             <button
               type="button"
               (click)="historyCustomer = null"
@@ -518,73 +525,90 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 8. ADD / EDIT CUSTOMER MODAL                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content p-6 max-w-md">
-          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">
-                {{ editingCustomerId ? 'edit' : 'person_add' }}
+        <div class="modal-content p-6 max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3.5">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">{{ editingCustomerId ? 'edit' : 'person_add' }}</span>
               </span>
-              <h3 class="text-lg font-black text-[#2E1065]">
-                {{ editingCustomerId ? 'Edit Guest Profile' : 'Register New Customer' }}
-              </h3>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                  {{ editingCustomerId ? 'Edit Guest Profile' : 'Register New Customer' }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Manage customer directory and CRM details</p>
+              </div>
             </div>
             <button
               type="button"
               (click)="showModal = false"
-              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveCustomer()" class="space-y-4 py-4">
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
+          <form (ngSubmit)="saveCustomer()" class="space-y-4">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Full Name
+              </label>
               <input
+                title="Full Name"
                 type="text"
                 [(ngModel)]="form.name"
                 name="name"
                 placeholder="e.g. Dr. Farooq Siddiqui"
-                class="form-control"
+                class="form-control text-sm w-full"
                 required
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Phone Number</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Phone Number
+              </label>
               <input
+                title="Phone Number"
                 type="tel"
                 [(ngModel)]="form.phone"
                 name="phone"
                 placeholder="10-digit mobile number"
-                class="form-control font-mono font-bold"
+                class="form-control font-mono font-bold text-sm w-full"
                 required
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Email (Optional)</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Email (Optional)
+              </label>
               <input
+                title="Email (Optional)"
                 type="email"
                 [(ngModel)]="form.email"
                 name="email"
                 placeholder="guest@example.com"
-                class="form-control"
+                class="form-control text-sm w-full"
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Address / Locality</label>
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                Address / Locality
+              </label>
               <input
+                title="Address / Locality"
                 type="text"
                 [(ngModel)]="form.address"
                 name="address"
                 placeholder="Area / Locality"
-                class="form-control"
+                class="form-control text-sm w-full"
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showModal = false"
@@ -596,7 +620,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 type="submit"
                 class="action-btn btn-gradient-purple"
               >
-                Save Profile
+                Save Customer ✓
               </button>
             </div>
           </form>
@@ -606,18 +630,6 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
   `,
   styles: [
     `
-      .action-icon-btn {
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
     `
   ]
 })
