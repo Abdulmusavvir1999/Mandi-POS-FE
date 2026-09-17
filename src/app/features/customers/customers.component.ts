@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomerService } from '../../core/services/customer.service';
@@ -8,12 +8,21 @@ import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading customers…"
+        subMessage="Fetching customer records from the server."
+        icon="groups"
+        (retry)="loadCustomers()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -81,7 +90,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">person_add</span>
-            <span>+ New Customer</span>
+            <span>New Customer</span>
           </button>
         </div>
       </div>
@@ -549,7 +558,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </button>
           </div>
 
-          <form (ngSubmit)="saveCustomer()" class="space-y-3.5">
+          <form (ngSubmit)="saveCustomer()" class="space-y-3.5" autocomplete="off">
             <div class="form-group mb-0">
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Full Name
@@ -808,7 +817,9 @@ export class CustomersComponent implements OnInit {
       isDestructive: true,
       onConfirm: () => {
         selected.forEach((c) => {
-          this.customerService.deleteCustomer(c.id).subscribe();
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          this.customerService.deleteCustomer(c.id).subscribe({ error: () => {} });
         });
         this.notify.success(`Deleted ${selected.length} customers`);
         this.loadCustomers();
@@ -863,6 +874,9 @@ export class CustomersComponent implements OnInit {
           this.showModal = false;
           this.loadCustomers();
         },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
       });
     } else {
       this.customerService.createCustomer(this.form).subscribe({
@@ -871,6 +885,9 @@ export class CustomersComponent implements OnInit {
           this.showModal = false;
           this.loadCustomers();
         },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
       });
     }
   }
@@ -887,6 +904,9 @@ export class CustomersComponent implements OnInit {
             this.notify.info('Customer deleted');
             this.loadCustomers();
           },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
         });
       },
     });
@@ -898,6 +918,9 @@ export class CustomersComponent implements OnInit {
       next: (res) => {
         if (res.success) this.purchaseHistory = res.data;
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 }

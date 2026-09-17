@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { CartItem, Product, Customer, DiningTable, OrderType } from '../models';
+import { CartItem, Product, ProductVariant, Customer, DiningTable, OrderType } from '../models';
 import { SettingsService } from './settings.service';
 
 @Injectable({
@@ -22,15 +22,22 @@ export class CartService {
 
   constructor() {
     // Tax configuration lives in the settings table, not in the client.
-    this.settingsService.loadPublicSettings().subscribe((settings) => {
-      const rawRate = settings['TAX_PERCENTAGE'] ?? settings['tax_rate_percentage'];
-      const rate = Number(rawRate);
-      if (rawRate !== undefined && rawRate !== '' && !Number.isNaN(rate)) {
-        this.taxRate.set(rate);
-      }
-      if (settings['TAX_ENABLED'] !== undefined) {
-        this.isTaxEnabled.set(settings['TAX_ENABLED'] === 'true');
-      }
+    this.settingsService.loadPublicSettings().subscribe({
+      next: (settings) => {
+        const rawRate = settings['TAX_PERCENTAGE'] ?? settings['tax_rate_percentage'];
+        const rate = Number(rawRate);
+        if (rawRate !== undefined && rawRate !== '' && !Number.isNaN(rate)) {
+          this.taxRate.set(rate);
+        }
+        if (settings['TAX_ENABLED'] !== undefined) {
+          this.isTaxEnabled.set(settings['TAX_ENABLED'] === 'true');
+        }
+      },
+      // Runs at construction, before any page is on screen. Without this an API
+      // that is still starting up throws out of the injector and the whole
+      // route fails to render; the configured defaults above are a fine
+      // fallback until settings can be read.
+      error: () => {},
     });
   }
 
@@ -66,13 +73,23 @@ export class CartService {
     Math.round((this.taxableAmount() + this.taxAmount()) * 100) / 100
   );
 
-  public addItem(product: Product, quantity = 1, notes?: string): boolean {
+  /** Key for a cart line — the same dish in two portions must not merge. */
+  public static lineKey(productId: number, variantId?: number | null): string {
+    return `${productId}:${variantId ?? 'base'}`;
+  }
+
+  public addItem(product: Product, variant?: ProductVariant | null, quantity = 1, notes?: string): boolean {
     if (product.status !== 'ACTIVE') {
       return false;
     }
 
+    // The variant's price wins when there is one; the server re-checks it at
+    // checkout, this is only what the cashier sees.
+    const unitPrice = variant ? Number(variant.selling_price) : Number(product.selling_price);
+    const lineId = CartService.lineKey(product.id, variant?.id ?? null);
+
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.product.id === product.id);
+    const index = currentItems.findIndex((i) => i.lineId === lineId);
 
     if (index >= 0) {
       const existing = currentItems[index];
@@ -85,10 +102,12 @@ export class CartService {
       };
     } else {
       currentItems.push({
+        lineId,
         product,
+        variant: variant ?? null,
         quantity,
-        unitPrice: product.selling_price,
-        subtotal: quantity * product.selling_price,
+        unitPrice,
+        subtotal: quantity * unitPrice,
         notes,
       });
     }
@@ -98,14 +117,14 @@ export class CartService {
     return true;
   }
 
-  public updateQuantity(productId: number, quantity: number): void {
+  public updateQuantity(lineId: string, quantity: number): void {
     if (quantity <= 0) {
-      this.removeItem(productId);
+      this.removeItem(lineId);
       return;
     }
 
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.product.id === productId);
+    const index = currentItems.findIndex((i) => i.lineId === lineId);
 
     if (index >= 0) {
       const item = currentItems[index];
@@ -118,22 +137,22 @@ export class CartService {
     }
   }
 
-  public increment(productId: number): void {
-    const item = this.itemsSignal().find((i) => i.product.id === productId);
+  public increment(lineId: string): void {
+    const item = this.itemsSignal().find((i) => i.lineId === lineId);
     if (item) {
-      this.updateQuantity(productId, item.quantity + 1);
+      this.updateQuantity(lineId, item.quantity + 1);
     }
   }
 
-  public decrement(productId: number): void {
-    const item = this.itemsSignal().find((i) => i.product.id === productId);
+  public decrement(lineId: string): void {
+    const item = this.itemsSignal().find((i) => i.lineId === lineId);
     if (item) {
-      this.updateQuantity(productId, item.quantity - 1);
+      this.updateQuantity(lineId, item.quantity - 1);
     }
   }
 
-  public removeItem(productId: number): void {
-    this.itemsSignal.update((list) => list.filter((i) => i.product.id !== productId));
+  public removeItem(lineId: string): void {
+    this.itemsSignal.update((list) => list.filter((i) => i.lineId !== lineId));
   }
 
   public clearCart(): void {
@@ -195,7 +214,16 @@ export class CartService {
         };
 
         cartItems.push({
+          lineId: CartService.lineKey(prod.id, item.variant_id ?? null),
           product: prod,
+          variant: item.variant_id
+            ? {
+                id: item.variant_id,
+                name: item.variant_name || '',
+                selling_price: item.unit_price,
+                stock_consumption: Number(item.stock_consumption) || 1,
+              }
+            : null,
           quantity: item.quantity,
           unitPrice: item.unit_price,
           subtotal: item.quantity * item.unit_price,

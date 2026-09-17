@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QueueService } from '../../core/services/queue.service';
@@ -6,12 +6,21 @@ import { NotificationService } from '../../core/services/notification.service';
 import { QueueToken } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-queue',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [PageLoaderComponent, CommonModule, FormsModule],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading token queue…"
+        subMessage="Fetching live queue tokens from the server."
+        icon="confirmation_number"
+        (retry)="loadTokens()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -69,7 +78,7 @@ import { SettingsService } from '../../core/services/settings.service';
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">confirmation_number</span>
-            <span>+ Issue Token</span>
+            <span>Issue Token</span>
           </button>
         </div>
       </div>
@@ -494,6 +503,9 @@ export class QueueComponent implements OnInit {
         this.tokenForm = { customerName: '', customerPhone: '', estimatedMinutes: 15 };
         this.loadTokens();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -503,6 +515,9 @@ export class QueueComponent implements OnInit {
         this.notify.info('Token marked as preparing');
         this.loadTokens();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -512,6 +527,9 @@ export class QueueComponent implements OnInit {
         this.notify.success('Token is ready for pickup!');
         this.loadTokens();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -521,6 +539,9 @@ export class QueueComponent implements OnInit {
         this.notify.info('Token cancelled');
         this.loadTokens();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 }

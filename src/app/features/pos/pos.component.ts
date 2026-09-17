@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -12,16 +12,26 @@ import { CheckoutService } from '../../core/services/checkout.service';
 import { BillService } from '../../core/services/bill.service';
 import { OrderService } from '../../core/services/order.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Product, Category, Customer, DiningTable, DraftBill, Order, OrderType, PaymentMethod } from '../../core/models';
+import { Product, ProductVariant, Category, Customer, DiningTable, DraftBill, Order, OrderType, PaymentMethod } from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe, PageLoaderComponent],
   template: `
     <div class="pos-fullscreen-container">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading menu…"
+        subMessage="Fetching categories and dishes for the till."
+        icon="storefront"
+        (retry)="loadPosData()"
+      ></app-page-loader>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- LEFT / MAIN PANEL: SEARCH, CATEGORIES, POPULAR DISHES & REPORTS -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -109,7 +119,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               [class.is-selected]="selectedCategoryId === null"
             >
               <div class="cat-avatar-bubble">
-                <span class="cat-avatar-icon">🍽️</span>
+                <span class="cat-avatar-icon">ðŸ½️</span>
               </div>
               <span class="cat-circle-label">All</span>
             </button>
@@ -255,12 +265,44 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </table>
           </div>
         </div>
+
+        <!-- FLOATING MOBILE BOTTOM CART BAR (< 768px) -->
+        <div
+          *ngIf="cartService.items().length > 0"
+          class="pos-mobile-floating-bar"
+          (click)="isMobileCartOpen = true"
+        >
+          <div class="flex items-center gap-2.5">
+            <span class="pos-mobile-cart-badge">
+              <span class="material-symbols-outlined text-[18px]">shopping_cart</span>
+              <span>{{ cartService.itemCount() }}</span>
+            </span>
+            <div class="flex flex-col text-left">
+              <span class="text-[10px] uppercase font-bold text-white/80 tracking-wider">Cart Total</span>
+              <span class="text-sm font-black font-mono text-white leading-tight">
+                {{ cartService.grandTotal() | appCurrency:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+          <div class="pos-mobile-cart-cta">
+            <span class="text-xs font-black uppercase">View & Pay</span>
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </div>
+        </div>
       </div>
 
+      <!-- Mobile Cart Backdrop Overlay (< 768px) -->
+      <div
+        *ngIf="isMobileCartOpen"
+        class="pos-cart-mobile-backdrop"
+        (click)="isMobileCartOpen = false"
+        aria-hidden="true"
+      ></div>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- RIGHT PANEL: TEAL CHECKOUT & CART TERMINAL (MATCHING SCREENSHOT) -->
+      <!-- RIGHT PANEL: CHECKOUT & CART TERMINAL                           -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="pos-cart-sidebar">
+      <div class="pos-cart-sidebar" [class.is-mobile-open]="isMobileCartOpen">
         <!-- TOP: DELIVERY / DINING ADDRESS CARD -->
         <div class="address-header-card">
           <div class="flex items-center justify-between">
@@ -292,8 +334,22 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-2xl text-white">shopping_cart</span>
             <h2 class="cart-heading">Cart</h2>
+            <span *ngIf="cartService.items().length > 0" class="pos-mobile-cart-item-count-badge">
+              {{ cartService.itemCount() }}
+            </span>
           </div>
-          <span class="order-id-tag font-mono">Order ID: #{{ activeOrderId }}</span>
+          <div class="flex items-center gap-2">
+            <span class="order-id-tag font-mono">#{{ activeOrderId }}</span>
+            <button
+              type="button"
+              class="pos-cart-mobile-close-btn"
+              (click)="isMobileCartOpen = false"
+              aria-label="Close Cart"
+              title="Close Cart"
+            >
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
         </div>
 
         <!-- ORDER TYPE SEGMENTED SWITCHER (Delivery / Dine in / Takeaway) -->
@@ -342,16 +398,25 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </div>
 
             <div class="cart-item-details">
-              <h4 class="item-name">{{ item.product.name }}</h4>
+              <h4 class="item-name">
+                {{ item.product.name }}
+                <span *ngIf="item.variant" class="cart-variant-chip">{{ item.variant.name }}</span>
+              </h4>
               <p class="item-sub-desc">
-                {{ item.notes || (item.product.category_id === 1 ? 'Thin Crust' : 'Special Portion') }}
+                <ng-container *ngIf="item.variant">
+                  Uses {{ item.variant.stock_consumption }} per unit
+                  <ng-container *ngIf="item.notes"> · {{ item.notes }}</ng-container>
+                </ng-container>
+                <ng-container *ngIf="!item.variant">
+                  {{ item.notes || (item.product.category_id === 1 ? 'Thin Crust' : 'Special Portion') }}
+                </ng-container>
               </p>
 
               <!-- Stepper Control -->
               <div class="item-stepper-row">
                 <button
                   type="button"
-                  (click)="cartService.decrement(item.product.id)"
+                  (click)="cartService.decrement(item.lineId)"
                   class="stepper-circle-btn"
                 >
                   <span class="material-symbols-outlined">remove</span>
@@ -359,7 +424,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 <span class="stepper-qty-text font-mono font-bold">{{ item.quantity }}</span>
                 <button
                   type="button"
-                  (click)="cartService.increment(item.product.id)"
+                  (click)="cartService.increment(item.lineId)"
                   class="stepper-circle-btn"
                 >
                   <span class="material-symbols-outlined">add</span>
@@ -369,7 +434,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
             <button
               type="button"
-              (click)="cartService.removeItem(item.product.id)"
+              (click)="cartService.removeItem(item.lineId)"
               class="cart-item-remove-btn"
               title="Remove item"
             >
@@ -716,7 +781,73 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       </div>
     </div>
 
-    <!-- 5. THERMAL RECEIPT PRINT MODAL -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 5. DISH VARIANT (PORTION) CHOOSER                               -->
+    <!-- Nothing reaches the cart until a portion is chosen: the portion -->
+    <!-- decides both the price and how much stock the sale consumes.    -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="variantPickerProduct">
+      <div class="modal-content p-6 max-w-md">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-3">
+            <span class="modal-icon-badge">
+              <span class="material-symbols-outlined">restaurant_menu</span>
+            </span>
+            <div>
+              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Choose Portion</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ variantPickerProduct?.name }}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="closeVariantPicker()"
+            class="modal-close-btn"
+            title="Close"
+            aria-label="Close"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="variant-available-strip">
+          <span class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined" style="font-size: 17px;">inventory_2</span>
+            <span>Available Stock</span>
+          </span>
+          <strong class="font-mono">
+            {{ availableStock(variantPickerProduct) | number:'1.0-3' }}
+            {{ variantPickerProduct?.linked_unit_type || 'units' }}
+          </strong>
+        </div>
+
+        <div class="variant-option-list">
+          <button
+            *ngFor="let v of variantPickerOptions"
+            type="button"
+            class="variant-option"
+            [disabled]="stockAfter(variantPickerProduct, v) < 0"
+            (click)="chooseVariant(v)"
+          >
+            <div class="variant-option-left">
+              <span class="variant-option-name">{{ v.name }}</span>
+              <span class="variant-option-meta">
+                Uses {{ v.stock_consumption }} · leaves
+                <strong>{{ stockAfter(variantPickerProduct, v) | number:'1.0-3' }}</strong>
+              </span>
+            </div>
+            <div class="variant-option-right">
+              <span class="variant-option-price font-mono">{{ v.selling_price | appCurrency:'1.0-0' }}</span>
+              <span
+                class="variant-option-flag"
+                *ngIf="stockAfter(variantPickerProduct, v) < 0"
+              >Not enough stock</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. THERMAL RECEIPT PRINT MODAL -->
     <app-receipt-modal
       [isOpen]="showReceiptModal"
       [printData]="lastReceiptData"
@@ -724,6 +855,119 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     ></app-receipt-modal>
   `,
   styles: [`
+    /* ─── Dish variant (portion) chooser ─── */
+    .variant-available-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.85rem;
+      margin-bottom: 0.85rem;
+      border-radius: 12px;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .variant-available-strip strong {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: var(--text-main, #2E1065);
+    }
+
+    .variant-option-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .variant-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: 100%;
+      padding: 0.8rem 0.95rem;
+      border-radius: 14px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: var(--card-bg, #FFFFFF);
+      text-align: left;
+      cursor: pointer;
+      transition:
+        border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .variant-option:hover:not(:disabled) {
+      border-color: var(--primary, #7E22CE);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+    }
+
+    .variant-option:active:not(:disabled) {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .variant-option:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      border-style: dashed;
+    }
+
+    .variant-option-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+    }
+
+    .variant-option-name {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-main, #2E1065);
+    }
+
+    .variant-option-meta {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .variant-option-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.15rem;
+      flex-shrink: 0;
+    }
+
+    .variant-option-price {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--primary, #7E22CE);
+    }
+
+    .variant-option-flag {
+      font-size: 0.625rem;
+      font-weight: 700;
+      color: var(--danger, #DC2626);
+    }
+
+    /* Portion badge on a cart line */
+    .cart-variant-chip {
+      display: inline-block;
+      margin-left: 0.35rem;
+      padding: 0.05rem 0.4rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      font-size: 0.625rem;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+
     .pos-fullscreen-container {
       display: flex;
       width: 100vw;
@@ -1522,6 +1766,184 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+
+    /* ═══════════════════════════════════════════════════════════════════ */
+    /* RESPONSIVE LAYOUTS (TABLET & MOBILE)                                */
+    /* ═══════════════════════════════════════════════════════════════════ */
+    @media (max-width: 1023px) {
+      .pos-cart-sidebar {
+        width: 340px;
+        padding: 1rem;
+      }
+      .dishes-cards-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1rem !important;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .pos-fullscreen-container {
+        flex-direction: column;
+        position: relative;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .pos-main-content {
+        padding: 0.875rem 1rem 5.5rem 1rem;
+        gap: 1.25rem;
+      }
+
+      .pos-top-search-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+      }
+
+      .pos-search-pill {
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .pos-quick-tools {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .pos-quick-tools .tool-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 0.45rem 0.65rem;
+        font-size: 0.75rem;
+      }
+
+      .dishes-cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.875rem !important;
+      }
+
+      .order-reports-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .order-reports-table {
+        min-width: 520px;
+      }
+
+      /* Mobile Bottom Sheet Cart Drawer */
+      .pos-cart-sidebar {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        max-height: 88vh;
+        border-radius: 20px 20px 0 0;
+        z-index: 1001;
+        box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.65);
+        transform: translateY(100%);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+      }
+
+      .pos-cart-sidebar.is-mobile-open {
+        transform: translateY(0);
+      }
+
+      .pos-cart-mobile-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1000;
+        animation: fadeInBackdrop 0.2s ease-out;
+      }
+
+      .pos-cart-mobile-close-btn {
+        display: flex !important;
+      }
+
+      .pos-mobile-floating-bar {
+        position: fixed;
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
+        color: #ffffff;
+        padding: 0.75rem 1.15rem;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 8px 24px var(--primary-glow, rgba(126, 34, 206, 0.45));
+        z-index: 900;
+        cursor: pointer;
+        animation: slideUpFloating 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .pos-mobile-cart-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 0.3rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
+      .pos-mobile-cart-cta {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #ffffff;
+        color: var(--primary, #7E22CE);
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    @media (max-width: 420px) {
+      .dishes-cards-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    .pos-cart-mobile-close-btn {
+      display: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .pos-mobile-cart-item-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      background: var(--accent, #EA580C);
+      color: #ffffff;
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+    }
+
+    @keyframes slideUpFloating {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   `],
 })
 export class PosComponent implements OnInit {
@@ -1535,6 +1957,13 @@ export class PosComponent implements OnInit {
   private billService = inject(BillService);
   private orderService = inject(OrderService);
   private notify = inject(NotificationService);
+
+  public isMobileCartOpen = false;
+
+  public isLoading = false;
+  public loadError: string | null = null;
+  /** Outstanding menu requests the loader is waiting on; see loadPosData(). */
+  private pendingCriticalLoads = 0;
 
   public products: Product[] = [];
   public filteredProducts: Product[] = [];
@@ -1578,10 +2007,45 @@ export class PosComponent implements OnInit {
   public lastReceiptData: any = null;
 
   ngOnInit(): void {
+    this.loadPosData();
+  }
+
+  /**
+   * The till is only usable once the menu itself has arrived, so the loader is
+   * held until both the category strip and the dish catalogue have settled.
+   * The draft count and recent-order strip are decorations around that — they
+   * load alongside and never hold the screen up.
+   */
+  loadPosData(): void {
+    this.isLoading = true;
+    this.loadError = null;
+    this.pendingCriticalLoads = 2;
+
     this.loadCategories();
     this.loadProducts();
     this.loadDraftCount();
     this.loadRecentOrders();
+  }
+
+  /**
+   * Clears the loader once both critical requests have finished, pass or fail.
+   *
+   * loadProducts() is also called on its own after a checkout to refresh stock
+   * counts. That is not a page load, so when nothing is pending this returns
+   * without touching the loader — otherwise a hiccup on that refresh would
+   * throw an error overlay over a till that had just settled a bill.
+   */
+  private settleCriticalLoad(err?: any): void {
+    if (this.pendingCriticalLoads === 0) return;
+
+    if (err) {
+      this.loadError =
+        err?.error?.message || 'Unable to load the menu. Please check your connection and try again.';
+    }
+    this.pendingCriticalLoads--;
+    if (this.pendingCriticalLoads === 0) {
+      this.isLoading = false;
+    }
   }
 
   // Keyboard Shortcuts
@@ -1625,7 +2089,9 @@ export class PosComponent implements OnInit {
     this.categoryService.getCategories().subscribe({
       next: (res) => {
         if (res.success) this.categories = res.data;
+        this.settleCriticalLoad();
       },
+      error: (err) => this.settleCriticalLoad(err),
     });
   }
 
@@ -1636,7 +2102,9 @@ export class PosComponent implements OnInit {
           this.products = res.data;
           this.filterProducts();
         }
+        this.settleCriticalLoad();
       },
+      error: (err) => this.settleCriticalLoad(err),
     });
   }
 
@@ -1648,6 +2116,8 @@ export class PosComponent implements OnInit {
           this.draftCount = res.data.length;
         }
       },
+      // Secondary data: the interceptor reports it, and the till still works.
+      error: () => {},
     });
   }
 
@@ -1658,6 +2128,7 @@ export class PosComponent implements OnInit {
           this.recentOrders = res.data;
         }
       },
+      error: () => {},
     });
   }
 
@@ -1686,12 +2157,56 @@ export class PosComponent implements OnInit {
     this.filteredProducts = list;
   }
 
+  /** Dish awaiting a portion choice; null when the chooser is closed. */
+  public variantPickerProduct: Product | null = null;
+
+  public get variantPickerOptions(): ProductVariant[] {
+    return (this.variantPickerProduct?.variants || []).filter((v) => v.status !== 'INACTIVE');
+  }
+
+  /**
+   * A dish that defines portions cannot be added without one — the server
+   * rejects it too, because the consumption is what leaves the ledger.
+   */
   addToCart(product: Product): void {
-    const success = this.cartService.addItem(product, 1);
+    const variants = (product.variants || []).filter((v) => v.status !== 'INACTIVE');
+    if (variants.length > 0) {
+      this.variantPickerProduct = product;
+      return;
+    }
+    this.commitToCart(product, null);
+  }
+
+  chooseVariant(variant: ProductVariant): void {
+    const product = this.variantPickerProduct;
+    if (!product) return;
+    this.variantPickerProduct = null;
+    this.commitToCart(product, variant);
+  }
+
+  closeVariantPicker(): void {
+    this.variantPickerProduct = null;
+  }
+
+  /** Stock the dish's linked ledger item still holds. */
+  public availableStock(product: Product | null): number {
+    if (!product) return 0;
+    const linked = Number(product.linked_stock_quantity);
+    return Number.isFinite(linked) ? linked : Number(product.current_stock) || 0;
+  }
+
+  /** What the balance becomes if this portion is sold once. */
+  public stockAfter(product: Product | null, variant: ProductVariant): number {
+    return this.availableStock(product) - (Number(variant.stock_consumption) || 0);
+  }
+
+  private commitToCart(product: Product, variant: ProductVariant | null): void {
+    const success = this.cartService.addItem(product, variant, 1);
+    const label = variant ? `${product.name} (${variant.name})` : product.name;
     if (!success) {
-      this.notify.error(`Cannot add "${product.name}" (Out of Stock / Inactive)`);
+      this.notify.error(`Cannot add "${label}" (Out of Stock / Inactive)`);
     } else {
-      this.notify.info(`Added "${product.name}" to cart`);
+      this.notify.info(`Added "${label}" to cart`);
     }
   }
 
@@ -1710,6 +2225,9 @@ export class PosComponent implements OnInit {
           this.showTableModal = true;
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1745,6 +2263,9 @@ export class PosComponent implements OnInit {
           this.notify.info('New customer number. Please enter name.');
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1774,6 +2295,9 @@ export class PosComponent implements OnInit {
                 this.showCustomerModal = false;
               }
             },
+            // Reported by the global error interceptor; present so a failure
+            // cannot escape as an unhandled rejection.
+            error: () => {},
           });
         },
       });
@@ -1799,6 +2323,7 @@ export class PosComponent implements OnInit {
   holdCurrentBill(): void {
     const items = this.cartService.items().map((i) => ({
       productId: i.product.id,
+      variantId: i.variant?.id ?? null,
       quantity: i.quantity,
       notes: i.notes,
     }));
@@ -1818,6 +2343,9 @@ export class PosComponent implements OnInit {
         this.cartService.clearCart();
         this.loadDraftCount();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1836,6 +2364,9 @@ export class PosComponent implements OnInit {
           this.notify.success(`Draft ${res.data.draft_number} resumed into POS`);
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1845,6 +2376,9 @@ export class PosComponent implements OnInit {
         this.loadDraftCount();
         this.notify.info('Draft deleted');
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1877,6 +2411,7 @@ export class PosComponent implements OnInit {
       paymentReference: this.paymentReference,
       items: this.cartService.items().map((i) => ({
         productId: i.product.id,
+        variantId: i.variant?.id ?? null,
         quantity: i.quantity,
         notes: i.notes,
       })),
@@ -1896,6 +2431,9 @@ export class PosComponent implements OnInit {
               this.showReceiptModal = true;
             }
           },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
         });
 
         this.cartService.clearCart();
@@ -1911,34 +2449,34 @@ export class PosComponent implements OnInit {
 
   getCategoryAvatar(name: string): string {
     const n = (name || '').toLowerCase();
-    if (n.includes('burger')) return '🍔';
-    if (n.includes('pizza')) return '🍕';
-    if (n.includes('mandi') || n.includes('rice') || n.includes('biryani')) return '🍗';
-    if (n.includes('taco')) return '🌮';
-    if (n.includes('sushi')) return '🍣';
-    if (n.includes('gratin') || n.includes('bake')) return '🍲';
-    if (n.includes('dessert') || n.includes('sweet') || n.includes('cake')) return '🍰';
-    if (n.includes('drink') || n.includes('beverage') || n.includes('juice')) return '🥤';
-    if (n.includes('starter') || n.includes('snack')) return '🥟';
-    return '🥘';
+    if (n.includes('burger')) return 'ðŸ”';
+    if (n.includes('pizza')) return 'ðŸ•';
+    if (n.includes('mandi') || n.includes('rice') || n.includes('biryani')) return 'ðŸ—';
+    if (n.includes('taco')) return 'ðŸŒ®';
+    if (n.includes('sushi')) return 'ðŸ£';
+    if (n.includes('gratin') || n.includes('bake')) return 'ðŸ²';
+    if (n.includes('dessert') || n.includes('sweet') || n.includes('cake')) return 'ðŸ°';
+    if (n.includes('drink') || n.includes('beverage') || n.includes('juice')) return 'ðŸ¥¤';
+    if (n.includes('starter') || n.includes('snack')) return 'ðŸ¥Ÿ';
+    return 'ðŸ¥˜';
   }
 
   getProductEmoji(name: string, categoryId?: number): string {
     const n = (name || '').toLowerCase();
-    if (n.includes('burger')) return '🍔';
-    if (n.includes('pizza') || n.includes('pepperoni')) return '🍕';
-    if (n.includes('sushi')) return '🍣';
-    if (n.includes('gratin')) return '🍲';
-    if (n.includes('taco')) return '🌮';
-    if (n.includes('mandi')) return '🍗';
-    if (n.includes('biryani')) return '🥘';
-    if (n.includes('pudding') || n.includes('sweet') || n.includes('umali')) return '🍮';
-    if (n.includes('chicken')) return '🍗';
-    if (n.includes('mutton')) return '🍖';
-    if (n.includes('soup')) return '🥣';
-    if (n.includes('salad')) return '🥗';
-    if (n.includes('juice') || n.includes('shake')) return '🥤';
-    return '🍽️';
+    if (n.includes('burger')) return 'ðŸ”';
+    if (n.includes('pizza') || n.includes('pepperoni')) return 'ðŸ•';
+    if (n.includes('sushi')) return 'ðŸ£';
+    if (n.includes('gratin')) return 'ðŸ²';
+    if (n.includes('taco')) return 'ðŸŒ®';
+    if (n.includes('mandi')) return 'ðŸ—';
+    if (n.includes('biryani')) return 'ðŸ¥˜';
+    if (n.includes('pudding') || n.includes('sweet') || n.includes('umali')) return 'ðŸ®';
+    if (n.includes('chicken')) return 'ðŸ—';
+    if (n.includes('mutton')) return 'ðŸ–';
+    if (n.includes('soup')) return 'ðŸ¥£';
+    if (n.includes('salad')) return 'ðŸ¥—';
+    if (n.includes('juice') || n.includes('shake')) return 'ðŸ¥¤';
+    return 'ðŸ½️';
   }
 }
 

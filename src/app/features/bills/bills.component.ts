@@ -6,14 +6,25 @@ import { Bill, PaymentMethod, OrderType } from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
 @Component({
   selector: 'app-bills',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReceiptModalComponent, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, ReceiptModalComponent, CustomDropdownComponent, DatePickerComponent, PageLoaderComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading || isPrinting"
+        [error]="loadError"
+        [message]="isPrinting ? 'Preparing receipt…' : 'Loading invoices…'"
+        [subMessage]="isPrinting ? 'Formatting the receipt for printing.' : 'Fetching sales invoices from the server.'"
+        icon="receipt_long"
+        (retry)="loadBills(currentPage)"
+      ></app-page-loader>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -248,13 +259,13 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           ></app-custom-dropdown>
 
           <!-- Date Filter -->
-          <input
-            title="Filter by date"
-            type="date"
+          <app-date-picker
             [(ngModel)]="selectedDate"
-            (ngModelChange)="currentPage = 1; loadBills(1)"
-            class="toolbar-search-input !w-auto"
-          />
+            (valueChange)="currentPage = 1; loadBills(1)"
+            label="Filter by date"
+            placeholder="All Dates"
+            minWidth="170px"
+          ></app-date-picker>
 
           <!-- Meta Record Count -->
           <span class="toolbar-meta-count hidden sm:inline-block">
@@ -446,6 +457,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 })
 export class BillsComponent implements OnInit {
   public isLoading = false;
+  public isPrinting = false;
   public loadError: string | null = null;
   public settingsService = inject(SettingsService);
   private billService = inject(BillService);
@@ -575,12 +587,19 @@ export class BillsComponent implements OnInit {
   }
 
   printReceipt(id: number): void {
+    this.isPrinting = true;
     this.billService.getPrintData(id).subscribe({
       next: (res) => {
+        this.isPrinting = false;
         if (res.success) {
           this.receiptData = res.data;
           this.showReceiptModal = true;
         }
+      },
+      // The global error interceptor already raises the toast; this only has to
+      // clear the busy flag so the loader cannot be left spinning.
+      error: () => {
+        this.isPrinting = false;
       },
     });
   }

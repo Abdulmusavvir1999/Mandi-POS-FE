@@ -8,13 +8,23 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { StockItem, StockEntry, StockMovement } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
+import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
 
 @Component({
   selector: 'app-stock-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, PageLoaderComponent],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading stock item…"
+        subMessage="Fetching purchase entries and movement history."
+        icon="inventory_2"
+        (retry)="loadItemData()"
+      ></app-page-loader>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & NAVIGATION                                     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -126,7 +136,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
             title="Adjust Stock or Record Wastage"
           >
             <span class="material-symbols-outlined">tune</span>
-            <span>⚖ Adjust / Wastage</span>
+            <span>Adjust / Wastage</span>
           </button>
 
           <button
@@ -136,7 +146,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
             title="Add Purchase Entry Batch"
           >
             <span class="material-symbols-outlined">add_shopping_cart</span>
-            <span>+ Purchase Entry (Stock In)</span>
+            <span>Purchase Entry (Stock In)</span>
           </button>
         </div>
       </div>
@@ -409,7 +419,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
                       (click)="openPurchaseModal()"
                       class="action-btn btn-gradient-purple mt-3"
                     >
-                      + Record First Purchase Batch
+                      Record First Purchase Batch
                     </button>
                   </div>
                 </td>
@@ -1005,12 +1015,19 @@ export class StockDetailComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading = false;
+        // Shown inline by <app-page-loader>; the interceptor raises the toast,
+        // so notifying again here would stack a third copy of the same message.
         this.loadError = err?.error?.message || 'Failed to load stock item details';
-        this.notify.error(this.loadError || 'Error loading stock item');
       },
     });
   }
 
+  /**
+   * Supplementary ledgers. The item itself has already rendered by the time
+   * these run, so a failure leaves the page usable and is reported by the
+   * interceptor's toast — but the callback is still required, or the rethrown
+   * error becomes an unhandled rejection.
+   */
   loadFullEntries(): void {
     this.stockService.getStockEntries(1, 200, this.stockItemId).subscribe({
       next: (res) => {
@@ -1018,6 +1035,7 @@ export class StockDetailComponent implements OnInit {
           this.entries = res.data;
         }
       },
+      error: () => {},
     });
   }
 
@@ -1028,6 +1046,7 @@ export class StockDetailComponent implements OnInit {
           this.movements = res.data;
         }
       },
+      error: () => {},
     });
   }
 

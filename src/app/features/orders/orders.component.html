@@ -1,4 +1,14 @@
 <div class="kds-page-container">
+  <!-- Loading only: this page already renders its own inline error banner
+       lower down, which keeps the board visible behind it. -->
+  <app-page-loader
+    [loading]="isLoading"
+    message="Loading kitchen orders…"
+    subMessage="Fetching live tickets from the server."
+    icon="receipt_long"
+    (retry)="loadOrders()"
+  ></app-page-loader>
+
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- 1. COMPACT PROFESSIONAL KDS PAGE HEADER                                 -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->

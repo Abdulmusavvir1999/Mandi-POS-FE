@@ -54,6 +54,18 @@ export interface Category {
   product_count?: number;
 }
 
+/** A portion of a dish: its own price, and how much stock one sale consumes. */
+export interface ProductVariant {
+  id: number;
+  product_id?: number;
+  name: string;
+  selling_price: number;
+  stock_consumption: number;
+  display_order?: number;
+  is_default?: boolean | number;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
 export interface Product {
   id: number;
   category_id: number;
@@ -71,6 +83,19 @@ export interface Product {
   min_stock_alert?: number;
   is_available: number | boolean;
   status: 'ACTIVE' | 'INACTIVE';
+  /** Portions this dish is sold in. Empty means it sells as a single item. */
+  variants?: ProductVariant[];
+  /** Balance of the linked stock ledger item, which variants consume from. */
+  linked_stock_quantity?: number;
+  linked_unit_type?: string;
+  linked_stock_code?: string;
+  linked_avg_cost?: number;
+  linked_min_alert?: number;
+  linked_stock_status?: string;
+  /** Held against open orders; available = current_stock - reserved_stock. */
+  reserved_stock?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Customer {
@@ -103,7 +128,13 @@ export interface DiningTable {
 }
 
 export interface CartItem {
+  /**
+   * Stable line key. A dish sold as Full and as Half is two separate lines,
+   * so the cart can no longer be keyed on product id alone.
+   */
+  lineId: string;
   product: Product;
+  variant?: ProductVariant | null;
   quantity: number;
   notes?: string;
   unitPrice: number;

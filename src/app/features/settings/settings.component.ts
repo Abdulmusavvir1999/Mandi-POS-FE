@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../core/services/settings.service';
 import { NotificationService, ToastPosition } from '../../core/services/notification.service';
 import { ThemeService, DEFAULT_THEME_PALETTES, ThemePalette } from '../../core/services/theme.service';
+import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 
 type SettingsTab = 'theme' | 'toast' | 'business' | 'hardware';
 
@@ -13,9 +15,18 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomDropdownComponent, PageLoaderComponent],
   template: `
     <div class="settings-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading settings…"
+        subMessage="Fetching saved configuration from the server."
+        icon="settings"
+        (retry)="loadSettings()"
+      ></app-page-loader>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- TOP EXECUTIVE HEADER & PERSISTENT ACTION BAR                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -677,60 +688,52 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             <!-- Max Visible -->
             <div class="control-box">
               <label class="control-label">Max Visible Toasts</label>
-              <select
+              <app-custom-dropdown
+                [options]="toastMaxVisibleOptions"
                 [(ngModel)]="settingsMap['TOAST_MAX_VISIBLE']"
                 (ngModelChange)="onToastConfigChanged()"
-                class="control-select"
-              >
-                <option value="2">2 toasts</option>
-                <option value="3">3 toasts</option>
-                <option value="4">4 toasts (Recommended)</option>
-                <option value="5">5 toasts</option>
-                <option value="6">6 toasts</option>
-              </select>
+                placeholder="Select limit"
+                minWidth="100%"
+              ></app-custom-dropdown>
               <span class="control-hint">Max stack limit</span>
             </div>
 
             <!-- Animation Style -->
             <div class="control-box">
               <label class="control-label">Animation Style</label>
-              <select
+              <app-custom-dropdown
+                [options]="toastAnimationOptions"
                 [(ngModel)]="settingsMap['TOAST_ANIMATION']"
                 (ngModelChange)="onToastConfigChanged()"
-                class="control-select"
-              >
-                <option value="slide">Slide + Fade</option>
-                <option value="fade">Smooth Fade</option>
-                <option value="bounce">Spring Bounce</option>
-              </select>
+                placeholder="Select animation"
+                minWidth="100%"
+              ></app-custom-dropdown>
               <span class="control-hint">Entrance curve</span>
             </div>
 
             <!-- Close Button -->
             <div class="control-box">
               <label class="control-label">Close Button</label>
-              <select
+              <app-custom-dropdown
+                [options]="toastShowCloseOptions"
                 [(ngModel)]="settingsMap['TOAST_SHOW_CLOSE']"
                 (ngModelChange)="onToastConfigChanged()"
-                class="control-select"
-              >
-                <option value="true">Show Close (✓)</option>
-                <option value="false">Hide Close</option>
-              </select>
+                placeholder="Select close behavior"
+                minWidth="100%"
+              ></app-custom-dropdown>
               <span class="control-hint">Dismiss icon on card</span>
             </div>
 
             <!-- Pause on Hover -->
             <div class="control-box">
               <label class="control-label">Pause On Hover</label>
-              <select
+              <app-custom-dropdown
+                [options]="toastPauseHoverOptions"
                 [(ngModel)]="settingsMap['TOAST_PAUSE_HOVER']"
                 (ngModelChange)="onToastConfigChanged()"
-                class="control-select"
-              >
-                <option value="true">Enabled (✓)</option>
-                <option value="false">Disabled</option>
-              </select>
+                placeholder="Select pause behavior"
+                minWidth="100%"
+              ></app-custom-dropdown>
               <span class="control-hint">Hover stops timer</span>
             </div>
           </div>
@@ -872,10 +875,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
             <div class="form-vertical-group">
               <label class="control-label">Tax Calculation Mode</label>
-              <select [(ngModel)]="settingsMap['TAX_ENABLED']" class="control-select font-bold">
-                <option value="true">ENABLED (Automated GST computation)</option>
-                <option value="false">DISABLED (Zero tax rate)</option>
-              </select>
+              <app-custom-dropdown
+                [options]="taxCalculationOptions"
+                [(ngModel)]="settingsMap['TAX_ENABLED']"
+                placeholder="Select tax mode"
+                minWidth="100%"
+              ></app-custom-dropdown>
             </div>
 
             <div class="two-input-row">
@@ -895,18 +900,21 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="two-input-row">
                 <div class="form-vertical-group">
                   <label class="control-label">Allow Negative Stock</label>
-                  <select [(ngModel)]="settingsMap['POS_ALLOW_NEGATIVE_STOCK']" class="control-select">
-                    <option value="false">STRICT (Prevent if 0 stock)</option>
-                    <option value="true">PERMIT (Allow below 0)</option>
-                  </select>
+                  <app-custom-dropdown
+                    [options]="negativeStockOptions"
+                    [(ngModel)]="settingsMap['POS_ALLOW_NEGATIVE_STOCK']"
+                    placeholder="Select policy"
+                    minWidth="100%"
+                  ></app-custom-dropdown>
                 </div>
                 <div class="form-vertical-group">
                   <label class="control-label">Default Order Type</label>
-                  <select [(ngModel)]="settingsMap['POS_DEFAULT_ORDER_TYPE']" class="control-select font-bold">
-                    <option value="WALK_IN">WALK_IN</option>
-                    <option value="TAKEAWAY">TAKEAWAY</option>
-                    <option value="DINING">DINING</option>
-                  </select>
+                  <app-custom-dropdown
+                    [options]="defaultOrderTypeOptions"
+                    [(ngModel)]="settingsMap['POS_DEFAULT_ORDER_TYPE']"
+                    placeholder="Select default type"
+                    minWidth="100%"
+                  ></app-custom-dropdown>
                 </div>
               </div>
             </div>
@@ -1029,17 +1037,21 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             <div class="two-input-row">
               <div class="form-vertical-group">
                 <label class="control-label">Paper Width</label>
-                <select [(ngModel)]="settingsMap['RECEIPT_PAPER_WIDTH']" class="control-select font-mono font-bold">
-                  <option value="80mm">80mm (Standard POS Thermal)</option>
-                  <option value="58mm">58mm (Compact Mobile Printer)</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="paperWidthOptions"
+                  [(ngModel)]="settingsMap['RECEIPT_PAPER_WIDTH']"
+                  placeholder="Select width"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
               <div class="form-vertical-group">
                 <label class="control-label">Show Customer Name</label>
-                <select [(ngModel)]="settingsMap['RECEIPT_SHOW_CUSTOMER']" class="control-select font-bold">
-                  <option value="true">YES</option>
-                  <option value="false">NO</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="showCustomerOptions"
+                  [(ngModel)]="settingsMap['RECEIPT_SHOW_CUSTOMER']"
+                  placeholder="Select option"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
             </div>
           </div>
@@ -1061,10 +1073,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div class="audio-title">POS Audio Chimes & Sound Effects</div>
                 <div class="audio-sub">Plays gentle confirmation chimes upon completing an order</div>
               </div>
-              <select [(ngModel)]="settingsMap['POS_SOUND_EFFECTS']" class="control-select w-32 font-bold">
-                <option value="true">ENABLED</option>
-                <option value="false">MUTED</option>
-              </select>
+              <app-custom-dropdown
+                [options]="soundEffectsOptions"
+                [(ngModel)]="settingsMap['POS_SOUND_EFFECTS']"
+                placeholder="Sound option"
+                minWidth="150px"
+              ></app-custom-dropdown>
             </div>
           </div>
         </div>
@@ -2165,10 +2179,69 @@ export class SettingsComponent implements OnInit {
   public activeTab: SettingsTab = 'theme';
   public settingsMap: Record<string, string> = {};
   public isSaving = false;
+  public isLoading = false;
+  public loadError: string | null = null;
   public presets = DEFAULT_THEME_PALETTES;
   public presetKeys = Object.keys(DEFAULT_THEME_PALETTES);
   public activePresetKey = 'purple';
   public showCustomFields = false;
+
+  // Custom Dropdown Option Arrays
+  public readonly toastMaxVisibleOptions: DropdownOption[] = [
+    { value: '1', label: '1 Toast (Single Alert)', icon: 'looks_one', description: 'Displays 1 toast at a time' },
+    { value: '3', label: '3 Toasts (Standard)', icon: 'looks_3', description: 'Recommended default toast stack' },
+    { value: '5', label: '5 Toasts (Busy Terminal)', icon: 'looks_5', description: 'Displays up to 5 concurrent toasts' },
+    { value: '8', label: '8 Toasts (High Volume)', icon: 'format_list_numbered', description: 'Maximum visible notification stack' },
+  ];
+
+  public readonly toastAnimationOptions: DropdownOption[] = [
+    { value: 'slide', label: 'Slide In & Out', icon: 'swipe', description: 'Smooth lateral slide transition' },
+    { value: 'fade', label: 'Smooth Fade', icon: 'blur_on', description: 'Gentle opacity fade in/out' },
+    { value: 'bounce', label: 'Spring Bounce', icon: 'animation', description: 'Playful bouncy elastic curve' },
+    { value: 'flip', label: '3D Card Flip', icon: 'flip', description: 'Modern 3D card rotation entrance' },
+  ];
+
+  public readonly toastShowCloseOptions: DropdownOption[] = [
+    { value: 'true', label: 'Show Close Button', icon: 'close', description: 'Explicit dismiss button on toast card' },
+    { value: 'false', label: 'Hide Close Button', icon: 'visibility_off', description: 'Minimalist clean card layout' },
+  ];
+
+  public readonly toastPauseHoverOptions: DropdownOption[] = [
+    { value: 'true', label: 'Pause on Hover', icon: 'pause_circle', description: 'Timer freezes when hovering over toast' },
+    { value: 'false', label: 'Do Not Pause', icon: 'play_circle', description: 'Toasts dismiss on fixed countdown' },
+  ];
+
+  public readonly taxCalculationOptions: DropdownOption[] = [
+    { value: 'true', label: 'Tax Computation Enabled', icon: 'check_circle', description: 'Automatically calculate GST/Tax on orders' },
+    { value: 'false', label: 'Tax Computation Disabled', icon: 'block', description: 'Prices are all-inclusive without extra tax' },
+  ];
+
+  public readonly negativeStockOptions: DropdownOption[] = [
+    { value: 'false', label: 'Disallow Negative Stock (Strict)', icon: 'inventory_2', description: 'Blocks orders if stock reaches zero' },
+    { value: 'true', label: 'Allow Negative Stock (Flexible)', icon: 'published_with_changes', description: 'Allows billing even if stock count is zero' },
+  ];
+
+  public readonly defaultOrderTypeOptions: DropdownOption[] = [
+    { value: 'WALK_IN', label: 'Walk-In / Counter', icon: 'directions_walk', description: 'Fast takeaway & walk-in ordering' },
+    { value: 'DINE_IN', label: 'Dine-In / Table Service', icon: 'table_restaurant', description: 'Table order management' },
+    { value: 'TAKEAWAY', label: 'Takeaway / Parcel', icon: 'shopping_bag', description: 'Pack & parcel orders' },
+    { value: 'DELIVERY', label: 'Home Delivery', icon: 'delivery_dining', description: 'Direct delivery orders' },
+  ];
+
+  public readonly paperWidthOptions: DropdownOption[] = [
+    { value: '80mm', label: '80mm (Standard POS Thermal)', icon: 'receipt_long', description: 'Standard 3-inch thermal roll' },
+    { value: '58mm', label: '58mm (Compact Mobile Printer)', icon: 'receipt', description: 'Compact 2-inch mini thermal roll' },
+  ];
+
+  public readonly showCustomerOptions: DropdownOption[] = [
+    { value: 'true', label: 'Show Customer Info', icon: 'person', description: 'Prints customer name & phone on receipt' },
+    { value: 'false', label: 'Hide Customer Info', icon: 'person_off', description: 'Compact receipt without customer header' },
+  ];
+
+  public readonly soundEffectsOptions: DropdownOption[] = [
+    { value: 'true', label: 'Chimes Enabled', icon: 'volume_up', description: 'Audible feedback on checkout & billing' },
+    { value: 'false', label: 'Muted / Silent', icon: 'volume_off', description: 'Completely silent operations' },
+  ];
 
   /**
    * The two uploadable branding images. `settingKey` is where the stored URL
@@ -2411,8 +2484,11 @@ export class SettingsComponent implements OnInit {
   }
 
   loadSettings(): void {
+    this.isLoading = true;
+    this.loadError = null;
     this.settingsService.getSettings().subscribe({
       next: (res) => {
+        this.isLoading = false;
         if (res.success && res.data) {
           // Flatten pure grouped category dictionary
           this.settingsMap = this.flattenGroupedSettings(res.data.map || res.data);
@@ -2425,7 +2501,13 @@ export class SettingsComponent implements OnInit {
           this.notify.syncFromSettingsMap(this.settingsMap);
         }
       },
-      error: () => {
+      error: (err: any) => {
+        // Settings fall back to the locally held theme so the page stays
+        // operable, but the failure is still stated rather than looking like a
+        // successful load of defaults.
+        this.isLoading = false;
+        this.loadError =
+          err?.error?.message || 'Unable to load saved settings. Showing the currently applied values.';
         this.themeService.exportToSettingsMap(this.settingsMap);
         this.activePresetKey = this.themeService.activePresetKey();
         this.notify.exportToSettingsMap(this.settingsMap);

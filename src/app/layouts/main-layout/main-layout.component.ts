@@ -1,4 +1,4 @@
-﻿import { Component, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -24,22 +24,27 @@ import { ConfirmationDialogComponent } from '../../shared/components/confirmatio
       [style.background-color]="isPosRoute ? '#F4F7F6' : 'var(--bg-app, #FAF5FF)'"
       [style.color]="'var(--text-main, #2E1065)'"
     >
-      <!-- Full-height Sidebar: its brand header occupies the top-left corner -->
+      <!-- Full-height Sidebar with Desktop Dock + Mobile Overlay Drawer Support -->
       <app-sidebar
         *ngIf="!isPosRoute"
         [isCollapsed]="isSidebarCollapsed"
+        [isMobileOpen]="isMobileSidebarOpen"
         (toggleCollapse)="isSidebarCollapsed = !isSidebarCollapsed"
+        (closeMobileDrawer)="isMobileSidebarOpen = false"
       ></app-sidebar>
 
       <!-- Right column: top navbar above the routed screen -->
-      <div class="flex flex-col flex-1 overflow-hidden relative">
+      <div class="flex flex-col flex-1 overflow-hidden relative min-w-0">
         <!-- Top Iconic Navbar (Hidden in Fullscreen POS mode) -->
-        <app-header *ngIf="!isPosRoute"></app-header>
+        <app-header
+          *ngIf="!isPosRoute"
+          (toggleMobileSidebar)="isMobileSidebarOpen = !isMobileSidebarOpen"
+        ></app-header>
 
         <!-- Routed Feature Screen with Canvas -->
         <main
-          class="flex-1 overflow-hidden"
-          [ngClass]="isPosRoute ? 'p-0 w-full h-full' : 'overflow-y-auto p-4 md:p-6'"
+          class="flex-1 overflow-hidden min-w-0"
+          [ngClass]="isPosRoute ? 'p-0 w-full h-full' : 'overflow-y-auto p-3 sm:p-4 md:p-6'"
           [style.color]="'var(--text-main, #2E1065)'"
         >
           <router-outlet></router-outlet>
@@ -55,6 +60,7 @@ import { ConfirmationDialogComponent } from '../../shared/components/confirmatio
 export class MainLayoutComponent {
   private router = inject(Router);
   public isSidebarCollapsed = false;
+  public isMobileSidebarOpen = false;
   public isPosRoute = false;
 
   constructor() {
@@ -63,6 +69,7 @@ export class MainLayoutComponent {
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: any) => {
         this.checkPosRoute(event.urlAfterRedirects || event.url);
+        this.isMobileSidebarOpen = false;
       });
   }
 

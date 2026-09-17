@@ -21,6 +21,15 @@ export class CategoryService {
     return this.http.get<ApiResponse<Category>>(`${this.API_URL}/${id}`);
   }
 
+  /**
+   * Uploads a thumbnail as a base64 data URL and returns its stored path.
+   * Runs before the category row exists, so the form holds the returned URL
+   * until it is saved with the rest of the fields.
+   */
+  public uploadCategoryImage(dataUrl: string): Observable<ApiResponse<{ url: string; fileName: string; bytes: number }>> {
+    return this.http.post<ApiResponse<{ url: string; fileName: string; bytes: number }>>(`${this.API_URL}/image`, { dataUrl });
+  }
+
   public createCategory(data: any): Observable<ApiResponse<Category>> {
     return this.http.post<ApiResponse<Category>>(this.API_URL, data);
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -10,12 +10,21 @@ import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading inventory…"
+        subMessage="Fetching stock items from the server."
+        icon="inventory_2"
+        (retry)="loadStockMaster()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -63,7 +72,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             title="Add New Master Stock Item"
           >
             <span class="material-symbols-outlined">add_box</span>
-            <span>+ Master Item</span>
+            <span>Master Item</span>
           </button>
 
           <button
@@ -73,7 +82,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             title="Adjust Stock / Record Wastage"
           >
             <span class="material-symbols-outlined">tune</span>
-            <span>⚖ Adjust / Wastage</span>
+            <span>Adjust / Wastage</span>
           </button>
 
           <button
@@ -83,7 +92,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             title="Record Stock Purchase (Qty x Multiplier)"
           >
             <span class="material-symbols-outlined">add_shopping_cart</span>
-            <span>+ Purchase Entry (Stock In)</span>
+            <span>Purchase Entry (Stock In)</span>
           </button>
         </div>
       </div>
@@ -410,7 +419,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                       class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs !text-[#16A34A] hover:!bg-[#DCFCE7]"
                       title="Add Purchase Entry"
                     >
-                      + Entry
+                      Entry
                     </button>
                     <button
                       type="button"
@@ -418,7 +427,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                       class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
                       title="Adjust Stock"
                     >
-                      ⚖ Adjust
+                      Adjust
                     </button>
                     <button
                       type="button"
@@ -516,7 +525,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                   <div class="empty-state-box">
                     <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'receipt_long' }}</span>
                     <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Purchase Entries Found' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching purchase entries…' : loadError ? loadError : 'No purchase entries recorded yet. Click "+ Purchase Entry" to add one.' }}</p>
+                    <p class="empty-desc">{{ isLoading ? 'Fetching purchase entries…' : loadError ? loadError : 'No purchase entries recorded yet. Click "Purchase Entry" to add one.' }}</p>
                   </div>
                 </td>
               </tr>
@@ -672,7 +681,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                       (click)="quickPurchaseEntry(item)"
                       class="action-btn btn-gradient-purple !py-1 !px-2.5 !text-xs"
                     >
-                      + Restock
+                      Restock
                     </button>
                     <button
                       type="button"
@@ -1711,6 +1720,9 @@ export class StockComponent implements OnInit {
           this.stockEntries = res.data;
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1722,6 +1734,9 @@ export class StockComponent implements OnInit {
           this.stockMovements = res.data;
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1733,6 +1748,9 @@ export class StockComponent implements OnInit {
           this.lowStockList = res.data;
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1743,6 +1761,9 @@ export class StockComponent implements OnInit {
           this.allProducts = res.data;
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1955,6 +1976,9 @@ export class StockComponent implements OnInit {
         this.loadStockMovements();
         this.loadLowStockAlerts();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -1995,6 +2019,9 @@ export class StockComponent implements OnInit {
         this.loadStockMovements();
         this.loadLowStockAlerts();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -2018,6 +2045,9 @@ export class StockComponent implements OnInit {
         this.showCreateMasterModal = false;
         this.loadStockMaster();
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 

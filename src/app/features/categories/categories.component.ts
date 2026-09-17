@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
@@ -7,12 +7,21 @@ import { Category } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading categories…"
+        subMessage="Fetching menu categories from the server."
+        icon="category"
+        (retry)="loadCategories()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -80,7 +89,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">add_circle</span>
-            <span>+ New Category</span>
+            <span>New Category</span>
           </button>
         </div>
       </div>
@@ -324,8 +333,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 <!-- Category Name & Icon -->
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-[#F3E8FF] border border-[#E9D5FF] flex items-center justify-center font-bold text-xs text-[#7E22CE] shrink-0 shadow-xs">
-                      <span class="material-symbols-outlined" style="font-size: 20px;">folder</span>
+                    <div class="category-thumb">
+                      <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" />
+                      <span *ngIf="!cat.image_url" class="material-symbols-outlined">folder</span>
                     </div>
                     <div class="min-w-0">
                       <div class="font-bold text-[#2E1065] text-xs truncate">{{ cat.name }}</div>
@@ -343,12 +353,12 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
 
                 <!-- Order & Linked Dishes -->
                 <td>
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono text-xs font-bold text-[#7E22CE] bg-[#FAF5FF] px-2 py-0.5 rounded-md border border-[#E9D5FF]">
-                      #{{ cat.display_order }}
-                    </span>
-                    <span class="text-xs font-semibold text-[#2E1065]">
-                      {{ cat.product_count || 0 }} dishes
+                  <div class="order-dish-cell">
+                    <span class="order-seq" [title]="'Display order ' + cat.display_order">{{ cat.display_order }}</span>
+                    <span class="dish-chip" [class.is-empty]="!cat.product_count">
+                      <span class="material-symbols-outlined">restaurant_menu</span>
+                      <strong>{{ cat.product_count || 0 }}</strong>
+                      <span class="dish-chip-label">{{ cat.product_count === 1 ? 'dish' : 'dishes' }}</span>
                     </span>
                   </div>
                 </td>
@@ -524,13 +534,59 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
                   Status
                 </label>
-                <select [(ngModel)]="form.status" name="status" class="form-control text-sm w-full">
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="formStatusOptions"
+                  [(ngModel)]="form.status"
+                  name="status"
+                  placeholder="Select Status"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                Category Image (Optional)
+              </label>
+              <div class="image-upload-row">
+                <div class="image-upload-preview" [class.is-empty]="!form.image_url">
+                  <img *ngIf="form.image_url" [src]="settingsService.assetUrl(form.image_url)" alt="Category image preview" />
+                  <span *ngIf="!form.image_url" class="material-symbols-outlined">add_photo_alternate</span>
+                </div>
+                <div class="image-upload-actions">
+                  <input
+                    type="file"
+                    hidden
+                    #catPicker
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    (change)="onCategoryImageFile($event, catPicker)"
+                    title="Choose category image"
+                  />
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      [disabled]="isUploadingImage"
+                      (click)="catPicker.click()"
+                    >
+                      <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
+                      <span>{{ isUploadingImage ? 'Uploading…' : (form.image_url ? 'Replace' : 'Choose Image') }}</span>
+                    </button>
+                    <button
+                      *ngIf="form.image_url && !isUploadingImage"
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      (click)="removeCategoryImage()"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
+                </div>
               </div>
             </div>
 
@@ -556,6 +612,144 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
   `,
   styles: [
     `
+      /* ─── Category thumbnail in the list ─── */
+      .category-thumb {
+        width: 2.25rem;
+        height: 2.25rem;
+        flex-shrink: 0;
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-light, #F3E8FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--primary, #7E22CE);
+        box-shadow: 0 1px 2px rgba(46, 16, 101, 0.06);
+      }
+
+      .category-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .category-thumb .material-symbols-outlined {
+        font-size: 20px;
+      }
+
+      /* ─── Order & linked dishes ───
+         The sequence number is context, the dish count is the datum, so only
+         the count carries colour. An empty category reads as an outline. */
+      .order-dish-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .order-seq {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        border-radius: 7px;
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--text-muted, #6B7280);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .dish-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.6rem 0.2rem 0.45rem;
+        border-radius: 999px;
+        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--primary, #7E22CE);
+        font-size: 0.6875rem;
+        white-space: nowrap;
+      }
+
+      .dish-chip .material-symbols-outlined {
+        font-size: 14px;
+      }
+
+      .dish-chip strong {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+
+      .dish-chip-label {
+        font-weight: 600;
+        opacity: 0.75;
+      }
+
+      .dish-chip.is-empty {
+        background: transparent;
+        border-style: dashed;
+        border-color: #E5E7EB;
+        color: #9CA3AF;
+      }
+
+      /* ─── Image upload field ─── */
+      .image-upload-row {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+      }
+
+      .image-upload-preview {
+        width: 4.5rem;
+        height: 4.5rem;
+        flex-shrink: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-app, #FAF5FF);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        color: var(--primary, #7E22CE);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+
+      .image-upload-preview.is-empty {
+        border-style: dashed;
+      }
+
+      .image-upload-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .image-upload-preview .material-symbols-outlined {
+        font-size: 26px;
+        opacity: 0.55;
+      }
+
+      .image-upload-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: 0;
+      }
+
+      .image-upload-hint {
+        margin: 0;
+        font-size: 0.6875rem;
+        color: var(--text-muted, #6B7280);
+      }
     `
   ]
 })
@@ -578,6 +772,11 @@ export class CategoriesComponent implements OnInit {
     { value: 'INACTIVE', label: 'Inactive Only', icon: 'pause_circle', description: 'Hidden from POS' },
   ];
 
+  public formStatusOptions: DropdownOption[] = [
+    { value: 'ACTIVE', label: 'ACTIVE', icon: 'check_circle', description: 'Category visible on POS' },
+    { value: 'INACTIVE', label: 'INACTIVE', icon: 'block', description: 'Category hidden from POS' },
+  ];
+
   public sortOptions: DropdownOption[] = [
     { value: 'display_order', label: 'Sort: Display Order', icon: 'format_list_numbered' },
     { value: 'name', label: 'Sort: Category Name (A-Z)', icon: 'sort_by_alpha' },
@@ -595,7 +794,69 @@ export class CategoriesComponent implements OnInit {
     description: '',
     display_order: 1,
     status: 'ACTIVE',
+    image_url: '',
   };
+
+  /** True while a picked file is being read and uploaded. */
+  public isUploadingImage = false;
+
+  private static readonly IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  private static readonly IMAGE_MAX_MB = 2;
+
+  /**
+   * Reads the picked file and uploads it immediately, so the form only ever
+   * carries a stored URL. The server re-checks type and size — these checks
+   * exist to fail fast without a round trip.
+   */
+  onCategoryImageFile(event: Event, picker: HTMLInputElement): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    // Cleared straight away so picking the same file after a failure still
+    // fires a change event.
+    picker.value = '';
+    if (!file) return;
+
+    if (!CategoriesComponent.IMAGE_TYPES.includes(file.type)) {
+      this.notify.error('Category image must be a PNG, JPG, WEBP or GIF.');
+      return;
+    }
+    if (file.size > CategoriesComponent.IMAGE_MAX_MB * 1024 * 1024) {
+      this.notify.error(
+        `Category image is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is ${CategoriesComponent.IMAGE_MAX_MB} MB.`
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      this.isUploadingImage = false;
+      this.notify.error(`Could not read ${file.name}.`);
+    };
+    reader.onload = () => {
+      this.categoryService.uploadCategoryImage(String(reader.result)).subscribe({
+        next: (res) => {
+          this.isUploadingImage = false;
+          if (res.success && res.data?.url) {
+            this.form.image_url = res.data.url;
+            this.notify.success('Image uploaded — save the category to apply it.');
+          } else {
+            this.notify.error(res?.message || 'Category image upload failed.');
+          }
+        },
+        error: (err) => {
+          this.isUploadingImage = false;
+          this.notify.error(err?.error?.message || 'Category image upload failed.');
+        },
+      });
+    };
+
+    this.isUploadingImage = true;
+    reader.readAsDataURL(file);
+  }
+
+  /** Clears the image; the old file is deleted server-side when the row saves. */
+  removeCategoryImage(): void {
+    this.form.image_url = '';
+  }
 
   ngOnInit(): void {
     this.loadCategories();
@@ -735,6 +996,9 @@ export class CategoriesComponent implements OnInit {
                 this.loadCategories();
               }
             },
+            // Reported by the global error interceptor; present so a failure
+            // cannot escape as an unhandled rejection.
+            error: () => {},
           });
         });
       },
@@ -748,7 +1012,9 @@ export class CategoriesComponent implements OnInit {
       description: '',
       display_order: this.categories.length + 1,
       status: 'ACTIVE',
+      image_url: '',
     };
+    this.isUploadingImage = false;
     this.showModal = true;
   }
 
@@ -759,7 +1025,9 @@ export class CategoriesComponent implements OnInit {
       description: cat.description,
       display_order: cat.display_order,
       status: cat.status,
+      image_url: cat.image_url || '',
     };
+    this.isUploadingImage = false;
     this.showModal = true;
   }
 
@@ -776,6 +1044,9 @@ export class CategoriesComponent implements OnInit {
           this.showModal = false;
           this.loadCategories();
         },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
       });
     } else {
       this.categoryService.createCategory(this.form).subscribe({
@@ -784,6 +1055,9 @@ export class CategoriesComponent implements OnInit {
           this.showModal = false;
           this.loadCategories();
         },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
       });
     }
   }
@@ -800,6 +1074,9 @@ export class CategoriesComponent implements OnInit {
             this.notify.info('Category deleted');
             this.loadCategories();
           },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
         });
       },
     });

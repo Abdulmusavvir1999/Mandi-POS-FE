@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { DiningTable, TableStatus } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
 /** Six ticks of fifteen minutes — the ninety-minute turn the floor is run to. */
 const DwellRail = {
@@ -15,12 +16,21 @@ const DwellRail = {
   MINUTES_PER_TICK: 15,
 } as const;
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-dining',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, AppCurrencyPipe, CustomDropdownComponent],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading dining floor…"
+        subMessage="Fetching table layout and status from the server."
+        icon="table_restaurant"
+        (retry)="loadTables()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -461,14 +471,16 @@ const DwellRail = {
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
                   Status
                 </label>
-                <select [(ngModel)]="tableForm.status" name="status" class="form-control text-sm w-full">
-                  <option value="AVAILABLE">AVAILABLE</option>
-                  <option value="OCCUPIED">OCCUPIED</option>
-                  <option value="UNAVAILABLE">UNAVAILABLE</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="tableStatusOptions"
+                  [(ngModel)]="tableForm.status"
+                  name="status"
+                  placeholder="Select Status"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
             </div>
 
@@ -1249,6 +1261,12 @@ export class DiningComponent implements OnInit, OnDestroy {
 
   public showTableModal = false;
   public editingTableId: number | null = null;
+  public tableStatusOptions: DropdownOption[] = [
+    { value: 'AVAILABLE', label: 'AVAILABLE', icon: 'check_circle', description: 'Table ready for incoming guests' },
+    { value: 'OCCUPIED', label: 'OCCUPIED', icon: 'restaurant', description: 'Guests dining currently' },
+    { value: 'UNAVAILABLE', label: 'UNAVAILABLE', icon: 'block', description: 'Table out of service' },
+  ];
+
   public tableForm: any = {
     tableNumber: '',
     name: '',
@@ -1485,6 +1503,9 @@ export class DiningComponent implements OnInit, OnDestroy {
             this.notify.success(`Table ${table.table_number} is now AVAILABLE`);
             this.loadTables();
           },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
         });
       },
     });
@@ -1528,6 +1549,9 @@ export class DiningComponent implements OnInit, OnDestroy {
           this.showTableModal = false;
           this.loadTables();
         },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
       });
     } else {
       this.diningService.createTable(this.tableForm).subscribe({
@@ -1536,6 +1560,9 @@ export class DiningComponent implements OnInit, OnDestroy {
           this.showTableModal = false;
           this.loadTables();
         },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
       });
     }
   }
@@ -1553,6 +1580,9 @@ export class DiningComponent implements OnInit, OnDestroy {
             this.showTableModal = false;
             this.loadTables();
           },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
         });
       },
     });

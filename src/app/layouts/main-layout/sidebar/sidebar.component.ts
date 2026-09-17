@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostBinding, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -26,6 +26,14 @@ export interface NavSection {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
+    <!-- Mobile Backdrop Overlay (< 1024px) -->
+    <div
+      *ngIf="isMobileOpen"
+      class="mobile-sidebar-backdrop"
+      (click)="closeMobileDrawer.emit()"
+      aria-hidden="true"
+    ></div>
+
     <aside
       class="sidebar-container"
       [class.is-collapsed]="isCollapsed"
@@ -52,7 +60,7 @@ export interface NavSection {
           </div>
         </div>
 
-        <!-- Collapse / Expand Toggle Button -->
+        <!-- Desktop Collapse / Expand Toggle Button -->
         <button
           type="button"
           class="collapse-toggle-btn"
@@ -61,6 +69,17 @@ export interface NavSection {
           [title]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         >
           <span class="material-symbols-outlined g-icon-sm toggle-icon">{{ isCollapsed ? 'menu_open' : 'dock_to_left' }}</span>
+        </button>
+
+        <!-- Mobile Close Drawer Button -->
+        <button
+          type="button"
+          class="mobile-close-btn"
+          (click)="closeMobileDrawer.emit()"
+          aria-label="Close navigation menu"
+          title="Close Menu"
+        >
+          <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
 
@@ -82,6 +101,7 @@ export interface NavSection {
                     *ngIf="canAccess(item)"
                     [routerLink]="item.route"
                     [queryParams]="item.queryParams || null"
+                    (click)="onNavItemClick()"
                     routerLinkActive="is-active"
                     [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' || item.route === '/pos' || (item.queryParams !== undefined) }"
                     class="menu-item"
@@ -182,7 +202,7 @@ export interface NavSection {
         background-color: var(--sidebar-bg, #2E1065);
         border-right: 1px solid var(--sidebar-border, #581C87);
         box-sizing: border-box;
-        transition: width 180ms ease, min-width 180ms ease, max-width 180ms ease;
+        transition: width 180ms ease, min-width 180ms ease, max-width 180ms ease, transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
         z-index: 30;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -202,8 +222,6 @@ export interface NavSection {
         align-items: center;
         justify-content: space-between;
         padding: 0 12px;
-        /* Same treatment as the header bar so the divider runs unbroken
-           across the brand and the navbar. */
         border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border, #581C87) 70%, #FFFFFF 30%);
         box-sizing: border-box;
         gap: 8px;
@@ -241,7 +259,6 @@ export interface NavSection {
         transition: background-color 150ms ease, border-color 150ms ease;
       }
 
-      /* Fills the crest square, minus the 1px border, when a logo is uploaded. */
       .brand-logo-img {
         width: 100%;
         height: 100%;
@@ -304,71 +321,64 @@ export interface NavSection {
         border-color: var(--sidebar-border, #581C87);
       }
 
-      .collapse-toggle-btn:focus-visible {
-        outline: 2px solid var(--primary, #7E22CE);
-        outline-offset: 2px;
-      }
-
-      .toggle-icon {
-        color: currentColor;
-      }
-
-      .is-collapsed .collapse-toggle-btn {
+      .mobile-close-btn {
         display: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--sidebar-surface, #3B0764);
+        border: 1px solid var(--sidebar-border, #581C87);
+        color: var(--sidebar-text, #FAF5FF);
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        transition: all 0.15s ease;
+      }
+      .mobile-close-btn:hover {
+        background: rgba(220, 38, 38, 0.2);
+        color: #F87171;
+        border-color: #F87171;
       }
 
-      /* 2. NAVIGATION SCROLL AREA */
+      /* 2. NAVIGATION GROUPS (Scrollable) */
       .sidebar-nav-scroll {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 12px;
-        box-sizing: border-box;
-      }
-
-      .is-collapsed .sidebar-nav-scroll {
         padding: 12px 8px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sidebar-surface, #3B0764) transparent;
       }
 
       .sidebar-nav-scroll::-webkit-scrollbar {
         width: 4px;
       }
-
-      .sidebar-nav-scroll::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
       .sidebar-nav-scroll::-webkit-scrollbar-thumb {
         background: var(--sidebar-surface, #3B0764);
         border-radius: 4px;
       }
 
-      .sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
-        background: var(--sidebar-border, #581C87);
-      }
-
       .nav-groups-wrapper {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 16px;
       }
 
       .nav-section {
         display: flex;
         flex-direction: column;
+        gap: 2px;
       }
 
       .section-label {
-        font-size: 11px;
-        font-weight: 600;
+        font-size: 10px;
+        font-weight: 700;
         letter-spacing: 0.08em;
-        color: var(--sidebar-active-accent, #A855F7);
         text-transform: uppercase;
-        padding: 0 8px;
-        margin-bottom: 6px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        color: var(--sidebar-section-label, #C084FC);
+        padding: 4px 10px;
+        margin-bottom: 2px;
       }
 
       .section-divider-collapsed {
@@ -380,32 +390,24 @@ export interface NavSection {
       .section-items {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
       }
 
-      /* 3. MENU ITEM DESIGN */
+      /* MENU ITEM (40px) */
       .menu-item {
         position: relative;
         display: flex;
         align-items: center;
-        height: 44px;
-        min-height: 44px;
+        height: 40px;
         padding: 0 10px;
         border-radius: 8px;
-        background-color: transparent;
-        color: var(--sidebar-text, #FAF5FF);
+        color: var(--sidebar-text-muted, #D8B4FE);
         text-decoration: none;
-        box-sizing: border-box;
-        cursor: pointer;
-        outline: none;
-        gap: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        gap: 10px;
         transition: background-color 150ms ease, color 150ms ease;
-      }
-
-      .is-collapsed .menu-item {
-        justify-content: center;
-        padding: 0;
-        gap: 0;
+        box-sizing: border-box;
       }
 
       .menu-item:hover {
@@ -413,143 +415,120 @@ export interface NavSection {
         color: var(--sidebar-text, #FAF5FF);
       }
 
-      .menu-item:focus-visible {
-        outline: 2px solid var(--primary, #7E22CE);
-        outline-offset: 1px;
+      .is-collapsed .menu-item {
+        justify-content: center;
+        padding: 0;
       }
 
-      /* Left Active Indicator */
+      /* Active Indicator Bar */
       .active-indicator {
-        display: none;
         position: absolute;
         left: 0;
-        top: 50%;
-        transform: translateY(-50%);
+        top: 6px;
+        bottom: 6px;
         width: 3px;
-        height: 22px;
         border-radius: 0 3px 3px 0;
-        background-color: var(--sidebar-active-accent, #C084FC);
+        background-color: transparent;
+        transition: background-color 150ms ease;
       }
 
-      /* Active State */
       .menu-item.is-active {
         background-color: var(--sidebar-surface, #3B0764);
-        color: #FFFFFF;
+        color: var(--sidebar-text, #FAF5FF);
+        font-weight: 600;
       }
 
       .menu-item.is-active .active-indicator {
-        display: block;
+        background-color: var(--sidebar-active-accent, #C084FC);
       }
 
       .menu-item.is-active .item-icon-wrapper {
         color: var(--sidebar-active-accent, #C084FC);
       }
 
-      /* POS Active & Featured State */
-      .menu-item.pos-special-item.is-active {
-        background-color: var(--sidebar-surface, #3B0764);
-        color: #FFFFFF;
-      }
-
-      /* Item Icon */
       .item-icon-wrapper {
-        width: 22px;
-        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
+        width: 20px;
+        height: 20px;
         flex-shrink: 0;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        transition: color 150ms ease;
+        color: inherit;
       }
 
-      .menu-item:hover .item-icon-wrapper {
-        color: var(--sidebar-text, #FAF5FF);
-      }
-
-      /* Item Label */
       .item-label {
-        font-size: 14px;
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
         flex: 1;
-        text-align: left;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
       }
 
-      /* Item Badge (e.g. F1) */
       .item-badge {
         font-size: 10px;
         font-weight: 600;
-        padding: 2px 6px;
+        padding: 1px 6px;
         border-radius: 4px;
         background-color: var(--sidebar-surface, #3B0764);
-        color: var(--sidebar-text-muted, #D8B4FE);
         border: 1px solid var(--sidebar-border, #581C87);
-        letter-spacing: 0.04em;
+        color: var(--sidebar-active-accent, #C084FC);
       }
 
-      .menu-item.is-active .item-badge {
-        border-color: var(--sidebar-active-accent, #C084FC);
-        color: var(--sidebar-text, #FAF5FF);
+      /* Special Accent for POS Item */
+      .pos-special-item {
+        color: #FBCFE8;
+      }
+      .pos-special-item .item-icon-wrapper {
+        color: #F472B6;
+      }
+      .pos-special-item.is-active {
+        background: linear-gradient(90deg, rgba(244, 114, 182, 0.2), transparent);
+        color: #FFFFFF;
+      }
+      .pos-special-item.is-active .active-indicator {
+        background-color: #F472B6;
       }
 
-      /* 4. COLLAPSED TOOLTIP */
+      /* Collapsed Tooltip */
       .collapsed-tooltip {
+        display: none;
         position: absolute;
-        left: calc(100% + 10px);
+        left: calc(100% + 8px);
         top: 50%;
-        transform: translateY(-50%) translateX(-4px);
+        transform: translateY(-50%);
         background-color: var(--sidebar-surface, #3B0764);
         color: var(--sidebar-text, #FAF5FF);
         border: 1px solid var(--sidebar-border, #581C87);
-        border-radius: 6px;
         padding: 5px 9px;
+        border-radius: 6px;
         font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
         pointer-events: none;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
-        z-index: 100;
+        z-index: 50;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
       }
 
-      .menu-item:hover .collapsed-tooltip,
-      .collapsed-logout-btn:hover .collapsed-tooltip {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(-50%) translateX(0);
+      .is-collapsed .menu-item:hover .collapsed-tooltip,
+      .is-collapsed .collapsed-logout-btn:hover .collapsed-tooltip {
+        display: block;
       }
 
-      /* 5. USER PROFILE & FOOTER */
+      /* 3. FOOTER (56px) */
       .sidebar-footer {
-        padding: 12px;
-        border-top: 1px solid var(--sidebar-border, #581C87);
+        min-height: 56px;
+        padding: 8px 10px;
+        border-top: 1px solid color-mix(in srgb, var(--sidebar-border, #581C87) 70%, #FFFFFF 30%);
         box-sizing: border-box;
-      }
-
-      .is-collapsed .sidebar-footer {
-        padding: 12px 8px;
+        display: flex;
+        align-items: center;
       }
 
       .user-profile-card {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 6px 8px;
-        border-radius: 8px;
-        background-color: var(--sidebar-surface, #3B0764);
-        border: 1px solid var(--sidebar-border, #581C87);
-      }
-
-      .user-profile-card.user-card-collapsed {
-        padding: 6px;
-        justify-content: center;
-        background: transparent;
-        border-color: transparent;
+        width: 100%;
+        gap: 8px;
+        min-width: 0;
       }
 
       .user-avatar-wrapper {
@@ -560,21 +539,21 @@ export interface NavSection {
       .user-avatar {
         width: 32px;
         height: 32px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
-        color: #FAF5FF;
-        font-size: 13px;
-        font-weight: 600;
+        border-radius: 50%;
+        background-color: var(--sidebar-surface, #3B0764);
+        border: 1px solid var(--sidebar-border, #581C87);
+        color: var(--sidebar-active-accent, #C084FC);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 12px;
+        font-weight: 700;
       }
 
       .online-indicator {
         position: absolute;
-        bottom: -1px;
-        right: -1px;
+        bottom: 0;
+        right: 0;
         width: 8px;
         height: 8px;
         border-radius: 50%;
@@ -591,25 +570,23 @@ export interface NavSection {
       }
 
       .user-name {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         color: var(--sidebar-text, #FAF5FF);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
         line-height: 1.2;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
       }
 
       .user-role {
-        font-size: 11px;
-        font-weight: 400;
+        font-size: 10px;
         color: var(--sidebar-text-muted, #D8B4FE);
         line-height: 1.2;
-        margin-top: 2px;
-        text-transform: capitalize;
+        margin-top: 1px;
         white-space: nowrap;
-        overflow: hidden;
         text-overflow: ellipsis;
+        overflow: hidden;
       }
 
       .logout-button {
@@ -617,61 +594,115 @@ export interface NavSection {
         height: 28px;
         border-radius: 6px;
         background: transparent;
-        border: none;
+        border: 1px solid transparent;
         color: var(--sidebar-text-muted, #D8B4FE);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: background-color 150ms ease, color 150ms ease;
-        padding: 0;
         flex-shrink: 0;
+        padding: 0;
       }
 
       .logout-button:hover {
-        background-color: var(--sidebar-surface, #581C87);
-        color: var(--sidebar-text, #FAF5FF);
-      }
-
-      .logout-button:focus-visible {
-        outline: 2px solid var(--primary, #7E22CE);
+        background-color: rgba(220, 38, 38, 0.15);
+        color: #F87171;
       }
 
       .collapsed-logout-wrap {
-        margin-top: 8px;
+        width: 100%;
         display: flex;
         justify-content: center;
       }
 
       .collapsed-logout-btn {
         position: relative;
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
         border-radius: 8px;
         background: transparent;
-        border: none;
+        border: 1px solid transparent;
         color: var(--sidebar-text-muted, #D8B4FE);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: background-color 150ms ease, color 150ms ease;
+        padding: 0;
       }
-
       .collapsed-logout-btn:hover {
-        background-color: var(--sidebar-surface, #3B0764);
-        color: var(--sidebar-text, #FAF5FF);
+        background-color: rgba(220, 38, 38, 0.15);
+        color: #F87171;
       }
 
-      .collapsed-logout-btn:focus-visible {
-        outline: 2px solid var(--primary, #7E22CE);
+      /* ═══════════════════════════════════════════════════════════════ */
+      /* MOBILE & TABLET RESPONSIVE OVERLAY DRAWER (< 1024px)            */
+      /* ═══════════════════════════════════════════════════════════════ */
+      @media (max-width: 1023px) {
+        :host {
+          display: none;
+        }
+
+        :host.is-mobile-active {
+          display: block;
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+        }
+
+        .sidebar-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          width: 280px !important;
+          min-width: 280px !important;
+          max-width: 85vw !important;
+          z-index: 1001;
+          box-shadow: 12px 0 32px rgba(15, 23, 42, 0.55);
+          transform: translateX(-100%);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        :host.is-mobile-active .sidebar-container {
+          transform: translateX(0);
+        }
+
+        .mobile-sidebar-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.65);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          z-index: 1000;
+          animation: fadeInBackdrop 0.2s ease-out;
+        }
+
+        .mobile-close-btn {
+          display: flex;
+        }
+
+        .collapse-toggle-btn {
+          display: none;
+        }
+      }
+
+      @keyframes fadeInBackdrop {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
     `,
   ],
 })
 export class SidebarComponent {
   @Input() isCollapsed = false;
+  @Input() isMobileOpen = false;
   @Output() toggleCollapse = new EventEmitter<void>();
+  @Output() closeMobileDrawer = new EventEmitter<void>();
+
+  @HostBinding('class.is-mobile-active') get mobileActive() {
+    return this.isMobileOpen;
+  }
 
   public authService = inject(AuthService);
   public settingsService = inject(SettingsService);
@@ -679,52 +710,60 @@ export class SidebarComponent {
 
   public navSections: NavSection[] = [
     {
-      title: 'MAIN',
+      title: 'POS COUNTER & OPERATIONS',
       items: [
-        {
-          id: 'dashboard',
-          label: 'Dashboard',
-          route: '/dashboard',
-          iconName: 'dashboard',
-          permission: 'dashboard.view',
-        },
         {
           id: 'pos',
           label: 'POS Billing',
           route: '/pos',
           iconName: 'point_of_sale',
+          badge: 'F1',
           permission: 'pos.billing',
           isPos: true,
         },
         {
           id: 'orders',
-          label: 'Orders',
+          label: 'Kitchen Display (KDS)',
           route: '/orders',
           iconName: 'receipt_long',
           permission: 'order.manage',
         },
         {
           id: 'dining',
-          label: 'Dining Floor',
+          label: 'Dining & Tables',
           route: '/dining',
           iconName: 'table_restaurant',
           permission: 'dining.manage',
         },
         {
           id: 'queue',
-          label: 'Queue',
+          label: 'Takeaway Queue',
           route: '/queue',
           iconName: 'takeout_dining',
           permission: 'queue.manage',
         },
+        {
+          id: 'drafts',
+          label: 'Held Drafts',
+          route: '/draft-bills',
+          iconName: 'drafts',
+          permission: 'pos.hold_bill',
+        },
       ],
     },
     {
-      title: 'MANAGEMENT',
+      title: 'CATALOG & INVENTORY',
       items: [
         {
+          id: 'dashboard',
+          label: 'Live Dashboard',
+          route: '/dashboard',
+          iconName: 'dashboard',
+          permission: 'dashboard.view',
+        },
+        {
           id: 'products',
-          label: 'Products',
+          label: 'Dishes & Products',
           route: '/products',
           iconName: 'inventory_2',
           permission: 'product.manage',
@@ -801,6 +840,12 @@ export class SidebarComponent {
 
   public hasVisibleItems(section: NavSection): boolean {
     return section.items.some((item) => this.canAccess(item));
+  }
+
+  public onNavItemClick(): void {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      this.closeMobileDrawer.emit();
+    }
   }
 
   public getInitials(name: string): string {

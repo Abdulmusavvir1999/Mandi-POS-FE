@@ -3,13 +3,23 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, AppCurrencyPipe],
+  imports: [CommonModule, RouterLink, AppCurrencyPipe, PageLoaderComponent],
   template: `
     <div class="dashboard-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading dashboard…"
+        subMessage="Aggregating today's sales and operational metrics."
+        icon="dashboard"
+        (retry)="loadMetrics()"
+      ></app-page-loader>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- TOP EXECUTIVE HEADER & LIVE TELEMETRY ACTION BAR                -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -753,7 +763,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      gap: 0.5rem;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
+      min-width: 0;
     }
 
     .kpi-main-number {
@@ -1333,6 +1345,7 @@ export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   public metrics: any = null;
   public isLoading = false;
+  public loadError: string | null = null;
 
   ngOnInit(): void {
     this.loadMetrics();
@@ -1340,6 +1353,7 @@ export class DashboardComponent implements OnInit {
 
   loadMetrics(): void {
     this.isLoading = true;
+    this.loadError = null;
     this.dashboardService.getMetrics().subscribe({
       next: (res) => {
         this.isLoading = false;
@@ -1347,8 +1361,9 @@ export class DashboardComponent implements OnInit {
           this.metrics = res.data;
         }
       },
-      error: () => {
+      error: (err) => {
         this.isLoading = false;
+        this.loadError = err?.error?.message || 'Unable to load dashboard metrics from the server.';
       },
     });
   }

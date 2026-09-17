@@ -38,7 +38,10 @@ export class SettingsService {
     if (!value) return '';
     if (/^(https?:|data:|blob:)/i.test(value)) return value;
     if (!value.startsWith('/uploads/')) return value;
-    return this.API_URL.replace(/\/api\/?$/, '') + value;
+    // Strip the /api segment off the API base, not off API_URL - that one
+    // already has "/settings" appended, so the anchored /api$ never matched and
+    // every stored upload resolved to .../api/settings/uploads/... and 404'd.
+    return environment.apiUrl.replace(/\/api\/?$/, '') + value;
   }
 
   /** Brand logo chosen in Settings -> Store; empty falls back to the storefront glyph. */
@@ -62,7 +65,9 @@ export class SettingsService {
   );
 
   constructor() {
-    this.loadPublicSettings().subscribe();
+    // Bootstrap read of branding/theme. A failure must not escape the injector
+    // — the app falls back to its built-in defaults instead of failing to boot.
+    this.loadPublicSettings().subscribe({ error: () => {} });
   }
 
   /**

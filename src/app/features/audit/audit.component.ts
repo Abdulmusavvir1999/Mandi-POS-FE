@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuditLogService } from '../../core/services/audit.service';
@@ -6,12 +6,21 @@ import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-audit',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent],
   template: `
     <div class="audit-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading audit trail…"
+        subMessage="Fetching activity records from the server."
+        icon="history"
+        (retry)="loadLogs()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -329,7 +338,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                     class="action-badge"
                     [ngClass]="getActionBadgeClass(log.action)"
                   >
-                    {{ log.action }}
+                    <span class="action-badge-dot"></span>
+                    <span class="material-symbols-outlined action-badge-icon">{{ getActionIcon(log.action) }}</span>
+                    <span>{{ formatActionLabel(log.action) }}</span>
                   </span>
                 </td>
 
@@ -445,6 +456,7 @@ export class AuditComponent implements OnInit {
   public pageSize = 10;
   public currentPage = 1;
   public isLoading = false;
+  public loadError: string | null = null;
 
   public moduleOptions: DropdownOption[] = [
     { value: '', label: 'All Event Modules', icon: 'dataset' },
@@ -466,6 +478,7 @@ export class AuditComponent implements OnInit {
   loadLogs(page = 1): void {
     this.currentPage = page;
     this.isLoading = true;
+    this.loadError = null;
     this.auditService
       .getLogs(page, this.pageSize, this.selectedModule || undefined, this.searchAction || undefined)
       .subscribe({
@@ -476,8 +489,9 @@ export class AuditComponent implements OnInit {
             this.pagination = res.pagination;
           }
         },
-        error: () => {
+        error: (err) => {
           this.isLoading = false;
+          this.loadError = err?.error?.message || 'Unable to load the audit trail from the server.';
         },
       });
   }
@@ -516,17 +530,48 @@ export class AuditComponent implements OnInit {
     return this.logs.filter((l) => (l.action && l.action.includes(pattern)) || (l.module && l.module.includes(pattern))).length;
   }
 
+  formatActionLabel(action: string): string {
+    if (!action) return 'Unknown Action';
+    return action
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  getActionIcon(action: string): string {
+    if (!action) return 'bolt';
+    const a = action.toUpperCase();
+    if (a.includes('LOGIN')) return 'login';
+    if (a.includes('LOGOUT')) return 'logout';
+    if (a.includes('ROLE') && (a.includes('DELETE') || a.includes('REMOVE'))) return 'shield';
+    if (a.includes('ROLE') && (a.includes('CREATE') || a.includes('ADD'))) return 'verified_user';
+    if (a.includes('ROLE')) return 'security';
+    if (a.includes('DELETE') || a.includes('CANCEL') || a.includes('REMOVE')) return 'delete';
+    if (a.includes('CREATE') || a.includes('ADD') || a.includes('INSERT')) return 'add_circle';
+    if (a.includes('UPDATE') || a.includes('EDIT') || a.includes('MODIFY') || a.includes('ADJUST')) return 'edit_note';
+    if (a.includes('STOCK') || a.includes('INVENTORY')) return 'warehouse';
+    if (a.includes('ORDER') || a.includes('BILL') || a.includes('CHECKOUT')) return 'receipt_long';
+    if (a.includes('PRODUCT')) return 'inventory_2';
+    if (a.includes('CATEGORY')) return 'category';
+    if (a.includes('SETTINGS')) return 'tune';
+    if (a.includes('USER') || a.includes('STAFF')) return 'person';
+    return 'bolt';
+  }
+
   getActionBadgeClass(action: string): string {
     if (!action) return 'action-badge-purple';
     const a = action.toUpperCase();
-    if (a.includes('CREATE') || a.includes('LOGIN') || a.includes('INSERT') || a.includes('ADD')) {
-      return 'action-badge-success';
-    }
-    if (a.includes('DELETE') || a.includes('CANCEL') || a.includes('REMOVE') || a.includes('FAIL')) {
+    if (a.includes('DELETE') || a.includes('CANCEL') || a.includes('REMOVE') || a.includes('FAIL') || a.includes('LOGOUT')) {
       return 'action-badge-danger';
     }
-    if (a.includes('WARN') || a.includes('STOCK')) {
+    if (a.includes('CREATE') || a.includes('LOGIN') || a.includes('INSERT') || a.includes('ADD') || a.includes('SUCCESS')) {
+      return 'action-badge-success';
+    }
+    if (a.includes('UPDATE') || a.includes('EDIT') || a.includes('ADJUST') || a.includes('WARN')) {
       return 'action-badge-warning';
+    }
+    if (a.includes('ORDER') || a.includes('BILL') || a.includes('CHECKOUT') || a.includes('PURCHASE')) {
+      return 'action-badge-blue';
     }
     return 'action-badge-purple';
   }

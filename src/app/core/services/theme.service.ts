@@ -131,11 +131,16 @@ export class ThemeService {
     this.applyPalette(DEFAULT_THEME_PALETTES['purple'].palette);
 
     // 2. Read the palette from the database via the shared public-settings store
-    this.settingsService.loadPublicSettings().subscribe((settings) => {
-      if (settings && Object.keys(settings).length) {
-        this.syncFromSettingsMap(settings);
-      }
-      // Otherwise keep the baseline default (e.g. API still starting up)
+    this.settingsService.loadPublicSettings().subscribe({
+      next: (settings) => {
+        if (settings && Object.keys(settings).length) {
+          this.syncFromSettingsMap(settings);
+        }
+        // Otherwise keep the baseline default (e.g. API still starting up)
+      },
+      // Same reason: keep the baseline palette rather than letting a failed
+      // bootstrap request escape unhandled.
+      error: () => {},
     });
   }
 

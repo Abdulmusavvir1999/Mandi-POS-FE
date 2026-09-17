@@ -1,6 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -9,12 +10,21 @@ import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading dishes…"
+        subMessage="Fetching the product catalogue from the server."
+        icon="restaurant_menu"
+        (retry)="loadProducts()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -78,11 +88,11 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <button
             type="button"
-            (click)="openAddModal()"
+            (click)="goToAdd()"
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">add_circle</span>
-            <span>+ New Dish</span>
+            <span>New Dish</span>
           </button>
         </div>
       </div>
@@ -339,9 +349,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let p of paginatedProducts">
+              <tr
+                *ngFor="let p of paginatedProducts"
+                class="clickable-row"
+                (click)="goToView(p)"
+                title="Open dish view page"
+              >
                 <!-- Checkbox -->
-                <td style="text-align: center;">
+                <td style="text-align: center;" class="row-select-cell" (click)="$event.stopPropagation()">
                   <input
                     title="Select this dish"
                     type="checkbox"
@@ -372,8 +387,12 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
                 <!-- Category -->
                 <td>
-                  <span class="badge badge-primary">
-                    {{ p.category_name || 'General' }}
+                  <span
+                    class="category-pill-badge"
+                    [ngStyle]="getCategoryBadgeStyle(p.category_name)"
+                  >
+                    <span class="material-symbols-outlined cat-icon">{{ getCategoryIcon(p.category_name) }}</span>
+                    <span>{{ p.category_name || 'General' }}</span>
                   </span>
                 </td>
 
@@ -420,11 +439,19 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 </td>
 
                 <!-- Actions -->
-                <td style="text-align: center;">
-                  <div class="flex items-center justify-center gap-1">
+                <td style="text-align: center;" class="row-actions-cell" (click)="$event.stopPropagation()">
+                  <div class="row-actions-flex">
                     <button
                       type="button"
-                      (click)="openEditModal(p)"
+                      (click)="goToView(p)"
+                      class="action-icon-btn is-success"
+                      title="View Dish"
+                    >
+                      <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="goToEdit(p)"
                       class="action-icon-btn"
                       title="Edit Dish"
                     >
@@ -451,7 +478,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                     <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No dishes match your active filter or search query in the menu catalog.' }}</p>
                     <button
                       type="button"
-                      (click)="openAddModal()"
+                      (click)="goToAdd()"
                       class="action-btn btn-gradient-purple mt-2"
                     >
                       <span class="material-symbols-outlined">add_circle</span>
@@ -506,193 +533,73 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
         </div>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 7. ADD / EDIT PRODUCT MODAL                                     -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="showProductModal">
-        <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
-          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3.5">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined text-2xl">{{ editingProductId ? 'edit' : 'restaurant' }}</span>
-              </span>
-              <div>
-                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
-                  {{ editingProductId ? 'Edit Product Dish' : 'Add New Menu Dish' }}
-                </h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure menu item pricing, tax, category, and inventory alerts</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              (click)="showProductModal = false"
-              class="modal-close-btn"
-              title="Close"
-              aria-label="Close"
-            >
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="saveProduct()" class="space-y-3.5 max-h-[70vh] overflow-y-auto pr-1">
-            <div class="grid grid-cols-2 gap-3.5 items-start">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Dish Name
-                </label>
-                <input
-                  title="Dish Name"
-                  type="text"
-                  [(ngModel)]="productForm.name"
-                  name="name"
-                  placeholder="e.g. Mutton Mandi Full"
-                  class="form-control text-sm w-full"
-                  required
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  SKU / Item Code
-                </label>
-                <input
-                  title="SKU / Item Code"
-                  type="text"
-                  [(ngModel)]="productForm.sku"
-                  name="sku"
-                  placeholder="e.g. MND-MUT-F"
-                  class="form-control font-mono font-bold text-sm w-full"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3.5 items-start">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Category
-                </label>
-                <select [(ngModel)]="productForm.categoryId" name="categoryId" class="form-control text-sm w-full" required>
-                  <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
-                </select>
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Status
-                </label>
-                <select [(ngModel)]="productForm.status" name="status" class="form-control text-sm w-full">
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                Description
-              </label>
-              <textarea
-                [(ngModel)]="productForm.description"
-                name="description"
-                rows="2"
-                placeholder="Fragrant basmati rice served with roasted spiced meat..."
-                class="form-control text-sm w-full"
-              ></textarea>
-            </div>
-
-            <div class="grid grid-cols-3 gap-3.5 items-start">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Selling Price ({{ settingsService.currencySymbol() }})
-                </label>
-                <input
-                  title="Selling Price ({{ settingsService.currencySymbol() }})"
-                  type="number"
-                  min="0"
-                  [(ngModel)]="productForm.sellingPrice"
-                  name="sellingPrice"
-                  class="form-control font-mono font-bold text-[#7E22CE] text-sm w-full"
-                  required
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Cost Price ({{ settingsService.currencySymbol() }})
-                </label>
-                <input
-                  title="Cost Price ({{ settingsService.currencySymbol() }})"
-                  type="number"
-                  min="0"
-                  [(ngModel)]="productForm.costPrice"
-                  name="costPrice"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Tax Rate (%)
-                </label>
-                <input
-                  title="Tax Rate (%)"
-                  type="number"
-                  min="0"
-                  [(ngModel)]="productForm.taxRate"
-                  name="taxRate"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3.5 items-start" *ngIf="!editingProductId">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Initial Stock Quantity
-                </label>
-                <input
-                  title="Initial Stock Quantity"
-                  type="number"
-                  min="0"
-                  [(ngModel)]="productForm.initialStock"
-                  name="initialStock"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Low Stock Alert Level
-                </label>
-                <input
-                  title="Low Stock Alert Level"
-                  type="number"
-                  min="1"
-                  [(ngModel)]="productForm.lowStockThreshold"
-                  name="lowStockThreshold"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
-              <button
-                type="button"
-                (click)="showProductModal = false"
-                class="action-btn btn-outline-purple"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="action-btn btn-gradient-purple"
-              >
-                Save Product ✓
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
   `,
   styles: [
     `
+      /* ─── Dish image upload ─── */
+      .image-upload-row { display: flex; align-items: center; gap: 0.875rem; }
+
+      .image-upload-preview {
+        width: 4.5rem;
+        height: 4.5rem;
+        flex-shrink: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-app, #FAF5FF);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        color: var(--primary, #7E22CE);
+      }
+
+      .image-upload-preview.is-empty { border-style: dashed; }
+      .image-upload-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .image-upload-preview .material-symbols-outlined { font-size: 26px; opacity: 0.55; }
+
+      .image-upload-actions { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
+      .image-upload-hint { margin: 0; font-size: 0.6875rem; color: var(--text-muted, #6B7280); }
+
+      /* ─── Variant editor ─── */
+      .variants-hint {
+        margin: 0.3rem 0 0;
+        font-size: 0.6875rem;
+        line-height: 1.45;
+        color: var(--text-muted, #6B7280);
+        max-width: 42ch;
+      }
+
+      .variant-rows { display: flex; flex-direction: column; gap: 0.5rem; }
+
+      .variant-row-head,
+      .variant-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 6.5rem 5.5rem 2.25rem;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .variant-row-head span {
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .variant-row .form-control { height: 38px; }
+
+      .variants-empty {
+        margin: 0;
+        padding: 0.7rem 0.85rem;
+        border-radius: 12px;
+        border: 1px dashed var(--card-border, #E9D5FF);
+        background: var(--bg-app, #FAF5FF);
+        font-size: 0.6875rem;
+        color: var(--text-muted, #6B7280);
+      }
+
     `
   ]
 })
@@ -703,6 +610,7 @@ export class ProductsComponent implements OnInit {
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
   private notify = inject(NotificationService);
+  private router = inject(Router);
 
   public products: (Product & { selected?: boolean })[] = [];
   public categories: Category[] = [];
@@ -748,20 +656,19 @@ export class ProductsComponent implements OnInit {
     ];
   }
 
-  public showProductModal = false;
-  public editingProductId: number | null = null;
-  public productForm: any = {
-    name: '',
-    sku: '',
-    categoryId: 1,
-    description: '',
-    sellingPrice: 0,
-    costPrice: 0,
-    taxRate: 5,
-    initialStock: 20,
-    lowStockThreshold: 10,
-    status: 'ACTIVE',
-  };
+  get formCategoryOptions(): DropdownOption[] {
+    return this.categories.map((c) => ({
+      value: c.id,
+      label: c.name,
+      icon: 'restaurant_menu',
+      description: c.description || 'Menu Category',
+    }));
+  }
+
+  public formStatusOptions: DropdownOption[] = [
+    { value: 'ACTIVE', label: 'ACTIVE', icon: 'check_circle', description: 'Item available on POS menu' },
+    { value: 'INACTIVE', label: 'INACTIVE', icon: 'block', description: 'Item hidden from POS menu' },
+  ];
 
   ngOnInit(): void {
     this.loadCategories();
@@ -772,12 +679,14 @@ export class ProductsComponent implements OnInit {
     this.categoryService.getCategories(true).subscribe({
       next: (res) => {
         if (res.success) {
+          // Only used to label rows and fill the filter dropdown now — the
+          // Add/Edit page picks its own default category.
           this.categories = res.data;
-          if (this.categories.length > 0 && !this.productForm.categoryId) {
-            this.productForm.categoryId = this.categories[0].id;
-          }
         }
       },
+      // Reported by the global error interceptor; present so a failure
+      // cannot escape as an unhandled rejection.
+      error: () => {},
     });
   }
 
@@ -900,67 +809,26 @@ export class ProductsComponent implements OnInit {
                 this.loadProducts();
               }
             },
+            // Reported by the global error interceptor; present so a failure
+            // cannot escape as an unhandled rejection.
+            error: () => {},
           });
         });
       },
     });
   }
 
-  openAddModal(): void {
-    this.editingProductId = null;
-    this.productForm = {
-      name: '',
-      sku: '',
-      categoryId: this.categories[0]?.id || 1,
-      description: '',
-      sellingPrice: 0,
-      costPrice: 0,
-      taxRate: 5,
-      initialStock: 20,
-      lowStockThreshold: 10,
-      status: 'ACTIVE',
-    };
-    this.showProductModal = true;
+  /** Add, edit and view each live on their own route. */
+  goToAdd(): void {
+    this.router.navigate(['/products/new']);
   }
 
-  openEditModal(product: Product): void {
-    this.editingProductId = product.id;
-    this.productForm = {
-      name: product.name,
-      sku: product.sku,
-      categoryId: product.category_id,
-      description: product.description,
-      sellingPrice: product.selling_price,
-      costPrice: product.cost_price,
-      taxRate: product.tax_rate,
-      status: product.status,
-    };
-    this.showProductModal = true;
+  goToEdit(product: Product): void {
+    this.router.navigate(['/products', product.id, 'edit']);
   }
 
-  saveProduct(): void {
-    if (!this.productForm.name || !this.productForm.sku) {
-      this.notify.error('Please enter name and SKU');
-      return;
-    }
-
-    if (this.editingProductId) {
-      this.productService.updateProduct(this.editingProductId, this.productForm).subscribe({
-        next: () => {
-          this.notify.success('Product updated');
-          this.showProductModal = false;
-          this.loadProducts();
-        },
-      });
-    } else {
-      this.productService.createProduct(this.productForm).subscribe({
-        next: () => {
-          this.notify.success('Dish added to catalog');
-          this.showProductModal = false;
-          this.loadProducts();
-        },
-      });
-    }
+  goToView(product: Product): void {
+    this.router.navigate(['/products', product.id]);
   }
 
   deleteProduct(product: Product): void {
@@ -975,6 +843,9 @@ export class ProductsComponent implements OnInit {
             this.notify.info('Product deleted');
             this.loadProducts();
           },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
         });
       },
     });
@@ -1006,5 +877,79 @@ export class ProductsComponent implements OnInit {
     link.click();
     document.body.removeChild(link);
     this.notify.success('Export downloaded');
+  }
+
+  getCategoryBadgeStyle(categoryName?: string): { [key: string]: string } {
+    const cat = (categoryName || '').toLowerCase();
+    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+      return {
+        'background-color': '#FFFBEB',
+        'color': '#B45309',
+        'border': '1px solid #FDE68A'
+      };
+    }
+    if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {
+      return {
+        'background-color': '#FAF5FF',
+        'color': '#7E22CE',
+        'border': '1px solid #E9D5FF'
+      };
+    }
+    if (cat.includes('appetizer') || cat.includes('salad') || cat.includes('soup') || cat.includes('veg')) {
+      return {
+        'background-color': '#F0FDF4',
+        'color': '#15803D',
+        'border': '1px solid #BBF7D0'
+      };
+    }
+    if (cat.includes('dessert') || cat.includes('sweet') || cat.includes('cake') || cat.includes('ice')) {
+      return {
+        'background-color': '#FFF1F2',
+        'color': '#BE123C',
+        'border': '1px solid #FECDD3'
+      };
+    }
+    if (cat.includes('beverage') || cat.includes('drink') || cat.includes('juice') || cat.includes('tea') || cat.includes('coffee')) {
+      return {
+        'background-color': '#F0FDFA',
+        'color': '#0F766E',
+        'border': '1px solid #99F6E4'
+      };
+    }
+    if (cat.includes('sea') || cat.includes('fish') || cat.includes('prawn')) {
+      return {
+        'background-color': '#EFF6FF',
+        'color': '#1D4ED8',
+        'border': '1px solid #BFDBFE'
+      };
+    }
+    return {
+      'background-color': '#EEF2FF',
+      'color': '#4338CA',
+      'border': '1px solid #C7D2FE'
+    };
+  }
+
+  getCategoryIcon(categoryName?: string): string {
+    const cat = (categoryName || '').toLowerCase();
+    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+      return 'rice_bowl';
+    }
+    if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {
+      return 'kebab_dining';
+    }
+    if (cat.includes('appetizer') || cat.includes('salad') || cat.includes('soup') || cat.includes('veg')) {
+      return 'lunch_dining';
+    }
+    if (cat.includes('dessert') || cat.includes('sweet') || cat.includes('cake') || cat.includes('ice')) {
+      return 'icecream';
+    }
+    if (cat.includes('beverage') || cat.includes('drink') || cat.includes('juice') || cat.includes('tea') || cat.includes('coffee')) {
+      return 'local_cafe';
+    }
+    if (cat.includes('sea') || cat.includes('fish') || cat.includes('prawn')) {
+      return 'set_meal';
+    }
+    return 'category';
   }
 }

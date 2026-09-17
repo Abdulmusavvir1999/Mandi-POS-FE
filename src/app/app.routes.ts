@@ -80,6 +80,27 @@ export const routes: Routes = [
         data: { permission: 'product.manage' },
       },
       {
+        path: 'products/new',
+        loadComponent: () =>
+          import('./features/products/product-form/product-form.component').then((m) => m.ProductFormComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'product.manage' },
+      },
+      {
+        path: 'products/:id/edit',
+        loadComponent: () =>
+          import('./features/products/product-form/product-form.component').then((m) => m.ProductFormComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'product.manage' },
+      },
+      {
+        path: 'products/:id',
+        loadComponent: () =>
+          import('./features/products/product-detail/product-detail.component').then((m) => m.ProductDetailComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'product.manage' },
+      },
+      {
         path: 'categories',
         loadComponent: () =>
           import('./features/categories/categories.component').then((m) => m.CategoriesComponent),

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -9,7 +9,20 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
     <header class="header-bar">
-      <!-- Center: Iconic Quick Navigation Hub -->
+      <!-- Left: Mobile Menu Hamburger Button (< 1024px) -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="mobile-menu-btn"
+          (click)="toggleMobileSidebar.emit()"
+          aria-label="Open Navigation Menu"
+          title="Open Menu"
+        >
+          <span class="material-symbols-outlined text-[22px]">menu</span>
+        </button>
+      </div>
+
+      <!-- Center: Iconic Quick Navigation Hub (≥ 1200px) -->
       <div class="nav-hub">
         <a
           routerLink="/pos"
@@ -50,8 +63,8 @@ import { AuthService } from '../../../core/auth/services/auth.service';
       </div>
 
       <!-- Right: Live Real-Time Clock & User Profile Bar -->
-      <div class="flex items-center gap-3" *ngIf="authService.currentUser() as user">
-        <!-- Digital Live Clock -->
+      <div class="flex items-center gap-2 sm:gap-3" *ngIf="authService.currentUser() as user">
+        <!-- Digital Live Clock (≥ 768px) -->
         <div class="clock-badge">
           <div class="live-pulse"></div>
           <div>
@@ -91,21 +104,49 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   styles: [
     `
       .header-bar {
-        /* Matches the sidebar's .brand-header exactly. Not 4rem: the root
-           font-size is 14px, so 4rem would render 56px and misalign by 8px. */
         height: 64px;
         min-height: 64px;
         background: var(--sidebar-bg, #2E1065);
-        /* Lifted off the theme's sidebar border so the divider reads against
-           both the dark bar above and the light canvas below. */
         border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border, #581C87) 70%, #FFFFFF 30%);
-        padding: 0 1.25rem;
+        padding: 0 1rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         z-index: 30;
         user-select: none;
         flex-shrink: 0;
+        gap: 0.75rem;
+      }
+
+      @media (min-width: 640px) {
+        .header-bar {
+          padding: 0 1.25rem;
+        }
+      }
+
+      .mobile-menu-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--sidebar-surface, #3B0764);
+        border: 1px solid var(--sidebar-border, #581C87);
+        color: var(--sidebar-text, #FAF5FF);
+        cursor: pointer;
+        padding: 0;
+        transition: all 0.15s ease;
+      }
+      .mobile-menu-btn:hover {
+        background: var(--primary, #7E22CE);
+        border-color: #C084FC;
+      }
+
+      @media (max-width: 1023px) {
+        .mobile-menu-btn {
+          display: flex;
+        }
       }
 
       .nav-hub {
@@ -116,7 +157,6 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         padding: 0.375rem;
         border-radius: 1rem;
         border: 1px solid var(--sidebar-border, #581C87);
-        /* The sidebar toggle used to hold the left slot; keep the hub centred without it. */
         margin-inline: auto;
       }
       @media (min-width: 1200px) {
@@ -149,14 +189,6 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4);
       }
 
-      .hotkey-hint {
-        font-size: 9px;
-        padding: 0.125rem 0.25rem;
-        background: rgba(0, 0, 0, 0.35);
-        border-radius: 0.25rem;
-        color: var(--sidebar-text, #F3E8FF);
-      }
-
       .clock-badge {
         display: none;
         align-items: center;
@@ -167,7 +199,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         border-radius: 0.75rem;
         text-align: right;
       }
-      @media (min-width: 1024px) {
+      @media (min-width: 768px) {
         .clock-badge {
           display: flex;
         }
@@ -197,17 +229,23 @@ import { AuthService } from '../../../core/auth/services/auth.service';
       .user-card {
         display: flex;
         align-items: center;
-        gap: 0.625rem;
+        gap: 0.5rem;
         background: var(--sidebar-surface, #3B0764);
         border: 1px solid var(--sidebar-border, #581C87);
-        padding: 0.375rem 0.625rem;
+        padding: 0.35rem 0.55rem;
         border-radius: 1rem;
+      }
+      @media (min-width: 640px) {
+        .user-card {
+          gap: 0.625rem;
+          padding: 0.375rem 0.625rem;
+        }
       }
 
       .user-avatar {
-        width: 2rem;
-        height: 2rem;
-        border-radius: 0.625rem;
+        width: 1.85rem;
+        height: 1.85rem;
+        border-radius: 0.55rem;
         background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #6B21A8));
         border: 1px solid rgba(255, 255, 255, 0.2);
         display: flex;
@@ -215,15 +253,23 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         justify-content: center;
         font-weight: 700;
         color: #ffffff;
-        font-size: 0.875rem;
+        font-size: 0.8rem;
+      }
+      @media (min-width: 640px) {
+        .user-avatar {
+          width: 2rem;
+          height: 2rem;
+          border-radius: 0.625rem;
+          font-size: 0.875rem;
+        }
       }
 
       .user-online {
         position: absolute;
         bottom: -1px;
         right: -1px;
-        width: 0.5rem;
-        height: 0.5rem;
+        width: 0.45rem;
+        height: 0.45rem;
         background-color: var(--success, #16A34A);
         border: 1.5px solid var(--sidebar-bg, #2E1065);
         border-radius: 9999px;
@@ -243,10 +289,15 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         font-weight: 700;
         color: var(--sidebar-text, #FAF5FF);
         line-height: 1.2;
-        max-width: 100px;
+        max-width: 90px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      @media (min-width: 1024px) {
+        .user-name {
+          max-width: 120px;
+        }
       }
 
       .user-role-badge {
@@ -257,7 +308,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
       }
 
       .signout-btn {
-        padding: 0.375rem;
+        padding: 0.35rem;
         border-radius: 0.5rem;
         color: var(--sidebar-text-muted, #E9D5FF);
         background: transparent;
@@ -276,6 +327,8 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   ],
 })
 export class HeaderComponent {
+  @Output() toggleMobileSidebar = new EventEmitter<void>();
+
   public authService = inject(AuthService);
   public currentTime = '';
   public currentDate = '';

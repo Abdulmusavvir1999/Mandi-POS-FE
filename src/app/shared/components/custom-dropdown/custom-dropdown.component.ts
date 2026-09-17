@@ -4,8 +4,11 @@ import {
   Output,
   EventEmitter,
   ElementRef,
+  ViewChild,
   HostListener,
   HostBinding,
+  OnInit,
+  OnDestroy,
   forwardRef,
   computed,
   signal,
@@ -43,6 +46,7 @@ export interface DropdownOption {
     >
       <!-- Dropdown Trigger Button -->
       <button
+        #triggerEl
         type="button"
         class="dropdown-trigger"
         (click)="toggleOpen($event)"
@@ -69,7 +73,13 @@ export interface DropdownOption {
       </button>
 
       <!-- Dropdown Menu Floating Panel -->
-      <div *ngIf="isOpen" class="dropdown-menu-panel shadow-elevation">
+      <div
+        *ngIf="isOpen"
+        #panelEl
+        class="dropdown-menu-panel shadow-elevation"
+        [class.is-positioned]="isPositioned"
+        [class.is-flipped]="isFlipped"
+      >
         <!-- Optional Search Bar inside dropdown for quick filtering -->
         <div *ngIf="searchable || options.length > 7" class="dropdown-search-wrapper" (click)="$event.stopPropagation()">
           <span class="material-symbols-outlined search-icon">search</span>
@@ -242,19 +252,46 @@ export interface DropdownOption {
       }
 
       /* Floating Dropdown Panel */
+      /* Fixed, not absolute. An absolutely positioned panel is part of its
+         scroll container's content, so opening it inside a modal that has
+         overflow-y: auto both grew the modal's scrollbar and clipped the list
+         at the modal's edge. Fixed leaves that box entirely; the exact top/left
+         are measured and written by positionPanel(). */
       .dropdown-menu-panel {
-        position: absolute;
-        top: calc(100% + 6px);
+        position: fixed;
+        top: 0;
         left: 0;
-        min-width: 100%;
-        max-width: 480px;
+        display: flex;
+        flex-direction: column;
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 14px;
         padding: 0.4rem;
-        z-index: 1000;
+        z-index: 2000;
         box-shadow: 0 16px 36px -4px rgba(46, 16, 101, 0.16), 0 6px 12px -2px rgba(46, 16, 101, 0.08);
+        /* Hidden for the one frame between being rendered and being measured,
+           so it never flashes at the top-left corner. */
+        visibility: hidden;
+      }
+
+      .dropdown-menu-panel.is-positioned {
+        visibility: visible;
         animation: dropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .dropdown-menu-panel.is-flipped.is-positioned {
+        animation: dropdownSlideInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes dropdownSlideInUp {
+        from {
+          opacity: 0;
+          transform: translateY(6px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
 
       @keyframes dropdownSlideIn {
@@ -323,8 +360,13 @@ export interface DropdownOption {
       /* Options Scroll Area */
       .options-list-scroll {
         max-height: 280px;
+        flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
+        /* Reaching the end of this list must not start scrolling the modal
+           underneath it. */
+        overscroll-behavior: contain;
         display: flex;
         flex-direction: column;
         gap: 0.2rem;
@@ -449,7 +491,7 @@ export interface DropdownOption {
     `,
   ],
 })
-export class CustomDropdownComponent implements ControlValueAccessor {
+export class CustomDropdownComponent implements ControlValueAccessor, OnInit, OnDestroy {
   @Input() options: DropdownOption[] = [];
   @Input() placeholder = 'Select an option';
   @Input() minWidth = '160px';
@@ -467,15 +509,89 @@ export class CustomDropdownComponent implements ControlValueAccessor {
   public searchQuery = '';
   public innerValue: any = null;
 
+  /** False for the frame between the panel rendering and being measured. */
+  public isPositioned = false;
+  /** True when the panel had to open upwards for lack of room below. */
+  public isFlipped = false;
+
+  @ViewChild('triggerEl') private triggerRef?: ElementRef<HTMLButtonElement>;
+  @ViewChild('panelEl') private panelRef?: ElementRef<HTMLElement>;
+
   private onChange: (val: any) => void = () => {};
   private onTouched: () => void = () => {};
 
   constructor(private elementRef: ElementRef) {}
 
+  private readonly reposition = (): void => {
+    if (this.isOpen) this.positionPanel();
+  };
+
+  ngOnInit(): void {
+    window.addEventListener('resize', this.reposition);
+    // Capture phase: a scroll inside the modal body does not bubble to window,
+    // so this is the only way to follow the trigger when the modal scrolls.
+    document.addEventListener('scroll', this.reposition, true);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('resize', this.reposition);
+    document.removeEventListener('scroll', this.reposition, true);
+  }
+
+  /**
+   * Anchors the fixed panel under (or over) the trigger.
+   *
+   * A filtered or transformed ancestor becomes the containing block for
+   * position: fixed — the modal backdrop's backdrop-filter does exactly that —
+   * so the panel's origin is not reliably the viewport. Rather than assume, the
+   * panel is parked at 0,0 and measured: wherever that lands IS the origin, and
+   * everything else is expressed relative to it. Correct in both cases.
+   */
+  private positionPanel(): void {
+    const trigger = this.triggerRef?.nativeElement;
+    const panel = this.panelRef?.nativeElement;
+    if (!trigger || !panel) return;
+
+    const GAP = 6;
+    const MARGIN = 12;
+    const MIN_PANEL = 180;
+
+    panel.style.top = '0px';
+    panel.style.left = '0px';
+    panel.style.maxHeight = '';
+    const origin = panel.getBoundingClientRect();
+    const naturalHeight = panel.offsetHeight;
+
+    const rect = trigger.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom - GAP - MARGIN;
+    const spaceAbove = rect.top - GAP - MARGIN;
+
+    // Only flip when below genuinely cannot hold a usable panel and above is roomier.
+    this.isFlipped = spaceBelow < Math.min(naturalHeight, MIN_PANEL) && spaceAbove > spaceBelow;
+
+    const available = Math.max(MIN_PANEL, this.isFlipped ? spaceAbove : spaceBelow);
+    const height = Math.min(naturalHeight, available);
+    const top = this.isFlipped ? rect.top - GAP - height : rect.bottom + GAP;
+
+    // Keep the panel inside the viewport horizontally.
+    let left = rect.left;
+    const overflowRight = left + rect.width + MARGIN - window.innerWidth;
+    if (overflowRight > 0) left -= overflowRight;
+    if (left < MARGIN) left = MARGIN;
+
+    panel.style.top = `${top - origin.top}px`;
+    panel.style.left = `${left - origin.left}px`;
+    panel.style.width = `${rect.width}px`;
+    panel.style.maxHeight = `${available}px`;
+
+    this.isPositioned = true;
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
       this.isOpen = false;
+      this.isPositioned = false;
       this.searchQuery = '';
     }
   }
@@ -484,6 +600,7 @@ export class CustomDropdownComponent implements ControlValueAccessor {
   onEscape(): void {
     if (this.isOpen) {
       this.isOpen = false;
+      this.isPositioned = false;
       this.searchQuery = '';
     }
   }
@@ -508,7 +625,11 @@ export class CustomDropdownComponent implements ControlValueAccessor {
     event.stopPropagation();
     if (this.disabled) return;
     this.isOpen = !this.isOpen;
-    if (!this.isOpen) {
+    if (this.isOpen) {
+      this.isPositioned = false;
+      // The panel has to exist in the DOM before it can be measured.
+      setTimeout(() => this.positionPanel());
+    } else {
       this.searchQuery = '';
     }
   }
@@ -520,6 +641,7 @@ export class CustomDropdownComponent implements ControlValueAccessor {
     this.onTouched();
     this.valueChange.emit(this.innerValue);
     this.isOpen = false;
+    this.isPositioned = false;
     this.searchQuery = '';
   }
 

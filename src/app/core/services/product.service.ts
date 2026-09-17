@@ -35,6 +35,11 @@ export class ProductService {
     return this.http.get<ApiResponse<Product>>(`${this.API_URL}/${id}`);
   }
 
+  /** Uploads a dish photo as a data URL and returns its stored path. */
+  public uploadProductImage(dataUrl: string): Observable<ApiResponse<{ url: string; fileName: string; bytes: number }>> {
+    return this.http.post<ApiResponse<{ url: string; fileName: string; bytes: number }>>(`${this.API_URL}/image`, { dataUrl });
+  }
+
   public createProduct(data: any): Observable<ApiResponse<Product>> {
     return this.http.post<ApiResponse<Product>>(this.API_URL, data);
   }

@@ -4,14 +4,25 @@ import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../core/services/report.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, CustomDropdownComponent, DatePickerComponent, PageLoaderComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Generating report…"
+        subMessage="Aggregating sales records for the selected period."
+        icon="analytics"
+        (retry)="loadActiveReport()"
+      ></app-page-loader>
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -213,27 +224,29 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <div class="filter-toolbar-card">
         <div class="filter-controls-group">
           <!-- Date From -->
-          <div class="flex items-center gap-1.5 text-xs text-[#6B7280]">
-            <span class="font-bold">From:</span>
-            <input
-              title="From date"
-              type="date"
+          <div class="toolbar-date-wrapper">
+            <span class="toolbar-date-label">From:</span>
+            <app-date-picker
               [(ngModel)]="dateFrom"
-              (ngModelChange)="loadActiveReport()"
-              class="toolbar-search-input !w-auto"
-            />
+              (valueChange)="loadActiveReport()"
+              [max]="dateTo"
+              label="From date"
+              placeholder="Start date"
+              minWidth="160px"
+            ></app-date-picker>
           </div>
 
           <!-- Date To -->
-          <div class="flex items-center gap-1.5 text-xs text-[#6B7280]">
-            <span class="font-bold">To:</span>
-            <input
-              title="To date"
-              type="date"
+          <div class="toolbar-date-wrapper">
+            <span class="toolbar-date-label">To:</span>
+            <app-date-picker
               [(ngModel)]="dateTo"
-              (ngModelChange)="loadActiveReport()"
-              class="toolbar-search-input !w-auto"
-            />
+              (valueChange)="loadActiveReport()"
+              [min]="dateFrom"
+              label="To date"
+              placeholder="End date"
+              minWidth="160px"
+            ></app-date-picker>
           </div>
 
           <!-- Payment Channel Filter -->
@@ -352,7 +365,13 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                   <span class="font-mono text-xs font-bold text-[#7E22CE] bg-[#FAF5FF] px-2 py-0.5 rounded-md border border-[#E9D5FF]">{{ p.sku }}</span>
                 </td>
                 <td>
-                  <span class="badge badge-primary">{{ p.category_name }}</span>
+                  <span
+                    class="category-pill-badge"
+                    [ngStyle]="getCategoryBadgeStyle(p.category_name)"
+                  >
+                    <span class="material-symbols-outlined cat-icon">{{ getCategoryIcon(p.category_name) }}</span>
+                    <span>{{ p.category_name || 'General' }}</span>
+                  </span>
                 </td>
                 <td>
                   <span class="font-mono font-bold text-xs text-[#2E1065]">{{ p.total_units_sold || p.quantity_sold }} units</span>
@@ -535,11 +554,25 @@ export class ReportsComponent implements OnInit {
   public categoryData: any[] = [];
   public stockData: any = null;
 
+  public isLoading = false;
+  public loadError: string | null = null;
+
   ngOnInit(): void {
     this.loadActiveReport();
   }
 
   loadActiveReport(): void {
+    // One loader per report tab. Every branch below settles it in both the next
+    // and error callbacks, so a failed report stops the spinner and shows why
+    // instead of leaving the page spinning on an empty table.
+    this.isLoading = true;
+    this.loadError = null;
+
+    const onError = (err: any) => {
+      this.isLoading = false;
+      this.loadError = err?.error?.message || 'Failed to generate this report. Please try again.';
+    };
+
     if (this.activeTab === 'SALES') {
       this.reportService
         .getSalesReport(
@@ -550,27 +583,37 @@ export class ReportsComponent implements OnInit {
         )
         .subscribe({
           next: (res) => {
+            this.isLoading = false;
             if (res.success) this.salesData = res.data;
           },
+          error: onError,
         });
     } else if (this.activeTab === 'PRODUCTS') {
       this.reportService.getProductSalesReport(this.dateFrom || undefined, this.dateTo || undefined).subscribe({
         next: (res) => {
+          this.isLoading = false;
           if (res.success) this.productData = res.data;
         },
+        error: onError,
       });
     } else if (this.activeTab === 'CATEGORIES') {
       this.reportService.getCategorySalesReport(this.dateFrom || undefined, this.dateTo || undefined).subscribe({
         next: (res) => {
+          this.isLoading = false;
           if (res.success) this.categoryData = res.data;
         },
+        error: onError,
       });
     } else if (this.activeTab === 'STOCK') {
       this.reportService.getStockReport().subscribe({
         next: (res) => {
+          this.isLoading = false;
           if (res.success) this.stockData = res.data;
         },
+        error: onError,
       });
+    } else {
+      this.isLoading = false;
     }
   }
 
@@ -601,5 +644,79 @@ export class ReportsComponent implements OnInit {
     a.download = `mandi_pos_report_${this.activeTab.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  getCategoryBadgeStyle(categoryName?: string): { [key: string]: string } {
+    const cat = (categoryName || '').toLowerCase();
+    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+      return {
+        'background-color': '#FFFBEB',
+        'color': '#B45309',
+        'border': '1px solid #FDE68A'
+      };
+    }
+    if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {
+      return {
+        'background-color': '#FAF5FF',
+        'color': '#7E22CE',
+        'border': '1px solid #E9D5FF'
+      };
+    }
+    if (cat.includes('appetizer') || cat.includes('salad') || cat.includes('soup') || cat.includes('veg')) {
+      return {
+        'background-color': '#F0FDF4',
+        'color': '#15803D',
+        'border': '1px solid #BBF7D0'
+      };
+    }
+    if (cat.includes('dessert') || cat.includes('sweet') || cat.includes('cake') || cat.includes('ice')) {
+      return {
+        'background-color': '#FFF1F2',
+        'color': '#BE123C',
+        'border': '1px solid #FECDD3'
+      };
+    }
+    if (cat.includes('beverage') || cat.includes('drink') || cat.includes('juice') || cat.includes('tea') || cat.includes('coffee')) {
+      return {
+        'background-color': '#F0FDFA',
+        'color': '#0F766E',
+        'border': '1px solid #99F6E4'
+      };
+    }
+    if (cat.includes('sea') || cat.includes('fish') || cat.includes('prawn')) {
+      return {
+        'background-color': '#EFF6FF',
+        'color': '#1D4ED8',
+        'border': '1px solid #BFDBFE'
+      };
+    }
+    return {
+      'background-color': '#EEF2FF',
+      'color': '#4338CA',
+      'border': '1px solid #C7D2FE'
+    };
+  }
+
+  getCategoryIcon(categoryName?: string): string {
+    const cat = (categoryName || '').toLowerCase();
+    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+      return 'rice_bowl';
+    }
+    if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {
+      return 'kebab_dining';
+    }
+    if (cat.includes('appetizer') || cat.includes('salad') || cat.includes('soup') || cat.includes('veg')) {
+      return 'lunch_dining';
+    }
+    if (cat.includes('dessert') || cat.includes('sweet') || cat.includes('cake') || cat.includes('ice')) {
+      return 'icecream';
+    }
+    if (cat.includes('beverage') || cat.includes('drink') || cat.includes('juice') || cat.includes('tea') || cat.includes('coffee')) {
+      return 'local_cafe';
+    }
+    if (cat.includes('sea') || cat.includes('fish') || cat.includes('prawn')) {
+      return 'set_meal';
+    }
+    return 'category';
   }
 }

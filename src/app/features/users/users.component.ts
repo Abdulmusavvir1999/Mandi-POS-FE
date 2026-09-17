@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../core/services/user.service';
@@ -14,12 +14,21 @@ interface ModuleGroup {
   permissions: Permission[];
 }
 
+import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent],
   template: `
     <div class="users-page-wrapper">
+      <app-page-loader
+        [loading]="isLoading"
+        [error]="loadError"
+        message="Loading staff accounts…"
+        subMessage="Fetching user records from the server."
+        icon="group"
+        (retry)="loadAllData()"
+      ></app-page-loader>
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -88,7 +97,7 @@ interface ModuleGroup {
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">person_add</span>
-            <span>+ New Staff User</span>
+            <span>New Staff User</span>
           </button>
 
           <button
@@ -101,7 +110,7 @@ interface ModuleGroup {
               : 'Create a new custom role'"
           >
             <span class="material-symbols-outlined">add_moderator</span>
-            <span>+ Create Custom Role</span>
+            <span>Create Custom Role</span>
           </button>
         </div>
       </div>
@@ -109,27 +118,49 @@ interface ModuleGroup {
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 2. PRIMARY NAVIGATION: STAFF ACCOUNTS vs ROLES & PERMISSIONS     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="module-tabs-bar">
+      <div class="tabs-scroll-container">
         <button
           type="button"
-          (click)="activeMainTab = 'users'"
-          class="module-tab-btn"
-          [class.is-active]="activeMainTab === 'users'"
+          class="tab-scroll-arrow-btn prev"
+          (click)="scrollTabs(primaryTabsRef, -220)"
+          aria-label="Scroll primary tabs left"
+          title="Scroll Left"
         >
-          <span class="material-symbols-outlined">group</span>
-          <span>Staff Accounts</span>
-          <span class="tab-count-badge">{{ users.length }}</span>
+          <span class="material-symbols-outlined">chevron_left</span>
         </button>
+
+        <div class="module-tabs-bar" #primaryTabsRef>
+          <button
+            type="button"
+            (click)="switchMainTab('users', $event)"
+            class="module-tab-btn"
+            [class.is-active]="activeMainTab === 'users'"
+          >
+            <span class="material-symbols-outlined">group</span>
+            <span>Staff Accounts</span>
+            <span class="tab-count-badge">{{ users.length }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="switchMainTab('roles', $event)"
+            class="module-tab-btn"
+            [class.is-active]="activeMainTab === 'roles'"
+          >
+            <span class="material-symbols-outlined">security</span>
+            <span>Dynamic Roles &amp; Permissions</span>
+            <span class="tab-count-badge">{{ roles.length }}</span>
+          </button>
+        </div>
 
         <button
           type="button"
-          (click)="activeMainTab = 'roles'"
-          class="module-tab-btn"
-          [class.is-active]="activeMainTab === 'roles'"
+          class="tab-scroll-arrow-btn next"
+          (click)="scrollTabs(primaryTabsRef, 220)"
+          aria-label="Scroll primary tabs right"
+          title="Scroll Right"
         >
-          <span class="material-symbols-outlined">security</span>
-          <span>Dynamic Roles &amp; Permissions</span>
-          <span class="tab-count-badge">{{ roles.length }}</span>
+          <span class="material-symbols-outlined">chevron_right</span>
         </button>
       </div>
 
@@ -137,35 +168,57 @@ interface ModuleGroup {
       <!-- TAB 1: STAFF ACCOUNTS MANAGEMENT                                -->
       <!-- =============================================================== -->
       <ng-container *ngIf="activeMainTab === 'users'">
-        <!-- Dynamic Sub-Navigation Role Tabs -->
-        <div class="module-tabs-bar">
+        <!-- Dynamic Sub-Navigation Role Tabs with Scroll to View Controls -->
+        <div class="tabs-scroll-container">
           <button
             type="button"
-            (click)="selectedRole = ''; currentPage = 1"
-            class="module-tab-btn"
-            [class.is-active]="selectedRole === ''"
+            class="tab-scroll-arrow-btn prev"
+            (click)="scrollTabs(roleTabsRef, -220)"
+            aria-label="Scroll role filters left"
+            title="Scroll Left"
           >
-            <span class="material-symbols-outlined">group</span>
-            <span>All Staff</span>
-            <span class="tab-count-badge">{{ users.length }}</span>
+            <span class="material-symbols-outlined">chevron_left</span>
           </button>
 
-          <!-- Fully Dynamic Role Tabs from Database -->
+          <div class="module-tabs-bar" #roleTabsRef>
+            <button
+              type="button"
+              (click)="selectRoleFilter('', $event)"
+              class="module-tab-btn"
+              [class.is-active]="selectedRole === ''"
+            >
+              <span class="material-symbols-outlined">group</span>
+              <span>All Staff</span>
+              <span class="tab-count-badge">{{ users.length }}</span>
+            </button>
+
+            <!-- Fully Dynamic Role Tabs from Database -->
+            <button
+              type="button"
+              *ngFor="let r of roles"
+              (click)="selectRoleFilter(r.name, $event)"
+              class="module-tab-btn"
+              [class.is-active]="selectedRole === r.name"
+            >
+              <span class="material-symbols-outlined">{{ getRoleIcon(r.name) }}</span>
+              <span>{{ r.name }}</span>
+              <span class="tab-count-badge">{{ countByRole(r.name) }}</span>
+            </button>
+          </div>
+
           <button
             type="button"
-            *ngFor="let r of roles"
-            (click)="selectedRole = r.name; currentPage = 1"
-            class="module-tab-btn"
-            [class.is-active]="selectedRole === r.name"
+            class="tab-scroll-arrow-btn next"
+            (click)="scrollTabs(roleTabsRef, 220)"
+            aria-label="Scroll role filters right"
+            title="Scroll Right"
           >
-            <span class="material-symbols-outlined">{{ getRoleIcon(r.name) }}</span>
-            <span>{{ r.name }}</span>
-            <span class="tab-count-badge">{{ countByRole(r.name) }}</span>
+            <span class="material-symbols-outlined">chevron_right</span>
           </button>
         </div>
 
         <!-- 6 KPI Metric Mini Cards Strip -->
-        <div class="kpi-cards-grid">
+        <div class="kpi-cards-grid" id="staff-kpi-section">
           <!-- 1. Total Staff -->
           <div class="kpi-card card-accent-purple">
             <div class="kpi-header-row">
@@ -309,11 +362,22 @@ interface ModuleGroup {
               <span class="material-symbols-outlined text-[17px]">refresh</span>
               <span>Reload</span>
             </button>
+
+            <!-- Scroll to Table Button -->
+            <button
+              type="button"
+              (click)="scrollToView('staff-table-section')"
+              class="scroll-to-view-btn"
+              title="Smoothly scroll to staff table"
+            >
+              <span class="material-symbols-outlined">south</span>
+              <span>Scroll to View</span>
+            </button>
           </div>
         </div>
 
         <!-- Users SaaS Data Table -->
-        <div class="table-container-card">
+        <div class="table-container-card" id="staff-table-section">
           <div class="table-responsive-wrapper">
             <table class="saas-data-table">
               <thead>
@@ -406,7 +470,7 @@ interface ModuleGroup {
                       <button
                         type="button"
                         (click)="openEditUserModal(u)"
-                        class="btn-action-icon"
+                        class="action-icon-btn"
                         title="Edit staff account"
                       >
                         <span class="material-symbols-outlined">edit</span>
@@ -415,7 +479,7 @@ interface ModuleGroup {
                         *ngIf="u.username !== 'admin'"
                         type="button"
                         (click)="deleteUser(u)"
-                        class="btn-action-icon is-danger"
+                        class="action-icon-btn is-danger"
                         title="Delete user"
                       >
                         <span class="material-symbols-outlined">delete</span>
@@ -487,7 +551,7 @@ interface ModuleGroup {
       <!-- =============================================================== -->
       <ng-container *ngIf="activeMainTab === 'roles'">
         <!-- Roles Grid -->
-        <div class="roles-grid">
+        <div class="roles-grid" id="roles-grid-section">
           <div *ngFor="let r of roles" class="role-manage-card">
             <div>
               <div class="role-card-top">
@@ -538,6 +602,7 @@ interface ModuleGroup {
               </button>
 
               <button
+                *ngIf="!r.is_system"
                 type="button"
                 (click)="deleteRole(r)"
                 class="btn-action-icon is-danger ml-2"
@@ -579,7 +644,11 @@ interface ModuleGroup {
             </button>
           </div>
 
-          <form (ngSubmit)="saveUser()" class="p-6 space-y-4">
+          <form (ngSubmit)="saveUser()" class="p-6 space-y-4" autocomplete="off">
+            <!-- Hidden dummy inputs to capture and neutralize aggressive browser credential autofill -->
+            <input type="text" name="fake_username_remembered" style="display:none" tabindex="-1" autocomplete="off" />
+            <input type="password" name="fake_password_remembered" style="display:none" tabindex="-1" autocomplete="new-password" />
+
             <div class="form-group mb-0">
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Full Name
@@ -588,7 +657,8 @@ interface ModuleGroup {
                 title="Full Name"
                 type="text"
                 [(ngModel)]="userForm.name"
-                name="name"
+                name="staff_name"
+                autocomplete="off"
                 placeholder="e.g. Rahul Sharma"
                 class="form-control text-sm w-full font-medium"
                 required
@@ -604,7 +674,10 @@ interface ModuleGroup {
                   title="Username"
                   type="text"
                   [(ngModel)]="userForm.username"
-                  name="username"
+                  name="staff_username"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  spellcheck="false"
                   placeholder="e.g. cashier1"
                   class="form-control font-mono text-sm w-full"
                   [disabled]="!!editingUserId"
@@ -614,19 +687,16 @@ interface ModuleGroup {
 
               <!-- Fully Dynamic Role Select Dropdown -->
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
                   Staff Role (Dynamic)
                 </label>
-                <select
+                <app-custom-dropdown
+                  [options]="formRoleOptions"
                   [(ngModel)]="userForm.roleId"
-                  name="roleId"
-                  class="form-control text-sm w-full font-bold bg-white text-[#7E22CE] border-[#D8B4FE]"
-                  required
-                >
-                  <option *ngFor="let r of roles" [ngValue]="r.id">
-                    {{ r.name }} {{ r.description ? '— ' + r.description : '' }}
-                  </option>
-                </select>
+                  name="staff_roleId"
+                  placeholder="Select Staff Role"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
             </div>
 
@@ -638,7 +708,8 @@ interface ModuleGroup {
                 title="Email Address"
                 type="email"
                 [(ngModel)]="userForm.email"
-                name="email"
+                name="staff_email"
+                autocomplete="off"
                 placeholder="user@projectx.com"
                 class="form-control text-sm w-full"
                 [disabled]="!!editingUserId"
@@ -655,20 +726,24 @@ interface ModuleGroup {
                   title="Phone Number (Optional)"
                   type="tel"
                   [(ngModel)]="userForm.phone"
-                  name="phone"
+                  name="staff_phone"
+                  autocomplete="off"
                   placeholder="+91 98765 00000"
                   class="form-control font-mono text-sm w-full"
                 />
               </div>
 
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
                   Status
                 </label>
-                <select [(ngModel)]="userForm.status" name="status" class="form-control text-sm w-full font-semibold">
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="statusOptions"
+                  [(ngModel)]="userForm.status"
+                  name="staff_status"
+                  placeholder="Select Status"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
             </div>
 
@@ -680,7 +755,8 @@ interface ModuleGroup {
                 [title]="editingUserId ? 'New Password (Leave blank to keep unchanged)' : 'Password'"
                 type="password"
                 [(ngModel)]="userForm.password"
-                name="password"
+                name="staff_password"
+                autocomplete="new-password"
                 placeholder="••••••••"
                 class="form-control font-mono text-sm w-full"
                 [required]="!editingUserId"
@@ -926,10 +1002,10 @@ export class UsersComponent implements OnInit {
     description: string;
     permissionIds: number[];
   } = {
-    name: '',
-    description: '',
-    permissionIds: [],
-  };
+      name: '',
+      description: '',
+      permissionIds: [],
+    };
 
   ngOnInit(): void {
     this.loadAllData();
@@ -943,6 +1019,12 @@ export class UsersComponent implements OnInit {
     this.loadUsers();
   }
 
+  /**
+   * Roles and permissions back the role editor rather than the user table, so
+   * a failure here is reported by the interceptor's toast and does not block
+   * the page — but the callback must exist, or the rethrown error escapes as an
+   * unhandled rejection. loadUsers() alone drives the page loader.
+   */
   loadRoles(): void {
     this.userService.getRoles().subscribe({
       next: (res) => {
@@ -953,6 +1035,7 @@ export class UsersComponent implements OnInit {
           }
         }
       },
+      error: () => {},
     });
   }
 
@@ -964,6 +1047,7 @@ export class UsersComponent implements OnInit {
           this.buildModuleGroups();
         }
       },
+      error: () => {},
     });
   }
 
@@ -1054,6 +1138,21 @@ export class UsersComponent implements OnInit {
     }
     return opts;
   }
+
+  get formRoleOptions(): DropdownOption[] {
+    return this.roles.map((r) => ({
+      value: r.id,
+      label: r.name,
+      icon: this.getRoleIcon(r.name),
+      description: r.description || `${r.name} access level`,
+      badge: r.is_system ? 'System' : 'Custom',
+    }));
+  }
+
+  public statusOptions: DropdownOption[] = [
+    { value: 'ACTIVE', label: 'ACTIVE', icon: 'check_circle', description: 'Active account with full login access' },
+    { value: 'INACTIVE', label: 'INACTIVE', icon: 'block', description: 'Disabled account with suspended access' },
+  ];
 
   get activeCount(): number {
     return this.users.filter((u) => u.status === 'ACTIVE').length;
@@ -1187,7 +1286,9 @@ export class UsersComponent implements OnInit {
       isDestructive: true,
       onConfirm: () => {
         selected.forEach((u) => {
-          this.userService.deleteUser(u.id).subscribe();
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          this.userService.deleteUser(u.id).subscribe({ error: () => {} });
         });
         this.notify.success(`Deleted ${selected.length} user(s)`);
         this.loadUsers();
@@ -1327,7 +1428,7 @@ export class UsersComponent implements OnInit {
           `Delete one of them first, then create the new role. Built-in roles do not count towards this limit.`,
         confirmText: 'Got it',
         cancelText: 'Close',
-        onConfirm: () => {},
+        onConfirm: () => { },
       });
       return;
     }
@@ -1438,6 +1539,11 @@ export class UsersComponent implements OnInit {
   }
 
   deleteRole(r: Role): void {
+    if (r.is_system) {
+      this.notify.error(`Default system role '${r.name}' cannot be deleted.`);
+      return;
+    }
+
     const userCount = r.user_count || this.countByRole(r.name);
     if (userCount > 0) {
       this.notify.error(
@@ -1464,4 +1570,43 @@ export class UsersComponent implements OnInit {
       },
     });
   }
+
+  // ═════════════════════════════════════════════════════════════════
+  // SCROLL-TO-VIEW & HORIZONTAL TABS NAVIGATION METHODS
+  // ═════════════════════════════════════════════════════════════════
+
+  public scrollTabs(container: HTMLElement, amount: number): void {
+    if (!container) return;
+    container.scrollBy({ left: amount, behavior: 'smooth' });
+  }
+
+  public switchMainTab(tab: 'users' | 'roles', event?: Event): void {
+    this.activeMainTab = tab;
+    if (event && event.currentTarget) {
+      (event.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+    setTimeout(() => {
+      const targetId = tab === 'users' ? 'staff-kpi-section' : 'roles-grid-section';
+      this.scrollToView(targetId);
+    }, 60);
+  }
+
+  public selectRoleFilter(roleName: string, event?: Event): void {
+    this.selectedRole = roleName;
+    this.currentPage = 1;
+    if (event && event.currentTarget) {
+      (event.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+    setTimeout(() => {
+      this.scrollToView('staff-table-section');
+    }, 60);
+  }
+
+  public scrollToView(elementId: string): void {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 }
+
