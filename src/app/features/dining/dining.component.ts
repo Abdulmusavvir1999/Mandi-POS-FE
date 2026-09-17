@@ -293,12 +293,6 @@ const DwellRail = {
               </div>
             </div>
 
-            <!-- One pip per cover: capacity read as a shape, not a number. -->
-            <div class="seat-pips" [attr.aria-hidden]="true">
-              <i class="seat-pip" *ngFor="let pip of seatPips(table.capacity); trackBy: trackByIndex"></i>
-              <span class="seat-more" *ngIf="seatOverflow(table.capacity) as extra">+{{ extra }}</span>
-            </div>
-
             <div class="tile-rule"></div>
 
             <!-- Seated: the running check is the headline, dwell time under it -->
@@ -537,7 +531,7 @@ const DwellRail = {
         isolation: isolate;
         overflow: hidden;
         background:
-          linear-gradient(160deg, var(--bg-app, #FAF5FF) 0%, var(--card-bg, #ffffff) 55%, var(--bg-app, #FAF5FF) 100%);
+          linear-gradient(160deg, #F3E9FF 0%, #FBF7FF 42%, #EEF2FF 74%, #F6EEFF 100%);
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 22px;
         padding: 1.25rem 1.35rem 1.6rem;
@@ -554,11 +548,14 @@ const DwellRail = {
         inset: -30%;
         z-index: -1;
         background:
-          radial-gradient(32% 32% at 18% 22%, var(--primary-glow, rgba(126, 34, 206, 0.35)) 0%, transparent 70%),
-          radial-gradient(30% 30% at 82% 18%, rgba(14, 116, 144, 0.3) 0%, transparent 70%),
-          radial-gradient(34% 34% at 68% 84%, rgba(190, 24, 93, 0.24) 0%, transparent 70%),
-          radial-gradient(28% 28% at 30% 78%, rgba(29, 78, 216, 0.24) 0%, transparent 70%);
-        opacity: 0.8;
+          radial-gradient(26% 30% at 12% 16%, var(--primary-glow, rgba(126, 34, 206, 0.35)) 0%, transparent 72%),
+          radial-gradient(24% 28% at 38% 8%, rgba(29, 78, 216, 0.3) 0%, transparent 72%),
+          radial-gradient(26% 30% at 64% 20%, rgba(14, 116, 144, 0.32) 0%, transparent 72%),
+          radial-gradient(24% 28% at 90% 12%, rgba(134, 25, 143, 0.28) 0%, transparent 72%),
+          radial-gradient(28% 32% at 22% 74%, rgba(4, 120, 87, 0.26) 0%, transparent 72%),
+          radial-gradient(26% 30% at 54% 88%, rgba(190, 24, 93, 0.26) 0%, transparent 72%),
+          radial-gradient(26% 30% at 86% 76%, rgba(180, 83, 9, 0.24) 0%, transparent 72%);
+        opacity: 0.85;
         animation: floorDrift 26s ease-in-out infinite alternate;
         pointer-events: none;
       }
@@ -679,27 +676,34 @@ const DwellRail = {
         gap: 0.6rem;
         padding: 0.95rem 1.05rem 0.85rem;
         border-radius: 20px;
-        /* Section colour pools at the top-left, status tints the top-right. */
+        /* Three layers of one pane: a caustic catching light at the top-left,
+           the status tint entering from the top-right, and the section colour
+           running down through the glass. */
         background:
+          radial-gradient(85% 58% at 6% -6%, rgba(255, 255, 255, 0.8) 0%, transparent 62%),
           radial-gradient(118% 88% at 100% 0%, var(--status-wash, transparent) 0%, transparent 58%),
           linear-gradient(
-            150deg,
+            152deg,
             var(--zone-wash, rgba(126, 34, 206, 0.14)) 0%,
-            rgba(255, 255, 255, 0.62) 48%,
-            rgba(255, 255, 255, 0.4) 100%
+            rgba(255, 255, 255, 0.5) 46%,
+            rgba(255, 255, 255, 0.32) 100%
           );
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(26px) saturate(190%) brightness(1.04);
+        -webkit-backdrop-filter: blur(26px) saturate(190%) brightness(1.04);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        /* Bevelled edge: light catches the top and left, the bottom edge sits
+           in its own shadow, which is what gives the pane thickness. */
         box-shadow:
-          0 12px 32px -14px rgba(46, 16, 101, 0.3),
           inset 0 1px 0 rgba(255, 255, 255, 0.95),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+          inset 1px 0 0 rgba(255, 255, 255, 0.55),
+          inset -1px 0 0 rgba(255, 255, 255, 0.25),
+          inset 0 -1px 0 rgba(46, 16, 101, 0.07),
+          0 2px 6px -2px rgba(46, 16, 101, 0.12),
+          0 16px 36px -18px var(--tile-shadow, rgba(46, 16, 101, 0.35));
         cursor: pointer;
         transition:
           transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-          box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-          background 0.28s ease;
+          box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
       .table-tile:focus-visible {
@@ -719,11 +723,11 @@ const DwellRail = {
         background: linear-gradient(
           115deg,
           rgba(255, 255, 255, 0) 35%,
-          rgba(255, 255, 255, 0.55) 50%,
+          rgba(255, 255, 255, 0.6) 50%,
           rgba(255, 255, 255, 0) 65%
         );
         transform: rotate(-8deg);
-        opacity: 0.65;
+        opacity: 0.7;
         pointer-events: none;
         transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
       }
@@ -742,18 +746,26 @@ const DwellRail = {
         pointer-events: none;
       }
 
+      /* Lifting the pane deepens its shadow and drags the highlight across it.
+         The tint layers are left alone so the glass does not flash white. */
       .table-tile:hover {
         transform: translateY(-5px);
         box-shadow:
-          0 20px 44px -14px var(--tile-shadow, rgba(46, 16, 101, 0.4)),
           inset 0 1px 0 rgba(255, 255, 255, 1),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.4);
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.52) 100%);
+          inset 1px 0 0 rgba(255, 255, 255, 0.7),
+          inset -1px 0 0 rgba(255, 255, 255, 0.3),
+          inset 0 -1px 0 rgba(46, 16, 101, 0.07),
+          0 4px 10px -4px rgba(46, 16, 101, 0.14),
+          0 26px 50px -20px var(--tile-shadow, rgba(46, 16, 101, 0.45));
       }
 
       .table-tile:hover::after {
         transform: rotate(-8deg) translateX(18%);
-        opacity: 0.9;
+        opacity: 0.95;
+      }
+
+      .table-tile:active {
+        transform: translateY(-1px);
       }
 
       /* Each status tints its own pane of glass - the wash layers over the
@@ -993,13 +1005,19 @@ const DwellRail = {
       }
 
       /* ─── Three figures, recessed into the glass ─── */
+      /* A second, shallower pane inside the first - the depth cue that keeps a
+         glass card from reading as one flat sheet. */
       .tile-cells {
         display: flex;
         border-radius: 12px;
         overflow: hidden;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.42);
         border: 1px solid rgba(255, 255, 255, 0.85);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(8px) saturate(140%);
+        -webkit-backdrop-filter: blur(8px) saturate(140%);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          inset 0 -1px 0 rgba(46, 16, 101, 0.05);
       }
 
       .tile-cells > div {
@@ -1064,35 +1082,6 @@ const DwellRail = {
         color: #B91C1C;
         align-items: flex-start;
         line-height: 1.35;
-      }
-
-      /* ─── Seat pips: one dot per cover, so capacity reads at a glance ─── */
-      .seat-pips {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .seat-pip {
-        width: 7px;
-        height: 7px;
-        border-radius: 9999px;
-        background: rgba(255, 255, 255, 0.85);
-        border: 1px solid var(--tile-accent, var(--primary, #7E22CE));
-        box-shadow: 0 1px 2px rgba(46, 16, 101, 0.12);
-      }
-
-      /* Occupied tables show their seats taken rather than empty. */
-      .is-busy .seat-pip {
-        background: var(--tile-accent, #EA580C);
-        box-shadow: 0 0 6px rgba(234, 88, 12, 0.5);
-      }
-
-      .seat-more {
-        font-size: 0.62rem;
-        font-weight: 800;
-        color: var(--text-muted, #6B7280);
-        margin-left: 2px;
       }
 
       /* The action reads as a label, not a button, because the whole tile is
@@ -1280,16 +1269,6 @@ export class DiningComponent implements OnInit, OnDestroy {
   /** Tables in a section, shown as the count badge on its filter tab. */
   public sectionCount(section: string): number {
     return this.tables.filter((t) => t.section === section).length;
-  }
-
-  /** One entry per seat for the pip row, capped so a banquet table stays tidy. */
-  public seatPips(capacity: number): number[] {
-    return new Array(Math.max(0, Math.min(Number(capacity) || 0, 10))).fill(0);
-  }
-
-  /** Seats beyond the ten pips, shown as "+n". */
-  public seatOverflow(capacity: number): number {
-    return Math.max(0, (Number(capacity) || 0) - 10);
   }
 
   public trackByTableId(_index: number, table: DiningTable): number {

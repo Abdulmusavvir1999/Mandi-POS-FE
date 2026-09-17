@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { StockService } from '../../core/services/stock.service';
 import { ProductService } from '../../core/services/product.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { StockItem, StockTransaction, Product } from '../../core/models';
+import { StockItem, StockEntry, StockMovement, Product, StockUnitType } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
@@ -20,11 +20,11 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <div class="breadcrumbs-row">
         <span>{{ settingsService.businessName() }}</span>
         <span class="breadcrumb-separator">›</span>
-        <span>Inventory Management</span>
+        <span>Inventory & Costing</span>
         <span class="breadcrumb-separator">›</span>
-        <span>Stock Levels</span>
+        <span>Stock Management</span>
         <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">Ledger & Alerts</span>
+        <span class="breadcrumb-current">3-Tier Stock Architecture</span>
       </div>
 
       <div class="module-header-card">
@@ -34,21 +34,26 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
           <div>
             <div class="header-title-flex">
-              <h1 class="page-title">Stock & Inventory Control</h1>
+              <h1 class="page-title">Stock & Inventory Ledger</h1>
               <span class="status-dot-pill is-active">
                 <span class="status-dot"></span>
-                <span>{{ totalStockUnits }} Total Units Live</span>
+                <span>{{ totalLiveQuantity | number:'1.0-2' }} Total Units Available</span>
               </span>
             </div>
             <div class="header-meta-row">
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon">inventory_2</span>
-                <span>Tracked SKUs: <strong>{{ stockItems.length }} Items</strong></span>
+                <span>Master SKUs: <strong>{{ stockItems.length }} Tracked Items</strong></span>
               </span>
               <span class="meta-dot">•</span>
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon">payments</span>
-                <span>Valuation: <strong>{{ stockValuation | appCurrency:'1.0-0' }}</strong></span>
+                <span>Total Inventory Value: <strong>{{ totalLiveValue | appCurrency:'1.0-2' }}</strong></span>
+              </span>
+              <span class="meta-dot">•</span>
+              <span class="meta-item">
+                <span class="material-symbols-outlined meta-icon">receipt_long</span>
+                <span>Purchase Entries: <strong>{{ stockEntries.length }} Batches</strong></span>
               </span>
             </div>
           </div>
@@ -59,7 +64,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             type="button"
             (click)="refreshActiveTab()"
             class="action-btn btn-outline-purple"
-            title="Refresh Stock Ledger"
+            title="Refresh Stock Data"
           >
             <span class="material-symbols-outlined">refresh</span>
             <span>Refresh</span>
@@ -67,43 +72,80 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <button
             type="button"
-            (click)="openAdjustModal()"
+            (click)="openCreateMasterModal()"
             class="action-btn btn-outline-purple"
-            title="Perform Audit Adjustment"
+            title="Add New Master Stock Item"
           >
-            <span class="material-symbols-outlined">tune</span>
-            <span>⚖ Adjust Audit</span>
+            <span class="material-symbols-outlined">add_box</span>
+            <span>+ Master Item</span>
           </button>
 
           <button
             type="button"
-            (click)="openStockInModal()"
+            (click)="openAdjustModal()"
+            class="action-btn btn-outline-purple"
+            title="Adjust Stock / Record Wastage"
+          >
+            <span class="material-symbols-outlined">tune</span>
+            <span>⚖ Adjust / Wastage</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="openPurchaseModal()"
             class="action-btn btn-gradient-purple"
+            title="Record Stock Purchase (Qty x Multiplier)"
           >
             <span class="material-symbols-outlined">add_shopping_cart</span>
-            <span>+ Stock In (Purchase)</span>
+            <span>+ Purchase Entry (Stock In)</span>
           </button>
         </div>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 2. SUB-NAVIGATION TABS                                          -->
+      <!-- 2. SUB-NAVIGATION TABS (3-TIER ARCHITECTURE)                     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="module-tabs-bar">
+        <!-- Tab 1: Stock Master -->
         <button
           type="button"
-          (click)="activeTab = 'INVENTORY'; currentPage = 1"
+          (click)="activeTab = 'MASTER'; currentPage = 1"
           class="module-tab-btn"
-          [class.is-active]="activeTab === 'INVENTORY'"
+          [class.is-active]="activeTab === 'MASTER'"
         >
           <span class="material-symbols-outlined">inventory_2</span>
-          <span>Inventory Ledger</span>
+          <span>1. Stock Master (Balance)</span>
           <span class="tab-count-badge">{{ stockItems.length }}</span>
         </button>
 
+        <!-- Tab 2: Stock Purchase Entries -->
         <button
           type="button"
-          (click)="activeTab = 'LOW_STOCK'; currentPage = 1; loadLowStock()"
+          (click)="activeTab = 'ENTRIES'; currentPage = 1; loadStockEntries()"
+          class="module-tab-btn"
+          [class.is-active]="activeTab === 'ENTRIES'"
+        >
+          <span class="material-symbols-outlined">shopping_cart_checkout</span>
+          <span>2. Purchase Entries (Ledger)</span>
+          <span class="tab-count-badge">{{ stockEntries.length }}</span>
+        </button>
+
+        <!-- Tab 3: Stock Movements History -->
+        <button
+          type="button"
+          (click)="activeTab = 'MOVEMENTS'; currentPage = 1; loadStockMovements()"
+          class="module-tab-btn"
+          [class.is-active]="activeTab === 'MOVEMENTS'"
+        >
+          <span class="material-symbols-outlined">history</span>
+          <span>3. Movement History (Audit)</span>
+          <span class="tab-count-badge">{{ stockMovements.length }}</span>
+        </button>
+
+        <!-- Tab 4: Low Stock Alerts -->
+        <button
+          type="button"
+          (click)="activeTab = 'LOW_STOCK'; currentPage = 1; loadLowStockAlerts()"
           class="module-tab-btn"
           [class.is-active]="activeTab === 'LOW_STOCK'"
         >
@@ -111,93 +153,81 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <span>Low Stock Alerts</span>
           <span class="tab-count-badge" [class.text-[#DC2626]]="lowStockList.length > 0">{{ lowStockList.length }}</span>
         </button>
-
-        <button
-          type="button"
-          (click)="activeTab = 'TRANSACTIONS'; currentPage = 1; loadTransactions()"
-          class="module-tab-btn"
-          [class.is-active]="activeTab === 'TRANSACTIONS'"
-        >
-          <span class="material-symbols-outlined">history</span>
-          <span>Movement Logs</span>
-          <span class="tab-count-badge">{{ transactions.length }}</span>
-        </button>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 3. 6 KPI METRIC MINI CARDS STRIP                                -->
+      <!-- 3. KPI METRIC MINI CARDS STRIP                                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="kpi-cards-grid">
         <!-- KPI 1 -->
         <div class="kpi-card card-accent-purple">
           <div class="kpi-header-row">
-            <span class="kpi-title">Tracked Items</span>
+            <span class="kpi-title">Master Stock Items</span>
             <span class="kpi-icon-bubble bg-purple-tint">
               <span class="material-symbols-outlined">inventory_2</span>
             </span>
           </div>
           <div class="kpi-value-row">
             <span class="kpi-number">{{ stockItems.length }}</span>
-            <span class="kpi-pill pill-purple">SKUs</span>
+            <span class="kpi-pill pill-purple">Master SKUs</span>
           </div>
         </div>
 
         <!-- KPI 2 -->
         <div class="kpi-card card-accent-green">
           <div class="kpi-header-row">
-            <span class="kpi-title">Units In Stock</span>
+            <span class="kpi-title">Current Available Quantity</span>
             <span class="kpi-icon-bubble bg-green-tint">
               <span class="material-symbols-outlined">warehouse</span>
             </span>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-number text-green">{{ totalStockUnits }}</span>
-            <span class="kpi-pill pill-live">● Live</span>
+            <span class="kpi-number text-green">{{ totalLiveQuantity | number:'1.0-2' }}</span>
+            <span class="kpi-pill pill-live">● Live Balance</span>
           </div>
         </div>
 
         <!-- KPI 3 -->
+        <div class="kpi-card card-accent-purple">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Total Inventory Valuation</span>
+            <span class="kpi-icon-bubble bg-purple-tint">
+              <span class="material-symbols-outlined">payments</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-purple-700">{{ totalLiveValue | appCurrency:'1.0-2' }}</span>
+            <span class="kpi-pill pill-purple">Total Value</span>
+          </div>
+        </div>
+
+        <!-- KPI 4 -->
+        <div class="kpi-card card-accent-blue">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Purchase Entries Logged</span>
+            <span class="kpi-icon-bubble bg-blue-tint">
+              <span class="material-symbols-outlined">receipt_long</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number">{{ stockEntries.length }}</span>
+            <span class="kpi-pill pill-blue">Invoices/Batches</span>
+          </div>
+        </div>
+
+        <!-- KPI 5 -->
         <div class="kpi-card card-accent-amber">
           <div class="kpi-header-row">
-            <span class="kpi-title">Low Stock</span>
+            <span class="kpi-title">Low Stock Alert</span>
             <span class="kpi-icon-bubble bg-amber-tint">
               <span class="material-symbols-outlined">warning</span>
             </span>
           </div>
           <div class="kpi-value-row">
             <span class="kpi-number" [ngClass]="lowStockList.length > 0 ? 'text-[#DC2626]' : ''">{{ lowStockList.length }}</span>
-            <span class="kpi-pill pill-amber">Alerts</span>
+            <span class="kpi-pill pill-amber">Needs Attention</span>
           </div>
         </div>
-
-        <!-- KPI 4 -->
-        <div class="kpi-card card-accent-purple">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Valuation</span>
-            <span class="kpi-icon-bubble bg-purple-tint">
-              <span class="material-symbols-outlined">payments</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number text-purple-700">{{ stockValuation | appCurrency:'1.0-0' }}</span>
-            <span class="kpi-pill pill-purple">Value</span>
-          </div>
-        </div>
-
-        <!-- KPI 5 -->
-        <div class="kpi-card card-accent-blue">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Transactions</span>
-            <span class="kpi-icon-bubble bg-blue-tint">
-              <span class="material-symbols-outlined">swap_horiz</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ transactions.length }}</span>
-            <span class="kpi-pill pill-blue">Audited</span>
-          </div>
-        </div>
-
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -212,7 +242,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
-              placeholder="Search items by SKU, name, or category..."
+              [placeholder]="getSearchPlaceholder()"
               class="toolbar-search-input"
             />
             <button
@@ -224,6 +254,38 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
+
+          <!-- Unit Type filter (for Master tab) -->
+          <select
+            *ngIf="activeTab === 'MASTER'"
+            [(ngModel)]="selectedUnitType"
+            (ngModelChange)="currentPage = 1; loadStockMaster()"
+            class="form-control !w-auto text-xs py-1.5"
+          >
+            <option value="">All Units</option>
+            <option value="piece">Piece (pcs)</option>
+            <option value="kg">Kilogram (kg)</option>
+            <option value="liter">Liter (L)</option>
+            <option value="gram">Gram (g)</option>
+            <option value="portion">Portion</option>
+            <option value="box">Box</option>
+            <option value="packet">Packet</option>
+          </select>
+
+          <!-- Movement Type filter (for Movements tab) -->
+          <select
+            *ngIf="activeTab === 'MOVEMENTS'"
+            [(ngModel)]="selectedMovementType"
+            (ngModelChange)="currentPage = 1; loadStockMovements()"
+            class="form-control !w-auto text-xs py-1.5"
+          >
+            <option value="all">All Movement Types</option>
+            <option value="in">IN (Purchases / Additions)</option>
+            <option value="out">OUT (Sales / Deductions)</option>
+            <option value="adjustment">ADJUSTMENT (Audit)</option>
+            <option value="wastage">WASTAGE (Kitchen Prep / Spoilage)</option>
+            <option value="return">RETURN</option>
+          </select>
 
           <!-- Meta Record Count -->
           <span class="toolbar-meta-count hidden sm:inline-block">
@@ -249,114 +311,137 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             title="Download CSV"
           >
             <span class="material-symbols-outlined">download</span>
-            <span>Export</span>
+            <span>Export CSV</span>
           </button>
         </div>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 5. STOCK DATA TABLES                                            -->
+      <!-- 5. TAB CONTENT TABLES                                           -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
 
-      <!-- TAB 1: Inventory Table -->
-      <div class="table-container-card" *ngIf="activeTab === 'INVENTORY'">
+      <!-- ── TAB 1: STOCK MASTER (stock_items) ────────────────────────── -->
+      <div class="table-container-card" *ngIf="activeTab === 'MASTER'">
         <div class="table-responsive-wrapper">
           <table class="saas-data-table">
             <thead>
               <tr>
-                <th style="width: 28%;">Product & SKU</th>
-                <th style="width: 16%;">SKU Code</th>
-                <th style="width: 16%;">Category</th>
-                <th style="width: 14%;">Stock Status</th>
-                <th style="width: 14%;">Selling Price</th>
-                <th style="width: 14%;">Current Stock</th>
-                <th style="width: 60px; text-align: center;">Action</th>
+                <th style="width: 12%;">Stock Code</th>
+                <th style="width: 22%;">Item Name</th>
+                <th style="width: 10%;">Unit Type</th>
+                <th style="width: 14%;">Current Quantity</th>
+                <th style="width: 14%;">Stock Value</th>
+                <th style="width: 14%;">Avg Unit Price</th>
+                <th style="width: 14%; text-align: center;">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let s of paginatedStockItems">
-                <!-- Product Name & Avatar -->
+              <tr *ngFor="let item of paginatedMasterItems">
+                <!-- Stock Code -->
+                <td>
+                  <span class="font-mono text-xs font-bold text-[var(--primary)] bg-[var(--bg-app)] px-2.5 py-1 rounded-md border border-[var(--card-border)]">
+                    {{ item.stock_code }}
+                  </span>
+                </td>
+
+                <!-- Name & Alert Status -->
                 <td>
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-[var(--primary-light)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--primary)] shrink-0 shadow-xs">
                       <span class="material-symbols-outlined" style="font-size: 20px;">inventory_2</span>
                     </div>
                     <div class="min-w-0">
-                      <div class="font-bold text-[var(--text-main)] text-xs truncate">{{ s.product_name }}</div>
-                      <div class="text-[10px] text-[var(--text-muted)]">Min Alert: {{ s.min_stock_alert }} units</div>
+                      <div class="font-bold text-[var(--text-main)] text-xs truncate flex items-center gap-1.5">
+                        <span>{{ item.name }}</span>
+                        <span *ngIf="item.status === 'inactive'" class="badge badge-danger text-[9px] py-0 px-1">Inactive</span>
+                      </div>
+                      <div class="text-[10px] text-[var(--text-muted)]">
+                        Alert Threshold: {{ item.min_stock_alert }} {{ item.unit_type }}s
+                      </div>
                     </div>
                   </div>
                 </td>
 
-                <!-- SKU -->
+                <!-- Unit Type -->
                 <td>
-                  <span class="font-mono text-xs font-bold text-[var(--primary)] bg-[var(--bg-app)] px-2 py-0.5 rounded-md border border-[var(--card-border)]">
-                    {{ s.sku }}
+                  <span class="badge badge-primary uppercase font-mono text-[10px]">
+                    {{ item.unit_type }}
                   </span>
                 </td>
 
-                <!-- Category -->
+                <!-- Current Quantity with Health Bar -->
                 <td>
-                  <span class="badge badge-primary">
-                    {{ s.category_name || 'General' }}
-                  </span>
-                </td>
-
-                <!-- Status Pill -->
-                <td>
-                  <span class="status-dot-pill" [ngClass]="s.is_low_stock ? 'is-danger' : 'is-active'">
-                    <span class="status-dot"></span>
-                    {{ s.is_low_stock ? 'Low Stock' : 'Optimal' }}
-                  </span>
-                </td>
-
-                <!-- Selling Price -->
-                <td>
-                  <span class="font-mono font-bold text-xs text-[var(--text-main)]">
-                    {{ s.selling_price | appCurrency:'1.0-0' }}
-                  </span>
-                </td>
-
-                <!-- Stock Level Progress -->
-                <td>
-                  <div class="space-y-1 max-w-[120px]">
-                    <div class="flex items-center justify-between text-[10px]">
-                      <span class="font-mono font-bold" [ngClass]="s.is_low_stock ? 'text-[#DC2626]' : 'text-[var(--text-main)]'">
-                        {{ s.current_stock }} units
+                  <div class="space-y-1 max-w-[140px]">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="font-mono font-black" [ngClass]="item.is_low_stock ? 'text-[#DC2626]' : 'text-[var(--text-main)]'">
+                        {{ item.current_quantity | number:'1.0-3' }} <span class="text-[10px] font-normal text-[var(--text-muted)]">{{ item.unit_type }}</span>
                       </span>
                     </div>
                     <div class="w-full bg-[var(--card-border)] rounded-full h-1.5 overflow-hidden">
                       <div
                         class="h-full rounded-full transition-all duration-300"
-                        [style.width.%]="calcStockPercent(s.current_stock, s.min_stock_alert)"
+                        [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
                         [ngClass]="{
-                          '!bg-[#DC2626]': s.current_stock <= 0,
-                          '!bg-[#EA580C]': s.current_stock > 0 && s.current_stock <= s.min_stock_alert,
-                          '!bg-[#16A34A]': s.current_stock > s.min_stock_alert
+                          '!bg-[#DC2626]': item.current_quantity <= 0,
+                          '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
+                          '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
                         }"
                       ></div>
                     </div>
                   </div>
                 </td>
 
-                <!-- Action Button -->
+                <!-- Current Total Value -->
+                <td>
+                  <span class="font-mono font-bold text-xs text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                    {{ item.current_value | appCurrency:'1.0-2' }}
+                  </span>
+                </td>
+
+                <!-- Weighted Average Unit Price -->
+                <td>
+                  <span class="font-mono font-bold text-xs text-[var(--text-main)]">
+                    {{ item.average_unit_price | appCurrency:'1.0-4' }} <span class="text-[10px] text-[var(--text-muted)]">/ {{ item.unit_type }}</span>
+                  </span>
+                </td>
+
+                <!-- Actions -->
                 <td style="text-align: center;">
-                  <button
-                    type="button"
-                    (click)="quickStockIn(s)"
-                    class="action-btn btn-outline-purple !py-1 !px-2 !text-xs !text-[#16A34A] hover:!bg-[#DCFCE7]"
-                  >
-                    + In
-                  </button>
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      (click)="quickPurchaseEntry(item)"
+                      class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs !text-[#16A34A] hover:!bg-[#DCFCE7]"
+                      title="Add Purchase Entry"
+                    >
+                      + Entry
+                    </button>
+                    <button
+                      type="button"
+                      (click)="quickAdjust(item)"
+                      class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
+                      title="Adjust Stock"
+                    >
+                      ⚖ Adjust
+                    </button>
+                    <button
+                      type="button"
+                      (click)="viewItemHistory(item)"
+                      class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
+                      title="View Details & Ledger"
+                    >
+                      <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
 
-              <tr *ngIf="filteredStockItems.length === 0">
+              <tr *ngIf="filteredMasterItems.length === 0">
                 <td colspan="7" class="empty-state-cell">
                   <div class="empty-state-box">
                     <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'warehouse' }}</span>
-                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Stock Items Found' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No inventory records match your query.' }}</p>
+                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Stock Master Items Found' }}</div>
+                    <p class="empty-desc">{{ isLoading ? 'Fetching records from server…' : loadError ? loadError : 'No master stock items match your search filter.' }}</p>
                   </div>
                 </td>
               </tr>
@@ -365,121 +450,233 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
         </div>
       </div>
 
-      <!-- TAB 2: Low Stock Alerts Table -->
+      <!-- ── TAB 2: PURCHASE ENTRIES (stock_entries) ──────────────────── -->
+      <div class="table-container-card" *ngIf="activeTab === 'ENTRIES'">
+        <div class="table-responsive-wrapper">
+          <table class="saas-data-table">
+            <thead>
+              <tr>
+                <th style="width: 14%;">Entry # & Date</th>
+                <th style="width: 20%;">Stock Item</th>
+                <th style="width: 16%;">Formula (Qty × Mult)</th>
+                <th style="width: 12%;">Total Qty</th>
+                <th style="width: 12%;">Total Price</th>
+                <th style="width: 12%;">Unit Price</th>
+                <th style="width: 14%;">Supplier & Invoice</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let entry of paginatedStockEntries">
+                <!-- Entry # & Date -->
+                <td>
+                  <div class="font-mono text-xs font-bold text-[#2E1065]">{{ entry.entry_number }}</div>
+                  <div class="text-[10px] text-[#6B7280] font-mono">{{ entry.entry_date | date:'dd/MM/yyyy HH:mm' }}</div>
+                </td>
+
+                <!-- Stock Item Name -->
+                <td>
+                  <div class="font-bold text-xs text-[var(--text-main)]">{{ entry.stock_item_name }}</div>
+                  <div class="text-[10px] font-mono text-[var(--primary)]">{{ entry.stock_code }}</div>
+                </td>
+
+                <!-- Qty x Multiplier -->
+                <td>
+                  <div class="font-mono text-xs text-[#2E1065]">
+                    <strong>{{ entry.quantity }}</strong> × {{ entry.multiplier }}
+                  </div>
+                  <div class="text-[10px] text-[var(--text-muted)]">Base Qty × Multiplier</div>
+                </td>
+
+                <!-- Total Qty -->
+                <td>
+                  <span class="font-mono font-black text-xs text-[#16A34A] bg-[#DCFCE7] px-2 py-0.5 rounded border border-[#BBF7D0]">
+                    {{ entry.total_quantity | number:'1.0-3' }} {{ entry.unit_type }}s
+                  </span>
+                </td>
+
+                <!-- Total Price -->
+                <td>
+                  <span class="font-mono font-bold text-xs text-purple-900">
+                    {{ entry.total_price | appCurrency:'1.0-2' }}
+                  </span>
+                </td>
+
+                <!-- Unit Price -->
+                <td>
+                  <span class="font-mono font-bold text-xs text-[#2E1065]">
+                    {{ entry.unit_price | appCurrency:'1.0-4' }}
+                  </span>
+                </td>
+
+                <!-- Supplier & Invoice -->
+                <td>
+                  <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase' }}</div>
+                  <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ entry.invoice_number || 'No Invoice #' }}</div>
+                </td>
+              </tr>
+
+              <tr *ngIf="filteredStockEntries.length === 0">
+                <td colspan="7" class="empty-state-cell">
+                  <div class="empty-state-box">
+                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'receipt_long' }}</span>
+                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Purchase Entries Found' }}</div>
+                    <p class="empty-desc">{{ isLoading ? 'Fetching purchase entries…' : loadError ? loadError : 'No purchase entries recorded yet. Click "+ Purchase Entry" to add one.' }}</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── TAB 3: STOCK MOVEMENTS (stock_movements) ──────────────────── -->
+      <div class="table-container-card" *ngIf="activeTab === 'MOVEMENTS'">
+        <div class="table-responsive-wrapper">
+          <table class="saas-data-table">
+            <thead>
+              <tr>
+                <th style="width: 14%;">Date & Time</th>
+                <th style="width: 18%;">Stock Item</th>
+                <th style="width: 12%;">Movement Type</th>
+                <th style="width: 14%;">Quantity Moved</th>
+                <th style="width: 14%;">Unit Cost & Value</th>
+                <th style="width: 16%;">Balance after Move</th>
+                <th style="width: 12%; text-align: right;">Author / Staff</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let move of paginatedStockMovements">
+                <!-- Timestamp -->
+                <td class="text-xs text-[#6B7280] font-mono">
+                  {{ move.movement_date | date:'dd/MM/yyyy HH:mm:ss' }}
+                </td>
+
+                <!-- Stock Item Name & Code -->
+                <td>
+                  <div class="font-bold text-xs text-[#2E1065]">{{ move.stock_item_name }}</div>
+                  <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ move.reference_type }} • {{ move.reference_id || 'Direct' }}</div>
+                </td>
+
+                <!-- Movement Type Pill -->
+                <td>
+                  <span
+                    class="badge uppercase font-bold text-[10px]"
+                    [ngClass]="{
+                      'badge-success': move.movement_type === 'in',
+                      'badge-danger': move.movement_type === 'out',
+                      'badge-warning': move.movement_type === 'adjustment',
+                      'badge-info': move.movement_type === 'return',
+                      'bg-rose-100 text-rose-800 border border-rose-200': move.movement_type === 'wastage',
+                      'bg-cyan-100 text-cyan-800 border border-cyan-200': move.movement_type === 'transfer_in' || move.movement_type === 'transfer_out'
+                    }"
+                  >
+                    {{ move.movement_type }}
+                  </span>
+                </td>
+
+                <!-- Quantity Moved -->
+                <td class="font-mono font-bold text-xs" [ngClass]="move.quantity > 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'">
+                  {{ move.quantity > 0 ? '+' + (move.quantity | number:'1.0-3') : (move.quantity | number:'1.0-3') }} {{ move.unit_type }}
+                </td>
+
+                <!-- Unit Cost & Movement Total Value -->
+                <td>
+                  <div class="font-mono text-xs font-semibold text-[var(--text-main)]">{{ move.unit_price | appCurrency:'1.0-2' }}/unit</div>
+                  <div class="text-[10px] text-[var(--text-muted)] font-mono">Val: {{ move.total_value | appCurrency:'1.0-2' }}</div>
+                </td>
+
+                <!-- Balance After Movement -->
+                <td>
+                  <div class="font-mono text-xs font-black text-purple-950">
+                    {{ move.balance_quantity | number:'1.0-3' }} {{ move.unit_type }}
+                  </div>
+                  <div class="text-[10px] text-purple-700 font-mono font-medium">
+                    Total Val: {{ move.balance_value | appCurrency:'1.0-2' }}
+                  </div>
+                </td>
+
+                <!-- Author -->
+                <td style="text-align: right;" class="text-xs font-semibold text-[#2E1065]">
+                  {{ move.created_by_name || 'System Auto' }}
+                </td>
+              </tr>
+
+              <tr *ngIf="filteredStockMovements.length === 0">
+                <td colspan="7" class="empty-state-cell">
+                  <div class="empty-state-box">
+                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'history' }}</span>
+                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Movement Records Found' }}</div>
+                    <p class="empty-desc">{{ isLoading ? 'Fetching movement audit trail…' : loadError ? loadError : 'No stock movement logs match your current filter.' }}</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── TAB 4: LOW STOCK ALERTS ─────────────────────────────────── -->
       <div class="table-container-card" *ngIf="activeTab === 'LOW_STOCK'">
         <div class="table-responsive-wrapper">
           <table class="saas-data-table">
             <thead>
               <tr>
-                <th style="width: 35%;">Product & SKU</th>
-                <th style="width: 20%;">SKU Code</th>
-                <th style="width: 20%;">Category</th>
-                <th style="width: 15%;">Stock Level vs Min Threshold</th>
+                <th style="width: 14%;">Stock Code</th>
+                <th style="width: 26%;">Stock Item</th>
+                <th style="width: 14%;">Unit Type</th>
+                <th style="width: 20%;">Stock Level vs Min Threshold</th>
+                <th style="width: 16%;">Current Valuation</th>
                 <th style="width: 10%; text-align: center;">Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let s of paginatedLowStockList">
+              <tr *ngFor="let item of paginatedLowStockList">
+                <td>
+                  <span class="font-mono text-xs font-bold text-[#DC2626] bg-[#FEE2E2] px-2.5 py-1 rounded-md border border-[#FECACA]">
+                    {{ item.stock_code }}
+                  </span>
+                </td>
                 <td>
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-[#FEE2E2] border border-[#FECACA] flex items-center justify-center font-bold text-xs text-[#DC2626] shrink-0 shadow-xs">
                       <span class="material-symbols-outlined" style="font-size: 20px;">warning</span>
                     </div>
                     <div class="min-w-0">
-                      <div class="font-bold text-[var(--text-main)] text-xs truncate">{{ s.product_name }}</div>
-                      <div class="text-[10px] text-[#DC2626] font-semibold">Immediate attention needed</div>
+                      <div class="font-bold text-[var(--text-main)] text-xs truncate">{{ item.name }}</div>
+                      <div class="text-[10px] text-[#DC2626] font-semibold">Critical Restock Needed</div>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span class="font-mono text-xs font-bold text-[#DC2626] bg-[#FEE2E2] px-2 py-0.5 rounded-md border border-[#FECACA]">
-                    {{ s.sku }}
-                  </span>
-                </td>
-                <td>
-                  <span class="text-xs text-[var(--text-muted)]">{{ s.category_name || 'General' }}</span>
+                  <span class="badge badge-primary uppercase font-mono text-[10px]">{{ item.unit_type }}</span>
                 </td>
                 <td>
                   <span class="font-mono font-black text-xs text-[#DC2626]">
-                    {{ s.current_stock }} / Min {{ s.min_stock_alert }}
+                    {{ item.current_quantity | number:'1.0-3' }} / Min {{ item.min_stock_alert }} {{ item.unit_type }}s
+                  </span>
+                </td>
+                <td>
+                  <span class="font-mono font-bold text-xs text-purple-900">
+                    {{ item.current_value | appCurrency:'1.0-2' }}
                   </span>
                 </td>
                 <td style="text-align: center;">
                   <button
                     type="button"
-                    (click)="quickStockIn(s)"
+                    (click)="quickPurchaseEntry(item)"
                     class="action-btn btn-gradient-purple !py-1 !px-3 !text-xs"
                   >
-                    Restock
+                    + Restock
                   </button>
                 </td>
               </tr>
 
               <tr *ngIf="lowStockList.length === 0">
-                <td colspan="5" class="empty-state-cell">
-                  <div class="empty-state-box">
-                    <span class="material-symbols-outlined empty-icon !text-[#16A34A]">verified</span>
-                    <div class="empty-title text-[#16A34A]">All Stock Healthy</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'All tracked products are currently stocked above their minimum alert levels.' }}</p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TAB 3: Movement Logs Table -->
-      <div class="table-container-card" *ngIf="activeTab === 'TRANSACTIONS'">
-        <div class="table-responsive-wrapper">
-          <table class="saas-data-table">
-            <thead>
-              <tr>
-                <th style="width: 20%;">Date & Time</th>
-                <th style="width: 24%;">Product / Item</th>
-                <th style="width: 14%;">Transaction Type</th>
-                <th style="width: 14%;">Quantity Changed</th>
-                <th style="width: 14%;">Stock Shift</th>
-                <th style="width: 14%; text-align: right;">Author / Staff</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let tx of paginatedTransactions">
-                <td class="text-xs text-[#6B7280] font-mono">
-                  {{ tx.created_at | date:'dd/MM/yyyy HH:mm:ss' }}
-                </td>
-                <td class="font-bold text-xs text-[#2E1065]">
-                  {{ tx.product_name }}
-                </td>
-                <td>
-                  <span class="badge"
-                    [ngClass]="{
-                      'badge-success': tx.transaction_type === 'STOCK_IN',
-                      'badge-danger': tx.transaction_type === 'SALE',
-                      'badge-warning': tx.transaction_type === 'ADJUSTMENT',
-                      'badge-info': tx.transaction_type === 'RETURN'
-                    }"
-                  >
-                    {{ tx.transaction_type }}
-                  </span>
-                </td>
-                <td class="font-mono font-bold text-xs" [ngClass]="tx.quantity > 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'">
-                  {{ tx.quantity > 0 ? '+' + tx.quantity : tx.quantity }} units
-                </td>
-                <td class="font-mono text-xs text-[#2E1065]">
-                  {{ tx.previous_stock }} → <strong>{{ tx.new_stock }}</strong>
-                </td>
-                <td style="text-align: right;" class="text-xs font-semibold text-[#2E1065]">
-                  {{ tx.created_by_name || 'System Auto' }}
-                </td>
-              </tr>
-
-              <tr *ngIf="filteredTransactions.length === 0">
                 <td colspan="6" class="empty-state-cell">
                   <div class="empty-state-box">
-                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'history' }}</span>
-                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Movement Logs' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No stock adjustment or sale logs match your query.' }}</p>
+                    <span class="material-symbols-outlined empty-icon !text-[#16A34A]">verified</span>
+                    <div class="empty-title text-[#16A34A]">All Stock Levels Healthy</div>
+                    <p class="empty-desc">All tracked items are currently stocked above their minimum threshold alert level.</p>
                   </div>
                 </td>
               </tr>
@@ -530,80 +727,171 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 7. STOCK IN (PURCHASE) MODAL                                    -->
+      <!-- 7. MODAL: PURCHASE ENTRY (Qty x Multiplier => Total Qty & Price)-->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="showStockInModal">
-        <div class="modal-content p-6 max-w-md">
+      <div class="modal-backdrop" *ngIf="showPurchaseModal">
+        <div class="modal-content p-6 max-w-lg">
           <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-2.5">
               <span class="material-symbols-outlined text-[#16A34A] text-2xl">add_shopping_cart</span>
-              <h3 class="text-lg font-black text-[#2E1065]">Stock Addition (Purchase)</h3>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065]">Stock Purchase / Addition Entry</h3>
+                <p class="text-xs text-[var(--text-muted)]">Calculates Quantity × Multiplier and updates Weighted Average Cost</p>
+              </div>
             </div>
             <button
               type="button"
-              (click)="showStockInModal = false"
+              (click)="showPurchaseModal = false"
               class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="submitStockIn()" class="space-y-4 py-4">
+          <form (ngSubmit)="submitPurchaseEntry()" class="space-y-4 py-4">
+            <!-- Select Master Item -->
             <div class="form-group">
-              <label class="form-label">Select Dish / Product</label>
-              <select [(ngModel)]="stockInForm.productId" name="productId" class="form-control" required>
-                <option *ngFor="let p of allProducts" [ngValue]="p.id">{{ p.name }} (Current: {{ p.current_stock }})</option>
+              <label class="form-label">Select Stock Item Master</label>
+              <select [(ngModel)]="purchaseForm.stockItemId" name="stockItemId" class="form-control" required>
+                <option *ngFor="let item of stockItems" [ngValue]="item.id">
+                  {{ item.name }} ({{ item.stock_code }}) — Current: {{ item.current_quantity }} {{ item.unit_type }} &#64; {{ item.average_unit_price | appCurrency:'1.0-2' }}
+                </option>
               </select>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Quantity to Add</label>
-              <input
-                type="number"
-                min="1"
-                [(ngModel)]="stockInForm.quantity"
-                name="quantity"
-                class="form-control font-mono font-bold text-[#16A34A] text-lg"
-                required
-              />
+            <!-- Formula Grid: Quantity & Multiplier -->
+            <div class="p-3.5 bg-[#F9F5FF] border border-[#E9D5FF] rounded-xl space-y-3">
+              <div class="text-xs font-bold text-[#6B21A8] flex items-center gap-1.5">
+                <span class="material-symbols-outlined" style="font-size: 16px;">calculate</span>
+                <span>Purchase Formula: Quantity × Multiplier</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Base Quantity</label>
+                  <input
+                    type="number"
+                    min="0.001"
+                    step="any"
+                    [(ngModel)]="purchaseForm.quantity"
+                    name="quantity"
+                    class="form-control font-mono font-bold text-lg"
+                    placeholder="e.g. 5"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Multiplier</label>
+                  <input
+                    type="number"
+                    min="0.001"
+                    step="any"
+                    [(ngModel)]="purchaseForm.multiplier"
+                    name="multiplier"
+                    class="form-control font-mono font-bold text-lg"
+                    placeholder="e.g. 4"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Live Total Quantity Display -->
+              <div class="flex items-center justify-between p-2.5 bg-white border border-[#DDD6FE] rounded-lg text-xs">
+                <span class="text-[#6B7280] font-medium">Calculated Total Quantity:</span>
+                <span class="font-mono font-black text-sm text-[#16A34A]">
+                  {{ calculatedTotalQuantity | number:'1.0-3' }} {{ selectedPurchaseItem?.unit_type || 'units' }}
+                </span>
+              </div>
+
+              <!-- Total Purchase Price -->
+              <div class="form-group">
+                <label class="form-label">Total Purchase Price (₹ / SAR)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  [(ngModel)]="purchaseForm.totalPrice"
+                  name="totalPrice"
+                  class="form-control font-mono font-black text-lg text-purple-950"
+                  placeholder="e.g. 2000"
+                  required
+                />
+              </div>
+
+              <!-- Live Unit Price Calculation -->
+              <div class="flex items-center justify-between p-2.5 bg-white border border-[#DDD6FE] rounded-lg text-xs">
+                <span class="text-[#6B7280] font-medium">Resulting Unit Cost:</span>
+                <span class="font-mono font-black text-sm text-[#7E22CE]">
+                  {{ calculatedUnitPrice | appCurrency:'1.0-4' }} <span class="text-[10px] font-normal text-[#6B7280]">/ {{ selectedPurchaseItem?.unit_type || 'unit' }}</span>
+                </span>
+              </div>
             </div>
 
+            <!-- Impact Simulation Card -->
+            <div *ngIf="selectedPurchaseItem" class="p-3 bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl text-xs space-y-1.5">
+              <div class="font-bold text-[#065F46] flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span>
+                <span>Projected Master Stock Balance Update:</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1">
+                <div>Current: <strong>{{ selectedPurchaseItem.current_quantity }}</strong> {{ selectedPurchaseItem.unit_type }} &#64; {{ selectedPurchaseItem.average_unit_price | appCurrency:'1.0-2' }}</div>
+                <div class="text-[#047857]">Adding: <strong>+{{ calculatedTotalQuantity }}</strong> &#64; {{ calculatedUnitPrice | appCurrency:'1.0-2' }}</div>
+              </div>
+              <div class="pt-1 border-t border-[#A7F3D0] flex items-center justify-between font-mono font-black text-[#065F46]">
+                <span>New Balance: {{ projectedQuantity | number:'1.0-3' }} {{ selectedPurchaseItem.unit_type }}</span>
+                <span>New Avg Cost: {{ projectedAvgPrice | appCurrency:'1.0-4' }}</span>
+              </div>
+            </div>
+
+            <!-- Supplier & Invoice Details -->
             <div class="grid grid-cols-2 gap-3">
               <div class="form-group">
                 <label class="form-label">Supplier Name</label>
                 <input
                   type="text"
-                  [(ngModel)]="stockInForm.supplier"
+                  [(ngModel)]="purchaseForm.supplier"
                   name="supplier"
-                  placeholder="e.g. Al-Madina Farms"
-                  class="form-control"
+                  placeholder="e.g. Al-Watania Poultry"
+                  class="form-control text-xs"
                 />
               </div>
               <div class="form-group">
-                <label class="form-label">Invoice #</label>
+                <label class="form-label">Invoice / Bill #</label>
                 <input
                   type="text"
-                  [(ngModel)]="stockInForm.invoiceNumber"
+                  [(ngModel)]="purchaseForm.invoiceNumber"
                   name="invoiceNumber"
-                  placeholder="e.g. PO-8921"
-                  class="form-control font-mono"
+                  placeholder="e.g. INV-9042"
+                  class="form-control font-mono text-xs"
                 />
               </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes (Optional)</label>
+              <input
+                type="text"
+                [(ngModel)]="purchaseForm.notes"
+                name="notes"
+                placeholder="e.g. Fresh stock delivered at morning shift"
+                class="form-control text-xs"
+              />
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
               <button
                 type="button"
-                (click)="showStockInModal = false"
+                (click)="showPurchaseModal = false"
                 class="action-btn btn-outline-purple"
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                [disabled]="calculatedTotalQuantity <= 0 || purchaseForm.totalPrice < 0"
                 class="action-btn btn-gradient-purple"
               >
-                Add Stock ✓
+                Save Purchase Entry ✓
               </button>
             </div>
           </form>
@@ -611,14 +899,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 8. STOCK ADJUSTMENT MODAL                                       -->
+      <!-- 8. MODAL: STOCK ADJUSTMENT & WASTAGE                            -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showAdjustModal">
         <div class="modal-content p-6 max-w-md">
           <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-2.5">
               <span class="material-symbols-outlined text-[#7E22CE] text-2xl">tune</span>
-              <h3 class="text-lg font-black text-[#2E1065]">Stock Audit Adjustment</h3>
+              <h3 class="text-lg font-black text-[#2E1065]">Stock Adjustment / Wastage</h3>
             </div>
             <button
               type="button"
@@ -631,25 +919,31 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <form (ngSubmit)="submitAdjust()" class="space-y-4 py-4">
             <div class="form-group">
-              <label class="form-label">Select Dish / Product</label>
-              <select [(ngModel)]="adjustForm.productId" name="productId" class="form-control" required>
-                <option *ngFor="let p of allProducts" [ngValue]="p.id">{{ p.name }} (Current: {{ p.current_stock }})</option>
+              <label class="form-label">Select Stock Master Item</label>
+              <select [(ngModel)]="adjustForm.stockItemId" name="stockItemId" class="form-control" required>
+                <option *ngFor="let item of stockItems" [ngValue]="item.id">
+                  {{ item.name }} (Current: {{ item.current_quantity }} {{ item.unit_type }})
+                </option>
               </select>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="form-group">
-                <label class="form-label">Action Type</label>
+                <label class="form-label">Movement / Reason Type</label>
                 <select [(ngModel)]="adjustForm.adjustmentType" name="adjustmentType" class="form-control">
-                  <option value="INCREASE">INCREASE (+)</option>
-                  <option value="DECREASE">DECREASE (-)</option>
+                  <option value="adjustment">Manual Adjustment</option>
+                  <option value="wastage">Kitchen Wastage / Spoilage</option>
+                  <option value="return">Return to Supplier</option>
+                  <option value="INCREASE">INCREASE (+ Audit)</option>
+                  <option value="DECREASE">DECREASE (- Audit)</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Quantity</label>
                 <input
                   type="number"
-                  min="1"
+                  min="0.001"
+                  step="any"
                   [(ngModel)]="adjustForm.quantity"
                   name="quantity"
                   class="form-control font-mono font-bold text-[#7E22CE]"
@@ -664,7 +958,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 type="text"
                 [(ngModel)]="adjustForm.reason"
                 name="reason"
-                placeholder="e.g. Physical count correction, wastage, breakage"
+                placeholder="e.g. Physical inventory count, kitchen trimming loss"
                 class="form-control"
                 required
               />
@@ -682,10 +976,248 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 type="submit"
                 class="action-btn btn-gradient-purple"
               >
-                Apply Adjustment
+                Apply Adjustment ✓
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 9. MODAL: CREATE NEW STOCK MASTER ITEM                          -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showCreateMasterModal">
+        <div class="modal-content p-6 max-w-md">
+          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[#7E22CE] text-2xl">add_box</span>
+              <h3 class="text-lg font-black text-[#2E1065]">Create Stock Master Item</h3>
+            </div>
+            <button
+              type="button"
+              (click)="showCreateMasterModal = false"
+              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form (ngSubmit)="submitCreateMaster()" class="space-y-4 py-4">
+            <div class="form-group">
+              <label class="form-label">Stock Item Name</label>
+              <input
+                type="text"
+                [(ngModel)]="masterForm.name"
+                name="name"
+                placeholder="e.g. Fresh Chicken, Mutton Meat, Basmati Rice"
+                class="form-control"
+                required
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group">
+                <label class="form-label">Stock Code (Optional)</label>
+                <input
+                  type="text"
+                  [(ngModel)]="masterForm.stockCode"
+                  name="stockCode"
+                  placeholder="Auto-generated if blank"
+                  class="form-control font-mono text-xs"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unit Type</label>
+                <select [(ngModel)]="masterForm.unitType" name="unitType" class="form-control">
+                  <option value="piece">Piece (pcs)</option>
+                  <option value="kg">Kilogram (kg)</option>
+                  <option value="liter">Liter (L)</option>
+                  <option value="gram">Gram (g)</option>
+                  <option value="portion">Portion</option>
+                  <option value="box">Box</option>
+                  <option value="packet">Packet</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Minimum Stock Alert Threshold</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                [(ngModel)]="masterForm.minStockAlert"
+                name="minStockAlert"
+                class="form-control font-mono"
+                placeholder="10"
+              />
+            </div>
+
+            <div class="p-3 bg-[#F9F5FF] border border-[#E9D5FF] rounded-xl space-y-3">
+              <div class="text-xs font-bold text-[#6B21A8]">Opening Balance (Optional)</div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Initial Quantity</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="masterForm.initialQuantity"
+                    name="initialQuantity"
+                    class="form-control font-mono"
+                    placeholder="0"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Initial Unit Cost</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="masterForm.initialPrice"
+                    name="initialPrice"
+                    class="form-control font-mono"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+              <button
+                type="button"
+                (click)="showCreateMasterModal = false"
+                class="action-btn btn-outline-purple"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="action-btn btn-gradient-purple"
+              >
+                Create Stock Item ✓
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 10. MODAL: ITEM DETAIL & MOVEMENT AUDIT DRAWER                  -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showItemDetailModal && selectedItemDetail">
+        <div class="modal-content p-6 max-w-2xl max-h-[85vh] overflow-y-auto">
+          <div class="flex items-center justify-between pb-3 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-bold text-purple-700 shadow-xs">
+                <span class="material-symbols-outlined">inventory_2</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#2E1065]">{{ selectedItemDetail.name }}</h3>
+                <div class="text-xs text-[#6B7280] font-mono">{{ selectedItemDetail.stock_code }} • Unit: {{ selectedItemDetail.unit_type }}</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="showItemDetailModal = false"
+              class="text-[#6B7280] hover:text-[#2E1065] p-1 rounded-lg hover:bg-[#F3E8FF]"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Summary Metric Strip -->
+          <div class="grid grid-cols-3 gap-3 my-4">
+            <div class="p-3 bg-purple-50 border border-purple-200 rounded-xl text-center">
+              <div class="text-[10px] text-purple-700 font-bold uppercase">Current Quantity</div>
+              <div class="text-base font-mono font-black text-purple-950">{{ selectedItemDetail.current_quantity }} {{ selectedItemDetail.unit_type }}s</div>
+            </div>
+            <div class="p-3 bg-green-50 border border-green-200 rounded-xl text-center">
+              <div class="text-[10px] text-green-700 font-bold uppercase">Current Valuation</div>
+              <div class="text-base font-mono font-black text-green-900">{{ selectedItemDetail.current_value | appCurrency:'1.0-2' }}</div>
+            </div>
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-center">
+              <div class="text-[10px] text-amber-700 font-bold uppercase">Weighted Avg Cost</div>
+              <div class="text-base font-mono font-black text-amber-900">{{ selectedItemDetail.average_unit_price | appCurrency:'1.0-4' }}</div>
+            </div>
+          </div>
+
+          <!-- Recent Purchase Batches -->
+          <div class="space-y-2 mt-4">
+            <h4 class="text-xs font-bold text-[#6B21A8] uppercase tracking-wider flex items-center gap-1.5">
+              <span class="material-symbols-outlined" style="font-size: 16px;">receipt_long</span>
+              <span>Purchase Entries (Ledger History)</span>
+            </h4>
+            <div class="border border-[#E9D5FF] rounded-xl overflow-hidden text-xs">
+              <table class="saas-data-table">
+                <thead>
+                  <tr>
+                    <th>Entry #</th>
+                    <th>Date</th>
+                    <th>Formula</th>
+                    <th>Total Qty</th>
+                    <th>Total Price</th>
+                    <th>Unit Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let e of selectedItemDetail.entries">
+                    <td class="font-mono font-bold">{{ e.entry_number }}</td>
+                    <td class="font-mono text-[#6B7280]">{{ e.entry_date | date:'dd/MM/yy HH:mm' }}</td>
+                    <td class="font-mono">{{ e.quantity }} × {{ e.multiplier }}</td>
+                    <td class="font-mono font-bold text-[#16A34A]">{{ e.total_quantity }}</td>
+                    <td class="font-mono font-bold">{{ e.total_price | appCurrency:'1.0-2' }}</td>
+                    <td class="font-mono">{{ e.unit_price | appCurrency:'1.0-4' }}</td>
+                  </tr>
+                  <tr *ngIf="!selectedItemDetail.entries?.length">
+                    <td colspan="6" class="text-center py-3 text-[var(--text-muted)]">No purchase batches recorded yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Movements Audit -->
+          <div class="space-y-2 mt-5">
+            <h4 class="text-xs font-bold text-[#6B21A8] uppercase tracking-wider flex items-center gap-1.5">
+              <span class="material-symbols-outlined" style="font-size: 16px;">history</span>
+              <span>Stock Movements (Audit Trail)</span>
+            </h4>
+            <div class="border border-[#E9D5FF] rounded-xl overflow-hidden text-xs">
+              <table class="saas-data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Unit Cost</th>
+                    <th>Balance</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let m of selectedItemDetail.movements">
+                    <td class="font-mono text-[#6B7280]">{{ m.movement_date | date:'dd/MM/yy HH:mm' }}</td>
+                    <td>
+                      <span class="badge uppercase text-[9px]" [ngClass]="m.movement_type === 'in' ? 'badge-success' : m.movement_type === 'out' ? 'badge-danger' : 'badge-warning'">
+                        {{ m.movement_type }}
+                      </span>
+                    </td>
+                    <td class="font-mono font-bold" [ngClass]="m.quantity > 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'">
+                      {{ m.quantity > 0 ? '+' + m.quantity : m.quantity }}
+                    </td>
+                    <td class="font-mono">{{ m.unit_price | appCurrency:'1.0-2' }}</td>
+                    <td class="font-mono font-bold text-purple-900">{{ m.balance_quantity }} ({{ m.balance_value | appCurrency:'1.0-0' }})</td>
+                    <td class="text-[10px] text-[var(--text-muted)] truncate max-w-[140px]">{{ m.notes }}</td>
+                  </tr>
+                  <tr *ngIf="!selectedItemDetail.movements?.length">
+                    <td colspan="6" class="text-center py-3 text-[var(--text-muted)]">No movements recorded yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -715,72 +1247,124 @@ export class StockComponent implements OnInit {
   private productService = inject(ProductService);
   private notify = inject(NotificationService);
 
-  public activeTab: 'INVENTORY' | 'LOW_STOCK' | 'TRANSACTIONS' = 'INVENTORY';
+  public activeTab: 'MASTER' | 'ENTRIES' | 'MOVEMENTS' | 'LOW_STOCK' = 'MASTER';
 
+  // 3-Tier Data Lists
   public stockItems: StockItem[] = [];
-  public lowStockList: any[] = [];
-  public transactions: StockTransaction[] = [];
+  public stockEntries: StockEntry[] = [];
+  public stockMovements: StockMovement[] = [];
+  public lowStockList: StockItem[] = [];
   public allProducts: Product[] = [];
 
+  // Filters & Pagination
   public searchQuery = '';
+  public selectedUnitType = '';
+  public selectedMovementType = 'all';
   public pageSize = 10;
   public currentPage = 1;
 
-  public showStockInModal = false;
+  // Modals state
+  public showPurchaseModal = false;
   public showAdjustModal = false;
+  public showCreateMasterModal = false;
+  public showItemDetailModal = false;
+  public selectedItemDetail: any = null;
 
-  public stockInForm: any = {
-    productId: 1,
-    quantity: 10,
+  // Forms
+  public purchaseForm: any = {
+    stockItemId: 1,
+    quantity: 5,
+    multiplier: 4,
+    totalPrice: 2000,
     supplier: '',
     invoiceNumber: '',
+    notes: '',
+    entryDate: '',
   };
 
   public adjustForm: any = {
-    productId: 1,
-    adjustmentType: 'INCREASE',
+    stockItemId: 1,
+    adjustmentType: 'adjustment',
     quantity: 1,
     reason: '',
+    notes: '',
+  };
+
+  public masterForm: any = {
+    name: '',
+    stockCode: '',
+    unitType: 'piece',
+    minStockAlert: 10,
+    initialQuantity: 0,
+    initialPrice: 0,
   };
 
   ngOnInit(): void {
-    this.loadInventory();
+    this.loadStockMaster();
+    this.loadStockEntries();
+    this.loadStockMovements();
+    this.loadLowStockAlerts();
     this.loadAllProducts();
   }
 
   refreshActiveTab(): void {
-    if (this.activeTab === 'INVENTORY') this.loadInventory();
-    else if (this.activeTab === 'LOW_STOCK') this.loadLowStock();
-    else this.loadTransactions();
+    if (this.activeTab === 'MASTER') this.loadStockMaster();
+    else if (this.activeTab === 'ENTRIES') this.loadStockEntries();
+    else if (this.activeTab === 'MOVEMENTS') this.loadStockMovements();
+    else this.loadLowStockAlerts();
   }
 
-  loadInventory(): void {
+  // ── 1. Load Stock Master (stock_items) ──────────────────────────────
+  loadStockMaster(): void {
     this.isLoading = true;
     this.loadError = null;
-    this.stockService.getStock(1, 200).subscribe({
+    this.stockService.getStock(1, 200, undefined, undefined, false, 'active', this.selectedUnitType || undefined).subscribe({
       next: (res) => {
-          this.isLoading = false;
-        if (res.success) this.stockItems = res.data;
+        this.isLoading = false;
+        if (res.success) {
+          this.stockItems = res.data;
+          if (this.stockItems.length > 0 && !this.purchaseForm.stockItemId) {
+            this.purchaseForm.stockItemId = this.stockItems[0].id;
+            this.adjustForm.stockItemId = this.stockItems[0].id;
+          }
+        }
       },
-        error: (err) => {
-          this.isLoading = false;
-          this.loadError = err?.error?.message || 'Unable to load data from the server.';
-        },
-      });
-  }
-
-  loadLowStock(): void {
-    this.stockService.getLowStockAlerts().subscribe({
-      next: (res) => {
-        if (res.success) this.lowStockList = res.data;
+      error: (err) => {
+        this.isLoading = false;
+        this.loadError = err?.error?.message || 'Unable to load stock items from server.';
       },
     });
   }
 
-  loadTransactions(): void {
-    this.stockService.getTransactions(1, 200).subscribe({
+  // ── 2. Load Purchase Entries (stock_entries) ────────────────────────
+  loadStockEntries(): void {
+    this.stockService.getStockEntries(1, 200).subscribe({
       next: (res) => {
-        if (res.success) this.transactions = res.data;
+        if (res.success) {
+          this.stockEntries = res.data;
+        }
+      },
+    });
+  }
+
+  // ── 3. Load Movements (stock_movements) ─────────────────────────────
+  loadStockMovements(): void {
+    this.stockService.getStockMovements(1, 200, undefined, this.selectedMovementType !== 'all' ? this.selectedMovementType : undefined).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.stockMovements = res.data;
+        }
+      },
+    });
+  }
+
+  // ── 4. Load Low Stock Alerts ────────────────────────────────────────
+  loadLowStockAlerts(): void {
+    this.stockService.getLowStockAlerts().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.lowStockList = res.data;
+        }
       },
     });
   }
@@ -790,60 +1374,116 @@ export class StockComponent implements OnInit {
       next: (res) => {
         if (res.success) {
           this.allProducts = res.data;
-          if (this.allProducts.length > 0) {
-            this.stockInForm.productId = this.allProducts[0].id;
-            this.adjustForm.productId = this.allProducts[0].id;
-          }
         }
       },
     });
   }
 
-  get totalStockUnits(): number {
-    return this.stockItems.reduce((sum, s) => sum + s.current_stock, 0);
+  // ── Live Calculation Helpers for Purchase Modal ────────────────────
+  get selectedPurchaseItem(): StockItem | undefined {
+    return this.stockItems.find((i) => i.id === Number(this.purchaseForm.stockItemId));
   }
 
-  get stockValuation(): number {
-    return this.stockItems.reduce((sum, s) => sum + (s.current_stock * s.selling_price), 0);
+  get calculatedTotalQuantity(): number {
+    const qty = Number(this.purchaseForm.quantity) || 0;
+    const mult = Number(this.purchaseForm.multiplier) || 1;
+    return qty * mult;
   }
 
-  get filteredStockItems(): StockItem[] {
+  get calculatedUnitPrice(): number {
+    const totQty = this.calculatedTotalQuantity;
+    const price = Number(this.purchaseForm.totalPrice) || 0;
+    return totQty > 0 ? price / totQty : 0;
+  }
+
+  get projectedQuantity(): number {
+    const curr = Number(this.selectedPurchaseItem?.current_quantity) || 0;
+    return curr + this.calculatedTotalQuantity;
+  }
+
+  get projectedValue(): number {
+    const currVal = Number(this.selectedPurchaseItem?.current_value) || 0;
+    const price = Number(this.purchaseForm.totalPrice) || 0;
+    return currVal + price;
+  }
+
+  get projectedAvgPrice(): number {
+    const projQty = this.projectedQuantity;
+    return projQty > 0 ? this.projectedValue / projQty : 0;
+  }
+
+  // ── Metrics & Totals ────────────────────────────────────────────────
+  get totalLiveQuantity(): number {
+    return this.stockItems.reduce((sum, item) => sum + Number(item.current_quantity || 0), 0);
+  }
+
+  get totalLiveValue(): number {
+    return this.stockItems.reduce((sum, item) => sum + Number(item.current_value || 0), 0);
+  }
+
+  // ── Tab Search & Pagination Filter Helpers ──────────────────────────
+  get filteredMasterItems(): StockItem[] {
     if (!this.searchQuery) return this.stockItems;
     const q = this.searchQuery.toLowerCase();
     return this.stockItems.filter(
-      (s) => s.product_name.toLowerCase().includes(q) || s.sku.toLowerCase().includes(q) || s.category_name?.toLowerCase().includes(q)
+      (s) => s.name.toLowerCase().includes(q) || s.stock_code.toLowerCase().includes(q) || s.category_name?.toLowerCase().includes(q)
     );
   }
 
-  get paginatedStockItems(): StockItem[] {
-    const list = this.filteredStockItems;
+  get paginatedMasterItems(): StockItem[] {
+    const list = this.filteredMasterItems;
     const start = (this.currentPage - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
-  get paginatedLowStockList(): any[] {
+  get filteredStockEntries(): StockEntry[] {
+    if (!this.searchQuery) return this.stockEntries;
+    const q = this.searchQuery.toLowerCase();
+    return this.stockEntries.filter(
+      (e) =>
+        e.entry_number.toLowerCase().includes(q) ||
+        e.stock_item_name?.toLowerCase().includes(q) ||
+        e.stock_code?.toLowerCase().includes(q) ||
+        e.supplier?.toLowerCase().includes(q) ||
+        e.invoice_number?.toLowerCase().includes(q)
+    );
+  }
+
+  get paginatedStockEntries(): StockEntry[] {
+    const list = this.filteredStockEntries;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
+  }
+
+  get filteredStockMovements(): StockMovement[] {
+    if (!this.searchQuery) return this.stockMovements;
+    const q = this.searchQuery.toLowerCase();
+    return this.stockMovements.filter(
+      (m) =>
+        m.stock_item_name?.toLowerCase().includes(q) ||
+        m.stock_code?.toLowerCase().includes(q) ||
+        m.movement_type.toLowerCase().includes(q) ||
+        (m.reference_id && m.reference_id.toLowerCase().includes(q)) ||
+        (m.notes && m.notes.toLowerCase().includes(q))
+    );
+  }
+
+  get paginatedStockMovements(): StockMovement[] {
+    const list = this.filteredStockMovements;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
+  }
+
+  get paginatedLowStockList(): StockItem[] {
     const start = (this.currentPage - 1) * this.pageSize;
     return this.lowStockList.slice(start, start + this.pageSize);
   }
 
-  get filteredTransactions(): StockTransaction[] {
-    if (!this.searchQuery) return this.transactions;
-    const q = this.searchQuery.toLowerCase();
-    return this.transactions.filter(
-      (t) => t.product_name.toLowerCase().includes(q) || (t.reference_id && t.reference_id.toLowerCase().includes(q))
-    );
-  }
-
-  get paginatedTransactions(): StockTransaction[] {
-    const list = this.filteredTransactions;
-    const start = (this.currentPage - 1) * this.pageSize;
-    return list.slice(start, start + this.pageSize);
-  }
-
   getCurrentTotal(): number {
-    if (this.activeTab === 'INVENTORY') return this.filteredStockItems.length;
-    if (this.activeTab === 'LOW_STOCK') return this.lowStockList.length;
-    return this.filteredTransactions.length;
+    if (this.activeTab === 'MASTER') return this.filteredMasterItems.length;
+    if (this.activeTab === 'ENTRIES') return this.filteredStockEntries.length;
+    if (this.activeTab === 'MOVEMENTS') return this.filteredStockMovements.length;
+    return this.lowStockList.length;
   }
 
   getTotalPages(totalItems: number): number {
@@ -867,45 +1507,82 @@ export class StockComponent implements OnInit {
     return Math.min(100, Math.max(0, (curr / max) * 100));
   }
 
-  exportCSV(): void {
-    const items = this.filteredStockItems;
-    const headers = ['SKU', 'Product Name', 'Category', 'Selling Price', 'Current Stock', 'Min Alert'];
-    const rows = items.map((s) => [s.sku, `"${s.product_name}"`, `"${s.category_name || ''}"`, s.selling_price, s.current_stock, s.min_stock_alert]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Stock_Ledger_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  getSearchPlaceholder(): string {
+    if (this.activeTab === 'MASTER') return 'Search master items by name or code (e.g. Chicken, STK-0001)...';
+    if (this.activeTab === 'ENTRIES') return 'Search purchase entries by entry #, item, supplier, invoice...';
+    if (this.activeTab === 'MOVEMENTS') return 'Search movement audit trail by reference, item, notes...';
+    return 'Search low stock alerts...';
   }
 
-  openStockInModal(): void {
-    this.showStockInModal = true;
+  // ── Modals Trigger Actions ──────────────────────────────────────────
+  openPurchaseModal(): void {
+    if (this.stockItems.length > 0 && !this.purchaseForm.stockItemId) {
+      this.purchaseForm.stockItemId = this.stockItems[0].id;
+    }
+    this.showPurchaseModal = true;
   }
 
-  quickStockIn(item: any): void {
-    this.stockInForm.productId = item.product_id || item.id;
-    this.showStockInModal = true;
+  quickPurchaseEntry(item: StockItem): void {
+    this.purchaseForm.stockItemId = item.id;
+    this.showPurchaseModal = true;
   }
 
   openAdjustModal(): void {
+    if (this.stockItems.length > 0 && !this.adjustForm.stockItemId) {
+      this.adjustForm.stockItemId = this.stockItems[0].id;
+    }
     this.showAdjustModal = true;
   }
 
-  submitStockIn(): void {
-    if (!this.stockInForm.quantity || this.stockInForm.quantity <= 0) {
-      this.notify.error('Please enter valid quantity');
+  quickAdjust(item: StockItem): void {
+    this.adjustForm.stockItemId = item.id;
+    this.showAdjustModal = true;
+  }
+
+  openCreateMasterModal(): void {
+    this.masterForm = {
+      name: '',
+      stockCode: '',
+      unitType: 'piece',
+      minStockAlert: 10,
+      initialQuantity: 0,
+      initialPrice: 0,
+    };
+    this.showCreateMasterModal = true;
+  }
+
+  viewItemHistory(item: StockItem): void {
+    this.stockService.getStockItemById(item.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.selectedItemDetail = res.data;
+          this.showItemDetailModal = true;
+        }
+      },
+    });
+  }
+
+  // ── Form Submissions ────────────────────────────────────────────────
+  submitPurchaseEntry(): void {
+    if (!this.purchaseForm.quantity || this.purchaseForm.quantity <= 0) {
+      this.notify.error('Please enter a valid base quantity');
+      return;
+    }
+    if (this.purchaseForm.totalPrice < 0 || this.purchaseForm.totalPrice === undefined) {
+      this.notify.error('Please enter a valid total purchase price');
       return;
     }
 
-    this.stockService.stockIn(this.stockInForm).subscribe({
+    this.stockService.createStockEntry(this.purchaseForm).subscribe({
       next: (res) => {
-        this.notify.success(`Added ${res.data.addedQuantity} units to ${res.data.productName}`);
-        this.showStockInModal = false;
-        this.loadInventory();
-        this.loadAllProducts();
+        this.notify.success(
+          `Entry ${res.data.entryNumber} recorded: +${res.data.totalQuantity} units added to ${res.data.stockItemName}`
+        );
+        this.showPurchaseModal = false;
+        this.loadStockMaster();
+        this.loadStockEntries();
+        this.loadStockMovements();
+        this.loadLowStockAlerts();
       },
     });
   }
@@ -917,12 +1594,93 @@ export class StockComponent implements OnInit {
     }
 
     this.stockService.adjustStock(this.adjustForm).subscribe({
-      next: () => {
-        this.notify.success('Stock adjusted successfully');
+      next: (res) => {
+        this.notify.success(`Stock adjusted successfully for ${res.data.stockItemName}. New balance: ${res.data.newQuantity}`);
         this.showAdjustModal = false;
-        this.loadInventory();
-        this.loadAllProducts();
+        this.loadStockMaster();
+        this.loadStockMovements();
+        this.loadLowStockAlerts();
       },
     });
   }
+
+  submitCreateMaster(): void {
+    if (!this.masterForm.name) {
+      this.notify.error('Please enter stock item name');
+      return;
+    }
+
+    this.stockService.createStockItem(this.masterForm).subscribe({
+      next: (res) => {
+        this.notify.success(`Created master item: ${res.data.name} (${res.data.stock_code})`);
+        this.showCreateMasterModal = false;
+        this.loadStockMaster();
+      },
+    });
+  }
+
+  // ── Export CSV ──────────────────────────────────────────────────────
+  exportCSV(): void {
+    if (this.activeTab === 'MASTER') {
+      const items = this.filteredMasterItems;
+      const headers = ['Stock Code', 'Name', 'Unit Type', 'Current Quantity', 'Valuation (Value)', 'Avg Unit Price', 'Min Alert', 'Status'];
+      const rows = items.map((s) => [
+        s.stock_code,
+        `"${s.name}"`,
+        s.unit_type,
+        s.current_quantity,
+        s.current_value,
+        s.average_unit_price,
+        s.min_stock_alert,
+        s.status,
+      ]);
+      this.downloadCSV('Stock_Master_Balances', headers, rows);
+    } else if (this.activeTab === 'ENTRIES') {
+      const entries = this.filteredStockEntries;
+      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Supplier', 'Invoice #'];
+      const rows = entries.map((e) => [
+        e.entry_number,
+        `"${e.entry_date}"`,
+        e.stock_code || '',
+        `"${e.stock_item_name || ''}"`,
+        e.quantity,
+        e.multiplier,
+        e.total_quantity,
+        e.total_price,
+        e.unit_price,
+        `"${e.supplier || ''}"`,
+        `"${e.invoice_number || ''}"`,
+      ]);
+      this.downloadCSV('Stock_Purchase_Entries_Ledger', headers, rows);
+    } else {
+      const moves = this.filteredStockMovements;
+      const headers = ['Date', 'Item Name', 'Type', 'Ref Type', 'Ref ID', 'Quantity', 'Unit Cost', 'Move Value', 'Balance Qty', 'Balance Value', 'Notes'];
+      const rows = moves.map((m) => [
+        `"${m.movement_date}"`,
+        `"${m.stock_item_name || ''}"`,
+        m.movement_type,
+        m.reference_type,
+        `"${m.reference_id || ''}"`,
+        m.quantity,
+        m.unit_price,
+        m.total_value,
+        m.balance_quantity,
+        m.balance_value,
+        `"${m.notes || ''}"`,
+      ]);
+      this.downloadCSV('Stock_Movements_Audit_History', headers, rows);
+    }
+  }
+
+  private downloadCSV(filename: string, headers: string[], rows: any[][]): void {
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${filename}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
+
