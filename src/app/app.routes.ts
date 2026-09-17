@@ -1,0 +1,150 @@
+import { Routes } from '@angular/router';
+import { authGuard, roleGuard } from './core/auth/guards/auth.guard';
+import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
+import { MainLayoutComponent } from './layouts/main-layout/main-layout.component';
+
+export const routes: Routes = [
+  // Auth Layout Route
+  {
+    path: 'login',
+    component: AuthLayoutComponent,
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/auth/login.component').then((m) => m.LoginComponent),
+      },
+    ],
+  },
+
+  // Main Dashboard / POS Shell Layout Routes (Protected)
+  {
+    path: '',
+    component: MainLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'dashboard.view' },
+      },
+      {
+        path: 'pos',
+        loadComponent: () =>
+          import('./features/pos/pos.component').then((m) => m.PosComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'pos.billing' },
+      },
+      {
+        path: 'orders',
+        loadComponent: () =>
+          import('./features/orders/orders.component').then((m) => m.OrdersComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'order.manage' },
+      },
+      {
+        path: 'draft-bills',
+        loadComponent: () =>
+          import('./features/draft-bills/draft-bills.component').then((m) => m.DraftBillsComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'pos.hold_bill' },
+      },
+      {
+        path: 'bills',
+        loadComponent: () =>
+          import('./features/bills/bills.component').then((m) => m.BillsComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'bill.view' },
+      },
+      {
+        path: 'dining',
+        loadComponent: () =>
+          import('./features/dining/dining.component').then((m) => m.DiningComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'dining.manage' },
+      },
+      {
+        path: 'queue',
+        loadComponent: () =>
+          import('./features/queue/queue.component').then((m) => m.QueueComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'queue.manage' },
+      },
+      {
+        path: 'products',
+        loadComponent: () =>
+          import('./features/products/products.component').then((m) => m.ProductsComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'product.manage' },
+      },
+      {
+        path: 'categories',
+        loadComponent: () =>
+          import('./features/categories/categories.component').then((m) => m.CategoriesComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'category.manage' },
+      },
+      {
+        path: 'stock',
+        loadComponent: () =>
+          import('./features/stock/stock.component').then((m) => m.StockComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'stock.view' },
+      },
+      {
+        path: 'customers',
+        loadComponent: () =>
+          import('./features/customers/customers.component').then((m) => m.CustomersComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'customer.manage' },
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./features/reports/reports.component').then((m) => m.ReportsComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'report.view' },
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./features/users/users.component').then((m) => m.UsersComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'user.manage' },
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'settings.manage' },
+      },
+      {
+        path: 'audit',
+        loadComponent: () =>
+          import('./features/audit/audit.component').then((m) => m.AuditComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
+      },
+
+      // Any unmatched URL inside the shell renders the module-aware 404 with
+      // the sidebar still in place. It sits here rather than at the top level
+      // so a bad link keeps its navigation, and it replaces the old silent
+      // bounce to the dashboard that made broken links look like they worked.
+      {
+        path: '**',
+        loadComponent: () =>
+          import('./features/page-not-found/page-not-found.component').then(
+            (m) => m.PageNotFoundComponent
+          ),
+      },
+    ],
+  },
+];

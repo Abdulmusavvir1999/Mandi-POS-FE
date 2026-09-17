@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" fill="none" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="deep" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="soft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C4B5FD"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- shared stage: halo + ground, identical on every module -->
+  <ellipse cx="160" cy="102" rx="106" ry="88" fill="#8B5CF6" opacity=".10"/>
+  <ellipse cx="160" cy="192" rx="90" ry="11" fill="#6D28D9" opacity=".15"/>
+
+  <g stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+
+    <rect x="64" y="46" width="192" height="122" rx="14" fill="#FFFFFF" stroke="#6D28D9"/>
+    <path d="M64 70h192" stroke="#C4B5FD"/>
+    <circle cx="80" cy="58" r="3.5" fill="#F43F5E" stroke="none"/>
+    <circle cx="92" cy="58" r="3.5" fill="#F59E0B" stroke="none"/>
+    <circle cx="104" cy="58" r="3.5" fill="#22C55E" stroke="none"/>
+    <rect x="78" y="82" width="50" height="28" rx="7" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="2.5"/>
+    <rect x="136" y="82" width="50" height="28" rx="7" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="2.5"/>
+    <rect x="194" y="82" width="50" height="28" rx="7" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="2.5"/>
+    <rect x="78" y="140" width="15" height="16" rx="5" fill="url(#deep)" stroke="none"/>
+    <rect x="100" y="130" width="15" height="26" rx="5" fill="url(#deep)" stroke="none"/>
+    <rect x="122" y="136" width="15" height="20" rx="5" fill="url(#deep)" stroke="none"/>
+    <rect x="144" y="124" width="15" height="32" rx="5" fill="url(#deep)" stroke="none"/>
+    <path d="M176 150l16-15 14 11 22-25" stroke="#F59E0B"/>
+    <circle cx="228" cy="121" r="4.5" fill="#F59E0B" stroke="none"/>
+    <path d="M146 168v12h28v-12" stroke="#6D28D9"/>
+    <rect x="126" y="180" width="68" height="7" rx="3.5" fill="#6D28D9" stroke="none"/>
+
+    <circle cx="272" cy="46" r="5" fill="#C4B5FD" stroke="none" opacity=".85"/>
+    <circle cx="52" cy="168" r="4" fill="#8B5CF6" stroke="none" opacity=".6"/>
+    <path d="M44 58l4 8-8-4z" fill="#F59E0B" stroke="none" opacity=".9"/>
+  </g>
+</svg>

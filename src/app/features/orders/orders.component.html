@@ -1,0 +1,890 @@
+<div class="kds-page-container">
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 1. COMPACT PROFESSIONAL KDS PAGE HEADER                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <header class="kds-header-card">
+    <div class="header-left">
+      <div class="kds-header-icon">
+        <span class="material-symbols-outlined">skillet</span>
+      </div>
+      <div>
+        <h1 class="kds-title">Kitchen & Order Pipeline</h1>
+        <p class="kds-subtitle">Kitchen preparation & order fulfillment</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- Live Status Indicator -->
+      <div class="live-pill" title="Live real-time synchronization active">
+        <span class="live-pulse-dot"></span>
+        <span class="live-text">LIVE</span>
+      </div>
+
+      <!-- Last Updated Clock -->
+      <div class="last-updated-badge" title="Last synchronized time">
+        <span class="material-symbols-outlined text-[16px]">schedule</span>
+        <span>Updated {{ lastUpdated | date:'h:mm:ss a' }}</span>
+      </div>
+
+      <!-- Sound Toggle Button -->
+      <button
+        type="button"
+        (click)="toggleSound()"
+        class="kds-header-btn"
+        [class.is-muted]="!soundEnabled"
+        [title]="soundEnabled ? 'Kitchen order audio chime active' : 'Kitchen order audio chime muted'"
+      >
+        <span class="material-symbols-outlined">{{ soundEnabled ? 'volume_up' : 'volume_off' }}</span>
+      </button>
+
+      <!-- Refresh Button -->
+      <button
+        type="button"
+        (click)="loadOrders()"
+        class="kds-header-btn"
+        title="Refresh orders from server"
+        [disabled]="isLoading"
+      >
+        <span class="material-symbols-outlined" [class.spin-icon]="isLoading">refresh</span>
+        <span class="hidden sm:inline">Refresh</span>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button
+        type="button"
+        (click)="toggleFullscreen()"
+        class="kds-header-btn"
+        [title]="isFullscreen ? 'Exit Fullscreen' : 'Enter Kitchen Display Fullscreen'"
+      >
+        <span class="material-symbols-outlined">{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 2. TOP SUMMARY METRICS                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="kds-metrics-strip">
+    <!-- NEW / WAITING -->
+    <div
+      class="metric-card metric-new"
+      (click)="selectedStatusTab = selectedStatusTab === 'PENDING' ? 'ALL' : 'PENDING'"
+      [class.is-active-filter]="selectedStatusTab === 'PENDING'"
+    >
+      <div class="metric-top">
+        <span class="metric-status-tag tag-new">
+          <span class="status-dot dot-new"></span>
+          <span>NEW</span>
+        </span>
+        <span class="material-symbols-outlined metric-icon text-amber-500">hourglass_top</span>
+      </div>
+      <div class="metric-value font-mono">{{ pendingCount | number:'2.0-0' }}</div>
+      <div class="metric-sub">Waiting in Queue</div>
+    </div>
+
+    <!-- COOKING / PREPARING -->
+    <div
+      class="metric-card metric-cooking"
+      (click)="selectedStatusTab = selectedStatusTab === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS'"
+      [class.is-active-filter]="selectedStatusTab === 'IN_PROGRESS'"
+    >
+      <div class="metric-top">
+        <span class="metric-status-tag tag-cooking">
+          <span class="status-dot dot-cooking"></span>
+          <span>COOKING</span>
+        </span>
+        <span class="material-symbols-outlined metric-icon text-blue-500">skillet</span>
+      </div>
+      <div class="metric-value font-mono">{{ inProgressCount | number:'2.0-0' }}</div>
+      <div class="metric-sub">Preparing in Kitchen</div>
+    </div>
+
+    <!-- TOTAL ACTIVE -->
+    <div
+      class="metric-card metric-active"
+      (click)="selectedStatusTab = 'ALL'"
+      [class.is-active-filter]="selectedStatusTab === 'ALL'"
+    >
+      <div class="metric-top">
+        <span class="metric-status-tag tag-active">
+          <span class="status-dot dot-active"></span>
+          <span>TOTAL ACTIVE</span>
+        </span>
+        <span class="material-symbols-outlined metric-icon text-purple-500">restaurant</span>
+      </div>
+      <div class="metric-value font-mono">{{ totalActiveCount | number:'2.0-0' }}</div>
+      <div class="metric-sub">Pending Preparation</div>
+    </div>
+
+    <!-- COMPLETED TODAY -->
+    <div
+      class="metric-card metric-completed"
+      (click)="selectedStatusTab = selectedStatusTab === 'COMPLETED' ? 'ALL' : 'COMPLETED'"
+      [class.is-active-filter]="selectedStatusTab === 'COMPLETED'"
+    >
+      <div class="metric-top">
+        <span class="metric-status-tag tag-completed">
+          <span class="status-dot dot-completed"></span>
+          <span>COMPLETED</span>
+        </span>
+        <span class="material-symbols-outlined metric-icon text-green-500">task_alt</span>
+      </div>
+      <div class="metric-value font-mono">{{ completedCount | number:'2.0-0' }}</div>
+      <div class="metric-sub">Fulfilled Today</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 3. FILTER & SEARCH TOOLBAR                                              -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="kds-toolbar-card">
+    <div class="toolbar-left">
+      <!-- Segmented Status Tabs -->
+      <div class="module-tabs-bar">
+        <button
+          type="button"
+          (click)="selectedStatusTab = 'ALL'"
+          class="module-tab-btn"
+          [class.is-active]="selectedStatusTab === 'ALL'"
+        >
+          <span class="material-symbols-outlined">grid_view</span>
+          <span>All Orders</span>
+          <span class="tab-count-badge">{{ orders.length }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="selectedStatusTab = 'PENDING'"
+          class="module-tab-btn"
+          [class.is-active]="selectedStatusTab === 'PENDING'"
+        >
+          <span class="material-symbols-outlined">hourglass_top</span>
+          <span>New</span>
+          <span class="tab-count-badge">{{ pendingCount }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="selectedStatusTab = 'IN_PROGRESS'"
+          class="module-tab-btn"
+          [class.is-active]="selectedStatusTab === 'IN_PROGRESS'"
+        >
+          <span class="material-symbols-outlined">skillet</span>
+          <span>Cooking</span>
+          <span class="tab-count-badge">{{ inProgressCount }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="selectedStatusTab = 'COMPLETED'"
+          class="module-tab-btn"
+          [class.is-active]="selectedStatusTab === 'COMPLETED'"
+        >
+          <span class="material-symbols-outlined">check_circle</span>
+          <span>Completed</span>
+          <span class="tab-count-badge">{{ completedCount }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="selectedStatusTab = 'CANCELLED'"
+          class="module-tab-btn"
+          [class.is-active]="selectedStatusTab === 'CANCELLED'"
+        >
+          <span class="material-symbols-outlined">cancel</span>
+          <span>Cancelled</span>
+          <span class="tab-count-badge">{{ cancelledCount }}</span>
+        </button>
+      </div>
+
+      <!-- Secondary Order Type Filter -->
+      <app-custom-dropdown
+        [options]="orderTypeOptions"
+        [(ngModel)]="selectedOrderType"
+        placeholder="All Order Types"
+        minWidth="170px"
+      ></app-custom-dropdown>
+
+      <!-- Table Filter -->
+      <app-custom-dropdown
+        *ngIf="availableTables.length > 0"
+        [options]="tableOptions"
+        [(ngModel)]="selectedTable"
+        placeholder="All Tables"
+        minWidth="150px"
+      ></app-custom-dropdown>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- Search Input -->
+      <div class="kds-search-wrapper">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Search order #, table or item..."
+          class="kds-search-input"
+        />
+        <button
+          *ngIf="searchQuery"
+          type="button"
+          (click)="searchQuery = ''"
+          class="search-clear-btn"
+          title="Clear search"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Sort Dropdown -->
+      <app-custom-dropdown
+        [options]="sortOptions"
+        [(ngModel)]="sortBy"
+        placeholder="Sort orders"
+        minWidth="195px"
+      ></app-custom-dropdown>
+    </div>
+  </section>
+
+  <!-- Error Banner if API fails -->
+  <div *ngIf="loadError" class="kds-error-banner">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ loadError }}</span>
+    </div>
+    <button (click)="loadOrders()" class="btn-error-retry">
+      <span class="material-symbols-outlined">refresh</span>
+      <span>Retry</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 4. KITCHEN PIPELINE KANBAN COLUMNS (PRIMARY VIEW)                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <main
+    *ngIf="selectedStatusTab !== 'CANCELLED'"
+    class="kds-pipeline-grid"
+    [class.grid-single-col]="selectedStatusTab !== 'ALL'"
+  >
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- COLUMN 1: NEW / WAITING (PENDING)                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div
+      *ngIf="selectedStatusTab === 'ALL' || selectedStatusTab === 'PENDING'"
+      class="pipeline-column col-new"
+    >
+      <!-- Sticky Column Header -->
+      <div class="col-header header-new">
+        <div class="col-header-left">
+          <span class="col-status-indicator indicator-new"></span>
+          <span class="material-symbols-outlined col-icon text-amber-500">hourglass_top</span>
+          <span class="col-title">NEW ORDERS</span>
+        </div>
+        <span class="col-badge badge-new">{{ pendingOrders.length }}</span>
+      </div>
+
+      <!-- Orders Card Container -->
+      <div class="col-cards-container">
+        <!-- Empty State -->
+        <div *ngIf="pendingOrders.length === 0" class="col-empty-state">
+          <span class="material-symbols-outlined empty-glyph">checklist</span>
+          <h4 class="empty-title">No new orders</h4>
+          <p class="empty-desc">New kitchen tickets will appear here automatically.</p>
+        </div>
+
+        <!-- Order Cards Loop -->
+        <article
+          *ngFor="let order of pendingOrders"
+          class="order-card card-new"
+          (click)="openOrderDrawer(order)"
+        >
+          <!-- Card Top Bar -->
+          <div class="order-card-header">
+            <div class="header-main-row">
+              <span class="order-number-text font-mono">#{{ order.order_number }}</span>
+              <span class="order-time-text">
+                <span class="material-symbols-outlined text-[13px]">schedule</span>
+                <span>{{ order.created_at | date:'h:mm a' }}</span>
+              </span>
+            </div>
+
+            <div class="header-meta-tags">
+              <!-- Order Type Tag -->
+              <span
+                class="order-type-tag"
+                [ngClass]="{
+                  'type-dining': order.order_type === 'DINING',
+                  'type-takeaway': order.order_type === 'TAKEAWAY',
+                  'type-walkin': order.order_type === 'WALK_IN'
+                }"
+              >
+                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : order.order_type === 'TAKEAWAY' ? '🥡 TAKEAWAY' : '⚡ WALK-IN' }}
+              </span>
+
+              <!-- Table Badge if exists -->
+              <span *ngIf="order.table_number" class="table-badge">
+                <span class="material-symbols-outlined text-[13px]">table_restaurant</span>
+                <span>Table {{ order.table_number }}</span>
+              </span>
+
+              <!-- Customer info if exists -->
+              <span *ngIf="order.customer_name" class="customer-tag truncate" title="{{ order.customer_name }}">
+                👤 {{ order.customer_name }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Live Timer & Urgency Bar -->
+          <div class="order-timer-bar" [ngClass]="getUrgencyClass(order.created_at, order.status)">
+            <span class="material-symbols-outlined text-[15px]">
+              {{ getUrgencyClass(order.created_at, order.status) === 'timer-overdue' ? 'local_fire_department' : 'timer' }}
+            </span>
+            <span class="timer-text font-mono font-bold">{{ getUrgencyLabel(order.created_at, order.status) }}</span>
+            <span class="item-count-pill font-mono ml-auto">{{ order.items?.length || order.item_count || 0 }} Items</span>
+          </div>
+
+          <!-- Order Items Breakdown -->
+          <div class="order-items-list">
+            <div
+              *ngFor="let item of order.items || []"
+              class="order-item-row"
+              (click)="toggleItemChecked(order.id, item.id, $event)"
+              [class.is-checked]="isItemChecked(order.id, item.id)"
+            >
+              <div class="item-check-box" [class.checked]="isItemChecked(order.id, item.id)">
+                <span class="material-symbols-outlined text-[14px]">
+                  {{ isItemChecked(order.id, item.id) ? 'check' : '' }}
+                </span>
+              </div>
+              <span class="item-qty font-mono font-bold">{{ item.quantity }}×</span>
+              <span class="item-name truncate">{{ item.product_name }}</span>
+              <span *ngIf="item.notes" class="item-note-pill" title="{{ item.notes }}">Note</span>
+            </div>
+
+            <!-- Fallback if items not loaded -->
+            <div *ngIf="(!order.items || order.items.length === 0) && (order.item_count || 0) > 0" class="fallback-items-notice">
+              <span class="material-symbols-outlined text-[16px]">restaurant_menu</span>
+              <span>{{ order.item_count }} Dish(es) in ticket • Tap for full details</span>
+            </div>
+          </div>
+
+          <!-- Special Instructions / Notes Banner -->
+          <div *ngIf="order.notes" class="order-notes-banner">
+            <span class="material-symbols-outlined text-[16px] shrink-0 text-amber-600">rate_review</span>
+            <span class="notes-text"><strong>Note:</strong> {{ order.notes }}</span>
+          </div>
+
+          <!-- Card Action Footer -->
+          <div class="order-card-footer" (click)="$event.stopPropagation()">
+            <!-- Primary Action: Start Cooking -->
+            <button
+              type="button"
+              (click)="startCooking(order, $event)"
+              class="btn-primary-action btn-start-cooking"
+              title="Start cooking this order"
+            >
+              <span class="material-symbols-outlined">skillet</span>
+              <span>Start Cooking</span>
+            </button>
+
+            <!-- Secondary Actions -->
+            <div class="secondary-actions-group">
+              <button
+                type="button"
+                (click)="printKOT(order, $event)"
+                class="btn-icon-action"
+                title="Print Kitchen Ticket (KOT)"
+              >
+                <span class="material-symbols-outlined">print</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="cancelOrder(order, $event)"
+                class="btn-icon-action btn-cancel-action"
+                title="Cancel Order"
+              >
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- COLUMN 2: COOKING / PREPARING (IN_PROGRESS)                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div
+      *ngIf="selectedStatusTab === 'ALL' || selectedStatusTab === 'IN_PROGRESS'"
+      class="pipeline-column col-cooking"
+    >
+      <!-- Sticky Column Header -->
+      <div class="col-header header-cooking">
+        <div class="col-header-left">
+          <span class="col-status-indicator indicator-cooking"></span>
+          <span class="material-symbols-outlined col-icon text-blue-500">skillet</span>
+          <span class="col-title">COOKING / PREPARING</span>
+        </div>
+        <span class="col-badge badge-cooking">{{ inProgressOrders.length }}</span>
+      </div>
+
+      <!-- Orders Card Container -->
+      <div class="col-cards-container">
+        <!-- Empty State -->
+        <div *ngIf="inProgressOrders.length === 0" class="col-empty-state">
+          <span class="material-symbols-outlined empty-glyph">soup_kitchen</span>
+          <h4 class="empty-title">Kitchen is clear</h4>
+          <p class="empty-desc">Click "Start Cooking" on new orders to move them here.</p>
+        </div>
+
+        <!-- Order Cards Loop -->
+        <article
+          *ngFor="let order of inProgressOrders"
+          class="order-card card-cooking"
+          (click)="openOrderDrawer(order)"
+        >
+          <!-- Card Top Bar -->
+          <div class="order-card-header">
+            <div class="header-main-row">
+              <span class="order-number-text font-mono">#{{ order.order_number }}</span>
+              <span class="order-time-text">
+                <span class="material-symbols-outlined text-[13px]">schedule</span>
+                <span>{{ order.created_at | date:'h:mm a' }}</span>
+              </span>
+            </div>
+
+            <div class="header-meta-tags">
+              <!-- Order Type Tag -->
+              <span
+                class="order-type-tag"
+                [ngClass]="{
+                  'type-dining': order.order_type === 'DINING',
+                  'type-takeaway': order.order_type === 'TAKEAWAY',
+                  'type-walkin': order.order_type === 'WALK_IN'
+                }"
+              >
+                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : order.order_type === 'TAKEAWAY' ? '🥡 TAKEAWAY' : '⚡ WALK-IN' }}
+              </span>
+
+              <!-- Table Badge if exists -->
+              <span *ngIf="order.table_number" class="table-badge">
+                <span class="material-symbols-outlined text-[13px]">table_restaurant</span>
+                <span>Table {{ order.table_number }}</span>
+              </span>
+
+              <!-- Customer info if exists -->
+              <span *ngIf="order.customer_name" class="customer-tag truncate" title="{{ order.customer_name }}">
+                👤 {{ order.customer_name }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Live Timer & Urgency Bar -->
+          <div class="order-timer-bar" [ngClass]="getUrgencyClass(order.created_at, order.status)">
+            <span class="material-symbols-outlined text-[15px]">
+              {{ getUrgencyClass(order.created_at, order.status) === 'timer-overdue' ? 'local_fire_department' : 'timer' }}
+            </span>
+            <span class="timer-text font-mono font-bold">{{ getUrgencyLabel(order.created_at, order.status) }}</span>
+            <span class="item-count-pill font-mono ml-auto">{{ order.items?.length || order.item_count || 0 }} Items</span>
+          </div>
+
+          <!-- Order Items Breakdown -->
+          <div class="order-items-list">
+            <div
+              *ngFor="let item of order.items || []"
+              class="order-item-row"
+              (click)="toggleItemChecked(order.id, item.id, $event)"
+              [class.is-checked]="isItemChecked(order.id, item.id)"
+            >
+              <div class="item-check-box" [class.checked]="isItemChecked(order.id, item.id)">
+                <span class="material-symbols-outlined text-[14px]">
+                  {{ isItemChecked(order.id, item.id) ? 'check' : '' }}
+                </span>
+              </div>
+              <span class="item-qty font-mono font-bold">{{ item.quantity }}×</span>
+              <span class="item-name truncate">{{ item.product_name }}</span>
+              <span *ngIf="item.notes" class="item-note-pill" title="{{ item.notes }}">Note</span>
+            </div>
+
+            <!-- Fallback if items not loaded -->
+            <div *ngIf="(!order.items || order.items.length === 0) && (order.item_count || 0) > 0" class="fallback-items-notice">
+              <span class="material-symbols-outlined text-[16px]">restaurant_menu</span>
+              <span>{{ order.item_count }} Dish(es) in ticket • Tap for details</span>
+            </div>
+          </div>
+
+          <!-- Special Instructions / Notes Banner -->
+          <div *ngIf="order.notes" class="order-notes-banner">
+            <span class="material-symbols-outlined text-[16px] shrink-0 text-amber-600">rate_review</span>
+            <span class="notes-text"><strong>Note:</strong> {{ order.notes }}</span>
+          </div>
+
+          <!-- Card Action Footer -->
+          <div class="order-card-footer" (click)="$event.stopPropagation()">
+            <!-- Primary Action: Mark Ready -->
+            <button
+              type="button"
+              (click)="markReady(order, $event)"
+              class="btn-primary-action btn-mark-ready"
+              title="Mark order ready and complete fulfillment"
+            >
+              <span class="material-symbols-outlined">notifications_active</span>
+              <span>Mark Ready</span>
+            </button>
+
+            <!-- Secondary Actions -->
+            <div class="secondary-actions-group">
+              <button
+                type="button"
+                (click)="printKOT(order, $event)"
+                class="btn-icon-action"
+                title="Print Kitchen Ticket (KOT)"
+              >
+                <span class="material-symbols-outlined">print</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="cancelOrder(order, $event)"
+                class="btn-icon-action btn-cancel-action"
+                title="Cancel Order"
+              >
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- COLUMN 3: COMPLETED / FULFILLED TODAY                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div
+      *ngIf="selectedStatusTab === 'ALL' || selectedStatusTab === 'COMPLETED'"
+      class="pipeline-column col-completed"
+    >
+      <!-- Sticky Column Header -->
+      <div class="col-header header-completed">
+        <div class="col-header-left">
+          <span class="col-status-indicator indicator-completed"></span>
+          <span class="material-symbols-outlined col-icon text-green-500">task_alt</span>
+          <span class="col-title">COMPLETED / SERVED</span>
+        </div>
+        <span class="col-badge badge-completed">{{ completedOrders.length }}</span>
+      </div>
+
+      <!-- Orders Card Container -->
+      <div class="col-cards-container">
+        <!-- Empty State -->
+        <div *ngIf="completedOrders.length === 0" class="col-empty-state">
+          <span class="material-symbols-outlined empty-glyph">fact_check</span>
+          <h4 class="empty-title">No completed orders yet</h4>
+          <p class="empty-desc">Fulfilled orders will be archived here.</p>
+        </div>
+
+        <!-- Order Cards Loop -->
+        <article
+          *ngFor="let order of completedOrders"
+          class="order-card card-completed"
+          (click)="openOrderDrawer(order)"
+        >
+          <!-- Card Top Bar -->
+          <div class="order-card-header">
+            <div class="header-main-row">
+              <span class="order-number-text font-mono text-green-700">#{{ order.order_number }}</span>
+              <span class="order-time-text">
+                <span class="material-symbols-outlined text-[13px]">schedule</span>
+                <span>{{ order.created_at | date:'h:mm a' }}</span>
+              </span>
+            </div>
+
+            <div class="header-meta-tags">
+              <!-- Order Type Tag -->
+              <span
+                class="order-type-tag"
+                [ngClass]="{
+                  'type-dining': order.order_type === 'DINING',
+                  'type-takeaway': order.order_type === 'TAKEAWAY',
+                  'type-walkin': order.order_type === 'WALK_IN'
+                }"
+              >
+                {{ order.order_type }}
+              </span>
+
+              <!-- Table Badge if exists -->
+              <span *ngIf="order.table_number" class="table-badge">
+                <span>Table {{ order.table_number }}</span>
+              </span>
+
+              <span *ngIf="order.bill_number" class="bill-badge font-mono">
+                Bill #{{ order.bill_number }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Items list -->
+          <div class="order-items-list py-2">
+            <div *ngFor="let item of order.items || []" class="order-item-row opacity-85">
+              <span class="item-qty font-mono font-bold text-green-600">{{ item.quantity }}×</span>
+              <span class="item-name truncate">{{ item.product_name }}</span>
+            </div>
+            <div *ngIf="!order.items || order.items.length === 0" class="text-xs text-[var(--text-muted)]">
+              {{ order.item_count || 1 }} items fulfilled
+            </div>
+          </div>
+
+          <!-- Card Completed Footer -->
+          <div class="order-card-footer justify-between" (click)="$event.stopPropagation()">
+            <div class="flex items-center gap-1.5 text-xs font-bold text-green-600">
+              <span class="material-symbols-outlined text-[16px]">check_circle</span>
+              <span>Order Fulfilled</span>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                (click)="printKOT(order, $event)"
+                class="btn-icon-action"
+                title="Reprint Kitchen Ticket"
+              >
+                <span class="material-symbols-outlined text-[16px]">print</span>
+              </button>
+              <button
+                type="button"
+                (click)="openOrderDrawer(order)"
+                class="btn-icon-action"
+                title="View Full History"
+              >
+                <span class="material-symbols-outlined text-[16px]">visibility</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 5. DEDICATED CANCELLED ORDERS VIEW (WHEN TAB ACTIVE)                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section *ngIf="selectedStatusTab === 'CANCELLED'" class="kds-cancelled-section">
+    <div class="cancelled-header-bar">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-red-500">cancel</span>
+        <h3 class="font-bold text-base text-[var(--text-main)]">Cancelled Orders Archive</h3>
+      </div>
+      <span class="badge badge-danger">{{ cancelledOrders.length }} Orders</span>
+    </div>
+
+    <div *ngIf="cancelledOrders.length === 0" class="col-empty-state py-12">
+      <span class="material-symbols-outlined empty-glyph text-red-400">check_circle</span>
+      <h4 class="empty-title">No cancelled orders</h4>
+      <p class="empty-desc">No orders have been cancelled today.</p>
+    </div>
+
+    <div *ngIf="cancelledOrders.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <article
+        *ngFor="let order of cancelledOrders"
+        class="order-card card-cancelled"
+        (click)="openOrderDrawer(order)"
+      >
+        <div class="order-card-header">
+          <div class="header-main-row">
+            <span class="order-number-text font-mono text-red-600">#{{ order.order_number }}</span>
+            <span class="order-time-text">{{ order.created_at | date:'h:mm a' }}</span>
+          </div>
+          <div class="header-meta-tags">
+            <span class="order-type-tag type-walkin">{{ order.order_type }}</span>
+            <span *ngIf="order.table_number" class="table-badge">Table {{ order.table_number }}</span>
+            <span class="badge badge-danger text-[10px]">CANCELLED</span>
+          </div>
+        </div>
+
+        <div class="order-items-list py-2">
+          <div *ngFor="let item of order.items || []" class="order-item-row line-through opacity-70">
+            <span class="item-qty font-mono">{{ item.quantity }}×</span>
+            <span class="item-name truncate">{{ item.product_name }}</span>
+          </div>
+        </div>
+
+        <div class="order-card-footer justify-between text-xs text-red-600 font-medium">
+          <span>Cancelled from kitchen pipeline</span>
+          <button (click)="openOrderDrawer(order)" class="text-[var(--primary)] font-bold hover:underline">
+            View Details →
+          </button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 6. RIGHT SLIDE-OVER ORDER DETAILS DRAWER                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="drawer-overlay" *ngIf="isDrawerOpen" (click)="closeDrawer()">
+    <aside class="drawer-panel" (click)="$event.stopPropagation()">
+      <!-- Drawer Header -->
+      <div class="drawer-header">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="drawer-title font-mono">#{{ selectedOrderDetails?.order_number }}</h2>
+            <span
+              class="badge text-[10px] font-bold"
+              [ngClass]="{
+                'badge-warning': selectedOrderDetails?.status === 'PENDING',
+                'badge-info': selectedOrderDetails?.status === 'IN_PROGRESS',
+                'badge-success': selectedOrderDetails?.status === 'COMPLETED',
+                'badge-danger': selectedOrderDetails?.status === 'CANCELLED'
+              }"
+            >
+              {{ selectedOrderDetails?.status }}
+            </span>
+          </div>
+          <p class="drawer-subtitle">
+            <span>{{ selectedOrderDetails?.order_type }}</span>
+            <span *ngIf="selectedOrderDetails?.table_number"> • Table {{ selectedOrderDetails?.table_number }}</span>
+            <span> • {{ selectedOrderDetails?.created_at | date:'h:mm a, MMM d' }}</span>
+          </p>
+        </div>
+
+        <button type="button" (click)="closeDrawer()" class="drawer-close-btn" title="Close drawer">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Drawer Scrollable Body -->
+      <div class="drawer-body">
+        <!-- Customer Info Box if available -->
+        <div *ngIf="selectedOrderDetails?.customer_name || selectedOrderDetails?.customer_phone" class="drawer-section-box">
+          <div class="section-label">Customer Profile</div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-[var(--text-main)]">👤 {{ selectedOrderDetails?.customer_name || 'Walk-in Guest' }}</span>
+            <span class="font-mono text-[var(--text-muted)]">{{ selectedOrderDetails?.customer_phone }}</span>
+          </div>
+        </div>
+
+        <!-- Special Instructions / Notes -->
+        <div *ngIf="selectedOrderDetails?.notes" class="drawer-notes-alert">
+          <span class="material-symbols-outlined text-amber-500">rate_review</span>
+          <div>
+            <div class="font-bold text-xs text-amber-900">Chef & Kitchen Notes:</div>
+            <div class="text-xs text-amber-800">{{ selectedOrderDetails?.notes }}</div>
+          </div>
+        </div>
+
+        <!-- Ordered Dishes Breakdown -->
+        <div class="drawer-section-box">
+          <div class="section-label flex items-center justify-between">
+            <span>Dishes in Order ({{ selectedOrderDetails?.items?.length || 0 }})</span>
+            <span class="text-[11px] text-[var(--text-dim)]">Tap to check off</span>
+          </div>
+
+          <div class="space-y-2 mt-2">
+            <div
+              *ngFor="let item of selectedOrderDetails?.items || []"
+              class="drawer-item-row"
+              (click)="toggleItemChecked(selectedOrderDetails!.id, item.id, $event)"
+              [class.is-item-checked]="isItemChecked(selectedOrderDetails!.id, item.id)"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="item-check-box" [class.checked]="isItemChecked(selectedOrderDetails!.id, item.id)">
+                  <span class="material-symbols-outlined text-[14px]">
+                    {{ isItemChecked(selectedOrderDetails!.id, item.id) ? 'check' : '' }}
+                  </span>
+                </div>
+                <span class="font-mono font-bold text-xs">{{ item.quantity }}×</span>
+                <div class="min-w-0">
+                  <div class="font-bold text-xs truncate" [class.line-through]="isItemChecked(selectedOrderDetails!.id, item.id)">
+                    {{ item.product_name }}
+                  </div>
+                  <div *ngIf="item.notes" class="text-[11px] text-amber-700 italic">
+                    Note: {{ item.notes }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-right font-mono font-bold text-xs text-[var(--primary)] shrink-0">
+                {{ item.total_amount | appCurrency:'1.0-0' }}
+              </div>
+            </div>
+
+            <div *ngIf="!selectedOrderDetails?.items || selectedOrderDetails?.items?.length === 0" class="text-xs text-[var(--text-muted)] py-2 text-center">
+              {{ selectedOrderDetails?.item_count || 1 }} dish(es) listed in ticket
+            </div>
+          </div>
+
+          <!-- Total Summary -->
+          <div class="pt-3 mt-3 border-t border-[var(--card-border)] flex items-center justify-between">
+            <span class="font-bold text-xs text-[var(--text-muted)]">Order Total Amount:</span>
+            <span class="font-mono font-black text-base text-[var(--text-main)]">
+              {{ selectedOrderDetails?.total_amount | appCurrency:'1.0-0' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Status Lifecycle Timeline History -->
+        <div *ngIf="selectedOrderDetails?.history && selectedOrderDetails!.history!.length > 0" class="drawer-section-box">
+          <div class="section-label">Order Lifecycle Timeline</div>
+          <div class="timeline-stepper mt-3">
+            <div *ngFor="let h of selectedOrderDetails?.history" class="timeline-step">
+              <div class="step-dot"></div>
+              <div class="step-content">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-bold text-xs text-[var(--text-main)]">{{ h.new_status }}</span>
+                  <span class="text-[10px] font-mono text-[var(--text-muted)]">{{ h.created_at | date:'h:mm:ss a' }}</span>
+                </div>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">{{ h.notes }}</p>
+                <span *ngIf="h.changed_by_name" class="text-[10px] text-[var(--text-dim)] font-medium">By: {{ h.changed_by_name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drawer Footer Actions -->
+      <div class="drawer-footer">
+        <button
+          type="button"
+          *ngIf="selectedOrderDetails?.status === 'PENDING'"
+          (click)="startCooking(selectedOrderDetails!)"
+          class="btn-primary-action btn-start-cooking flex-1 py-2.5 font-bold"
+        >
+          <span class="material-symbols-outlined">skillet</span>
+          <span>Start Cooking Order</span>
+        </button>
+
+        <button
+          type="button"
+          *ngIf="selectedOrderDetails?.status === 'IN_PROGRESS'"
+          (click)="markReady(selectedOrderDetails!)"
+          class="btn-primary-action btn-mark-ready flex-1 py-2.5 font-bold"
+        >
+          <span class="material-symbols-outlined">notifications_active</span>
+          <span>Mark Order Ready</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="printKOT(selectedOrderDetails!)"
+          class="btn-drawer-outline"
+          title="Print KOT Ticket"
+        >
+          <span class="material-symbols-outlined">print</span>
+          <span>Print KOT</span>
+        </button>
+
+        <button
+          type="button"
+          *ngIf="selectedOrderDetails?.status === 'PENDING' || selectedOrderDetails?.status === 'IN_PROGRESS'"
+          (click)="cancelOrder(selectedOrderDetails!)"
+          class="btn-drawer-danger"
+          title="Cancel Order"
+        >
+          <span class="material-symbols-outlined">cancel</span>
+          <span>Cancel</span>
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>

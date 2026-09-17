@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" fill="none" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="deep" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="soft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C4B5FD"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- shared stage: halo + ground, identical on every module -->
+  <ellipse cx="160" cy="102" rx="106" ry="88" fill="#8B5CF6" opacity=".10"/>
+  <ellipse cx="160" cy="192" rx="90" ry="11" fill="#6D28D9" opacity=".15"/>
+
+  <g stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+
+    <rect x="58" y="84" width="60" height="72" rx="14" fill="#FFFFFF" stroke="#6D28D9"/>
+    <circle cx="88" cy="110" r="13" fill="url(#deep)" stroke="none"/>
+    <path d="M70 142a18 18 0 0 1 36 0" fill="url(#soft)" stroke="none"/>
+    <rect x="130" y="92" width="56" height="64" rx="13" fill="#FFFFFF" stroke="#8B5CF6" opacity=".95"/>
+    <circle cx="158" cy="114" r="11" fill="#C4B5FD" stroke="none"/>
+    <path d="M142 144a16 16 0 0 1 32 0" fill="#EDE9FE" stroke="none"/>
+    <rect x="198" y="100" width="50" height="56" rx="12" fill="#FFFFFF" stroke="#C4B5FD" opacity=".9"/>
+    <circle cx="223" cy="120" r="9" fill="#EDE9FE" stroke="none"/>
+    <path d="M209 146a14 14 0 0 1 28 0" fill="#EDE9FE" stroke="none" opacity=".8"/>
+    <rect x="120" y="44" width="80" height="34" rx="9" fill="url(#warm)" stroke="none"/>
+    <path d="M136 61h20M166 61h18" stroke="#FFFFFF" stroke-width="3.5" opacity=".8"/>
+
+    <circle cx="276" cy="46" r="5" fill="#C4B5FD" stroke="none" opacity=".85"/>
+    <circle cx="56" cy="168" r="4" fill="#8B5CF6" stroke="none" opacity=".6"/>
+    <path d="M48 58l4 8-8-4z" fill="#F59E0B" stroke="none" opacity=".9"/>
+  </g>
+</svg>

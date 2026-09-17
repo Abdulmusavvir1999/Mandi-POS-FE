@@ -1,0 +1,31 @@
+{
+  "name": "mandi-pos-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --port 8002",
+    "build": "ng build --configuration production",
+    "watch": "ng build --watch --configuration development"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^19.1.5",
+    "@angular/common": "^19.1.5",
+    "@angular/compiler": "^19.1.5",
+    "@angular/core": "^19.1.5",
+    "@angular/forms": "^19.1.5",
+    "@angular/platform-browser": "^19.1.5",
+    "@angular/platform-browser-dynamic": "^19.1.5",
+    "@angular/router": "^19.1.5",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.1.5",
+    "@angular/cli": "^19.1.5",
+    "@angular/compiler-cli": "^19.1.5",
+    "@types/node": "^22.13.9",
+    "typescript": "~5.7.2"
+  }
+}
