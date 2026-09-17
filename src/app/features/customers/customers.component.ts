@@ -460,14 +460,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 7. PURCHASE HISTORY DRAWER MODAL                                -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="historyCustomer">
-        <div class="modal-content p-6 max-w-xl shadow-2xl">
+        <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3.5">
               <span class="modal-icon-badge">
                 <span class="material-symbols-outlined text-2xl">receipt_long</span>
               </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">Purchase History — {{ historyCustomer.name }}</h3>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Purchase History — {{ historyCustomer.name }}</h3>
                 <p class="text-xs text-[#6B7280] font-mono mt-0.5">{{ historyCustomer.phone }}</p>
               </div>
             </div>
@@ -525,14 +525,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 8. ADD / EDIT CUSTOMER MODAL                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content p-6 max-w-md shadow-2xl">
+        <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3.5">
               <span class="modal-icon-badge">
                 <span class="material-symbols-outlined text-2xl">{{ editingCustomerId ? 'edit' : 'person_add' }}</span>
               </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
                   {{ editingCustomerId ? 'Edit Guest Profile' : 'Register New Customer' }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-0.5">Manage customer directory and CRM details</p>
@@ -549,9 +549,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </button>
           </div>
 
-          <form (ngSubmit)="saveCustomer()" class="space-y-4">
+          <form (ngSubmit)="saveCustomer()" class="space-y-3.5">
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Full Name
               </label>
               <input
@@ -566,7 +566,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Phone Number
               </label>
               <input
@@ -581,7 +581,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Email (Optional)
               </label>
               <input
@@ -595,7 +595,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Address / Locality
               </label>
               <input
@@ -608,7 +608,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showModal = false"

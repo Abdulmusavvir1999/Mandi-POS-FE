@@ -437,14 +437,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 1. SETTLEMENT & PAYMENT MODAL                                   -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showPaymentModal">
-      <div class="modal-content p-6 max-w-lg shadow-2xl">
+      <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
         <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
           <div class="flex items-center gap-3.5">
             <span class="modal-icon-badge is-teal">
               <span class="material-symbols-outlined text-2xl">point_of_sale</span>
             </span>
             <div>
-              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Settlement & Checkout</h3>
+              <h3 class="text-xl font-black text-[#2E1065] leading-tight">Settlement & Checkout</h3>
               <p class="text-xs text-[var(--text-muted)] mt-0.5">Select payment mode, record tender, and print receipt</p>
             </div>
           </div>
@@ -464,7 +464,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <!-- Payment Methods Selector -->
           <div>
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Payment Mode</label>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Payment Mode</label>
             <div class="grid grid-cols-4 gap-2">
               <button
                 type="button"
@@ -481,7 +481,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           <!-- Cash Tendered & Quick Notes -->
           <div *ngIf="selectedPaymentMethod === 'CASH'" class="space-y-3 p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF]">
             <div>
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Amount Tendered</label>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Amount Tendered</label>
               <input
                 title="Amount Tendered"
                 type="number"
@@ -514,7 +514,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <!-- Reference Number (for UPI / Card) -->
           <div *ngIf="selectedPaymentMethod !== 'CASH'" class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Transaction Reference # (Optional)</label>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Transaction Reference # (Optional)</label>
             <input
               title="Transaction Reference # (Optional)"
               type="text"
@@ -525,7 +525,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+        <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-[#E9D5FF]">
           <button (click)="showPaymentModal = false" class="action-btn btn-outline-purple">
             Cancel
           </button>
@@ -546,14 +546,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 2. DINING TABLE SELECTOR MODAL                                  -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showTableModal">
-      <div class="modal-content p-6 max-w-2xl shadow-2xl">
+      <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
         <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
           <div class="flex items-center gap-3.5">
             <span class="modal-icon-badge">
               <span class="material-symbols-outlined text-2xl">table_restaurant</span>
             </span>
             <div>
-              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Select Dining Table</h3>
+              <h3 class="text-xl font-black text-[#2E1065] leading-tight">Select Dining Table</h3>
               <p class="text-xs text-[var(--text-muted)] mt-0.5">Assign current POS order to an available dining table</p>
             </div>
           </div>
@@ -593,14 +593,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 3. CUSTOMER SELECTOR / ADD MODAL                                -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showCustomerModal">
-      <div class="modal-content p-6 max-w-md shadow-2xl">
+      <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
         <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
           <div class="flex items-center gap-3.5">
             <span class="modal-icon-badge">
               <span class="material-symbols-outlined text-2xl">person</span>
             </span>
             <div>
-              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Customer & Delivery Details</h3>
+              <h3 class="text-xl font-black text-[#2E1065] leading-tight">Customer & Delivery Details</h3>
               <p class="text-xs text-[var(--text-muted)] mt-0.5">Attach guest profile or delivery address to order</p>
             </div>
           </div>
@@ -609,9 +609,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </button>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3.5">
           <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Phone Number</label>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Phone Number</label>
             <div class="flex gap-2">
               <input
                 title="Phone Number"
@@ -628,7 +628,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
 
           <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Customer Name</label>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Customer Name</label>
             <input
               title="Customer Name"
               type="text"
@@ -639,7 +639,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
 
           <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">Delivery Address (Optional)</label>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Delivery Address (Optional)</label>
             <input
               title="Delivery Address (Optional)"
               type="text"
@@ -650,7 +650,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+        <div class="flex items-center justify-end gap-3 pt-5 mt-3 border-t border-[#E9D5FF]">
           <button (click)="showCustomerModal = false" class="action-btn btn-outline-purple">
             Cancel
           </button>
@@ -666,7 +666,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
     <!-- 4. DRAFT BILLS MODAL                                            -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showDraftsModal">
-      <div class="modal-content p-6 max-w-lg shadow-2xl">
+      <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
         <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
           <div class="flex items-center gap-3.5">
             <span class="modal-icon-badge">

@@ -370,14 +370,14 @@ const DwellRail = {
       <!-- 5. ADD / EDIT TABLE MODAL                                       -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showTableModal">
-        <div class="modal-content p-6 max-w-md shadow-2xl">
+        <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3.5">
               <span class="modal-icon-badge">
                 <span class="material-symbols-outlined text-2xl">{{ editingTableId ? 'edit_square' : 'add_circle' }}</span>
               </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
                   {{ editingTableId ? 'Edit Dining Table' : 'Add Dining Table' }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure floor layout, seating capacity, and table code</p>
@@ -394,10 +394,10 @@ const DwellRail = {
             </button>
           </div>
 
-          <form (ngSubmit)="saveTable()" class="space-y-4">
-            <div class="grid grid-cols-2 gap-4 items-start">
+          <form (ngSubmit)="saveTable()" class="space-y-3.5">
+            <div class="grid grid-cols-2 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Table Number / Code
                 </label>
                 <input
@@ -411,7 +411,7 @@ const DwellRail = {
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Display Name
                 </label>
                 <input
@@ -427,7 +427,7 @@ const DwellRail = {
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Section / Dining Area
               </label>
               <input
@@ -445,9 +445,9 @@ const DwellRail = {
               </datalist>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 items-start">
+            <div class="grid grid-cols-2 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Seating Capacity
                 </label>
                 <input
@@ -461,7 +461,7 @@ const DwellRail = {
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Status
                 </label>
                 <select [(ngModel)]="tableForm.status" name="status" class="form-control text-sm w-full">
@@ -472,7 +472,7 @@ const DwellRail = {
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 *ngIf="editingTableId"
                 type="button"

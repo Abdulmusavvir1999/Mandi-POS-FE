@@ -189,6 +189,20 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           </div>
         </div>
 
+        <!-- 5. Managers -->
+        <div class="kpi-card card-accent-teal">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Managers</span>
+            <span class="kpi-icon-bubble bg-teal-tint">
+              <span class="material-symbols-outlined">badge</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-teal-700">{{ countByRole('MANAGER') }}</span>
+            <span class="kpi-pill pill-teal">Supervisors</span>
+          </div>
+        </div>
+
         <!-- 6. Role Groups -->
         <div class="kpi-card card-accent-blue">
           <div class="kpi-header-row">
@@ -440,14 +454,14 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
       <!-- MODAL DIALOG                                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content p-6 max-w-md shadow-2xl">
+        <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3.5">
               <span class="modal-icon-badge">
                 <span class="material-symbols-outlined text-2xl">person_add</span>
               </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
                   {{ editingUserId ? 'Edit Staff Account' : 'Create New Staff Account' }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-0.5">Manage operator permissions, roles, and credentials</p>
@@ -464,9 +478,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             </button>
           </div>
 
-          <form (ngSubmit)="saveUser()" class="space-y-4">
+          <form (ngSubmit)="saveUser()" class="space-y-3.5">
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Full Name
               </label>
               <input
@@ -480,9 +494,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-4 items-start">
+            <div class="grid grid-cols-2 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Username
                 </label>
                 <input
@@ -497,7 +511,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Staff Role
                 </label>
                 <select [(ngModel)]="form.roleId" name="roleId" class="form-control text-sm w-full font-bold">
@@ -507,7 +521,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Email Address
               </label>
               <input
@@ -523,7 +537,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Phone Number (Optional)
               </label>
               <input
@@ -537,7 +551,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 {{ editingUserId ? 'New Password (Leave blank to keep unchanged)' : 'Password' }}
               </label>
               <input
@@ -551,7 +565,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showModal = false"

@@ -143,6 +143,9 @@ export class StockService {
     productId?: number;
     adjustmentType: string;
     quantity: number;
+    multiplier?: number;
+    totalPrice?: number;
+    unitPrice?: number;
     reason: string;
     notes?: string;
   }): Observable<ApiResponse<any>> {

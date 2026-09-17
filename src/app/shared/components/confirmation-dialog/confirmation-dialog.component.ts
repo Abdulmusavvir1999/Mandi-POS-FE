@@ -9,7 +9,7 @@ import { NotificationService } from '../../../core/services/notification.service
   template: `
     <div class="modal-backdrop" *ngIf="notificationService.confirmModal() as modal">
       <div
-        class="modal-content p-6 max-w-md shadow-2xl"
+        class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl"
         [style.background]="'var(--card-bg, #ffffff)'"
         [style.border]="'1.5px solid var(--card-border, #E9D5FF)'"
         [style.color]="'var(--text-main, #2E1065)'"
@@ -19,10 +19,10 @@ import { NotificationService } from '../../../core/services/notification.service
             class="modal-icon-badge"
             [ngClass]="modal.isDestructive ? 'is-danger' : 'is-warning'"
           >
-            <span class="material-symbols-outlined">{{ modal.isDestructive ? 'warning' : 'priority_high' }}</span>
+            <span class="material-symbols-outlined text-2xl">{{ modal.isDestructive ? 'warning' : 'priority_high' }}</span>
           </span>
           <div>
-            <h3 class="text-base font-black" [style.color]="'var(--text-main, #2E1065)'">{{ modal.title }}</h3>
+            <h3 class="text-lg font-black" [style.color]="'var(--text-main, #2E1065)'">{{ modal.title }}</h3>
             <p class="text-xs mt-0.5 font-medium" [style.color]="'var(--text-muted, #6B7280)'">{{ modal.message }}</p>
           </div>
         </div>

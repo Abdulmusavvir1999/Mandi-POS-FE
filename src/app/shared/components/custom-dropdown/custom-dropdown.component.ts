@@ -5,6 +5,7 @@ import {
   EventEmitter,
   ElementRef,
   HostListener,
+  HostBinding,
   forwardRef,
   computed,
   signal,
@@ -37,7 +38,7 @@ export interface DropdownOption {
       class="custom-dropdown-container"
       [class.is-open]="isOpen"
       [class.w-full]="minWidth === '100%'"
-      [style.min-width]="minWidth || '220px'"
+      [style.min-width]="minWidth === '100%' ? '100%' : (minWidth || '160px')"
       [style.width]="minWidth === '100%' ? '100%' : 'auto'"
     >
       <!-- Dropdown Trigger Button -->
@@ -130,27 +131,43 @@ export interface DropdownOption {
   styles: [
     `
       :host {
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      :host(.w-full),
+      :host-context(.form-group),
+      :host-context(.form-group-box),
+      :host-context(.form-grid),
+      :host-context(.form-control-wrapper),
+      :host-context(.modal-form-group) {
         display: block;
         width: 100%;
       }
 
       .custom-dropdown-container {
         position: relative;
-        display: block;
+        display: inline-block;
         width: 100%;
         font-family: 'Plus Jakarta Sans', sans-serif;
         user-select: none;
       }
 
+      .custom-dropdown-container.w-full {
+        display: block;
+        width: 100%;
+      }
+
       /* Trigger Button */
       .dropdown-trigger {
         width: 100%;
+        height: 42px;
+        min-height: 42px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.65rem;
-        padding: 0.625rem 0.875rem;
-        min-height: 42px;
+        padding: 0 0.875rem;
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: var(--radius-md, 12px);
@@ -435,9 +452,14 @@ export interface DropdownOption {
 export class CustomDropdownComponent implements ControlValueAccessor {
   @Input() options: DropdownOption[] = [];
   @Input() placeholder = 'Select an option';
-  @Input() minWidth = '220px';
+  @Input() minWidth = '160px';
   @Input() searchable = false;
   @Input() disabled = false;
+
+  @HostBinding('class.w-full')
+  get isFullWidth(): boolean {
+    return this.minWidth === '100%';
+  }
 
   @Output() valueChange = new EventEmitter<any>();
 

@@ -510,14 +510,14 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 7. ADD / EDIT PRODUCT MODAL                                     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showProductModal">
-        <div class="modal-content p-6 max-w-xl shadow-2xl">
+        <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3.5">
               <span class="modal-icon-badge">
                 <span class="material-symbols-outlined text-2xl">{{ editingProductId ? 'edit' : 'restaurant' }}</span>
               </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
                   {{ editingProductId ? 'Edit Product Dish' : 'Add New Menu Dish' }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure menu item pricing, tax, category, and inventory alerts</p>
@@ -534,10 +534,10 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </button>
           </div>
 
-          <form (ngSubmit)="saveProduct()" class="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-            <div class="grid grid-cols-2 gap-4 items-start">
+          <form (ngSubmit)="saveProduct()" class="space-y-3.5 max-h-[70vh] overflow-y-auto pr-1">
+            <div class="grid grid-cols-2 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Dish Name
                 </label>
                 <input
@@ -551,7 +551,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   SKU / Item Code
                 </label>
                 <input
@@ -566,9 +566,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 items-start">
+            <div class="grid grid-cols-2 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Category
                 </label>
                 <select [(ngModel)]="productForm.categoryId" name="categoryId" class="form-control text-sm w-full" required>
@@ -576,7 +576,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 </select>
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Status
                 </label>
                 <select [(ngModel)]="productForm.status" name="status" class="form-control text-sm w-full">
@@ -587,7 +587,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Description
               </label>
               <textarea
@@ -599,9 +599,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               ></textarea>
             </div>
 
-            <div class="grid grid-cols-3 gap-4 items-start">
+            <div class="grid grid-cols-3 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Selling Price ({{ settingsService.currencySymbol() }})
                 </label>
                 <input
@@ -615,7 +615,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Cost Price ({{ settingsService.currencySymbol() }})
                 </label>
                 <input
@@ -628,7 +628,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Tax Rate (%)
                 </label>
                 <input
@@ -642,9 +642,9 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 items-start" *ngIf="!editingProductId">
+            <div class="grid grid-cols-2 gap-3.5 items-start" *ngIf="!editingProductId">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Initial Stock Quantity
                 </label>
                 <input
@@ -657,7 +657,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Low Stock Alert Level
                 </label>
                 <input
@@ -671,7 +671,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showProductModal = false"

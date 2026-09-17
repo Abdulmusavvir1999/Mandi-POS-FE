@@ -183,6 +183,20 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           </div>
         </div>
 
+        <!-- KPI 5 -->
+        <div class="kpi-card card-accent-green">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Catalog Active</span>
+            <span class="kpi-icon-bubble bg-green-tint">
+              <span class="material-symbols-outlined">verified</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-green">{{ activePercent }}%</span>
+            <span class="kpi-pill pill-success">✓ Published</span>
+          </div>
+        </div>
+
         <!-- KPI 6 -->
         <div class="kpi-card card-accent-amber">
           <div class="kpi-header-row">
@@ -441,14 +455,14 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
       <!-- 7. ADD / EDIT CATEGORY MODAL                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content p-6 max-w-md shadow-2xl">
+        <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3.5">
               <span class="modal-icon-badge">
                 <span class="material-symbols-outlined text-2xl">{{ editingCategoryId ? 'edit' : 'category' }}</span>
               </span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
                   {{ editingCategoryId ? 'Edit Category' : 'Add New Category' }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure menu classification and catalog sorting</p>
@@ -465,9 +479,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             </button>
           </div>
 
-          <form (ngSubmit)="saveCategory()" class="space-y-4">
+          <form (ngSubmit)="saveCategory()" class="space-y-3.5">
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Category Name
               </label>
               <input
@@ -482,7 +496,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Description
               </label>
               <input
@@ -495,9 +509,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-4 items-start">
+            <div class="grid grid-cols-2 gap-3.5 items-start">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Display Order
                 </label>
                 <input
@@ -510,7 +524,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-2 block">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Status
                 </label>
                 <select [(ngModel)]="form.status" name="status" class="form-control text-sm w-full">
@@ -520,7 +534,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
                 (click)="showModal = false"
@@ -604,6 +618,11 @@ export class CategoriesComponent implements OnInit {
 
   get activeCount(): number {
     return this.categories.filter((c) => c.status === 'ACTIVE').length;
+  }
+
+  get activePercent(): number {
+    if (!this.categories.length) return 0;
+    return Math.round((this.activeCount / this.categories.length) * 100);
   }
 
   get inactiveCount(): number {

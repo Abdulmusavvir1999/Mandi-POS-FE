@@ -150,6 +150,20 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           </div>
         </div>
 
+        <!-- 2. Checkout & Sales -->
+        <div class="kpi-card card-accent-green">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Checkout & Sales</span>
+            <span class="kpi-icon-bubble bg-green-tint">
+              <span class="material-symbols-outlined">point_of_sale</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-green">{{ countAction('CHECKOUT') }}</span>
+            <span class="kpi-pill pill-success">Sales</span>
+          </div>
+        </div>
+
         <!-- 3. Price & Product Edits -->
         <div class="kpi-card card-accent-purple">
           <div class="kpi-header-row">
@@ -179,16 +193,30 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
         </div>
 
         <!-- 5. Login Events -->
-        <div class="kpi-card card-accent-green">
+        <div class="kpi-card card-accent-blue">
           <div class="kpi-header-row">
             <span class="kpi-title">Login Events</span>
-            <span class="kpi-icon-bubble bg-green-tint">
+            <span class="kpi-icon-bubble bg-blue-tint">
               <span class="material-symbols-outlined">badge</span>
             </span>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-number">{{ countAction('LOGIN') }}</span>
-            <span class="kpi-pill pill-success">Tracked</span>
+            <span class="kpi-number text-blue-700">{{ countAction('LOGIN') }}</span>
+            <span class="kpi-pill pill-blue">Access</span>
+          </div>
+        </div>
+
+        <!-- 6. Deletions & Security -->
+        <div class="kpi-card card-accent-rose">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Deletions / Critical</span>
+            <span class="kpi-icon-bubble bg-rose-tint">
+              <span class="material-symbols-outlined">warning</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-rose-700">{{ countAction('DELETE') }}</span>
+            <span class="kpi-pill pill-rose">Critical</span>
           </div>
         </div>
       </div>

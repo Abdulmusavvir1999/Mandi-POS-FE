@@ -536,19 +536,49 @@ svg {
   border-radius: var(--radius-lg);
 }
 
-/* Form inputs */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+/* Universal Form Label & Input Spacing Control for the Whole Project */
+.form-group,
+.form-group-box,
+.input-group,
+.field-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.2rem !important; /* ~3px tight, clean gap */
+  margin-bottom: 0 !important;
 }
 
-.form-label {
-  font-size: 0.75rem;
+/* Eliminate excessive bottom margins from labels and badge containers inside form groups */
+.form-group > label,
+.form-group > .form-label,
+.form-group > .modal-label,
+.form-group > .flex,
+.form-group > div:first-child,
+.form-group-box > label,
+.form-group-box > .form-label,
+.form-group-box > .modal-label,
+.form-group-box > .flex,
+.form-group label,
+.form-group .form-label,
+.form-group .modal-label,
+.form-group-box label,
+.form-group-box .form-label {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.form-label,
+.modal-label,
+label.form-label,
+label {
+  font-size: 0.725rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: var(--text-muted, #6B7280);
+  margin-bottom: 0.2rem !important;
+  line-height: 1.25;
+  display: block;
 }
 
 .form-control {
@@ -878,25 +908,92 @@ select option {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  padding: 1rem;
+  z-index: 1000;
+  padding: 1.5rem;
   animation: fadeInModal 0.15s ease-out;
+  overflow-y: auto;
 }
 
 .modal-content {
   background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #E9D5FF);
+  border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(46, 16, 101, 0.35);
   color: var(--text-main, #2E1065);
-  width: 100%;
+  width: min(92vw, 680px);
+  max-width: 680px;
+  max-height: calc(100vh - 3.5rem);
+  overflow-y: auto;
+  padding: 2rem 2.25rem !important;
   animation: scaleInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .modal-content {
+    width: 48vw;
+    max-width: 680px;
+    min-width: 540px;
+  }
+}
+
+.modal-content.modal-lg,
+.modal-content.max-w-3xl {
+  max-width: 760px;
+}
+
+@media (min-width: 1024px) {
+  .modal-content.modal-lg,
+  .modal-content.max-w-3xl {
+    width: 56vw;
+    max-width: 760px;
+  }
+}
+
+.modal-content.modal-sm,
+.modal-content.max-w-md {
+  max-width: 480px;
+}
+
+@media (min-width: 1024px) {
+  .modal-content.modal-sm,
+  .modal-content.max-w-md {
+    width: 36vw;
+    max-width: 480px;
+  }
+}
+
+/* Universal Header Bottom Separation & Spacing in all Modals */
+.modal-header-bar,
+.modal-header-flex,
+.modal-content > .flex:first-child,
+.modal-content > div:first-child.flex {
+  border-bottom: 1.5px solid var(--card-border, #E9D5FF) !important;
+  padding-bottom: 1.125rem !important;
+  margin-bottom: 1.35rem !important;
+}
+
+/* Form Group & Label Gaps inside Modals */
+.modal-content .form-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted, #4B5563);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 @keyframes fadeInModal {
@@ -1031,7 +1128,10 @@ select option {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.8125rem;
   font-weight: 700;
-  padding: 0.6rem 1.15rem;
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 1.15rem;
   border-radius: 12px;
   border: 1.5px solid transparent;
   cursor: pointer;
@@ -1219,6 +1319,7 @@ select option {
 .card-accent-green  { border-left: 4px solid var(--success, #16A34A) !important; }
 .card-accent-amber  { border-left: 4px solid var(--warning, #EA580C) !important; }
 .card-accent-blue   { border-left: 4px solid #2563EB !important; }
+.card-accent-teal   { border-left: 4px solid #0D9488 !important; }
 .card-accent-rose   { border-left: 4px solid var(--danger, #E11D48) !important; }
 
 .kpi-header-row {
@@ -1252,6 +1353,7 @@ select option {
 .bg-green-tint  { background: #DCFCE7; color: #16A34A; }
 .bg-amber-tint  { background: #FFEDD5; color: #EA580C; }
 .bg-blue-tint   { background: #DBEAFE; color: #2563EB; }
+.bg-teal-tint   { background: #CCFBF1; color: #0D9488; }
 .bg-rose-tint   { background: #FFE4E6; color: #E11D48; }
 
 .kpi-value-row {
@@ -1283,6 +1385,7 @@ select option {
 .pill-purple { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, #D8B4FE); }
 .pill-amber { background: #FFEDD5; color: #C2410C; border: 1px solid #FED7AA; }
 .pill-blue { background: #DBEAFE; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.pill-teal { background: #CCFBF1; color: #0F766E; border: 1px solid #99F6E4; }
 .pill-rose { background: #FFE4E6; color: #BE123C; border: 1px solid #FECDD3; }
 
 /* Filter & Search Action Toolbar */
@@ -1291,7 +1394,7 @@ select option {
   border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 16px;
   padding: 0.875rem 1.15rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(46, 16, 101, 0.04);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1317,7 +1420,7 @@ select option {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 260px;
+  min-width: 240px;
   flex: 1;
   max-width: 420px;
 }
@@ -1332,7 +1435,9 @@ select option {
 
 .toolbar-search-input {
   width: 100%;
-  padding: 0.55rem 2.25rem 0.55rem 2.5rem;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 2.25rem 0 2.5rem;
   background: var(--card-bg, #ffffff);
   border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 12px;
@@ -1379,7 +1484,9 @@ select option {
 }
 
 .toolbar-select {
-  padding: 0.55rem 2.25rem 0.55rem 0.875rem;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 2.25rem 0 0.875rem;
   background-color: var(--card-bg, #ffffff);
   border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 12px;
@@ -1403,17 +1510,51 @@ select option {
   box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
 }
 
-.toolbar-meta-count {
+.toolbar-meta-count,
+.results-counter-pill {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-muted, #6B7280);
-  padding-left: 0.25rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--bg-app, #FAF5FF);
+  border-radius: 9999px;
+  border: 1px solid var(--card-border, #E9D5FF);
+  white-space: nowrap;
 }
 
-.toolbar-actions-group {
+.toolbar-actions-group,
+.filter-actions-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+/* App Custom Dropdown in Toolbars vs Form Groups */
+app-custom-dropdown {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.filter-controls-group app-custom-dropdown,
+.toolbar-actions-group app-custom-dropdown,
+.filter-actions-group app-custom-dropdown {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.form-group app-custom-dropdown,
+.form-group-box app-custom-dropdown,
+.modal-form-group app-custom-dropdown,
+.form-grid app-custom-dropdown,
+.form-control-wrapper app-custom-dropdown,
+app-custom-dropdown.w-full {
+  display: block;
+  width: 100%;
 }
 
 /* SaaS Table Container Card */
