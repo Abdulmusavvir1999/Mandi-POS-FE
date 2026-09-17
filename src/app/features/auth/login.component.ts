@@ -615,8 +615,15 @@ export class LoginComponent {
         next: (res) => {
           this.isLoading = false;
           this.notify.success(`Welcome back, ${res.data.user.name}!`);
-          if (res.data.user.role === 'CASHIER') {
+          const perms = res.data.user.permissions || [];
+          if (perms.includes('dashboard.view') || res.data.user.role?.toUpperCase() === 'ADMIN') {
+            this.router.navigate(['/dashboard']);
+          } else if (perms.includes('pos.billing')) {
             this.router.navigate(['/pos']);
+          } else if (perms.includes('order.manage')) {
+            this.router.navigate(['/orders']);
+          } else if (perms.includes('dining.manage')) {
+            this.router.navigate(['/dining']);
           } else {
             this.router.navigate(['/dashboard']);
           }

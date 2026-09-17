@@ -133,7 +133,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/audit/audit.component').then((m) => m.AuditComponent),
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] },
+        data: { permission: 'audit.view' },
       },
       {
         path: '',

@@ -1,4 +1,4 @@
-export type RoleName = 'ADMIN' | 'MANAGER' | 'CASHIER' | 'STAFF';
+export type RoleName = string;
 
 export type OrderType = 'WALK_IN' | 'TAKEAWAY' | 'DINING';
 
@@ -8,6 +8,26 @@ export type TableStatus = 'AVAILABLE' | 'SELECTED' | 'OCCUPIED' | 'UNAVAILABLE';
 
 export type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'OTHER';
 
+export interface Permission {
+  id: number;
+  code: string;
+  module: string;
+  description?: string;
+  selected?: boolean;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+  /** 1 for built-in roles, which are exempt from the manual role limit. */
+  is_system?: number;
+  user_count?: number;
+  permissions?: Permission[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -15,8 +35,11 @@ export interface User {
   name: string;
   phone?: string;
   role: RoleName;
+  role_id?: number;
+  role_name?: string;
   status?: string;
   lastLoginAt?: string;
+  last_login_at?: string;
   permissions: string[];
 }
 

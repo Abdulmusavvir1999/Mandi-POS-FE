@@ -3,9 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../core/services/user.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { User } from '../../core/models';
+import { User, Role, Permission } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+
+interface ModuleGroup {
+  name: string;
+  label: string;
+  icon: string;
+  permissions: Permission[];
+}
 
 @Component({
   selector: 'app-users',
@@ -23,26 +30,30 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
         <span class="breadcrumb-separator">›</span>
         <span>Team & Roles</span>
         <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">User Accounts</span>
+        <span class="breadcrumb-current">{{ activeMainTab === 'users' ? 'Staff Accounts' : 'Dynamic Roles & Permissions' }}</span>
       </div>
 
       <div class="users-header-card">
         <div class="header-left">
           <div class="header-icon-box">
-            <span class="material-symbols-outlined">badge</span>
+            <span class="material-symbols-outlined">{{ activeMainTab === 'users' ? 'badge' : 'admin_panel_settings' }}</span>
           </div>
           <div>
             <div class="header-title-flex">
-              <h1 class="page-title">Users, Cashiers & Staff</h1>
+              <h1 class="page-title">{{ activeMainTab === 'users' ? 'Staff Accounts & Access' : 'Dynamic Roles & Permission Matrix' }}</h1>
               <span class="status-dot-pill is-active">
                 <span class="status-dot"></span>
-                <span>{{ activeCount }} Active</span>
+                <span>{{ activeCount }} Active Staff</span>
               </span>
             </div>
             <div class="header-meta-row">
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon">manage_accounts</span>
-                <span>Role-Based Access Control (RBAC)</span>
+                <span>Fully Dynamic Role-Based Access Control (RBAC)</span>
+              </span>
+              <span class="meta-item">
+                <span class="material-symbols-outlined meta-icon">shield</span>
+                <span>{{ roles.length }} Custom Roles Defined</span>
               </span>
             </div>
           </div>
@@ -51,15 +62,16 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
         <div class="header-action-buttons">
           <button
             type="button"
-            (click)="loadUsers()"
+            (click)="loadAllData()"
             class="action-btn btn-outline-purple"
-            title="Refresh user list"
+            title="Refresh records"
           >
             <span class="material-symbols-outlined">refresh</span>
             <span>Refresh</span>
           </button>
 
           <button
+            *ngIf="activeMainTab === 'users'"
             type="button"
             (click)="exportCSV()"
             class="action-btn btn-outline-purple"
@@ -70,415 +82,504 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           </button>
 
           <button
+            *ngIf="activeMainTab === 'users'"
             type="button"
-            (click)="openAddModal()"
+            (click)="openAddUserModal()"
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">person_add</span>
-            <span>+ New User</span>
+            <span>+ New Staff User</span>
+          </button>
+
+          <button
+            *ngIf="activeMainTab === 'roles'"
+            type="button"
+            (click)="openAddRoleModal()"
+            class="action-btn btn-gradient-purple"
+            [title]="isRoleLimitReached
+              ? 'Role limit reached - a maximum of ' + maxCustomRoles + ' custom roles can be created'
+              : 'Create a new custom role'"
+          >
+            <span class="material-symbols-outlined">add_moderator</span>
+            <span>+ Create Custom Role</span>
           </button>
         </div>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 2. SUB-NAVIGATION ROLE TABS                                     -->
+      <!-- 2. PRIMARY NAVIGATION: STAFF ACCOUNTS vs ROLES & PERMISSIONS     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="module-tabs-bar">
         <button
           type="button"
-          (click)="selectedRole = ''; currentPage = 1"
+          (click)="activeMainTab = 'users'"
           class="module-tab-btn"
-          [class.is-active]="selectedRole === ''"
+          [class.is-active]="activeMainTab === 'users'"
         >
           <span class="material-symbols-outlined">group</span>
-          <span>All Users</span>
+          <span>Staff Accounts</span>
           <span class="tab-count-badge">{{ users.length }}</span>
         </button>
 
         <button
           type="button"
-          (click)="selectedRole = 'CASHIER'; currentPage = 1"
+          (click)="activeMainTab = 'roles'"
           class="module-tab-btn"
-          [class.is-active]="selectedRole === 'CASHIER'"
+          [class.is-active]="activeMainTab === 'roles'"
         >
-          <span class="material-symbols-outlined">point_of_sale</span>
-          <span>Cashiers</span>
-          <span class="tab-count-badge">{{ countByRole('CASHIER') }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="selectedRole = 'MANAGER'; currentPage = 1"
-          class="module-tab-btn"
-          [class.is-active]="selectedRole === 'MANAGER'"
-        >
-          <span class="material-symbols-outlined">manage_accounts</span>
-          <span>Managers</span>
-          <span class="tab-count-badge">{{ countByRole('MANAGER') }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="selectedRole = 'ADMIN'; currentPage = 1"
-          class="module-tab-btn"
-          [class.is-active]="selectedRole === 'ADMIN'"
-        >
-          <span class="material-symbols-outlined">admin_panel_settings</span>
-          <span>Admins</span>
-          <span class="tab-count-badge">{{ countByRole('ADMIN') }}</span>
+          <span class="material-symbols-outlined">security</span>
+          <span>Dynamic Roles &amp; Permissions</span>
+          <span class="tab-count-badge">{{ roles.length }}</span>
         </button>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 3. 6 KPI METRIC MINI CARDS STRIP                                -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="kpi-cards-grid">
-        <!-- 1. Total Staff -->
-        <div class="kpi-card card-accent-purple">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Total Staff</span>
-            <span class="kpi-icon-bubble bg-purple-tint">
-              <span class="material-symbols-outlined">groups</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ users.length }}</span>
-            <span class="kpi-pill pill-purple">Members</span>
-          </div>
-        </div>
-
-        <!-- 2. Active Shifts -->
-        <div class="kpi-card card-accent-green">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Active Shifts</span>
-            <span class="kpi-icon-bubble bg-green-tint">
-              <span class="material-symbols-outlined">how_to_reg</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number text-green">{{ activeCount }}</span>
-            <span class="kpi-pill pill-live">● Online</span>
-          </div>
-        </div>
-
-        <!-- 3. Cashiers -->
-        <div class="kpi-card card-accent-purple">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Cashiers</span>
-            <span class="kpi-icon-bubble bg-purple-tint">
-              <span class="material-symbols-outlined">point_of_sale</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ countByRole('CASHIER') }}</span>
-            <span class="kpi-pill pill-purple">Front Desk</span>
-          </div>
-        </div>
-
-        <!-- 4. Admins -->
-        <div class="kpi-card card-accent-amber">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Admins</span>
-            <span class="kpi-icon-bubble bg-amber-tint">
-              <span class="material-symbols-outlined">shield_person</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ countByRole('ADMIN') }}</span>
-            <span class="kpi-pill pill-amber">Superusers</span>
-          </div>
-        </div>
-
-        <!-- 5. Managers -->
-        <div class="kpi-card card-accent-teal">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Managers</span>
-            <span class="kpi-icon-bubble bg-teal-tint">
-              <span class="material-symbols-outlined">badge</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number text-teal-700">{{ countByRole('MANAGER') }}</span>
-            <span class="kpi-pill pill-teal">Supervisors</span>
-          </div>
-        </div>
-
-        <!-- 6. Role Groups -->
-        <div class="kpi-card card-accent-blue">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Role Groups</span>
-            <span class="kpi-icon-bubble bg-blue-tint">
-              <span class="material-symbols-outlined">account_tree</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ roles.length || 4 }}</span>
-            <span class="kpi-pill pill-blue">RBAC Tiers</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 4. FILTER & SEARCH ACTION TOOLBAR                               -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="filter-toolbar-card">
-        <div class="filter-controls-group">
-          <!-- Search Box -->
-          <div class="search-input-wrapper">
-            <span class="material-symbols-outlined search-icon">search</span>
-            <input
-              title="Search users"
-              type="text"
-              [(ngModel)]="searchQuery"
-              (ngModelChange)="currentPage = 1"
-              placeholder="Search by name, username, email or role..."
-              class="toolbar-search-input"
-            />
-            <button
-              *ngIf="searchQuery"
-              (click)="searchQuery = ''; currentPage = 1"
-              class="search-clear-btn"
-              title="Clear search"
-            >
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <!-- Role Selector -->
-          <app-custom-dropdown
-            [options]="roleOptions"
-            [(ngModel)]="selectedRole"
-            (valueChange)="currentPage = 1"
-            placeholder="All Staff Roles"
-            minWidth="200px"
-          ></app-custom-dropdown>
-
-          <span class="results-counter-pill">
-            Showing {{ filteredUsers.length }} users
-          </span>
-        </div>
-
-        <div class="filter-actions-group">
-          <button
-            *ngIf="hasSelectedUsers"
-            type="button"
-            (click)="deleteSelected()"
-            class="action-btn btn-sm btn-outline-danger"
-          >
-            <span class="material-symbols-outlined text-[17px]">delete</span>
-            <span>Delete Selected ({{ selectedCount }})</span>
-          </button>
-
+      <!-- =============================================================== -->
+      <!-- TAB 1: STAFF ACCOUNTS MANAGEMENT                                -->
+      <!-- =============================================================== -->
+      <ng-container *ngIf="activeMainTab === 'users'">
+        <!-- Dynamic Sub-Navigation Role Tabs -->
+        <div class="module-tabs-bar">
           <button
             type="button"
-            (click)="loadUsers()"
-            class="action-btn btn-sm btn-outline-purple"
-            title="Reload list"
+            (click)="selectedRole = ''; currentPage = 1"
+            class="module-tab-btn"
+            [class.is-active]="selectedRole === ''"
           >
-            <span class="material-symbols-outlined text-[17px]">refresh</span>
-            <span>Reload</span>
+            <span class="material-symbols-outlined">group</span>
+            <span>All Staff</span>
+            <span class="tab-count-badge">{{ users.length }}</span>
+          </button>
+
+          <!-- Fully Dynamic Role Tabs from Database -->
+          <button
+            type="button"
+            *ngFor="let r of roles"
+            (click)="selectedRole = r.name; currentPage = 1"
+            class="module-tab-btn"
+            [class.is-active]="selectedRole === r.name"
+          >
+            <span class="material-symbols-outlined">{{ getRoleIcon(r.name) }}</span>
+            <span>{{ r.name }}</span>
+            <span class="tab-count-badge">{{ countByRole(r.name) }}</span>
           </button>
         </div>
-      </div>
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 5. USERS SAAS DATA TABLE                                        -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="table-container-card">
-        <div class="table-responsive-wrapper">
-          <table class="saas-data-table">
-            <thead>
-              <tr>
-                <th style="width: 44px; text-align: center;">
-                  <input
-                    title="Select all users"
-                    type="checkbox"
-                    [(ngModel)]="selectAll"
-                    (change)="toggleSelectAll()"
-                    class="custom-checkbox"
-                  />
-                </th>
-                <th style="width: 26%;">Name & Username</th>
-                <th style="width: 24%;">Email Address</th>
-                <th style="width: 15%;">Role / Access</th>
-                <th style="width: 13%;">Status</th>
-                <th style="width: 14%;">Last Login</th>
-                <th style="width: 80px; text-align: center;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let u of paginatedUsers" class="data-row">
-                <!-- Checkbox -->
-                <td style="text-align: center;">
-                  <input
-                    title="Select this user"
-                    type="checkbox"
-                    [(ngModel)]="u.selected"
-                    class="custom-checkbox"
-                  />
-                </td>
-
-                <!-- Name & Avatar -->
-                <td>
-                  <div class="user-identity-cell">
-                    <div class="avatar-wrapper">
-                      <div class="user-avatar-bubble">
-                        {{ getInitials(u.name) }}
-                      </div>
-                      <span class="avatar-status-dot" [class.is-active]="u.status === 'ACTIVE'" [class.is-inactive]="u.status !== 'ACTIVE'"></span>
-                    </div>
-                    <div class="user-names-col">
-                      <div class="user-display-name">{{ u.name }}</div>
-                      <div class="user-handle">&#64;{{ u.username }}</div>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Email -->
-                <td>
-                  <span class="email-text">{{ u.email }}</span>
-                </td>
-
-                <!-- Role Badge -->
-                <td>
-                  <span
-                    class="role-badge"
-                    [ngClass]="getRoleBadgeClass(u.role)"
-                  >
-                    {{ u.role }}
-                  </span>
-                </td>
-
-                <!-- Status Dot Pill -->
-                <td>
-                  <span
-                    class="status-dot-pill"
-                    [ngClass]="u.status === 'ACTIVE' ? 'is-active' : 'is-inactive'"
-                  >
-                    <span class="status-dot"></span>
-                    {{ u.status || 'Active' }}
-                  </span>
-                </td>
-
-                <!-- Last Login -->
-                <td>
-                  <span class="last-login-text">
-                    {{ u.lastLoginAt ? (u.lastLoginAt | date:'dd/MM/yyyy HH:mm') : 'Never' }}
-                  </span>
-                </td>
-
-                <!-- Actions -->
-                <td style="text-align: center;">
-                  <div class="row-actions-flex">
-                    <button
-                      type="button"
-                      (click)="openEditModal(u)"
-                      class="btn-action-icon"
-                      title="Edit user"
-                    >
-                      <span class="material-symbols-outlined">edit</span>
-                    </button>
-                    <button
-                      *ngIf="u.username !== 'admin'"
-                      type="button"
-                      (click)="deleteUser(u)"
-                      class="btn-action-icon is-danger"
-                      title="Delete user"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Empty State -->
-              <tr *ngIf="filteredUsers.length === 0">
-                <td colspan="7" class="empty-state-cell">
-                  <div class="empty-state-box">
-                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'group_off' }}</span>
-                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Staff Accounts Found' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No users match your selected role filter or search query.' }}</p>
-                    <button type="button" (click)="selectedRole = ''; searchQuery = ''" class="action-btn btn-sm btn-outline-purple mt-2">
-                      <span>Reset Filters</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        <!-- 6. BOTTOM PAGINATION BAR                                        -->
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        <div class="pagination-footer-bar" *ngIf="filteredUsers.length > 0">
-          <div class="pagination-info">
-            Showing <strong>{{ paginationStart }}</strong> to <strong>{{ paginationEnd }}</strong> of <strong>{{ filteredUsers.length }}</strong> users
-          </div>
-
-          <div class="pagination-controls">
-            <button
-              type="button"
-              [disabled]="currentPage <= 1"
-              (click)="currentPage = currentPage - 1"
-              class="page-nav-btn"
-              title="Previous page"
-            >
-              <span class="material-symbols-outlined">chevron_left</span>
-            </button>
-
-            <button
-              type="button"
-              *ngFor="let page of pageNumbers"
-              (click)="currentPage = page"
-              class="page-num-btn"
-              [class.is-active]="currentPage === page"
-            >
-              {{ page }}
-            </button>
-
-            <button
-              type="button"
-              [disabled]="currentPage >= totalPages"
-              (click)="currentPage = currentPage + 1"
-              class="page-nav-btn"
-              title="Next page"
-            >
-              <span class="material-symbols-outlined">chevron_right</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- MODAL DIALOG                                                    -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="showModal">
-        <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
-          <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3.5">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined text-2xl">person_add</span>
+        <!-- 6 KPI Metric Mini Cards Strip -->
+        <div class="kpi-cards-grid">
+          <!-- 1. Total Staff -->
+          <div class="kpi-card card-accent-purple">
+            <div class="kpi-header-row">
+              <span class="kpi-title">Total Staff</span>
+              <span class="kpi-icon-bubble bg-purple-tint">
+                <span class="material-symbols-outlined">groups</span>
               </span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-number">{{ users.length }}</span>
+              <span class="kpi-pill pill-purple">Members</span>
+            </div>
+          </div>
+
+          <!-- 2. Active Shifts -->
+          <div class="kpi-card card-accent-green">
+            <div class="kpi-header-row">
+              <span class="kpi-title">Active Accounts</span>
+              <span class="kpi-icon-bubble bg-green-tint">
+                <span class="material-symbols-outlined">how_to_reg</span>
+              </span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-number text-green">{{ activeCount }}</span>
+              <span class="kpi-pill pill-live">● Online</span>
+            </div>
+          </div>
+
+          <!-- 3. Dynamic Top Role 1 -->
+          <div class="kpi-card card-accent-purple" *ngIf="roles[0]">
+            <div class="kpi-header-row">
+              <span class="kpi-title">{{ roles[0].name }}</span>
+              <span class="kpi-icon-bubble bg-purple-tint">
+                <span class="material-symbols-outlined">{{ getRoleIcon(roles[0].name) }}</span>
+              </span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-number">{{ countByRole(roles[0].name) }}</span>
+              <span class="kpi-pill pill-purple">Assigned</span>
+            </div>
+          </div>
+
+          <!-- 4. Dynamic Top Role 2 -->
+          <div class="kpi-card card-accent-amber" *ngIf="roles[1]">
+            <div class="kpi-header-row">
+              <span class="kpi-title">{{ roles[1].name }}</span>
+              <span class="kpi-icon-bubble bg-amber-tint">
+                <span class="material-symbols-outlined">{{ getRoleIcon(roles[1].name) }}</span>
+              </span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-number">{{ countByRole(roles[1].name) }}</span>
+              <span class="kpi-pill pill-amber">Assigned</span>
+            </div>
+          </div>
+
+          <!-- 5. Dynamic Top Role 3 -->
+          <div class="kpi-card card-accent-teal" *ngIf="roles[2]">
+            <div class="kpi-header-row">
+              <span class="kpi-title">{{ roles[2].name }}</span>
+              <span class="kpi-icon-bubble bg-teal-tint">
+                <span class="material-symbols-outlined">{{ getRoleIcon(roles[2].name) }}</span>
+              </span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-number text-teal-700">{{ countByRole(roles[2].name) }}</span>
+              <span class="kpi-pill pill-teal">Assigned</span>
+            </div>
+          </div>
+
+          <!-- 6. Total Dynamic Role Groups -->
+          <div class="kpi-card card-accent-blue">
+            <div class="kpi-header-row">
+              <span class="kpi-title">Dynamic Roles</span>
+              <span class="kpi-icon-bubble bg-blue-tint">
+                <span class="material-symbols-outlined">account_tree</span>
+              </span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-number">{{ roles.length }}</span>
+              <span class="kpi-pill pill-blue">RBAC Tiers</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Action Toolbar -->
+        <div class="filter-toolbar-card">
+          <div class="filter-controls-group">
+            <!-- Search Box -->
+            <div class="search-input-wrapper">
+              <span class="material-symbols-outlined search-icon">search</span>
+              <input
+                title="Search users"
+                type="text"
+                [(ngModel)]="searchQuery"
+                (ngModelChange)="currentPage = 1"
+                placeholder="Search staff by name, username, email or role..."
+                class="toolbar-search-input"
+              />
+              <button
+                *ngIf="searchQuery"
+                (click)="searchQuery = ''; currentPage = 1"
+                class="search-clear-btn"
+                title="Clear search"
+              >
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Fully Dynamic Role Selector Dropdown -->
+            <app-custom-dropdown
+              [options]="dynamicRoleOptions"
+              [(ngModel)]="selectedRole"
+              (valueChange)="currentPage = 1"
+              placeholder="All Staff Roles"
+              minWidth="200px"
+            ></app-custom-dropdown>
+
+            <span class="results-counter-pill">
+              Showing {{ filteredUsers.length }} staff
+            </span>
+          </div>
+
+          <div class="filter-actions-group">
+            <button
+              *ngIf="hasSelectedUsers"
+              type="button"
+              (click)="deleteSelectedUsers()"
+              class="action-btn btn-sm btn-outline-danger"
+            >
+              <span class="material-symbols-outlined text-[17px]">delete</span>
+              <span>Delete Selected ({{ selectedCount }})</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="loadUsers()"
+              class="action-btn btn-sm btn-outline-purple"
+              title="Reload list"
+            >
+              <span class="material-symbols-outlined text-[17px]">refresh</span>
+              <span>Reload</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Users SaaS Data Table -->
+        <div class="table-container-card">
+          <div class="table-responsive-wrapper">
+            <table class="saas-data-table">
+              <thead>
+                <tr>
+                  <th style="width: 44px; text-align: center;">
+                    <input
+                      title="Select all users"
+                      type="checkbox"
+                      [(ngModel)]="selectAll"
+                      (change)="toggleSelectAll()"
+                      class="custom-checkbox"
+                    />
+                  </th>
+                  <th style="width: 26%;">Name & Username</th>
+                  <th style="width: 24%;">Email & Phone</th>
+                  <th style="width: 15%;">Dynamic Role</th>
+                  <th style="width: 13%;">Status</th>
+                  <th style="width: 14%;">Last Login</th>
+                  <th style="width: 80px; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let u of paginatedUsers" class="data-row">
+                  <!-- Checkbox -->
+                  <td style="text-align: center;">
+                    <input
+                      title="Select this user"
+                      type="checkbox"
+                      [(ngModel)]="u.selected"
+                      class="custom-checkbox"
+                    />
+                  </td>
+
+                  <!-- Name & Avatar -->
+                  <td>
+                    <div class="user-identity-cell">
+                      <div class="avatar-wrapper">
+                        <div class="user-avatar-bubble">
+                          {{ getInitials(u.name) }}
+                        </div>
+                        <span class="avatar-status-dot" [class.is-active]="u.status === 'ACTIVE'" [class.is-inactive]="u.status !== 'ACTIVE'"></span>
+                      </div>
+                      <div class="user-names-col">
+                        <div class="user-display-name">{{ u.name }}</div>
+                        <div class="user-handle">&#64;{{ u.username }}</div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Email & Phone -->
+                  <td>
+                    <div class="flex flex-col gap-0.5">
+                      <span class="email-text font-medium">{{ u.email }}</span>
+                      <span class="text-xs text-[#6B7280] font-mono" *ngIf="u.phone">{{ u.phone }}</span>
+                    </div>
+                  </td>
+
+                  <!-- Fully Dynamic Role Badge -->
+                  <td>
+                    <span
+                      class="dynamic-role-badge"
+                      [ngStyle]="getRoleBadgeStyle(u.role)"
+                    >
+                      <span class="material-symbols-outlined text-[13px]">{{ getRoleIcon(u.role) }}</span>
+                      <span>{{ u.role }}</span>
+                    </span>
+                  </td>
+
+                  <!-- Status Dot Pill -->
+                  <td>
+                    <span
+                      class="status-dot-pill"
+                      [ngClass]="u.status === 'ACTIVE' ? 'is-active' : 'is-inactive'"
+                    >
+                      <span class="status-dot"></span>
+                      {{ u.status || 'Active' }}
+                    </span>
+                  </td>
+
+                  <!-- Last Login -->
+                  <td>
+                    <span class="last-login-text">
+                      {{ (u.last_login_at || u.lastLoginAt) ? ((u.last_login_at || u.lastLoginAt) | date:'dd/MM/yyyy HH:mm') : 'Never' }}
+                    </span>
+                  </td>
+
+                  <!-- Actions -->
+                  <td style="text-align: center;">
+                    <div class="row-actions-flex">
+                      <button
+                        type="button"
+                        (click)="openEditUserModal(u)"
+                        class="btn-action-icon"
+                        title="Edit staff account"
+                      >
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button
+                        *ngIf="u.username !== 'admin'"
+                        type="button"
+                        (click)="deleteUser(u)"
+                        class="btn-action-icon is-danger"
+                        title="Delete user"
+                      >
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Empty State -->
+                <tr *ngIf="filteredUsers.length === 0">
+                  <td colspan="7" class="empty-state-cell">
+                    <div class="empty-state-box">
+                      <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'group_off' }}</span>
+                      <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Staff Accounts Found' }}</div>
+                      <p class="empty-desc">{{ isLoading ? 'Fetching records from server…' : loadError ? loadError : 'No users match your selected role filter or search query.' }}</p>
+                      <button type="button" (click)="selectedRole = ''; searchQuery = ''" class="action-btn btn-sm btn-outline-purple mt-2">
+                        <span>Reset Filters</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Bottom Pagination Bar -->
+          <div class="pagination-footer-bar" *ngIf="filteredUsers.length > 0">
+            <div class="pagination-info">
+              Showing <strong>{{ paginationStart }}</strong> to <strong>{{ paginationEnd }}</strong> of <strong>{{ filteredUsers.length }}</strong> users
+            </div>
+
+            <div class="pagination-controls">
+              <button
+                type="button"
+                [disabled]="currentPage <= 1"
+                (click)="currentPage = currentPage - 1"
+                class="page-nav-btn"
+                title="Previous page"
+              >
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+
+              <button
+                type="button"
+                *ngFor="let page of pageNumbers"
+                (click)="currentPage = page"
+                class="page-num-btn"
+                [class.is-active]="currentPage === page"
+              >
+                {{ page }}
+              </button>
+
+              <button
+                type="button"
+                [disabled]="currentPage >= totalPages"
+                (click)="currentPage = currentPage + 1"
+                class="page-nav-btn"
+                title="Next page"
+              >
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- =============================================================== -->
+      <!-- TAB 2: DYNAMIC ROLES & PERMISSIONS MATRIX                       -->
+      <!-- =============================================================== -->
+      <ng-container *ngIf="activeMainTab === 'roles'">
+        <!-- Roles Grid -->
+        <div class="roles-grid">
+          <div *ngFor="let r of roles" class="role-manage-card">
+            <div>
+              <div class="role-card-top">
+                <div class="role-icon-box" [ngStyle]="getRoleIconBoxStyle(r.name)">
+                  <span class="material-symbols-outlined text-[24px]">{{ getRoleIcon(r.name) }}</span>
+                </div>
+                <div class="role-info-col">
+                  <h3 class="role-name-title">
+                    <span>{{ r.name }}</span>
+                    <span
+                      class="role-origin-badge"
+                      [class.is-default]="r.is_system"
+                      [class.is-manual]="!r.is_system"
+                      [title]="r.is_system
+                        ? 'Built-in role, shipped with the system'
+                        : 'Created manually, counts towards the limit of ' + maxCustomRoles"
+                    >
+                      <span class="material-symbols-outlined">
+                        {{ r.is_system ? 'lock' : 'edit' }}
+                      </span>
+                      {{ r.is_system ? 'Default' : 'Manual' }}
+                    </span>
+                  </h3>
+                  <p class="role-desc-text">{{ r.description || 'Custom defined staff role' }}</p>
+                </div>
+              </div>
+
+              <div class="role-stats-pills">
+                <div class="role-stat-pill">
+                  <span class="material-symbols-outlined text-[15px]">group</span>
+                  <span>{{ r.user_count || 0 }} Staff Assigned</span>
+                </div>
+                <div class="role-stat-pill text-purple-700">
+                  <span class="material-symbols-outlined text-[15px]">verified_user</span>
+                  <span>{{ (r.permissions?.length || 0) }} / {{ permissions.length }} Permissions</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="role-card-actions">
+              <button
+                type="button"
+                (click)="openConfigureRoleModal(r)"
+                class="action-btn btn-sm btn-outline-purple flex-1 justify-center"
+              >
+                <span class="material-symbols-outlined text-[16px]">tune</span>
+                <span>Edit Permissions</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="deleteRole(r)"
+                class="btn-action-icon is-danger ml-2"
+                title="Delete this role"
+              >
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- USER ADD / EDIT MODAL                                           -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="showUserModal" class="modal-backdrop-layer">
+        <div class="custom-modal-box">
+          <div class="modal-header-bar">
+            <div class="flex items-center gap-3">
+              <div class="modal-icon-badge">
+                <span class="material-symbols-outlined">{{ editingUserId ? 'manage_accounts' : 'person_add' }}</span>
+              </div>
               <div>
-                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
-                  {{ editingUserId ? 'Edit Staff Account' : 'Create New Staff Account' }}
-                </h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">Manage operator permissions, roles, and credentials</p>
+                <h2 class="text-base font-bold text-[#1F2937] leading-tight m-0">
+                  {{ editingUserId ? 'Edit Staff Account' : 'Add New Staff Member' }}
+                </h2>
+                <p class="text-xs text-[#6B7280] m-0 mt-0.5">
+                  {{ editingUserId ? 'Update user profile and assign dynamic roles.' : 'Create a new staff login with dynamic RBAC permissions.' }}
+                </p>
               </div>
             </div>
             <button
               type="button"
-              (click)="showModal = false"
+              (click)="showUserModal = false"
               class="modal-close-btn"
-              title="Close"
-              aria-label="Close"
+              title="Close dialog"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveUser()" class="space-y-3.5">
+          <form (ngSubmit)="saveUser()" class="p-6 space-y-4">
             <div class="form-group mb-0">
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Full Name
@@ -486,15 +587,15 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               <input
                 title="Full Name"
                 type="text"
-                [(ngModel)]="form.name"
+                [(ngModel)]="userForm.name"
                 name="name"
-                placeholder="e.g. Aamir Khan"
-                class="form-control text-sm w-full"
+                placeholder="e.g. Rahul Sharma"
+                class="form-control text-sm w-full font-medium"
                 required
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-3.5 items-start">
+            <div class="grid grid-cols-2 gap-4">
               <div class="form-group mb-0">
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                   Username
@@ -502,20 +603,29 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
                 <input
                   title="Username"
                   type="text"
-                  [(ngModel)]="form.username"
+                  [(ngModel)]="userForm.username"
                   name="username"
-                  placeholder="cashier1"
+                  placeholder="e.g. cashier1"
                   class="form-control font-mono text-sm w-full"
                   [disabled]="!!editingUserId"
                   required
                 />
               </div>
+
+              <!-- Fully Dynamic Role Select Dropdown -->
               <div class="form-group mb-0">
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Staff Role
+                  Staff Role (Dynamic)
                 </label>
-                <select [(ngModel)]="form.roleId" name="roleId" class="form-control text-sm w-full font-bold">
-                  <option *ngFor="let r of roles" [ngValue]="r.id">{{ r.name }}</option>
+                <select
+                  [(ngModel)]="userForm.roleId"
+                  name="roleId"
+                  class="form-control text-sm w-full font-bold bg-white text-[#7E22CE] border-[#D8B4FE]"
+                  required
+                >
+                  <option *ngFor="let r of roles" [ngValue]="r.id">
+                    {{ r.name }} {{ r.description ? '— ' + r.description : '' }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -527,7 +637,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               <input
                 title="Email Address"
                 type="email"
-                [(ngModel)]="form.email"
+                [(ngModel)]="userForm.email"
                 name="email"
                 placeholder="user@projectx.com"
                 class="form-control text-sm w-full"
@@ -536,18 +646,30 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               />
             </div>
 
-            <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                Phone Number (Optional)
-              </label>
-              <input
-                title="Phone Number (Optional)"
-                type="tel"
-                [(ngModel)]="form.phone"
-                name="phone"
-                placeholder="+91 98765 00000"
-                class="form-control font-mono text-sm w-full"
-              />
+            <div class="grid grid-cols-2 gap-4">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Phone Number (Optional)
+                </label>
+                <input
+                  title="Phone Number (Optional)"
+                  type="tel"
+                  [(ngModel)]="userForm.phone"
+                  name="phone"
+                  placeholder="+91 98765 00000"
+                  class="form-control font-mono text-sm w-full"
+                />
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Status
+                </label>
+                <select [(ngModel)]="userForm.status" name="status" class="form-control text-sm w-full font-semibold">
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="INACTIVE">INACTIVE</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-group mb-0">
@@ -557,7 +679,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
               <input
                 [title]="editingUserId ? 'New Password (Leave blank to keep unchanged)' : 'Password'"
                 type="password"
-                [(ngModel)]="form.password"
+                [(ngModel)]="userForm.password"
                 name="password"
                 placeholder="••••••••"
                 class="form-control font-mono text-sm w-full"
@@ -568,7 +690,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
             <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
               <button
                 type="button"
-                (click)="showModal = false"
+                (click)="showUserModal = false"
                 class="action-btn btn-outline-purple"
               >
                 Cancel
@@ -583,47 +705,241 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
           </form>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DYNAMIC ROLE CREATION / PERMISSIONS MATRIX MODAL                -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="showRoleModal" class="modal-backdrop-layer">
+        <div class="custom-modal-box is-wide">
+          <div class="modal-header-bar">
+            <div class="flex items-center gap-3">
+              <div class="modal-icon-badge">
+                <span class="material-symbols-outlined">{{ editingRoleId ? 'tune' : 'add_moderator' }}</span>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-[#1F2937] leading-tight m-0">
+                  {{ editingRoleId ? 'Edit Role & Permissions: ' + roleForm.name : 'Create Custom Role' }}
+                </h2>
+                <p class="text-xs text-[#6B7280] m-0 mt-0.5">
+                  <ng-container *ngIf="!editingRoleId">
+                    Using {{ customRoles.length }} of {{ maxCustomRoles }} custom roles.
+                  </ng-container>
+                  Configure role name, description, and module access permissions.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="showRoleModal = false"
+              class="modal-close-btn"
+              title="Close dialog"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form (ngSubmit)="saveRole()" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Role Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  title="Role Name"
+                  type="text"
+                  [(ngModel)]="roleForm.name"
+                  name="roleName"
+                  placeholder="e.g. Kitchen Lead, Shift Supervisor, Barista..."
+                  class="form-control text-sm w-full font-bold uppercase"
+                  required
+                />
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Description
+                </label>
+                <input
+                  title="Description"
+                  type="text"
+                  [(ngModel)]="roleForm.description"
+                  name="roleDescription"
+                  placeholder="e.g. Manages order queue and kitchen display operations"
+                  class="form-control text-sm w-full"
+                />
+              </div>
+            </div>
+
+            <!-- Permission Matrix Header with Bulk Select Controls -->
+            <div class="perm-matrix-bar">
+              <div class="perm-matrix-title-group">
+                <span class="perm-matrix-title">Access Permissions Matrix</span>
+                <span class="tab-count-badge">
+                  {{ roleForm.permissionIds.length }} of {{ permissions.length }} granted
+                </span>
+              </div>
+
+              <div class="perm-matrix-actions">
+                <button
+                  type="button"
+                  (click)="selectAllPermissions()"
+                  class="perm-link-btn"
+                >
+                  <span class="material-symbols-outlined">done_all</span>
+                  Grant All
+                </button>
+                <span class="perm-matrix-divider"></span>
+                <button
+                  type="button"
+                  (click)="deselectAllPermissions()"
+                  class="perm-link-btn is-muted"
+                >
+                  <span class="material-symbols-outlined">remove_done</span>
+                  Revoke All
+                </button>
+              </div>
+            </div>
+
+            <!-- Permission Modules List -->
+            <div class="perm-matrix-wrapper">
+              <div *ngFor="let mod of moduleGroups" class="perm-module-card">
+                <div class="perm-module-header">
+                  <div class="perm-module-title-group">
+                    <span class="material-symbols-outlined">{{ mod.icon }}</span>
+                    <span>{{ mod.label }}</span>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="toggleModulePermissions(mod)"
+                    class="perm-link-btn"
+                    [class.is-muted]="isModuleAllSelected(mod)"
+                  >
+                    <span class="material-symbols-outlined">
+                      {{ isModuleAllSelected(mod) ? 'remove_done' : 'done_all' }}
+                    </span>
+                    {{ isModuleAllSelected(mod) ? 'Deselect all' : 'Select all' }}
+                  </button>
+                </div>
+
+                <div class="perm-items-grid">
+                  <div
+                    *ngFor="let p of mod.permissions"
+                    (click)="togglePermission(p.id)"
+                    class="perm-checkbox-tile"
+                    [class.is-selected]="isPermissionSelected(p.id)"
+                  >
+                    <input
+                      title="Permission checkbox"
+                      type="checkbox"
+                      [checked]="isPermissionSelected(p.id)"
+                      (change)="$event.stopPropagation(); togglePermission(p.id)"
+                      class="custom-checkbox mt-0.5"
+                    />
+                    <div class="perm-label-content">
+                      <span class="perm-code-badge">{{ p.code }}</span>
+                      <span class="perm-desc-text">{{ p.description || p.code }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+              <button
+                type="button"
+                (click)="showRoleModal = false"
+                class="action-btn btn-outline-purple"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="action-btn btn-gradient-purple"
+                [disabled]="isSavingRole"
+              >
+                {{ isSavingRole ? 'Saving...' : (editingRoleId ? 'Update Role & Permissions ✓' : 'Create Role ✓') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   `,
 })
 export class UsersComponent implements OnInit {
+  public activeMainTab: 'users' | 'roles' = 'users';
   public isLoading = false;
   public loadError: string | null = null;
+  public isSavingRole = false;
+
   public settingsService = inject(SettingsService);
   private userService = inject(UserService);
   private notify = inject(NotificationService);
 
+  // Data Collections
   public users: (User & { selected?: boolean })[] = [];
-  public roles: any[] = [];
+  public roles: Role[] = [];
+  public permissions: Permission[] = [];
+  public moduleGroups: ModuleGroup[] = [];
+
+  // Filtering & Pagination
   public selectAll = false;
   public selectedRole = '';
-
-  public roleOptions: DropdownOption[] = [
-    { value: '', label: 'All Staff Roles', icon: 'groups' },
-    { value: 'ADMIN', label: 'System Admins', icon: 'shield_person', description: 'Full system management' },
-    { value: 'MANAGER', label: 'Store Managers', icon: 'manage_accounts', description: 'Operations & oversight' },
-    { value: 'CASHIER', label: 'Billing Cashiers', icon: 'point_of_sale', description: 'POS billing & counter' },
-    { value: 'STAFF', label: 'Service Staff', icon: 'badge', description: 'Dining service & kitchen' },
-  ];
-
   public searchQuery = '';
   public pageSize = 10;
   public currentPage = 1;
 
-  public showModal = false;
+  // User Add/Edit Dialog State
+  public showUserModal = false;
   public editingUserId: number | null = null;
-  public form: any = {
+  public userForm: any = {
     name: '',
     username: '',
     email: '',
     phone: '',
-    roleId: 3,
+    roleId: null,
     password: '',
     status: 'ACTIVE',
   };
 
+  /**
+   * How many roles may be created by hand. Built-in roles (is_system = 1) are
+   * not counted. Mirrors MAX_CUSTOM_ROLES in the backend roles controller,
+   * which is the authoritative check.
+   */
+  public readonly maxCustomRoles = 2;
+
+  /** Roles created by hand, i.e. everything except the built-in ones. */
+  public get customRoles(): Role[] {
+    return this.roles.filter((r) => !r.is_system);
+  }
+
+  public get isRoleLimitReached(): boolean {
+    return this.customRoles.length >= this.maxCustomRoles;
+  }
+
+  // Role Add/Edit Dialog State
+  public showRoleModal = false;
+  public editingRoleId: number | null = null;
+  public roleForm: {
+    name: string;
+    description: string;
+    permissionIds: number[];
+  } = {
+    name: '',
+    description: '',
+    permissionIds: [],
+  };
+
   ngOnInit(): void {
+    this.loadAllData();
+  }
+
+  loadAllData(): void {
+    this.isLoading = true;
+    this.loadError = null;
     this.loadRoles();
+    this.loadPermissions();
     this.loadUsers();
   }
 
@@ -632,12 +948,79 @@ export class UsersComponent implements OnInit {
       next: (res) => {
         if (res.success) {
           this.roles = res.data;
-          if (this.roles.length > 0 && !this.form.roleId) {
-            this.form.roleId = this.roles[0].id;
+          if (this.roles.length > 0 && !this.userForm.roleId) {
+            this.userForm.roleId = this.roles[0].id;
           }
         }
       },
     });
+  }
+
+  loadPermissions(): void {
+    this.userService.getPermissions().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.permissions = res.data;
+          this.buildModuleGroups();
+        }
+      },
+    });
+  }
+
+  buildModuleGroups(): void {
+    const moduleMap = new Map<string, Permission[]>();
+    for (const p of this.permissions) {
+      const mod = p.module || 'GENERAL';
+      if (!moduleMap.has(mod)) {
+        moduleMap.set(mod, []);
+      }
+      moduleMap.get(mod)!.push(p);
+    }
+
+    const icons: Record<string, string> = {
+      AUTH: 'key',
+      POS: 'point_of_sale',
+      ORDERS: 'receipt_long',
+      DINING: 'table_restaurant',
+      QUEUE: 'confirmation_number',
+      PRODUCTS: 'inventory_2',
+      CATEGORIES: 'category',
+      STOCK: 'warehouse',
+      CUSTOMERS: 'group',
+      BILLS: 'receipt',
+      REPORTS: 'analytics',
+      DASHBOARD: 'dashboard',
+      SETTINGS: 'settings',
+      USERS: 'manage_accounts',
+      AUDIT: 'history',
+      GENERAL: 'shield',
+    };
+
+    const friendlyLabels: Record<string, string> = {
+      AUTH: 'Authentication & Session',
+      POS: 'POS Billing & Cashier Operations',
+      ORDERS: 'Orders & Kitchen Management',
+      DINING: 'Dining Layout & Tables',
+      QUEUE: 'Takeaway Queue Tokens',
+      PRODUCTS: 'Products & Price Catalog',
+      CATEGORIES: 'Product Categories',
+      STOCK: 'Stock & Inventory Ledger',
+      CUSTOMERS: 'Customers & CRM Directory',
+      BILLS: 'Sales Bills & Tax Receipts',
+      REPORTS: 'Reports & Analytics',
+      DASHBOARD: 'Dashboard & Metrics Overview',
+      SETTINGS: 'System & Theme Settings',
+      USERS: 'Staff Accounts & Dynamic RBAC',
+      AUDIT: 'Audit Trail & Security Logs',
+      GENERAL: 'General Access',
+    };
+
+    this.moduleGroups = Array.from(moduleMap.entries()).map(([name, perms]) => ({
+      name,
+      label: friendlyLabels[name] || name,
+      icon: icons[name] || 'shield',
+      permissions: perms,
+    }));
   }
 
   loadUsers(): void {
@@ -652,17 +1035,33 @@ export class UsersComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading = false;
-        this.loadError = err?.error?.message || 'Unable to load data from the server.';
+        this.loadError = err?.error?.message || 'Unable to load staff records from server.';
       },
     });
+  }
+
+  get dynamicRoleOptions(): DropdownOption[] {
+    const opts: DropdownOption[] = [
+      { value: '', label: 'All Staff Roles', icon: 'groups', description: 'Show all team members' },
+    ];
+    for (const r of this.roles) {
+      opts.push({
+        value: r.name,
+        label: r.name,
+        icon: this.getRoleIcon(r.name),
+        description: r.description || `${r.name} access level`,
+      });
+    }
+    return opts;
   }
 
   get activeCount(): number {
     return this.users.filter((u) => u.status === 'ACTIVE').length;
   }
 
-  countByRole(role: string): number {
-    return this.users.filter((u) => u.role === role).length;
+  countByRole(roleName: string): number {
+    if (!roleName) return 0;
+    return this.users.filter((u) => (u.role || '').toLowerCase() === roleName.toLowerCase()).length;
   }
 
   get hasSelectedUsers(): boolean {
@@ -673,24 +1072,56 @@ export class UsersComponent implements OnInit {
     return this.users.filter((u) => u.selected && u.username !== 'admin').length;
   }
 
-  getRoleBadgeClass(role: string): string {
-    switch (role?.toUpperCase()) {
-      case 'ADMIN':
-        return 'role-badge-admin';
-      case 'MANAGER':
-        return 'role-badge-manager';
-      case 'CASHIER':
-        return 'role-badge-cashier';
-      default:
-        return 'role-badge-staff';
+  getRoleBadgeStyle(roleName: string): { background: string; color: string; border: string } {
+    if (!roleName) {
+      return { background: '#F3F4F6', color: '#4B5563', border: '1px solid #E5E7EB' };
     }
+    const palettes = [
+      { background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }, // Blue
+      { background: '#FAF5FF', color: '#7E22CE', border: '1px solid #E9D5FF' }, // Purple
+      { background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' }, // Green
+      { background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A' }, // Amber
+      { background: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4' }, // Teal
+      { background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }, // Rose
+      { background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE' }, // Indigo
+      { background: '#FDF2F8', color: '#BE185D', border: '1px solid #FBCFE8' }, // Pink
+      { background: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC' }, // Cyan
+    ];
+    let hash = 0;
+    for (let i = 0; i < roleName.length; i++) {
+      hash = roleName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % palettes.length;
+    return palettes[index];
+  }
+
+  getRoleIconBoxStyle(roleName: string): { background: string; color: string; border: string } {
+    const badge = this.getRoleBadgeStyle(roleName);
+    return {
+      background: badge.background,
+      color: badge.color,
+      border: badge.border,
+    };
+  }
+
+  getRoleIcon(roleName: string): string {
+    const name = (roleName || '').toLowerCase();
+    if (name.includes('admin') || name.includes('super')) return 'shield_person';
+    if (name.includes('manage') || name.includes('lead') || name.includes('director')) return 'manage_accounts';
+    if (name.includes('cash') || name.includes('pos') || name.includes('bill') || name.includes('counter')) return 'point_of_sale';
+    if (name.includes('chef') || name.includes('kitchen') || name.includes('cook')) return 'outdoor_grill';
+    if (name.includes('table') || name.includes('wait') || name.includes('server') || name.includes('floor')) return 'restaurant';
+    if (name.includes('barista') || name.includes('cafe') || name.includes('drink')) return 'local_cafe';
+    if (name.includes('account') || name.includes('finance') || name.includes('tax')) return 'calculate';
+    if (name.includes('stock') || name.includes('store') || name.includes('inventory')) return 'warehouse';
+    return 'badge';
   }
 
   get filteredUsers(): (User & { selected?: boolean })[] {
     let list = this.users;
 
     if (this.selectedRole) {
-      list = list.filter((u) => u.role === this.selectedRole);
+      list = list.filter((u) => (u.role || '').toLowerCase() === this.selectedRole.toLowerCase());
     }
 
     if (this.searchQuery) {
@@ -742,7 +1173,7 @@ export class UsersComponent implements OnInit {
     this.paginatedUsers.forEach((u) => (u.selected = this.selectAll));
   }
 
-  deleteSelected(): void {
+  deleteSelectedUsers(): void {
     const selected = this.users.filter((u) => u.selected && u.username !== 'admin');
     if (selected.length === 0) {
       this.notify.info('No users selected');
@@ -767,7 +1198,15 @@ export class UsersComponent implements OnInit {
   exportCSV(): void {
     const items = this.filteredUsers;
     const headers = ['ID', 'Name', 'Username', 'Email', 'Role', 'Status', 'Last Login'];
-    const rows = items.map((u) => [u.id, `"${u.name}"`, u.username, u.email, u.role, u.status, u.lastLoginAt || 'Never']);
+    const rows = items.map((u) => [
+      u.id,
+      `"${u.name}"`,
+      u.username,
+      u.email,
+      u.role,
+      u.status,
+      u.last_login_at || u.lastLoginAt || 'Never',
+    ]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -779,58 +1218,74 @@ export class UsersComponent implements OnInit {
     this.notify.success('Staff list exported successfully!');
   }
 
-  openAddModal(): void {
+  // -------------------------------------------------------------------------
+  // User Accounts Actions
+  // -------------------------------------------------------------------------
+  openAddUserModal(): void {
     this.editingUserId = null;
-    this.form = {
+    this.userForm = {
       name: '',
       username: '',
       email: '',
       phone: '',
-      roleId: this.roles.find((r) => r.name === 'CASHIER')?.id || this.roles[0]?.id,
+      roleId: this.roles[0]?.id || null,
       password: '',
       status: 'ACTIVE',
     };
-    this.showModal = true;
+    this.showUserModal = true;
   }
 
-  openEditModal(u: any): void {
+  openEditUserModal(u: any): void {
     this.editingUserId = u.id;
-    this.form = {
+    this.userForm = {
       name: u.name,
       username: u.username,
       email: u.email,
       phone: u.phone,
-      roleId: u.role_id,
+      roleId: u.role_id || (this.roles.find((r) => r.name === u.role)?.id) || this.roles[0]?.id,
       password: '',
       status: u.status,
     };
-    this.showModal = true;
+    this.showUserModal = true;
   }
 
   saveUser(): void {
-    if (!this.form.name) {
+    if (!this.userForm.name) {
       this.notify.error('Please enter full name');
       return;
     }
 
+    if (!this.userForm.roleId) {
+      this.notify.error('Please select a staff role');
+      return;
+    }
+
     if (this.editingUserId) {
-      this.userService.updateUser(this.editingUserId, this.form).subscribe({
+      this.userService.updateUser(this.editingUserId, this.userForm).subscribe({
         next: () => {
-          this.notify.success('User updated successfully');
-          this.showModal = false;
+          this.notify.success('Staff account updated successfully');
+          this.showUserModal = false;
           this.loadUsers();
+          this.loadRoles();
+        },
+        error: (err) => {
+          this.notify.error(err?.error?.message || 'Failed to update user');
         },
       });
     } else {
-      if (!this.form.username || !this.form.email || !this.form.password) {
+      if (!this.userForm.username || !this.userForm.email || !this.userForm.password) {
         this.notify.error('Please fill username, email and password');
         return;
       }
-      this.userService.createUser(this.form).subscribe({
+      this.userService.createUser(this.userForm).subscribe({
         next: () => {
-          this.notify.success('User created successfully');
-          this.showModal = false;
+          this.notify.success('Staff account created successfully');
+          this.showUserModal = false;
           this.loadUsers();
+          this.loadRoles();
+        },
+        error: (err) => {
+          this.notify.error(err?.error?.message || 'Failed to create user');
         },
       });
     }
@@ -838,15 +1293,172 @@ export class UsersComponent implements OnInit {
 
   deleteUser(u: User): void {
     this.notify.confirm({
-      title: 'Delete User Account',
+      title: 'Delete Staff Account',
       message: `Are you sure you want to delete ${u.name} (${u.username})?`,
       confirmText: 'Delete',
       isDestructive: true,
       onConfirm: () => {
         this.userService.deleteUser(u.id).subscribe({
           next: () => {
-            this.notify.info('User deleted');
+            this.notify.info('Staff user deleted');
             this.loadUsers();
+            this.loadRoles();
+          },
+          error: (err) => {
+            this.notify.error(err?.error?.message || 'Failed to delete user');
+          },
+        });
+      },
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Dynamic Roles Actions
+  // -------------------------------------------------------------------------
+  openAddRoleModal(): void {
+    // The button stays clickable at the limit so the reason can be explained,
+    // rather than leaving a dead control the user gets no feedback from.
+    if (this.isRoleLimitReached) {
+      this.notify.confirm({
+        title: 'Custom role limit reached',
+        message:
+          `You already have ${this.customRoles.length} of ${this.maxCustomRoles} custom roles ` +
+          `(${this.customRoles.map((r) => r.name).join(', ')}). ` +
+          `Delete one of them first, then create the new role. Built-in roles do not count towards this limit.`,
+        confirmText: 'Got it',
+        cancelText: 'Close',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    this.editingRoleId = null;
+    this.roleForm = {
+      name: '',
+      description: '',
+      permissionIds: [],
+    };
+    this.showRoleModal = true;
+  }
+
+  openConfigureRoleModal(r: Role): void {
+    this.editingRoleId = r.id;
+    const currentPermIds = (r.permissions || []).map((p) => p.id);
+    this.roleForm = {
+      name: r.name,
+      description: r.description || '',
+      permissionIds: [...currentPermIds],
+    };
+    this.showRoleModal = true;
+  }
+
+  isPermissionSelected(pId: number): boolean {
+    return this.roleForm.permissionIds.includes(pId);
+  }
+
+  togglePermission(pId: number): void {
+    if (this.isPermissionSelected(pId)) {
+      this.roleForm.permissionIds = this.roleForm.permissionIds.filter((id) => id !== pId);
+    } else {
+      this.roleForm.permissionIds = [...this.roleForm.permissionIds, pId];
+    }
+  }
+
+  isModuleAllSelected(mod: ModuleGroup): boolean {
+    if (!mod.permissions || mod.permissions.length === 0) return false;
+    return mod.permissions.every((p) => this.isPermissionSelected(p.id));
+  }
+
+  toggleModulePermissions(mod: ModuleGroup): void {
+    const allSelected = this.isModuleAllSelected(mod);
+    const modPermIds = mod.permissions.map((p) => p.id);
+    if (allSelected) {
+      this.roleForm.permissionIds = this.roleForm.permissionIds.filter((id) => !modPermIds.includes(id));
+    } else {
+      const set = new Set([...this.roleForm.permissionIds, ...modPermIds]);
+      this.roleForm.permissionIds = Array.from(set);
+    }
+  }
+
+  selectAllPermissions(): void {
+    this.roleForm.permissionIds = this.permissions.map((p) => p.id);
+  }
+
+  deselectAllPermissions(): void {
+    this.roleForm.permissionIds = [];
+  }
+
+  saveRole(): void {
+    if (!this.roleForm.name || !this.roleForm.name.trim()) {
+      this.notify.error('Please enter a role name');
+      return;
+    }
+
+    this.isSavingRole = true;
+
+    if (this.editingRoleId) {
+      this.userService
+        .updateRole(this.editingRoleId, {
+          name: this.roleForm.name.trim(),
+          description: this.roleForm.description.trim(),
+          permissionIds: this.roleForm.permissionIds,
+        })
+        .subscribe({
+          next: () => {
+            this.isSavingRole = false;
+            this.notify.success(`Role '${this.roleForm.name}' updated successfully!`);
+            this.showRoleModal = false;
+            this.loadRoles();
+            this.loadUsers();
+          },
+          error: (err) => {
+            this.isSavingRole = false;
+            this.notify.error(err?.error?.message || 'Failed to update role');
+          },
+        });
+    } else {
+      this.userService
+        .createRole({
+          name: this.roleForm.name.trim(),
+          description: this.roleForm.description.trim(),
+          permissionIds: this.roleForm.permissionIds,
+        })
+        .subscribe({
+          next: () => {
+            this.isSavingRole = false;
+            this.notify.success(`Role '${this.roleForm.name}' created successfully!`);
+            this.showRoleModal = false;
+            this.loadRoles();
+          },
+          error: (err) => {
+            this.isSavingRole = false;
+            this.notify.error(err?.error?.message || 'Failed to create role');
+          },
+        });
+    }
+  }
+
+  deleteRole(r: Role): void {
+    const userCount = r.user_count || this.countByRole(r.name);
+    if (userCount > 0) {
+      this.notify.error(
+        `Cannot delete role '${r.name}': ${userCount} staff user(s) are currently assigned to this role. Please reassign them first.`
+      );
+      return;
+    }
+
+    this.notify.confirm({
+      title: 'Delete Custom Role',
+      message: `Are you sure you want to permanently delete role '${r.name}'?`,
+      confirmText: 'Delete Role',
+      isDestructive: true,
+      onConfirm: () => {
+        this.userService.deleteRole(r.id).subscribe({
+          next: () => {
+            this.notify.success(`Role '${r.name}' deleted successfully`);
+            this.loadRoles();
+          },
+          error: (err) => {
+            this.notify.error(err?.error?.message || 'Failed to delete role');
           },
         });
       },
