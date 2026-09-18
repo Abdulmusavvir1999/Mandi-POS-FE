@@ -82,7 +82,7 @@ export class SettingsService {
 
     const flat: Record<string, string> = {};
     for (const [key, value] of Object.entries(data)) {
-      if (value && typeof value === 'object' && !Array.isArray(value) && !['system_theme', 'system_toast', 'system_business', 'system_hardware', 'system_branding'].includes(key)) {
+      if (value && typeof value === 'object' && !Array.isArray(value) && !['system_theme', 'system_toast', 'system_business', 'system_hardware', 'system_branding', 'system_pos_design', 'system_dish_layout', 'system_dining_layout', 'system_category_layout', 'system_stock_layout', 'system_customer_layout', 'system_staff_layout'].includes(key)) {
         Object.assign(flat, this.flatten(value));
       } else {
         flat[key] = typeof value === 'object' ? JSON.stringify(value) : (value as string);

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -6,6 +6,7 @@ import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { ToastComponent } from '../../shared/components/toast/toast.component';
 import { ConfirmationDialogComponent } from '../../shared/components/confirmation-dialog/confirmation-dialog.component';
+import { SidebarLayoutService } from '../../core/services/sidebar-layout.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -27,9 +28,9 @@ import { ConfirmationDialogComponent } from '../../shared/components/confirmatio
       <!-- Full-height Sidebar with Desktop Dock + Mobile Overlay Drawer Support -->
       <app-sidebar
         *ngIf="!isPosRoute"
-        [isCollapsed]="isSidebarCollapsed"
+        [isCollapsed]="isSidebarCollapsed()"
         [isMobileOpen]="isMobileSidebarOpen"
-        (toggleCollapse)="isSidebarCollapsed = !isSidebarCollapsed"
+        (toggleCollapse)="onToggleCollapse()"
         (closeMobileDrawer)="isMobileSidebarOpen = false"
       ></app-sidebar>
 
@@ -59,7 +60,9 @@ import { ConfirmationDialogComponent } from '../../shared/components/confirmatio
 })
 export class MainLayoutComponent {
   private router = inject(Router);
-  public isSidebarCollapsed = false;
+  private sidebarLayout = inject(SidebarLayoutService);
+
+  public isSidebarCollapsed = signal(false);
   public isMobileSidebarOpen = false;
   public isPosRoute = false;
 
@@ -71,6 +74,19 @@ export class MainLayoutComponent {
         this.checkPosRoute(event.urlAfterRedirects || event.url);
         this.isMobileSidebarOpen = false;
       });
+
+    // Each sidebar template opens with the operator's remembered rail state,
+    // falling back to that template's own preference (Compact starts narrow).
+    effect(() => {
+      const key = this.sidebarLayout.activeKey();
+      this.isSidebarCollapsed.set(this.sidebarLayout.resolveInitialCollapsed(key));
+    });
+  }
+
+  public onToggleCollapse(): void {
+    const next = !this.isSidebarCollapsed();
+    this.isSidebarCollapsed.set(next);
+    this.sidebarLayout.persistCollapsed(this.sidebarLayout.activeKey(), next);
   }
 
   private checkPosRoute(url: string): void {

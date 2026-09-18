@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomerService } from '../../core/services/customer.service';
@@ -9,10 +9,14 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { RouterLink } from '@angular/router';
+import { CustomerLayoutService } from '../../core/services/customer-layout.service';
+import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles';
+
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterLink, CustomDropdownComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -73,6 +77,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <span class="material-symbols-outlined">refresh</span>
             <span>Refresh</span>
           </button>
+
+          <a
+            routerLink="/settings"
+            [queryParams]="{ tab: 'customerdesign' }"
+            class="action-btn btn-outline-purple"
+            style="text-decoration: none;"
+            title="Customize Customer Directory Layout & Styling"
+          >
+            <span class="material-symbols-outlined">tune</span>
+            <span>Customize</span>
+          </a>
 
           <button
             type="button"
@@ -286,11 +301,194 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 5. CUSTOMERS DATA TABLE                                         -->
+      <!-- 5. CUSTOMERS STAGE (5 DYNAMIC DESIGNS)                           -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="table-container-card">
-        <div class="table-responsive-wrapper">
-          <table class="saas-data-table">
+      <div class="customer-stage" [ngClass]="customerLayout.rootClass()" [ngStyle]="customerLayout.cssVars()">
+        <!-- Empty State -->
+        <div *ngIf="filteredCustomers.length === 0" class="empty-state-box p-8 text-center bg-white rounded-2xl border border-purple-100 shadow-sm">
+          <span class="material-symbols-outlined empty-icon text-5xl text-purple-400">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'contacts' }}</span>
+          <div class="empty-title text-base font-bold text-slate-800 mt-2">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Guests Found' }}</div>
+          <p class="empty-desc text-xs text-slate-500 max-w-sm mx-auto mt-1">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No customer profiles match your search criteria or spending filter.' }}</p>
+          <button
+            type="button"
+            (click)="openAddModal()"
+            class="action-btn btn-gradient-purple mt-3 inline-flex mx-auto"
+          >
+            <span class="material-symbols-outlined">person_add</span>
+            <span>Register First Guest</span>
+          </button>
+        </div>
+
+        <!-- DESIGN 1: EXECUTIVE VIP CARDS -->
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'vipcard'" class="cust-vip-grid">
+          <div *ngFor="let c of paginatedCustomers" class="cust-vip-card">
+            <div class="cust-vip-header">
+              <div class="flex items-center gap-3">
+                <input
+                  title="Select guest"
+                  type="checkbox"
+                  [(ngModel)]="c.selected"
+                  class="rounded border-[#E9D5FF] text-[#7E22CE]"
+                />
+                <div class="cust-vip-avatar-wrap">
+                  <div class="cust-vip-avatar">
+                    <img *ngIf="c.image_url" [src]="settingsService.assetUrl(c.image_url)" [alt]="c.name" />
+                    <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
+                  </div>
+                  <span class="cust-vip-online" title="Active Account"></span>
+                </div>
+              </div>
+              <span class="cust-vip-badge" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
+                <span class="material-symbols-outlined" style="font-size: 13px;">diamond</span>
+                {{ getTier(c) }}
+              </span>
+            </div>
+
+            <div class="cust-vip-body">
+              <h4 class="cust-vip-name">{{ c.name }}</h4>
+              <div class="cust-vip-locality">
+                <span class="material-symbols-outlined">location_on</span>
+                <span>{{ c.address || 'Local Guest' }}</span>
+              </div>
+
+              <div class="cust-vip-chips-row">
+                <span class="cust-vip-chip" *ngIf="c.phone">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">call</span>
+                  {{ c.phone }}
+                </span>
+                <span class="cust-vip-chip" *ngIf="c.email">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">mail</span>
+                  {{ c.email }}
+                </span>
+              </div>
+
+              <div class="cust-vip-stats-bar">
+                <div class="cust-vip-stat-item">
+                  <span class="cust-vip-stat-label">Visits</span>
+                  <span class="cust-vip-stat-val">{{ c.total_visits }}</span>
+                </div>
+                <div class="cust-vip-stat-item" style="text-align: right;">
+                  <span class="cust-vip-stat-label">Total Spent</span>
+                  <span class="cust-vip-stat-val is-spend">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="cust-vip-actions">
+              <div class="text-[11px] font-mono font-bold text-purple-700">
+                #CUST-{{ c.id }}
+              </div>
+              <div class="cust-vip-btn-group">
+                <button type="button" (click)="viewHistory(c)" class="cust-vip-btn" title="View Invoices">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">receipt_long</span>
+                </button>
+                <button type="button" (click)="openEditModal(c)" class="cust-vip-btn" title="Edit Customer">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                </button>
+                <button type="button" (click)="deleteCustomer(c)" class="cust-vip-btn is-delete" title="Delete Customer">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DESIGN 2: MINIMALIST CLEAN TABLE -->
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'clean'" class="cust-clean-table-wrap">
+          <table class="cust-clean-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">
+                  <input title="Select all" type="checkbox" [(ngModel)]="selectAll" (change)="toggleSelectAll()" class="rounded" />
+                </th>
+                <th style="width: 28%;">Guest & Locality</th>
+                <th style="width: 18%;">Phone</th>
+                <th style="width: 14%;">Tier</th>
+                <th style="width: 12%;">Visits</th>
+                <th style="width: 14%;">Gross Spent</th>
+                <th style="width: 90px; text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of paginatedCustomers">
+                <td style="text-align: center;">
+                  <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
+                </td>
+                <td>
+                  <div class="cust-clean-name">{{ c.name }}</div>
+                  <div class="cust-clean-locality">{{ c.address || 'Local Guest' }}</div>
+                </td>
+                <td>
+                  <span class="cust-clean-phone">{{ c.phone }}</span>
+                </td>
+                <td>
+                  <span class="px-2 py-0.5 rounded-full text-[11px] font-bold" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
+                    {{ getTier(c) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="font-mono font-bold text-xs">{{ c.total_visits }} visits</span>
+                </td>
+                <td>
+                  <span class="cust-clean-spend">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
+                </td>
+                <td style="text-align: center;">
+                  <div class="flex items-center justify-center gap-1">
+                    <button type="button" (click)="viewHistory(c)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-purple-600">
+                      <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                    </button>
+                    <button type="button" (click)="openEditModal(c)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-blue-600">
+                      <span class="material-symbols-outlined text-[16px]">edit</span>
+                    </button>
+                    <button type="button" (click)="deleteCustomer(c)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-red-600">
+                      <span class="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- DESIGN 3: COMPACT CRM TILES -->
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'compact'" class="cust-compact-grid">
+          <div *ngFor="let c of paginatedCustomers" class="cust-compact-tile">
+            <div class="cust-compact-top">
+              <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
+              <div class="cust-compact-avatar">
+                <img *ngIf="c.image_url" [src]="settingsService.assetUrl(c.image_url)" [alt]="c.name" class="w-full h-full object-cover rounded-lg" />
+                <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h5 class="cust-compact-title">{{ c.name }}</h5>
+                <div class="cust-compact-phone">{{ c.phone }}</div>
+              </div>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
+                {{ getTier(c) }}
+              </span>
+            </div>
+
+            <div class="cust-compact-bottom">
+              <span class="text-[11px] text-slate-500">{{ c.total_visits }} visits</span>
+              <span class="cust-compact-spent">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
+              <div class="flex items-center gap-1">
+                <button type="button" (click)="viewHistory(c)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-slate-100" title="Invoices">
+                  <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+                </button>
+                <button type="button" (click)="openEditModal(c)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-slate-100" title="Edit">
+                  <span class="material-symbols-outlined text-[15px]">edit</span>
+                </button>
+                <button type="button" (click)="deleteCustomer(c)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 text-red-500" title="Delete">
+                  <span class="material-symbols-outlined text-[15px]">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DESIGN 4: LIST VIEW (ENTERPRISE TABULAR) -->
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'list'" class="cust-list-table-wrap">
+          <table class="cust-list-table">
             <thead>
               <tr>
                 <th style="width: 44px; text-align: center;">
@@ -313,7 +511,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </thead>
             <tbody>
               <tr *ngFor="let c of paginatedCustomers">
-                <!-- Checkbox -->
                 <td style="text-align: center;">
                   <input
                     title="Select this guest"
@@ -322,14 +519,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     class="rounded border-[#E9D5FF] text-[#7E22CE]"
                   />
                 </td>
-
-                <!-- Name & Initials Avatar -->
                 <td>
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-[#F3E8FF] border border-[#E9D5FF] flex items-center justify-center font-black text-xs text-[#7E22CE] shrink-0 shadow-xs">
                       <img
                         *ngIf="c.image_url"
-                        class="row-avatar-img"
+                        class="row-avatar-img w-full h-full object-cover rounded-xl"
                         [src]="settingsService.assetUrl(c.image_url)"
                         [alt]="c.name"
                       />
@@ -341,92 +536,101 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     </div>
                   </div>
                 </td>
-
-                <!-- Email -->
                 <td>
                   <span class="text-xs text-[#6B7280] font-mono truncate block">{{ c.email || '—' }}</span>
                 </td>
-
-                <!-- Phone -->
                 <td>
                   <span class="font-mono text-xs font-bold text-[#7E22CE] bg-[#FAF5FF] px-2 py-0.5 rounded-md border border-[#E9D5FF]">
                     {{ c.phone }}
                   </span>
                 </td>
-
-                <!-- Status Pill -->
                 <td>
                   <span class="status-dot-pill is-active">
                     <span class="status-dot"></span>
                     Active
                   </span>
                 </td>
-
-                <!-- Visits -->
                 <td>
                   <span class="badge badge-primary font-mono">
                     {{ c.total_visits }} visits
                   </span>
                 </td>
-
-                <!-- Total Spent -->
                 <td>
                   <span class="font-mono font-black text-xs text-[#16A34A]">
                     {{ c.total_spent | appCurrency:'1.0-0' }}
                   </span>
                 </td>
-
-                <!-- Actions -->
                 <td style="text-align: center;">
                   <div class="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      (click)="viewHistory(c)"
-                      class="action-icon-btn is-success"
-                      title="View Invoices"
-                    >
+                    <button type="button" (click)="viewHistory(c)" class="action-icon-btn is-success" title="View Invoices">
                       <span class="material-symbols-outlined" style="font-size: 18px;">receipt_long</span>
                     </button>
-                    <button
-                      type="button"
-                      (click)="openEditModal(c)"
-                      class="action-icon-btn"
-                      title="Edit Customer"
-                    >
+                    <button type="button" (click)="openEditModal(c)" class="action-icon-btn" title="Edit Customer">
                       <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
                     </button>
-                    <button
-                      type="button"
-                      (click)="deleteCustomer(c)"
-                      class="action-icon-btn is-danger"
-                      title="Delete Customer"
-                    >
+                    <button type="button" (click)="deleteCustomer(c)" class="action-icon-btn is-danger" title="Delete Customer">
                       <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Empty State -->
-              <tr *ngIf="filteredCustomers.length === 0">
-                <td colspan="8" class="empty-state-cell">
-                  <div class="empty-state-box">
-                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'contacts' }}</span>
-                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Guests Found' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No customer profiles match your search criteria or spending filter.' }}</p>
-                    <button
-                      type="button"
-                      (click)="openAddModal()"
-                      class="action-btn btn-gradient-purple mt-2"
-                    >
-                      <span class="material-symbols-outlined">person_add</span>
-                      <span>Register First Guest</span>
                     </button>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- DESIGN 5: CARD VIEW (GUEST PROFILE CARDS) -->
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'card'" class="cust-card-grid">
+          <div *ngFor="let c of paginatedCustomers" class="cust-profile-card">
+            <div class="cust-profile-cover">
+              <div class="cust-profile-avatar-pos">
+                <div class="cust-profile-avatar">
+                  <img *ngIf="c.image_url" [src]="settingsService.assetUrl(c.image_url)" [alt]="c.name" class="w-full h-full object-cover rounded-lg" />
+                  <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
+                </div>
+              </div>
+              <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-black" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
+                {{ getTier(c) }}
+              </span>
+            </div>
+
+            <div class="cust-profile-card-content">
+              <h4 class="cust-profile-name">{{ c.name }}</h4>
+              <div class="cust-profile-loc">{{ c.address || 'Local Guest' }}</div>
+
+              <div class="cust-profile-stats-row">
+                <div>
+                  <span class="text-[10px] text-slate-400 block font-bold uppercase">Visits</span>
+                  <span class="font-mono font-bold text-xs">{{ c.total_visits }} visits</span>
+                </div>
+                <div style="text-align: right;">
+                  <span class="text-[10px] text-slate-400 block font-bold uppercase">Gross Spent</span>
+                  <span class="font-mono font-black text-xs text-green-700">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
+                </div>
+              </div>
+
+              <div class="text-xs font-mono text-slate-600 truncate mb-1">
+                📞 {{ c.phone }}
+              </div>
+              <div class="text-xs font-mono text-slate-400 truncate" *ngIf="c.email">
+                ✉️ {{ c.email }}
+              </div>
+            </div>
+
+            <div class="cust-profile-card-footer">
+              <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
+              <div class="flex items-center gap-1.5">
+                <button type="button" (click)="viewHistory(c)" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-purple-700" title="Invoices">
+                  <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                </button>
+                <button type="button" (click)="openEditModal(c)" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-blue-700" title="Edit">
+                  <span class="material-symbols-outlined text-[16px]">edit</span>
+                </button>
+                <button type="button" (click)="deleteCustomer(c)" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-red-700" title="Delete">
+                  <span class="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -686,15 +890,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
     </div>
   `,
-  styles: [
-    `
-    `
-  ]
+  styles: [CUSTOMER_LAYOUT_CSS],
 })
 export class CustomersComponent implements OnInit {
   public isLoading = false;
   public loadError: string | null = null;
   public settingsService = inject(SettingsService);
+  public customerLayout = inject(CustomerLayoutService);
   private customerService = inject(CustomerService);
   private notify = inject(NotificationService);
 
@@ -761,6 +963,27 @@ export class CustomersComponent implements OnInit {
 
   get frequentCount(): number {
     return this.customers.filter((c) => c.total_visits >= 5).length;
+  }
+
+  getTier(c: Customer): string {
+    if (c.total_spent >= 5000) return 'VIP Gold';
+    if (c.total_spent >= 2500) return 'VIP Silver';
+    if (c.total_visits >= 5) return 'Regular';
+    return 'New Guest';
+  }
+
+  getTierBg(c: Customer): string {
+    if (c.total_spent >= 5000) return '#FEF3C7';
+    if (c.total_spent >= 2500) return '#F1F5F9';
+    if (c.total_visits >= 5) return '#CCFBF1';
+    return '#F3F4F6';
+  }
+
+  getTierColor(c: Customer): string {
+    if (c.total_spent >= 5000) return '#B45309';
+    if (c.total_spent >= 2500) return '#475569';
+    if (c.total_visits >= 5) return '#0F766E';
+    return '#6B7280';
   }
 
   get totalVisits(): number {

@@ -73,8 +73,13 @@ import { AuthService } from '../../../core/auth/services/auth.service';
           </div>
         </div>
 
-        <!-- User Profile Card -->
-        <div class="user-card">
+        <!-- User Profile Card (Clickable to open Profile page) -->
+        <a
+          routerLink="/profile"
+          routerLinkActive="active-user-card"
+          class="user-card"
+          title="My Profile & Account Settings"
+        >
           <div class="relative">
             <div class="user-avatar">
               {{ user.name.charAt(0) }}
@@ -91,13 +96,14 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 
           <!-- Sign Out Action -->
           <button
-            (click)="authService.logout()"
+            type="button"
+            (click)="onLogout($event)"
             class="signout-btn"
             title="Sign Out of POS System"
           >
             <span class="material-symbols-outlined g-icon-sm">logout</span>
           </button>
-        </div>
+        </a>
       </div>
     </header>
   `,
@@ -234,6 +240,20 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         border: 1px solid var(--sidebar-border, #581C87);
         padding: 0.35rem 0.55rem;
         border-radius: 1rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .user-card:hover {
+        background: rgba(126, 34, 206, 0.45);
+        border-color: #C084FC;
+        box-shadow: 0 4px 12px rgba(126, 34, 206, 0.3);
+        transform: translateY(-1px);
+      }
+      .active-user-card {
+        border-color: #C084FC !important;
+        background: rgba(126, 34, 206, 0.5) !important;
+        box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.35) !important;
       }
       @media (min-width: 640px) {
         .user-card {
@@ -342,5 +362,11 @@ export class HeaderComponent {
     const now = new Date();
     this.currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     this.currentDate = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  public onLogout(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.authService.logout();
   }
 }

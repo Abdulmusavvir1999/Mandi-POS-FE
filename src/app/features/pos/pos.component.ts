@@ -12,6 +12,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CartService } from '../../core/services/cart.service';
+import { PosDesignService } from '../../core/services/pos-design.service';
+import { POS_DESIGN_CSS } from '../../shared/styles/pos-design.styles';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { CustomerService } from '../../core/services/customer.service';
@@ -32,7 +34,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe, PageLoaderComponent],
   template: `
-    <div class="pos-fullscreen-container">
+    <div
+      class="pos-fullscreen-container"
+      [ngClass]="'pos-design-' + posDesign.activeKey()"
+      [ngStyle]="posDesign.cssVars()"
+    >
       <app-page-loader
         [loading]="isLoading"
         [error]="loadError"
@@ -232,22 +238,66 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               *ngFor="let p of filteredProducts; let i = index"
               (click)="addToCart(p)"
               class="dish-hero-card"
-              [class.is-out-of-stock]="p.current_stock <= 0"
+              [class.is-out-of-stock]="isOutOfStock(p)"
             >
-              <!-- Food Image / Icon Burst on Top -->
-              <div class="dish-floating-avatar">
-                <span class="food-emoji">{{ getProductEmoji(p.name, p.category_id) }}</span>
+              <!-- Decorative layers. Each design turns on what it needs:
+                   the glow and confetti, the angled block and dot grid, the
+                   colour band and arch, or the pale circle. -->
+              <span class="dish-deco dish-deco-a" aria-hidden="true"></span>
+              <span class="dish-deco dish-deco-b" aria-hidden="true"></span>
+
+              <!-- Out of Stock Badge -->
+              <div *ngIf="isOutOfStock(p)" class="out-of-stock-badge">
+                <span>OUT OF STOCK</span>
               </div>
 
-              <!-- Dish Info -->
+              <!-- NEW ribbon (Colour Arch); doubles as the corner dot in
+                   Diagonal Split, which is why it carries no text there. -->
+              <span class="dish-flag" aria-hidden="true">New</span>
+
+              <!-- Dish photo, falling back to the name-matched emoji -->
+              <div class="dish-floating-avatar">
+                <img
+                  *ngIf="hasProductImage(p)"
+                  class="dish-photo"
+                  [src]="settingsService.assetUrl(p.image_url!)"
+                  [alt]="p.name"
+                  loading="lazy"
+                  draggable="false"
+                  (error)="onProductImageError(p)"
+                />
+                <span *ngIf="!hasProductImage(p)" class="food-emoji">
+                  {{ getProductEmoji(p.name, p.category_id) }}
+                </span>
+              </div>
+
+              <!-- Dish Info. DOM order is fixed; each design reorders with CSS. -->
               <div class="dish-body">
                 <h3 class="dish-title">{{ p.name }}</h3>
-                <span class="dish-sub-label">Starting From</span>
+
                 <div class="dish-price-tag font-mono">
                   {{ p.selling_price | appCurrency:'1.0-0' }}
                 </div>
 
-                <!-- Star Rating & Total Sales Footer -->
+                <p class="dish-desc">{{ p.description || 'Freshly prepared to order' }}</p>
+
+                <!-- Where the artwork runs lorem spec columns, the card shows
+                     the real figures instead. -->
+                <div class="dish-specs">
+                  <div class="spec-row">
+                    <span class="spec-label">Category</span>
+                    <span class="spec-value">{{ p.category_name || 'Uncategorised' }}</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="spec-label">In Stock</span>
+                    <span class="spec-value">{{ p.current_stock || 0 }}</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="spec-label">Portions</span>
+                    <span class="spec-value">{{ p.variants?.length || 'Single' }}</span>
+                  </div>
+                </div>
+
                 <div class="dish-card-footer">
                   <div class="star-rating">
                     <span class="star-icon">★</span>
@@ -256,6 +306,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   <div class="sales-count-badge">
                     {{ (120 + (i * 45) + 30) }} Total Sale
                   </div>
+                </div>
+
+                <div class="dish-cta" aria-hidden="true">
+                  <span>ADD TO CART</span>
                 </div>
               </div>
             </div>
@@ -1457,9 +1511,26 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       box-shadow: 0 10px 25px var(--primary-glow, rgba(126, 34, 206, 0.45));
     }
     .dish-hero-card.is-out-of-stock {
-      opacity: 0.5;
-      filter: grayscale(1);
-      pointer-events: none;
+      opacity: 0.55;
+      filter: grayscale(0.85);
+      cursor: not-allowed;
+    }
+
+    .out-of-stock-badge {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      color: #FFFFFF;
+      font-size: 0.58rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.45);
+      z-index: 2;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      text-shadow: none;
     }
 
     .dish-floating-avatar {
@@ -2350,10 +2421,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       .dish-hero-card::after { transition: none; }
       .dish-hero-card:hover::after { left: -60%; }
     }
-  `],
+  `, POS_DESIGN_CSS],
 })
 export class PosComponent implements OnInit, AfterViewInit {
   public cartService = inject(CartService);
+  public posDesign = inject(PosDesignService);
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
   private customerService = inject(CustomerService);
@@ -2579,6 +2651,7 @@ export class PosComponent implements OnInit, AfterViewInit {
   private catDragStartX = 0;
   private catDragStartScroll = 0;
   private catDragDistance = 0;
+  private catPointerId: number | null = null;
   private suppressCatClick = false;
 
   /** Movement under this is a click, not a drag. */
@@ -2592,12 +2665,15 @@ export class PosComponent implements OnInit, AfterViewInit {
     if (!track) return;
 
     this.isDraggingCats = true;
+    this.catPointerId = event.pointerId;
     this.catDragStartX = event.clientX;
     this.catDragStartScroll = track.scrollLeft;
     this.catDragDistance = 0;
 
-    // Capture keeps the drag alive when the cursor leaves the rail.
-    track.setPointerCapture(event.pointerId);
+    // The pointer is deliberately not captured here. A capture held at
+    // pointerup retargets the click that follows to the capturing element, so
+    // a card inside the rail would never receive its own click. Capture is
+    // taken in onCatPointerMove, once the gesture is really a drag.
   }
 
   onCatPointerMove(event: PointerEvent): void {
@@ -2610,13 +2686,29 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.catDragDistance = Math.max(this.catDragDistance, Math.abs(dx));
     track.scrollLeft = this.catDragStartScroll - dx;
 
+    // Past the threshold the gesture is a drag, not a click, so the rail takes
+    // the pointer and the drag survives the cursor leaving the rail.
+    if (
+      this.catPointerId !== null &&
+      this.catDragDistance > PosComponent.CAT_DRAG_THRESHOLD_PX &&
+      !track.hasPointerCapture(this.catPointerId)
+    ) {
+      track.setPointerCapture(this.catPointerId);
+    }
+
     // Stops the browser starting a native image drag from a category thumbnail.
     event.preventDefault();
   }
 
+  // Also on the window, because a press is only captured once it crosses the
+  // drag threshold — a press that ends off the rail before then would
+  // otherwise leave the rail stuck in its dragging state.
+  @HostListener('window:pointerup', ['$event'])
+  @HostListener('window:pointercancel', ['$event'])
   onCatPointerEnd(event: PointerEvent): void {
-    if (!this.isDraggingCats) return;
+    if (!this.isDraggingCats || event.pointerId !== this.catPointerId) return;
     this.isDraggingCats = false;
+    this.catPointerId = null;
 
     const track = this.catTrackRef?.nativeElement;
     if (track?.hasPointerCapture(event.pointerId)) {
@@ -2672,6 +2764,17 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.updateCatScrollState();
   }
 
+  /** Dish photos that 404'd; they fall back to the emoji instead of a broken icon. */
+  private brokenProductImages = new Set<number>();
+
+  hasProductImage(p: Product): boolean {
+    return !!p.image_url && !this.brokenProductImages.has(p.id);
+  }
+
+  onProductImageError(p: Product): void {
+    this.brokenProductImages.add(p.id);
+  }
+
   /** True when the category has a usable thumbnail that has not failed to load. */
   hasCategoryImage(cat: Category): boolean {
     return !!cat.image_url && !this.brokenCategoryImages.has(cat.id);
@@ -2705,7 +2808,20 @@ export class PosComponent implements OnInit, AfterViewInit {
       );
     }
 
-    this.filteredProducts = list;
+    // Sort: In-stock dishes first (at the top), Out-of-stock dishes below (at the bottom)
+    this.filteredProducts = [...list].sort((a, b) => {
+      const aInStock = this.availableStock(a) > 0 ? 1 : 0;
+      const bInStock = this.availableStock(b) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) {
+        return bInStock - aInStock; // 1 (in-stock) comes before 0 (out-of-stock)
+      }
+      return 0; // maintain default/category order within the same stock status
+    });
+  }
+
+  /** Checks if a dish is currently out of stock. */
+  public isOutOfStock(product: Product | null): boolean {
+    return this.availableStock(product) <= 0;
   }
 
   /** Dish awaiting a portion choice; null when the chooser is closed. */
@@ -2720,6 +2836,10 @@ export class PosComponent implements OnInit, AfterViewInit {
    * rejects it too, because the consumption is what leaves the ledger.
    */
   addToCart(product: Product): void {
+    if (this.isOutOfStock(product)) {
+      this.notify.warning(`"${product.name}" is currently Out of Stock`);
+      return;
+    }
     const variants = (product.variants || []).filter((v) => v.status !== 'INACTIVE');
     if (variants.length > 0) {
       this.variantPickerProduct = product;

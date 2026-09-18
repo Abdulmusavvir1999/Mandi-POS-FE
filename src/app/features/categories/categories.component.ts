@@ -1,17 +1,21 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Category } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
+import { CategoryLayoutService } from '../../core/services/category-layout.service';
+import { CATEGORY_LAYOUT_CSS } from '../../shared/styles/category-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -72,6 +76,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <span class="material-symbols-outlined">refresh</span>
             <span>Refresh</span>
           </button>
+
+          <a
+            routerLink="/settings"
+            [queryParams]="{ tab: 'categorydesign' }"
+            class="action-btn btn-outline-purple"
+            style="text-decoration: none;"
+            title="Customize Category Page Layout & Theme"
+          >
+            <span class="material-symbols-outlined">tune</span>
+            <span>Customize</span>
+          </a>
 
           <button
             type="button"
@@ -296,30 +311,100 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 5. CATEGORIES DATA TABLE                                        -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="table-container-card">
-        <div class="table-responsive-wrapper">
-          <table class="saas-data-table">
+      <div
+        class="category-stage"
+        [ngClass]="'category-layout-' + categoryLayout.activeKey()"
+        [ngStyle]="categoryLayout.cssVars()"
+      >
+        <!-- Empty State -->
+        <div *ngIf="filteredCategories.length === 0" class="empty-state-cell w-full py-12">
+          <div class="empty-state-box">
+            <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'category' }}</span>
+            <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Categories Found' }}</div>
+            <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No categories match your current search query or active filter.' }}</p>
+            <button
+              type="button"
+              (click)="openAddModal()"
+              class="action-btn btn-gradient-purple mt-2"
+            >
+              <span class="material-symbols-outlined">add_circle</span>
+              <span>Create New Category</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. BENTO SHOWCASE -->
+        <div *ngIf="categoryLayout.activeKey() === 'showcase' && filteredCategories.length > 0" class="cat-bento-grid">
+          <div *ngFor="let cat of paginatedCategories" class="cat-bento-card" [class.bg-purple-50]="selectedIds.has(cat.id)">
+            <div class="cat-bento-header">
+              <div class="flex items-center gap-3">
+                <input
+                  title="Select category"
+                  type="checkbox"
+                  [checked]="selectedIds.has(cat.id)"
+                  (change)="toggleSelection(cat.id)"
+                  class="rounded border-[#E9D5FF] text-[#7E22CE]"
+                />
+                <div class="cat-bento-icon">
+                  <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" class="w-full h-full object-cover rounded-lg" />
+                  <span *ngIf="!cat.image_url" class="material-symbols-outlined">folder</span>
+                </div>
+              </div>
+              <div class="cat-bento-badges">
+                <span class="cat-bento-dish-pill">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">restaurant_menu</span>
+                  {{ cat.product_count || 0 }} dishes
+                </span>
+                <span class="cat-bento-status" [class.is-draft]="cat.status !== 'ACTIVE'">
+                  ● {{ cat.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="cat-bento-body">
+              <h4 class="cat-bento-title">{{ cat.name }}</h4>
+              <p class="cat-bento-desc">{{ cat.description || 'Standard dish classification' }}</p>
+            </div>
+
+            <div class="cat-bento-footer">
+              <span class="cat-bento-order">Seq #{{ cat.display_order }}</span>
+              <div class="cat-bento-actions">
+                <button type="button" (click)="openEditModal(cat)" class="cat-bento-btn" title="Edit Category">
+                  <span class="material-symbols-outlined" style="font-size: 15px;">edit</span>
+                  <span>Edit</span>
+                </button>
+                <button type="button" (click)="deleteCategory(cat)" class="cat-bento-btn !text-red-500 hover:!bg-red-50" title="Delete Category">
+                  <span class="material-symbols-outlined" style="font-size: 15px;">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. MINIMALIST CLEAN TABLE -->
+        <div *ngIf="categoryLayout.activeKey() === 'clean' && filteredCategories.length > 0" class="cat-clean-table-card">
+          <table class="cat-clean-table">
             <thead>
               <tr>
                 <th style="width: 44px; text-align: center;">
                   <input
-                    title="Select all categories"
+                    title="Select all"
                     type="checkbox"
                     [checked]="isAllSelected"
                     (change)="toggleSelectAll($event)"
                     class="rounded border-[#E9D5FF] text-[#7E22CE]"
                   />
                 </th>
-                <th style="width: 32%;">Category & Section</th>
+                <th style="width: 50px;">Seq</th>
+                <th style="width: 32%;">Category Details</th>
                 <th style="width: 28%;">Description</th>
-                <th style="width: 14%;">Order & Linked Dishes</th>
-                <th style="width: 14%;">Status</th>
-                <th style="width: 60px; text-align: center;">Actions</th>
+                <th style="width: 14%;">Dishes</th>
+                <th style="width: 12%;">Status</th>
+                <th style="width: 80px; text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cat of paginatedCategories" [class.bg-purple-50]="selectedIds.has(cat.id)">
-                <!-- Checkbox -->
+              <tr *ngFor="let cat of paginatedCategories" class="cat-clean-row" [class.bg-purple-50]="selectedIds.has(cat.id)">
                 <td style="text-align: center;">
                   <input
                     title="Select this category"
@@ -329,88 +414,42 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     class="rounded border-[#E9D5FF] text-[#7E22CE]"
                   />
                 </td>
-
-                <!-- Category Name & Icon -->
                 <td>
-                  <div class="flex items-center gap-3">
-                    <div class="category-thumb">
-                      <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" />
+                  <span class="cat-clean-id">#{{ cat.display_order }}</span>
+                </td>
+                <td>
+                  <div class="cat-clean-name-cell">
+                    <div class="cat-clean-thumb">
+                      <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" class="w-full h-full object-cover rounded-md" />
                       <span *ngIf="!cat.image_url" class="material-symbols-outlined">folder</span>
                     </div>
-                    <div class="min-w-0">
-                      <div class="font-bold text-[#2E1065] text-xs truncate">{{ cat.name }}</div>
-                      <div class="text-[11px] text-[#6B7280] font-mono">ID: #{{ cat.id }}</div>
+                    <div>
+                      <div class="cat-clean-title">{{ cat.name }}</div>
+                      <div class="cat-clean-id">ID: #{{ cat.id }}</div>
                     </div>
                   </div>
                 </td>
-
-                <!-- Description -->
                 <td>
-                  <span class="text-xs text-[#6B7280] truncate max-w-sm block">
-                    {{ cat.description || 'Standard dish classification' }}
+                  <span class="cat-clean-desc">{{ cat.description || 'Standard dish classification' }}</span>
+                </td>
+                <td>
+                  <span class="cat-clean-metric">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">restaurant</span>
+                    {{ cat.product_count || 0 }} dishes
                   </span>
                 </td>
-
-                <!-- Order & Linked Dishes -->
                 <td>
-                  <div class="order-dish-cell">
-                    <span class="order-seq" [title]="'Display order ' + cat.display_order">{{ cat.display_order }}</span>
-                    <span class="dish-chip" [class.is-empty]="!cat.product_count">
-                      <span class="material-symbols-outlined">restaurant_menu</span>
-                      <strong>{{ cat.product_count || 0 }}</strong>
-                      <span class="dish-chip-label">{{ cat.product_count === 1 ? 'dish' : 'dishes' }}</span>
-                    </span>
-                  </div>
-                </td>
-
-                <!-- Status Pill -->
-                <td>
-                  <span
-                    class="status-dot-pill"
-                    [ngClass]="cat.status === 'ACTIVE' ? 'is-active' : 'is-inactive'"
-                  >
-                    <span class="status-dot"></span>
+                  <span class="cat-clean-badge" [class.is-draft]="cat.status !== 'ACTIVE'">
                     {{ cat.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
-
-                <!-- Actions -->
-                <td style="text-align: center;">
-                  <div class="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      (click)="openEditModal(cat)"
-                      class="action-icon-btn"
-                      title="Edit Category"
-                    >
-                      <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
+                <td style="text-align: right;">
+                  <div class="flex items-center justify-end gap-1">
+                    <button type="button" (click)="openEditModal(cat)" class="cat-clean-btn" title="Edit">
+                      <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
                     </button>
-                    <button
-                      type="button"
-                      (click)="deleteCategory(cat)"
-                      class="action-icon-btn is-danger"
-                      title="Delete Category"
-                    >
-                      <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Empty State -->
-              <tr *ngIf="filteredCategories.length === 0">
-                <td colspan="6" class="empty-state-cell">
-                  <div class="empty-state-box">
-                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'category' }}</span>
-                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Categories Found' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No categories match your current search query or active filter.' }}</p>
-                    <button
-                      type="button"
-                      (click)="openAddModal()"
-                      class="action-btn btn-gradient-purple mt-2"
-                    >
-                      <span class="material-symbols-outlined">add_circle</span>
-                      <span>Create New Category</span>
+                    <button type="button" (click)="deleteCategory(cat)" class="cat-clean-btn text-red-500 hover:bg-red-50" title="Delete">
+                      <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
                     </button>
                   </div>
                 </td>
@@ -418,6 +457,144 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </tbody>
           </table>
         </div>
+
+        <!-- 3. COMPACT BADGE TILES -->
+        <div *ngIf="categoryLayout.activeKey() === 'compact' && filteredCategories.length > 0" class="cat-compact-grid">
+          <div *ngFor="let cat of paginatedCategories" class="cat-compact-tile" [class.bg-purple-50]="selectedIds.has(cat.id)">
+            <div class="cat-compact-header">
+              <div class="flex items-center gap-2">
+                <input
+                  title="Select category"
+                  type="checkbox"
+                  [checked]="selectedIds.has(cat.id)"
+                  (change)="toggleSelection(cat.id)"
+                  class="rounded border-[#E9D5FF] text-[#7E22CE]"
+                />
+                <div class="cat-compact-icon">
+                  <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" class="w-full h-full object-cover rounded-md" />
+                  <span *ngIf="!cat.image_url" class="material-symbols-outlined">folder</span>
+                </div>
+              </div>
+              <span class="cat-compact-status" [class.is-draft]="cat.status !== 'ACTIVE'">
+                {{ cat.status === 'ACTIVE' ? 'Live' : 'Draft' }}
+              </span>
+            </div>
+
+            <div class="cat-compact-name">{{ cat.name }}</div>
+
+            <div class="cat-compact-footer">
+              <span class="cat-compact-count">
+                <span class="material-symbols-outlined" style="font-size: 13px;">restaurant_menu</span>
+                {{ cat.product_count || 0 }} dishes
+              </span>
+              <div class="cat-compact-actions">
+                <button type="button" (click)="openEditModal(cat)" class="cat-compact-btn" title="Edit">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                </button>
+                <button type="button" (click)="deleteCategory(cat)" class="cat-compact-btn text-red-500 hover:bg-red-50" title="Delete">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. LIST VIEW -->
+        <div *ngIf="categoryLayout.activeKey() === 'list' && filteredCategories.length > 0" class="cat-list-container">
+          <div *ngFor="let cat of paginatedCategories" class="cat-list-row" [class.bg-purple-50]="selectedIds.has(cat.id)">
+            <input
+              title="Select category"
+              type="checkbox"
+              [checked]="selectedIds.has(cat.id)"
+              (change)="toggleSelection(cat.id)"
+              class="rounded border-[#E9D5FF] text-[#7E22CE]"
+            />
+            <span class="cat-list-seq">{{ cat.display_order }}</span>
+
+            <div class="cat-list-thumb">
+              <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" class="w-full h-full object-cover rounded-lg" />
+              <span *ngIf="!cat.image_url" class="material-symbols-outlined">folder</span>
+            </div>
+
+            <div class="cat-list-info">
+              <div class="cat-list-name">{{ cat.name }}</div>
+              <div class="cat-list-desc">{{ cat.description || 'Standard dish classification' }}</div>
+            </div>
+
+            <div class="cat-list-count">
+              <span class="material-symbols-outlined" style="font-size: 15px;">restaurant_menu</span>
+              <span><strong>{{ cat.product_count || 0 }}</strong> dishes</span>
+            </div>
+
+            <div>
+              <span class="cat-list-status" [class.is-draft]="cat.status !== 'ACTIVE'">
+                {{ cat.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+
+            <div class="cat-list-actions">
+              <button type="button" (click)="openEditModal(cat)" class="cat-list-btn" title="Edit Category">
+                <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+              </button>
+              <button type="button" (click)="deleteCategory(cat)" class="cat-list-btn text-red-500 hover:bg-red-50" title="Delete Category">
+                <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. CARD VIEW -->
+        <div *ngIf="categoryLayout.activeKey() === 'card' && filteredCategories.length > 0" class="cat-card-grid">
+          <div *ngFor="let cat of paginatedCategories" class="cat-card-item" [class.bg-purple-50]="selectedIds.has(cat.id)">
+            <div class="cat-card-banner">
+              <div class="flex items-center gap-2">
+                <input
+                  title="Select category"
+                  type="checkbox"
+                  [checked]="selectedIds.has(cat.id)"
+                  (change)="toggleSelection(cat.id)"
+                  class="rounded border-[#E9D5FF] text-[#7E22CE]"
+                />
+                <span class="cat-card-badge-top" [class.is-draft]="cat.status !== 'ACTIVE'">
+                  {{ cat.status === 'ACTIVE' ? 'Active' : 'Draft' }}
+                </span>
+              </div>
+              <div class="cat-card-avatar">
+                <img *ngIf="cat.image_url" [src]="settingsService.assetUrl(cat.image_url)" [alt]="cat.name" class="w-full h-full object-cover rounded-full" />
+                <span *ngIf="!cat.image_url" class="material-symbols-outlined" style="font-size: 28px;">folder</span>
+              </div>
+            </div>
+
+            <div class="cat-card-content">
+              <h4 class="cat-card-title">{{ cat.name }}</h4>
+              <p class="cat-card-desc">{{ cat.description || 'Standard dish classification' }}</p>
+
+              <div class="cat-card-progress">
+                <div class="cat-card-progress-bar">
+                  <div
+                    class="cat-card-progress-fill"
+                    [style.width.%]="(cat.product_count || 0) > 0 ? ((cat.product_count || 0) / 40) * 100 : 6"
+                  ></div>
+                </div>
+                <span class="cat-card-progress-text">{{ cat.product_count || 0 }} Menu Dishes</span>
+              </div>
+            </div>
+
+            <div class="cat-card-footer">
+              <span class="cat-card-seq-pill">Seq #{{ cat.display_order }}</span>
+              <div class="cat-card-actions">
+                <button type="button" (click)="openEditModal(cat)" class="cat-card-btn" title="Edit">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                  <span>Edit</span>
+                </button>
+                <button type="button" (click)="deleteCategory(cat)" class="cat-card-btn !text-red-500 hover:!bg-red-50" title="Delete">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <!-- 6. BOTTOM PAGINATION BAR                                        -->
@@ -459,7 +636,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </button>
           </div>
         </div>
-      </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 7. ADD / EDIT CATEGORY MODAL                                    -->
@@ -750,13 +926,15 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         font-size: 0.6875rem;
         color: var(--text-muted, #6B7280);
       }
-    `
+    `,
+    CATEGORY_LAYOUT_CSS,
   ]
 })
 export class CategoriesComponent implements OnInit {
   public isLoading = false;
   public loadError: string | null = null;
   public settingsService = inject(SettingsService);
+  public categoryLayout = inject(CategoryLayoutService);
   private categoryService = inject(CategoryService);
   private notify = inject(NotificationService);
 

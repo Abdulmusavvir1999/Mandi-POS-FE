@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -7,6 +7,8 @@ import { ProductService } from '../../core/services/product.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { StockItem, StockEntry, StockMovement, Product, StockUnitType } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
+import { StockLayoutService } from '../../core/services/stock-layout.service';
+import { STOCK_LAYOUT_CSS } from '../../shared/styles/stock-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
@@ -64,6 +66,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <span class="material-symbols-outlined">refresh</span>
             <span>Refresh</span>
           </button>
+
+          <a
+            routerLink="/settings"
+            [queryParams]="{ tab: 'stockdesign' }"
+            class="action-btn btn-outline-purple"
+            style="text-decoration: none;"
+            title="Customize Stock Ledger Layout & Styling"
+          >
+            <span class="material-symbols-outlined">tune</span>
+            <span>Customize</span>
+          </a>
 
           <button
             type="button"
@@ -319,139 +332,352 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ═══════════════════════════════════════════════════════════════ -->
 
       <!-- ── TAB 1: STOCK MASTER (stock_items) ────────────────────────── -->
-      <div class="table-container-card" *ngIf="activeTab === 'MASTER'">
-        <div class="table-responsive-wrapper">
-          <table class="saas-data-table">
+      <div
+        class="stock-stage mb-6"
+        *ngIf="activeTab === 'MASTER'"
+        [ngClass]="'stock-layout-' + stockLayout.activeKey()"
+        [ngStyle]="stockLayout.cssVars()"
+      >
+        <!-- Empty State -->
+        <div *ngIf="filteredMasterItems.length === 0" class="empty-state-cell w-full py-12">
+          <div class="empty-state-box">
+            <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'warehouse' }}</span>
+            <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Stock Master Items Found' }}</div>
+            <p class="empty-desc">{{ isLoading ? 'Fetching records from server…' : loadError ? loadError : 'No master stock items match your search filter.' }}</p>
+          </div>
+        </div>
+
+        <!-- 1. WAREHOUSE METRIC GRID -->
+        <div *ngIf="stockLayout.activeKey() === 'warehouse' && filteredMasterItems.length > 0" class="stock-wh-grid">
+          <div *ngFor="let item of paginatedMasterItems" class="stock-wh-card">
+            <div>
+              <div class="stock-wh-header">
+                <span class="stock-wh-sku">{{ item.stock_code }}</span>
+                <span
+                  class="stock-wh-status-badge"
+                  [ngClass]="item.current_quantity <= 0 ? 'is-critical' : item.is_low_stock ? 'is-warning' : 'is-healthy'"
+                >
+                  ● {{ item.current_quantity <= 0 ? 'Depleted' : item.is_low_stock ? 'Low Stock' : 'Optimal' }}
+                </span>
+              </div>
+
+              <div class="stock-wh-body">
+                <h4 class="stock-wh-title">{{ item.name }}</h4>
+                <p class="stock-wh-sub">Threshold: {{ item.min_stock_alert }} {{ item.unit_type }}s</p>
+              </div>
+
+              <div class="stock-wh-meter-box">
+                <div class="stock-wh-meter-row">
+                  <span class="stock-wh-qty">
+                    {{ item.current_quantity | number:'1.0-3' }} <span class="stock-wh-unit">{{ item.unit_type }}</span>
+                  </span>
+                  <span class="stock-wh-threshold">Min: {{ item.min_stock_alert }}</span>
+                </div>
+                <div class="stock-wh-bar-bg">
+                  <div
+                    class="stock-wh-bar-fill"
+                    [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                    [ngClass]="{
+                      '!bg-[#DC2626]': item.current_quantity <= 0,
+                      '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
+                      '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
+                    }"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="stock-wh-stats">
+                <div class="stock-wh-stat-card">
+                  <span class="stock-wh-stat-label">Inventory Value</span>
+                  <span class="stock-wh-stat-value is-valuation">{{ item.current_value | appCurrency:'1.0-2' }}</span>
+                </div>
+                <div class="stock-wh-stat-card">
+                  <span class="stock-wh-stat-label">Avg Unit Cost</span>
+                  <span class="stock-wh-stat-value">{{ item.average_unit_price | appCurrency:'1.0-4' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stock-wh-footer">
+              <button
+                type="button"
+                (click)="quickPurchaseEntry(item)"
+                class="stock-wh-btn btn-entry"
+                title="Add Purchase Entry"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">add_shopping_cart</span>
+                <span>Entry</span>
+              </button>
+              <button
+                type="button"
+                (click)="quickAdjust(item)"
+                class="stock-wh-btn"
+                title="Adjust Stock"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">tune</span>
+                <span>Adjust</span>
+              </button>
+              <button
+                type="button"
+                (click)="viewItemHistory(item)"
+                class="stock-wh-btn"
+                title="View Details & Ledger"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">visibility</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. AUDITED FINANCIAL LEDGER -->
+        <div *ngIf="stockLayout.activeKey() === 'financial' && filteredMasterItems.length > 0" class="stock-fin-table-card">
+          <table class="stock-fin-table">
             <thead>
               <tr>
-                <th style="width: 12%;">Stock Code</th>
-                <th style="width: 22%;">Item Name</th>
-                <th style="width: 10%;">Unit Type</th>
-                <th style="width: 14%;">Current Quantity</th>
-                <th style="width: 14%;">Stock Value</th>
-                <th style="width: 14%;">Avg Unit Price</th>
-                <th style="width: 14%; text-align: center;">Actions</th>
+                <th style="width: 14%;">Stock Code</th>
+                <th style="width: 26%;">Item Description</th>
+                <th style="width: 10%;">Unit</th>
+                <th style="width: 16%;">Live Balance</th>
+                <th style="width: 14%;">Valuation</th>
+                <th style="width: 12%;">Avg Cost</th>
+                <th style="width: 8%; text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                *ngFor="let item of paginatedMasterItems"
-                class="clickable-row"
-                (click)="viewItemHistory(item)"
-                title="Open stock ledger view"
-              >
-                <!-- Stock Code -->
+              <tr *ngFor="let item of paginatedMasterItems" class="stock-fin-row">
                 <td>
-                  <span class="font-mono text-xs font-bold text-[var(--primary)] bg-[var(--bg-app)] px-2.5 py-1 rounded-md border border-[var(--card-border)]">
-                    {{ item.stock_code }}
-                  </span>
+                  <span class="stock-fin-sku">{{ item.stock_code }}</span>
                 </td>
-
-                <!-- Name & Alert Status -->
                 <td>
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-9 h-9 rounded-xl bg-[var(--primary-light)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--primary)] shrink-0 shadow-xs"
+                  <div class="stock-fin-name">{{ item.name }}</div>
+                  <div class="stock-fin-meta">Min Alert: {{ item.min_stock_alert }} {{ item.unit_type }}s</div>
+                </td>
+                <td>
+                  <span class="stock-fin-unit-pill">{{ item.unit_type }}</span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="stock-fin-qty">{{ item.current_quantity | number:'1.0-3' }}</span>
+                    <span
+                      class="stock-fin-health-pill"
+                      [ngClass]="item.current_quantity <= 0 ? 'is-critical' : item.is_low_stock ? 'is-warning' : 'is-healthy'"
                     >
-                      <span class="material-symbols-outlined" style="font-size: 20px;">inventory_2</span>
-                    </div>
-                    <div class="min-w-0">
-                      <div class="font-bold text-[var(--text-main)] text-xs truncate flex items-center gap-1.5">
-                        <span>{{ item.name }}</span>
-                        <span *ngIf="item.status === 'inactive'" class="badge badge-danger text-[9px] py-0 px-1">Inactive</span>
-                      </div>
-                      <div class="text-[10px] text-[var(--text-muted)]">
-                        Alert Threshold: {{ item.min_stock_alert }} {{ item.unit_type }}s
-                      </div>
-                    </div>
+                      {{ item.current_quantity <= 0 ? 'Empty' : item.is_low_stock ? 'Low' : 'Optimal' }}
+                    </span>
                   </div>
                 </td>
-
-                <!-- Unit Type -->
                 <td>
-                  <span class="badge badge-primary uppercase font-mono text-[10px]">
-                    {{ item.unit_type }}
-                  </span>
+                  <span class="stock-fin-valuation">{{ item.current_value | appCurrency:'1.0-2' }}</span>
                 </td>
-
-                <!-- Current Quantity with Health Bar -->
                 <td>
-                  <div class="space-y-1 max-w-[140px]">
-                    <div class="flex items-center justify-between text-xs">
-                      <span class="font-mono font-black" [ngClass]="item.is_low_stock ? 'text-[#DC2626]' : 'text-[var(--text-main)]'">
-                        {{ item.current_quantity | number:'1.0-3' }} <span class="text-[10px] font-normal text-[var(--text-muted)]">{{ item.unit_type }}</span>
-                      </span>
-                    </div>
-                    <div class="w-full bg-[var(--card-border)] rounded-full h-1.5 overflow-hidden">
-                      <div
-                        class="h-full rounded-full transition-all duration-300"
-                        [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
-                        [ngClass]="{
-                          '!bg-[#DC2626]': item.current_quantity <= 0,
-                          '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
-                          '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
-                        }"
-                      ></div>
-                    </div>
-                  </div>
+                  <span class="stock-fin-cost">{{ item.average_unit_price | appCurrency:'1.0-4' }}</span>
                 </td>
-
-                <!-- Current Total Value -->
-                <td>
-                  <span class="font-mono font-bold text-xs text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
-                    {{ item.current_value | appCurrency:'1.0-2' }}
-                  </span>
-                </td>
-
-                <!-- Weighted Average Unit Price -->
-                <td>
-                  <span class="font-mono font-bold text-xs text-[var(--text-main)]">
-                    {{ item.average_unit_price | appCurrency:'1.0-4' }} <span class="text-[10px] text-[var(--text-muted)]">/ {{ item.unit_type }}</span>
-                  </span>
-                </td>
-
-                <!-- Actions -->
-                <td style="text-align: center;" class="row-actions-cell" (click)="$event.stopPropagation()">
-                  <div class="flex items-center justify-center gap-1.5">
-                    <button
-                      type="button"
-                      (click)="quickPurchaseEntry(item)"
-                      class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs !text-[#16A34A] hover:!bg-[#DCFCE7]"
-                      title="Add Purchase Entry"
-                    >
-                      Entry
+                <td style="text-align: right;">
+                  <div class="flex items-center justify-end gap-1">
+                    <button type="button" (click)="quickPurchaseEntry(item)" class="stock-fin-btn" title="Purchase Entry">
+                      <span class="material-symbols-outlined" style="font-size: 15px;">add_shopping_cart</span>
                     </button>
-                    <button
-                      type="button"
-                      (click)="quickAdjust(item)"
-                      class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
-                      title="Adjust Stock"
-                    >
-                      Adjust
+                    <button type="button" (click)="viewItemHistory(item)" class="stock-fin-btn" title="View Ledger">
+                      <span class="material-symbols-outlined" style="font-size: 15px;">visibility</span>
                     </button>
-                    <button
-                      type="button"
-                      (click)="viewItemHistory(item)"
-                      class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
-                      title="View Details & Ledger"
-                    >
-                      <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr *ngIf="filteredMasterItems.length === 0">
-                <td colspan="7" class="empty-state-cell">
-                  <div class="empty-state-box">
-                    <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'warehouse' }}</span>
-                    <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Stock Master Items Found' }}</div>
-                    <p class="empty-desc">{{ isLoading ? 'Fetching records from server…' : loadError ? loadError : 'No master stock items match your search filter.' }}</p>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- 3. COMPACT KANBAN STOCK TILES -->
+        <div *ngIf="stockLayout.activeKey() === 'kanban' && filteredMasterItems.length > 0" class="stock-kan-grid">
+          <div *ngFor="let item of paginatedMasterItems" class="stock-kan-tile">
+            <div class="stock-kan-header">
+              <span class="stock-kan-sku">{{ item.stock_code }}</span>
+              <span
+                class="stock-kan-status-dot"
+                [ngClass]="item.current_quantity <= 0 ? 'is-critical' : item.is_low_stock ? 'is-warning' : 'is-healthy'"
+              ></span>
+            </div>
+
+            <div class="stock-kan-name">{{ item.name }}</div>
+
+            <div class="stock-kan-qty-row">
+              <span class="stock-kan-qty">
+                {{ item.current_quantity | number:'1.0-3' }} <span class="stock-kan-unit">{{ item.unit_type }}</span>
+              </span>
+              <span class="stock-kan-val">{{ item.current_value | appCurrency:'1.0-2' }}</span>
+            </div>
+
+            <div class="stock-kan-bar">
+              <div
+                class="stock-kan-bar-fill"
+                [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                [ngClass]="{
+                  '!bg-[#DC2626]': item.current_quantity <= 0,
+                  '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
+                  '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
+                }"
+              ></div>
+            </div>
+
+            <div class="stock-kan-footer">
+              <span class="stock-kan-alert">Alert: {{ item.min_stock_alert }}</span>
+              <div class="stock-kan-actions">
+                <button type="button" (click)="quickPurchaseEntry(item)" class="stock-kan-btn" title="Purchase Entry">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">add</span>
+                </button>
+                <button type="button" (click)="viewItemHistory(item)" class="stock-kan-btn" title="Ledger">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">history</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. LIST VIEW -->
+        <div *ngIf="stockLayout.activeKey() === 'list' && filteredMasterItems.length > 0" class="stock-list-container">
+          <div *ngFor="let item of paginatedMasterItems" class="stock-list-row">
+            <div class="stock-list-left">
+              <span class="stock-list-sku">{{ item.stock_code }}</span>
+              <div>
+                <div class="stock-list-title">{{ item.name }}</div>
+                <div class="stock-list-sub">Min Alert: {{ item.min_stock_alert }} {{ item.unit_type }}s</div>
+              </div>
+            </div>
+
+            <div>
+              <span class="stock-list-unit-badge">{{ item.unit_type }}</span>
+            </div>
+
+            <div class="stock-list-qty-box">
+              <span class="stock-list-qty-num">{{ item.current_quantity | number:'1.0-3' }} {{ item.unit_type }}</span>
+              <div class="stock-list-bar">
+                <div
+                  class="stock-list-bar-fill"
+                  [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                  [ngClass]="{
+                    '!bg-[#DC2626]': item.current_quantity <= 0,
+                    '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
+                    '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
+                  }"
+                ></div>
+              </div>
+            </div>
+
+            <div>
+              <span class="stock-list-val">{{ item.current_value | appCurrency:'1.0-2' }}</span>
+            </div>
+
+            <div>
+              <span class="stock-list-cost">{{ item.average_unit_price | appCurrency:'1.0-4' }} / {{ item.unit_type }}</span>
+            </div>
+
+            <div class="stock-list-actions">
+              <button
+                type="button"
+                (click)="quickPurchaseEntry(item)"
+                class="stock-list-btn btn-entry"
+                title="Add Purchase Entry"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">add_shopping_cart</span>
+                <span>Entry</span>
+              </button>
+              <button
+                type="button"
+                (click)="quickAdjust(item)"
+                class="stock-list-btn"
+                title="Adjust Stock"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">tune</span>
+                <span>Adjust</span>
+              </button>
+              <button
+                type="button"
+                (click)="viewItemHistory(item)"
+                class="stock-list-btn"
+                title="Ledger Details"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">visibility</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. CARD VIEW -->
+        <div *ngIf="stockLayout.activeKey() === 'card' && filteredMasterItems.length > 0" class="stock-card-grid">
+          <div *ngFor="let item of paginatedMasterItems" class="stock-card-item">
+            <div>
+              <div class="stock-card-top">
+                <span class="stock-card-sku-pill">{{ item.stock_code }}</span>
+                <span class="stock-card-unit-pill">{{ item.unit_type }}</span>
+              </div>
+
+              <h4 class="stock-card-name">{{ item.name }}</h4>
+              <p class="stock-card-sub">Alert Threshold: {{ item.min_stock_alert }} {{ item.unit_type }}s</p>
+
+              <div class="stock-card-progress">
+                <div class="stock-card-progress-header">
+                  <span class="stock-card-big-qty">{{ item.current_quantity | number:'1.0-3' }} <span style="font-size: 12px; font-weight: 500;">{{ item.unit_type }}</span></span>
+                  <span
+                    class="stock-card-health-label"
+                    [ngClass]="item.current_quantity <= 0 ? 'text-[#DC2626]' : item.is_low_stock ? 'text-[#EA580C]' : 'text-[#16A34A]'"
+                  >
+                    {{ item.current_quantity <= 0 ? 'Out of Stock' : item.is_low_stock ? 'Low Stock' : 'Optimal Stock' }}
+                  </span>
+                </div>
+                <div class="stock-card-bar-bg">
+                  <div
+                    class="stock-card-bar-fill"
+                    [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                    [ngClass]="{
+                      '!bg-[#DC2626]': item.current_quantity <= 0,
+                      '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
+                      '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
+                    }"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="stock-card-values">
+                <div class="stock-card-vbox">
+                  <span class="stock-card-vbox-lbl">Valuation</span>
+                  <span class="stock-card-vbox-val">{{ item.current_value | appCurrency:'1.0-2' }}</span>
+                </div>
+                <div class="stock-card-vbox">
+                  <span class="stock-card-vbox-lbl">Unit Cost</span>
+                  <span class="stock-card-vbox-val" style="color: #0F172A;">{{ item.average_unit_price | appCurrency:'1.0-4' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stock-card-footer">
+              <button
+                type="button"
+                (click)="quickPurchaseEntry(item)"
+                class="stock-card-btn btn-entry"
+                title="Purchase Entry"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">add_shopping_cart</span>
+                <span>Purchase</span>
+              </button>
+              <button
+                type="button"
+                (click)="quickAdjust(item)"
+                class="stock-card-btn"
+                title="Adjust"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">tune</span>
+                <span>Adjust</span>
+              </button>
+              <button
+                type="button"
+                (click)="viewItemHistory(item)"
+                class="stock-card-btn"
+                title="Audit"
+              >
+                <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1495,14 +1721,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     </div>
   `,
   styles: [
-    `
-    `
+    STOCK_LAYOUT_CSS,
   ]
 })
 export class StockComponent implements OnInit {
   public isLoading = false;
   public loadError: string | null = null;
   public settingsService = inject(SettingsService);
+  public stockLayout = inject(StockLayoutService);
   private stockService = inject(StockService);
   private productService = inject(ProductService);
   private notify = inject(NotificationService);

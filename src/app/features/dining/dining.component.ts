@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -9,6 +9,8 @@ import { SettingsService } from '../../core/services/settings.service';
 import { DiningTable, TableStatus } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DiningLayoutService } from '../../core/services/dining-layout.service';
+import { DINING_LAYOUT_CSS } from '../../shared/styles/dining-layout.styles';
 
 /** Six ticks of fifteen minutes — the ninety-minute turn the floor is run to. */
 const DwellRail = {
@@ -207,13 +209,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 4. VISUAL FLOOR MAP                                             -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="floor-panel">
+      <div class="floor-panel dining-stage" [ngClass]="'dining-layout-' + diningLayout.activeKey()" [ngStyle]="diningLayout.cssVars()">
         <div class="floor-panel-head">
           <div class="flex-align-center gap-2">
             <span class="material-symbols-outlined icon-purple">map</span>
             <div>
               <h3 class="floor-panel-title">
-                {{ selectedSection || 'Entire Floor' }}
+                {{ selectedSection || 'Entire Floor' }} · {{ diningLayout.activeDesign().name }}
               </h3>
               <p class="floor-panel-sub">
                 {{ filteredTables.length }} table{{ filteredTables.length === 1 ? '' : 's' }} shown · click a free table to start its order
@@ -266,112 +268,341 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </button>
         </div>
 
-        <div class="floor-grid" *ngIf="filteredTables.length > 0">
-          <!-- The whole tile is the tap target - a waiter mid-service should not -->
-          <!-- have to hit a small button. Only the gear opts out of that.        -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- DESIGN 1: CHECKERED FLOOR PLAN (Reference 1)                    -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="chk-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'checkered'">
+          <span class="chk-plant" style="top: 15px; left: 20px;"></span>
+          <span class="chk-plant" style="top: 15px; right: 25px;"></span>
+          <span class="chk-plant" style="top: 50%; left: 45%;"></span>
+
           <article
             *ngFor="let table of filteredTables; trackBy: trackByTableId"
-            class="table-tile"
-            [ngClass]="tileClasses(table)"
+            class="chk-table-card"
+            [ngClass]="{
+              'chk-table-banquet': table.capacity >= 6,
+              'chk-table-square': table.capacity === 4 || table.capacity === 5,
+              'chk-table-round': table.capacity <= 3
+            }"
             role="button"
             tabindex="0"
             [attr.aria-label]="tileAction(table) + ' — ' + table.table_number + ', ' + table.name"
             (click)="onTileClick(table, $event)"
-            (keydown.enter)="onTileClick(table, $event)"
-            (keydown.space)="onTileClick(table, $event)"
           >
-            <!-- Section owns the top line: colour groups the floor before you -->
-            <!-- read a single label. Status keeps its own green/amber/red.     -->
-            <header class="tile-head">
-              <span class="zone-chip" [title]="table.section">
-                <i class="zone-dot"></i>{{ table.section }}
-              </span>
-              <span class="tile-status" [ngClass]="statusClass(table.status)">
-                <i class="status-dot"></i>{{ statusLabel(table.status) }}
-              </span>
-            </header>
+            <!-- Banquet Table (>= 6 seats) -->
+            <ng-container *ngIf="table.capacity >= 6">
+              <div class="chk-chair-seat chk-chair-top" style="left: 30px;"></div>
+              <div class="chk-chair-seat chk-chair-top" style="left: 80px;"></div>
+              <div class="chk-chair-seat chk-chair-top" style="left: 130px;"></div>
+              <div class="chk-chair-seat chk-chair-top" style="left: 180px;"></div>
+              <div class="chk-chair-seat chk-chair-bottom" style="left: 30px;"></div>
+              <div class="chk-chair-seat chk-chair-bottom" style="left: 80px;"></div>
+              <div class="chk-chair-seat chk-chair-bottom" style="left: 130px;"></div>
+              <div class="chk-chair-seat chk-chair-bottom" style="left: 180px;"></div>
+              <div class="chk-chair-seat chk-chair-left" style="top: calc(50% - 11px);"></div>
+              <div class="chk-chair-seat chk-chair-right" style="top: calc(50% - 11px);"></div>
 
-            <!-- Identity + capacity -->
-            <div class="tile-id">
-              <div class="id-text">
-                <span class="tile-number">{{ table.table_number }}</span>
-                <span class="tile-name" [title]="table.name">{{ table.name }}</span>
-              </div>
-              <div class="tile-seats">
-                <b>{{ table.capacity }}</b>
-                <span>Seats</span>
-              </div>
-            </div>
+              <div class="chk-cloth-diamond"></div>
 
-            <div class="tile-rule"></div>
-
-            <!-- Seated: the running check is the headline, dwell time under it -->
-            <ng-container *ngIf="table.status === 'OCCUPIED'">
-              <div class="bill-hero">
-                <span class="bill-total">{{ table.order_current_total | appCurrency:'1.2-2' }}</span>
-                <span class="bill-ref" *ngIf="table.order_number">{{ table.order_number }}</span>
+              <div class="chk-guest-label">
+                {{ table.customer_name || table.name || 'Table' }}
+                <span class="chk-guest-time">{{ seatedClock(table) || (table.capacity + ' seats') }}</span>
               </div>
 
-              <!-- Dwell rail: each tick is 15 minutes of a 90-minute turn, so a -->
-              <!-- table running long reads from across the room.                -->
-              <div class="dwell" *ngIf="minutesSeated(table) !== null">
-                <div class="dwell-ticks">
-                  <i
-                    *ngFor="let lit of dwellTicks(table); trackBy: trackByIndex"
-                    [class.on]="lit"
-                  ></i>
-                </div>
-                <div class="dwell-legend">
-                  <span>{{ dwellText(table) }} on table</span>
-                  <span [class.is-over]="isOverTurn(table)">{{ isOverTurn(table) ? 'Over turn' : 'Seated ' + seatedClock(table) }}</span>
-                </div>
-              </div>
-
-              <div class="tile-cells">
-                <div>
-                  <span>On table</span>
-                  <b>{{ dwellText(table) || '—' }}</b>
-                </div>
-                <div>
-                  <span>Per seat</span>
-                  <b>{{ perSeat(table) | appCurrency:'1.0-0' }}</b>
-                </div>
-                <div *ngIf="table.customer_name">
-                  <span>Guest</span>
-                  <b class="plain" [title]="table.customer_name">{{ table.customer_name }}</b>
-                </div>
+              <div
+                class="chk-status-badge"
+                [class.is-free]="table.status === 'AVAILABLE'"
+                [class.is-busy]="table.status === 'OCCUPIED'"
+                [class.is-blocked]="table.status === 'UNAVAILABLE'"
+              >
+                {{ table.table_number }}
               </div>
             </ng-container>
 
-            <!-- Free -->
-            <p *ngIf="table.status === 'AVAILABLE'" class="tile-note">
-              Laid and ready · seats up to <b>{{ table.capacity }}</b>
-            </p>
+            <!-- Square Table (4-5 seats) -->
+            <ng-container *ngIf="table.capacity === 4 || table.capacity === 5">
+              <div class="chk-chair-seat chk-chair-top" style="left: calc(50% - 11px);"></div>
+              <div class="chk-chair-seat chk-chair-bottom" style="left: calc(50% - 11px);"></div>
+              <div class="chk-chair-seat chk-chair-left" style="top: calc(50% - 11px);"></div>
+              <div class="chk-chair-seat chk-chair-right" style="top: calc(50% - 11px);"></div>
+              <div
+                class="chk-bottom-accent"
+                [class.accent-yellow]="sectionIndex(table.section) % 3 === 0"
+                [class.accent-teal]="sectionIndex(table.section) % 3 === 1"
+                [class.accent-orange]="sectionIndex(table.section) % 3 === 2"
+              ></div>
+              <div class="chk-coaster">
+                <span class="chk-coaster-code">{{ table.table_number }}</span>
+              </div>
+            </ng-container>
 
-            <!-- Out of service -->
-            <p *ngIf="table.status === 'UNAVAILABLE'" class="tile-note is-blocked-note">
-              <span class="material-symbols-outlined">build</span>
-              <span>Blocked — not seatable until it is returned to service.</span>
-            </p>
+            <!-- Round Table (<= 3 seats) -->
+            <ng-container *ngIf="table.capacity <= 3">
+              <div class="chk-chair-seat chk-chair-top" style="left: calc(50% - 11px);"></div>
+              <div class="chk-chair-seat chk-chair-left" style="top: calc(50% - 11px);"></div>
+              <div class="chk-chair-seat chk-chair-right" style="top: calc(50% - 11px);"></div>
+              <div
+                class="chk-booth-arc"
+                [class.arc-orange]="sectionIndex(table.section) % 2 === 0"
+                [class.arc-teal]="sectionIndex(table.section) % 2 === 1"
+              ></div>
+              <div class="chk-coaster">
+                <span class="chk-coaster-code">{{ table.table_number }}</span>
+              </div>
+            </ng-container>
+          </article>
+        </div>
 
-            <!-- Actions -->
-            <footer class="tile-actions">
-              <span class="tile-go">
-                <span class="material-symbols-outlined">{{ tileActionIcon(table) }}</span>
-                <span>{{ tileAction(table) }}</span>
-                <span class="material-symbols-outlined go-arrow">arrow_forward</span>
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- DESIGN 2: TABLE VIEW / SOFT NEUMORPHIC (Reference 2)            -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="neu-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'neumorphic'">
+          <article
+            *ngFor="let table of filteredTables; trackBy: trackByTableId"
+            class="neu-table-card"
+            [ngClass]="{
+              'neu-table-8seat': table.capacity >= 8,
+              'neu-table-6seat': table.capacity === 6 || table.capacity === 7,
+              'neu-table-4seat': table.capacity === 4 || table.capacity === 5,
+              'neu-table-2seat': table.capacity <= 3,
+              'is-busy': table.status === 'OCCUPIED'
+            }"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="tileAction(table) + ' — ' + table.table_number + ', ' + table.name"
+            (click)="onTileClick(table, $event)"
+          >
+            <!-- Top Pill Seats -->
+            <span class="neu-pill-seat neu-pill-top" style="left: 20px;" *ngIf="table.capacity >= 4"></span>
+            <span class="neu-pill-seat neu-pill-top" style="left: calc(50% - 16px);"></span>
+            <span class="neu-pill-seat neu-pill-top" style="right: 20px;" *ngIf="table.capacity >= 4"></span>
+
+            <!-- Bottom Pill Seats -->
+            <span class="neu-pill-seat neu-pill-bottom" style="left: 20px;" *ngIf="table.capacity >= 4"></span>
+            <span class="neu-pill-seat neu-pill-bottom" style="left: calc(50% - 16px);"></span>
+            <span class="neu-pill-seat neu-pill-bottom" style="right: 20px;" *ngIf="table.capacity >= 4"></span>
+
+            <!-- Side Pill Seats -->
+            <span class="neu-pill-seat neu-pill-left" *ngIf="table.capacity >= 6"></span>
+            <span class="neu-pill-seat neu-pill-right" *ngIf="table.capacity >= 6"></span>
+
+            <!-- Center Badge -->
+            <div
+              class="neu-code-badge"
+              [class.badge-red]="table.status === 'OCCUPIED'"
+              [class.badge-blue]="table.status === 'AVAILABLE' && sectionIndex(table.section) % 2 === 0"
+              [class.badge-dark]="table.status === 'AVAILABLE' && sectionIndex(table.section) % 2 !== 0"
+            >
+              <span>{{ table.table_number }}</span>
+              <span class="neu-bill-sub" *ngIf="table.status === 'OCCUPIED' && table.order_current_total">
+                {{ table.order_current_total | appCurrency:'1.0-0' }}
               </span>
+              <span class="neu-bill-sub" *ngIf="table.status === 'AVAILABLE'">
+                {{ table.capacity }} seats
+              </span>
+            </div>
+          </article>
+        </div>
 
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- DESIGN 3: ILLUSTRATED CAPACITY FLOOR (Reference 3)              -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="ill-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'illustrated'">
+          <article
+            *ngFor="let table of filteredTables; trackBy: trackByTableId"
+            class="ill-table-card"
+            [ngClass]="[
+              sectionIndex(table.section) % 3 === 0 ? 'ill-theme-mint' : sectionIndex(table.section) % 3 === 1 ? 'ill-theme-pink' : 'ill-theme-lavender',
+              table.capacity >= 6 ? 'ill-table-lg' : table.capacity >= 4 ? 'ill-table-md' : 'ill-table-sm'
+            ]"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="tileAction(table) + ' — ' + table.table_number + ', ' + table.name"
+            (click)="onTileClick(table, $event)"
+          >
+            <!-- Top illustrated chairs (filled when occupied, outline when free) -->
+            <div class="ill-chair-icon ill-chair-top" [class.is-occupied]="table.status === 'OCCUPIED'" style="left: 20px;" *ngIf="table.capacity >= 4">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+            <div class="ill-chair-icon ill-chair-top" [class.is-occupied]="table.status === 'OCCUPIED'" style="left: calc(50% - 10px);">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+            <div class="ill-chair-icon ill-chair-top" [class.is-occupied]="table.status === 'OCCUPIED'" style="right: 20px;" *ngIf="table.capacity >= 4">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+
+            <!-- Bottom illustrated chairs -->
+            <div class="ill-chair-icon ill-chair-bottom" [class.is-occupied]="table.status === 'OCCUPIED'" style="left: 20px;" *ngIf="table.capacity >= 4">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+            <div class="ill-chair-icon ill-chair-bottom" [class.is-occupied]="table.status === 'OCCUPIED'" style="left: calc(50% - 10px);">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+            <div class="ill-chair-icon ill-chair-bottom" [class.is-occupied]="table.status === 'OCCUPIED'" style="right: 20px;" *ngIf="table.capacity >= 4">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+
+            <!-- End chairs -->
+            <div class="ill-chair-icon ill-chair-left" [class.is-occupied]="table.status === 'OCCUPIED'" style="top: calc(50% - 9px);">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+            <div class="ill-chair-icon ill-chair-right" [class.is-occupied]="table.status === 'OCCUPIED'" style="top: calc(50% - 9px);">
+              <svg class="ill-chair-svg" viewBox="0 0 24 24"><path d="M5 20V9a7 7 0 0 1 14 0v11M3 20h18M8 12h8" /></svg>
+            </div>
+
+            <div class="ill-table-title">{{ table.table_number }} · {{ table.name }}</div>
+            <div class="ill-table-capacity">
+              <span>👥</span>
+              <span>{{ table.capacity }}</span>
+            </div>
+          </article>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- DESIGN 4: LIST VIEW                                             -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="list-table-container" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'list'">
+          <table class="list-table-grid">
+            <thead>
+              <tr>
+                <th>Table Code</th>
+                <th>Name</th>
+                <th>Section</th>
+                <th>Capacity</th>
+                <th>Status</th>
+                <th>Dwell Time</th>
+                <th>Running Check</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let table of filteredTables; trackBy: trackByTableId"
+                (click)="onTileClick(table, $event)"
+              >
+                <td><span class="list-code-badge">{{ table.table_number }}</span></td>
+                <td><b>{{ table.name }}</b></td>
+                <td><span class="list-section-chip">{{ table.section }}</span></td>
+                <td>{{ table.capacity }} Seats</td>
+                <td>
+                  <span
+                    class="list-status-pill"
+                    [class.is-free]="table.status === 'AVAILABLE'"
+                    [class.is-busy]="table.status === 'OCCUPIED'"
+                    [class.is-blocked]="table.status === 'UNAVAILABLE'"
+                  >
+                    ● {{ statusLabel(table.status) }}
+                  </span>
+                </td>
+                <td>
+                  <span *ngIf="table.status === 'OCCUPIED'">{{ dwellText(table) || 'Seated ' + seatedClock(table) }}</span>
+                  <span *ngIf="table.status !== 'OCCUPIED'" class="text-slate-400">—</span>
+                </td>
+                <td>
+                  <span *ngIf="table.status === 'OCCUPIED' && table.order_current_total" class="font-bold font-mono">
+                    {{ table.order_current_total | appCurrency:'1.2-2' }}
+                  </span>
+                  <span *ngIf="table.status !== 'OCCUPIED'" class="text-slate-400">—</span>
+                </td>
+                <td style="text-align: right;">
+                  <button
+                    type="button"
+                    class="list-action-btn"
+                    (click)="onTileClick(table, $event); $event.stopPropagation();"
+                  >
+                    {{ tileAction(table) }}
+                  </button>
+                  <button
+                    type="button"
+                    class="ml-2 text-slate-400 hover:text-purple-600 transition-colors"
+                    (click)="editTable(table, $event); $event.stopPropagation();"
+                    title="Edit Table"
+                  >
+                    <span class="material-symbols-outlined text-sm">settings</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- DESIGN 5: CARD LIST VIEW                                        -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="cardlist-container" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'cardlist'">
+          <article
+            *ngFor="let table of filteredTables; trackBy: trackByTableId"
+            class="cardlist-row-card"
+            role="button"
+            tabindex="0"
+            (click)="onTileClick(table, $event)"
+          >
+            <div class="cardlist-left-col">
+              <span
+                class="cardlist-badge"
+                [class.is-free]="table.status === 'AVAILABLE'"
+                [class.is-busy]="table.status === 'OCCUPIED'"
+                [class.is-blocked]="table.status === 'UNAVAILABLE'"
+              >
+                {{ table.table_number }}
+              </span>
+              <div>
+                <span class="cardlist-section">{{ table.section }}</span>
+                <div class="cardlist-seats">👥 {{ table.capacity }} Seats</div>
+              </div>
+            </div>
+
+            <div class="cardlist-mid-col">
+              <div class="cardlist-title-row">
+                <span class="cardlist-name">{{ table.name }}</span>
+                <span
+                  class="list-status-pill"
+                  [class.is-free]="table.status === 'AVAILABLE'"
+                  [class.is-busy]="table.status === 'OCCUPIED'"
+                  [class.is-blocked]="table.status === 'UNAVAILABLE'"
+                >
+                  ● {{ statusLabel(table.status) }}
+                </span>
+              </div>
+
+              <div class="cardlist-dwell-bar" *ngIf="table.status === 'OCCUPIED'">
+                <i
+                  *ngFor="let lit of dwellTicks(table); trackBy: trackByIndex"
+                  [class.on]="lit"
+                ></i>
+              </div>
+              <span class="text-xs text-slate-500" *ngIf="table.status === 'OCCUPIED'">
+                {{ dwellText(table) }} on table · {{ table.customer_name ? 'Guest: ' + table.customer_name : 'Order ' + (table.order_number || '') }}
+              </span>
+              <span class="text-xs text-slate-500" *ngIf="table.status === 'AVAILABLE'">
+                Laid and ready · Seats up to {{ table.capacity }}
+              </span>
+              <span class="text-xs text-slate-500" *ngIf="table.status === 'UNAVAILABLE'">
+                Out of service
+              </span>
+            </div>
+
+            <div class="cardlist-right-col">
+              <div *ngIf="table.status === 'OCCUPIED'">
+                <div class="cardlist-bill-amount">{{ table.order_current_total | appCurrency:'1.2-2' }}</div>
+                <span class="text-xs text-slate-400" *ngIf="table.order_number">{{ table.order_number }}</span>
+              </div>
               <button
                 type="button"
-                (click)="editTable(table, $event)"
-                class="tile-icon-btn"
-                title="Edit table"
-                aria-label="Edit table"
+                class="list-action-btn"
+                (click)="onTileClick(table, $event); $event.stopPropagation();"
               >
-                <span class="material-symbols-outlined">settings</span>
+                {{ tileAction(table) }}
               </button>
-            </footer>
+              <button
+                type="button"
+                class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+                (click)="editTable(table, $event); $event.stopPropagation();"
+                title="Edit Table"
+              >
+                <span class="material-symbols-outlined text-base">settings</span>
+              </button>
+            </div>
           </article>
         </div>
       </div>
@@ -514,6 +745,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     </div>
   `,
   styles: [
+    DINING_LAYOUT_CSS,
     `
       .icon-purple {
         color: var(--primary, #7E22CE);
@@ -1241,6 +1473,7 @@ export class DiningComponent implements OnInit, OnDestroy {
   public isLoading = false;
   public loadError: string | null = null;
   public settingsService = inject(SettingsService);
+  public diningLayout = inject(DiningLayoutService);
   private diningService = inject(DiningService);
   private cartService = inject(CartService);
   private router = inject(Router);

@@ -66,6 +66,27 @@ export class AuthService {
     return roles.includes(user.role);
   }
 
+  public updateProfile(data: { name: string; email?: string; phone?: string; image_url?: string }): Observable<ApiResponse<User>> {
+    return this.http.put<ApiResponse<User>>(`${this.API_URL}/auth/profile`, data).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const current = this.currentUserSignal();
+          const updatedUser: User = {
+            ...current,
+            ...res.data,
+            permissions: res.data.permissions || current?.permissions || [],
+          };
+          localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+          this.currentUserSignal.set(updatedUser);
+        }
+      })
+    );
+  }
+
+  public changePassword(data: { currentPassword?: string; newPassword: string }): Observable<ApiResponse<{ message: string }>> {
+    return this.http.post<ApiResponse<{ message: string }>>(`${this.API_URL}/auth/change-password`, data);
+  }
+
   public refreshUserData(): void {
     const token = this.getToken();
     if (!token) return;

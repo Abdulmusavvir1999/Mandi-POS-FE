@@ -2924,7 +2924,7 @@ button,
   padding: 0.15rem 0.6rem;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
-  color: #FFFFFF;
+  color: #FFFFFF !important;
   font-weight: 800;
   letter-spacing: 0.01em;
   box-shadow:

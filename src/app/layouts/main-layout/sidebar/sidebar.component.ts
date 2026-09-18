@@ -1,8 +1,11 @@
-import { Component, Input, Output, EventEmitter, HostBinding, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostBinding, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { SidebarLayoutService } from '../../../core/services/sidebar-layout.service';
+import { SIDEBAR_LAYOUT_CSS } from '../../../shared/styles/sidebar-layout.styles';
 
 export interface NavItem {
   id: string;
@@ -37,6 +40,8 @@ export interface NavSection {
     <aside
       class="sidebar-container"
       [class.is-collapsed]="isCollapsed"
+      [ngClass]="'tpl-' + sidebarLayout.activeKey()"
+      [ngStyle]="sidebarLayout.cssVars()"
       aria-label="Main Navigation"
     >
       <!-- 1. Brand Header (64px) -->
@@ -83,27 +88,95 @@ export interface NavSection {
         </button>
       </div>
 
+      <!-- 1b. Quick Action Shortcuts (template capability) -->
+      <div
+        class="sb-quick-actions"
+        *ngIf="sidebarLayout.caps().quickActions && !isCollapsed"
+      >
+        <a
+          *ngIf="canAccess(alertsShortcut)"
+          [routerLink]="alertsShortcut.route"
+          (click)="onNavItemClick()"
+          class="sb-quick-btn"
+          title="Live kitchen order alerts"
+        >
+          <span class="sb-quick-dot" aria-hidden="true"></span>
+          <span class="material-symbols-outlined">notifications</span>
+          <span>Alerts</span>
+        </a>
+        <button
+          type="button"
+          class="sb-quick-btn"
+          (click)="showShortcutHelp()"
+          title="Navigation & shortcut help"
+        >
+          <span class="material-symbols-outlined">help</span>
+          <span>Help</span>
+        </button>
+      </div>
+
+      <!-- 1c. Menu Search (template capability) -->
+      <div class="sb-search-wrap" *ngIf="sidebarLayout.caps().hasSearch && !isCollapsed">
+        <div class="sb-search-field">
+          <span class="material-symbols-outlined sb-search-icon">search</span>
+          <input
+            type="text"
+            class="sb-search-input"
+            placeholder="Search menu…"
+            aria-label="Filter navigation menu"
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+          />
+          <button
+            *ngIf="searchQuery()"
+            type="button"
+            class="sb-search-clear"
+            (click)="clearSearch()"
+            aria-label="Clear menu search"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
       <!-- 2. Navigation Groups (Scrollable) -->
       <nav class="sidebar-nav-scroll" role="navigation">
         <div class="nav-groups-wrapper">
-          <ng-container *ngFor="let section of navSections">
+          <ng-container *ngFor="let section of filteredSections()">
             <div class="nav-section" *ngIf="hasVisibleItems(section)">
-              <!-- Section Label -->
-              <div class="section-label" *ngIf="!isCollapsed">
-                {{ section.title }}
-              </div>
+              <!-- Section Label — a button when the template allows folding -->
+              <ng-container *ngIf="!isCollapsed">
+                <button
+                  *ngIf="sidebarLayout.caps().collapsibleSections; else staticLabel"
+                  type="button"
+                  class="section-label"
+                  [class.is-folded]="isFolded(section)"
+                  (click)="toggleSection(section)"
+                  [attr.aria-expanded]="!isFolded(section)"
+                >
+                  <span>{{ section.title }}</span>
+                  <span class="material-symbols-outlined section-chevron">expand_more</span>
+                </button>
+                <ng-template #staticLabel>
+                  <div class="section-label">{{ section.title }}</div>
+                </ng-template>
+              </ng-container>
               <div class="section-divider-collapsed" *ngIf="isCollapsed"></div>
 
               <!-- Menu Items -->
-              <div class="section-items">
+              <div class="section-items" [class.is-folded]="isFolded(section)">
                 <ng-container *ngFor="let item of section.items">
                   <a
                     *ngIf="canAccess(item)"
                     [routerLink]="item.route"
                     [queryParams]="item.queryParams || null"
                     (click)="onNavItemClick()"
+                    (mouseenter)="showTip($event, item.label)"
+                    (mouseleave)="hideTip()"
+                    (focus)="showTip($event, item.label)"
+                    (blur)="hideTip()"
                     routerLinkActive="is-active"
-                    [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' || item.route === '/pos' || (item.queryParams !== undefined) }"
+                    [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' || item.route === '/pos' || item.route === '/settings' || (item.queryParams !== undefined) }"
                     class="menu-item"
                     [class.pos-special-item]="item.isPos"
                     [attr.aria-label]="item.label"
@@ -125,22 +198,30 @@ export interface NavSection {
                       {{ item.badge }}
                     </span>
 
-                    <!-- Collapsed Tooltip -->
-                    <span *ngIf="isCollapsed" class="collapsed-tooltip" role="tooltip">
-                      {{ item.label }}
-                    </span>
                   </a>
                 </ng-container>
               </div>
             </div>
           </ng-container>
+
+          <!-- Empty search state -->
+          <div class="sb-empty-results" *ngIf="searchQuery() && !hasAnyResult()">
+            <span class="material-symbols-outlined">search_off</span>
+            <span>No menu matches “{{ searchQuery() }}”</span>
+          </div>
         </div>
       </nav>
 
       <!-- 3. Bottom Section: User Profile & Logout -->
       <div class="sidebar-footer" *ngIf="authService.currentUser() as user">
         <!-- User Profile Card -->
-        <div class="user-profile-card" [class.user-card-collapsed]="isCollapsed">
+        <a
+          routerLink="/profile"
+          (click)="onNavItemClick()"
+          class="user-profile-card"
+          [class.user-card-collapsed]="isCollapsed"
+          title="View & Manage Profile"
+        >
           <div class="user-avatar-wrapper" [title]="isCollapsed ? (user.name + ' (' + (user.role || 'Staff') + ')') : ''">
             <div class="user-avatar">
               {{ getInitials(user.name) }}
@@ -158,13 +239,13 @@ export interface NavSection {
             *ngIf="!isCollapsed"
             type="button"
             class="logout-button"
-            (click)="handleLogout()"
+            (click)="handleLogout($event)"
             aria-label="Logout"
             title="Sign out of system"
           >
             <span class="material-symbols-outlined g-icon-sm">logout</span>
           </button>
-        </div>
+        </a>
 
         <!-- Standalone Logout Button when Collapsed -->
         <div class="collapsed-logout-wrap" *ngIf="isCollapsed">
@@ -172,527 +253,26 @@ export interface NavSection {
             type="button"
             class="collapsed-logout-btn"
             (click)="handleLogout()"
+            (mouseenter)="showTip($event, 'Logout')"
+            (mouseleave)="hideTip()"
             aria-label="Logout"
             title="Sign out"
           >
             <span class="material-symbols-outlined g-icon-sm">logout</span>
-            <span class="collapsed-tooltip" role="tooltip">Logout</span>
           </button>
         </div>
       </div>
+
+      <!-- Rail tooltip, rendered outside the scrolling nav so it is never clipped -->
+      <span
+        class="rail-tooltip"
+        role="tooltip"
+        *ngIf="tooltip() as tip"
+        [style.top.px]="tip.top"
+      >{{ tip.label }}</span>
     </aside>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-        height: 100%;
-        flex-shrink: 0;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-
-      .sidebar-container {
-        display: flex;
-        flex-direction: column;
-        width: 240px;
-        min-width: 230px;
-        max-width: 250px;
-        height: 100%;
-        background-color: var(--sidebar-bg, #2E1065);
-        border-right: 1px solid var(--sidebar-border, #581C87);
-        box-sizing: border-box;
-        transition: width 180ms ease, min-width 180ms ease, max-width 180ms ease, transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
-        position: relative;
-        z-index: 30;
-        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      }
-
-      .sidebar-container.is-collapsed {
-        width: 68px;
-        min-width: 68px;
-        max-width: 68px;
-      }
-
-      /* 1. BRAND HEADER (64px) */
-      .brand-header {
-        height: 64px;
-        min-height: 64px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 12px;
-        border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border, #581C87) 70%, #FFFFFF 30%);
-        box-sizing: border-box;
-        gap: 8px;
-      }
-
-      .brand-content {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 0;
-        flex: 1;
-      }
-
-      .is-collapsed .brand-header {
-        justify-content: center;
-        padding: 0 8px;
-      }
-
-      .is-collapsed .brand-content {
-        justify-content: center;
-        flex: none;
-      }
-
-      .brand-logo-container {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        background-color: var(--sidebar-surface, #3B0764);
-        border: 1px solid var(--sidebar-border, #581C87);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--sidebar-active-accent, #C084FC);
-        flex-shrink: 0;
-        transition: background-color 150ms ease, border-color 150ms ease;
-      }
-
-      .brand-logo-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 7px;
-      }
-
-      .brand-logo-icon {
-        color: var(--sidebar-active-accent, #C084FC);
-      }
-
-      .brand-meta {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        overflow: hidden;
-      }
-
-      .brand-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: var(--sidebar-text, #FAF5FF);
-        letter-spacing: 0.02em;
-        line-height: 1.2;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-
-      .brand-subtitle {
-        font-size: 11px;
-        font-weight: 400;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        line-height: 1.2;
-        margin-top: 2px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-
-      .collapse-toggle-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
-        flex-shrink: 0;
-        padding: 0;
-      }
-
-      .collapse-toggle-btn:hover {
-        background-color: var(--sidebar-surface, #3B0764);
-        color: var(--sidebar-text, #FAF5FF);
-        border-color: var(--sidebar-border, #581C87);
-      }
-
-      .mobile-close-btn {
-        display: none;
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        background: var(--sidebar-surface, #3B0764);
-        border: 1px solid var(--sidebar-border, #581C87);
-        color: var(--sidebar-text, #FAF5FF);
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        padding: 0;
-        transition: all 0.15s ease;
-      }
-      .mobile-close-btn:hover {
-        background: rgba(220, 38, 38, 0.2);
-        color: #F87171;
-        border-color: #F87171;
-      }
-
-      /* 2. NAVIGATION GROUPS (Scrollable) */
-      .sidebar-nav-scroll {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 12px 8px;
-        scrollbar-width: thin;
-        scrollbar-color: var(--sidebar-surface, #3B0764) transparent;
-      }
-
-      .sidebar-nav-scroll::-webkit-scrollbar {
-        width: 4px;
-      }
-      .sidebar-nav-scroll::-webkit-scrollbar-thumb {
-        background: var(--sidebar-surface, #3B0764);
-        border-radius: 4px;
-      }
-
-      .nav-groups-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .nav-section {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .section-label {
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--sidebar-section-label, #C084FC);
-        padding: 4px 10px;
-        margin-bottom: 2px;
-      }
-
-      .section-divider-collapsed {
-        height: 1px;
-        background-color: var(--sidebar-border, #581C87);
-        margin: 6px 4px;
-      }
-
-      .section-items {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      /* MENU ITEM (40px) */
-      .menu-item {
-        position: relative;
-        display: flex;
-        align-items: center;
-        height: 40px;
-        padding: 0 10px;
-        border-radius: 8px;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 500;
-        gap: 10px;
-        transition: background-color 150ms ease, color 150ms ease;
-        box-sizing: border-box;
-      }
-
-      .menu-item:hover {
-        background-color: var(--sidebar-surface, #3B0764);
-        color: var(--sidebar-text, #FAF5FF);
-      }
-
-      .is-collapsed .menu-item {
-        justify-content: center;
-        padding: 0;
-      }
-
-      /* Active Indicator Bar */
-      .active-indicator {
-        position: absolute;
-        left: 0;
-        top: 6px;
-        bottom: 6px;
-        width: 3px;
-        border-radius: 0 3px 3px 0;
-        background-color: transparent;
-        transition: background-color 150ms ease;
-      }
-
-      .menu-item.is-active {
-        background-color: var(--sidebar-surface, #3B0764);
-        color: var(--sidebar-text, #FAF5FF);
-        font-weight: 600;
-      }
-
-      .menu-item.is-active .active-indicator {
-        background-color: var(--sidebar-active-accent, #C084FC);
-      }
-
-      .menu-item.is-active .item-icon-wrapper {
-        color: var(--sidebar-active-accent, #C084FC);
-      }
-
-      .item-icon-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        color: inherit;
-      }
-
-      .item-label {
-        flex: 1;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-
-      .item-badge {
-        font-size: 10px;
-        font-weight: 600;
-        padding: 1px 6px;
-        border-radius: 4px;
-        background-color: var(--sidebar-surface, #3B0764);
-        border: 1px solid var(--sidebar-border, #581C87);
-        color: var(--sidebar-active-accent, #C084FC);
-      }
-
-      /* Special Accent for POS Item */
-      .pos-special-item {
-        color: #FBCFE8;
-      }
-      .pos-special-item .item-icon-wrapper {
-        color: #F472B6;
-      }
-      .pos-special-item.is-active {
-        background: linear-gradient(90deg, rgba(244, 114, 182, 0.2), transparent);
-        color: #FFFFFF;
-      }
-      .pos-special-item.is-active .active-indicator {
-        background-color: #F472B6;
-      }
-
-      /* Collapsed Tooltip */
-      .collapsed-tooltip {
-        display: none;
-        position: absolute;
-        left: calc(100% + 8px);
-        top: 50%;
-        transform: translateY(-50%);
-        background-color: var(--sidebar-surface, #3B0764);
-        color: var(--sidebar-text, #FAF5FF);
-        border: 1px solid var(--sidebar-border, #581C87);
-        padding: 5px 9px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 500;
-        white-space: nowrap;
-        pointer-events: none;
-        z-index: 50;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-      }
-
-      .is-collapsed .menu-item:hover .collapsed-tooltip,
-      .is-collapsed .collapsed-logout-btn:hover .collapsed-tooltip {
-        display: block;
-      }
-
-      /* 3. FOOTER (56px) */
-      .sidebar-footer {
-        min-height: 56px;
-        padding: 8px 10px;
-        border-top: 1px solid color-mix(in srgb, var(--sidebar-border, #581C87) 70%, #FFFFFF 30%);
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-      }
-
-      .user-profile-card {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        gap: 8px;
-        min-width: 0;
-      }
-
-      .user-avatar-wrapper {
-        position: relative;
-        flex-shrink: 0;
-      }
-
-      .user-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: var(--sidebar-surface, #3B0764);
-        border: 1px solid var(--sidebar-border, #581C87);
-        color: var(--sidebar-active-accent, #C084FC);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: 700;
-      }
-
-      .online-indicator {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: var(--success, #16A34A);
-        border: 1.5px solid var(--sidebar-bg, #2E1065);
-      }
-
-      .user-details {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        flex: 1;
-        overflow: hidden;
-      }
-
-      .user-name {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--sidebar-text, #FAF5FF);
-        line-height: 1.2;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-
-      .user-role {
-        font-size: 10px;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        line-height: 1.2;
-        margin-top: 1px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      }
-
-      .logout-button {
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background-color 150ms ease, color 150ms ease;
-        flex-shrink: 0;
-        padding: 0;
-      }
-
-      .logout-button:hover {
-        background-color: rgba(220, 38, 38, 0.15);
-        color: #F87171;
-      }
-
-      .collapsed-logout-wrap {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-      }
-
-      .collapsed-logout-btn {
-        position: relative;
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--sidebar-text-muted, #D8B4FE);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        padding: 0;
-      }
-      .collapsed-logout-btn:hover {
-        background-color: rgba(220, 38, 38, 0.15);
-        color: #F87171;
-      }
-
-      /* ═══════════════════════════════════════════════════════════════ */
-      /* MOBILE & TABLET RESPONSIVE OVERLAY DRAWER (< 1024px)            */
-      /* ═══════════════════════════════════════════════════════════════ */
-      @media (max-width: 1023px) {
-        :host {
-          display: none;
-        }
-
-        :host.is-mobile-active {
-          display: block;
-          position: fixed;
-          inset: 0;
-          z-index: 1000;
-        }
-
-        .sidebar-container {
-          position: fixed;
-          top: 0;
-          left: 0;
-          bottom: 0;
-          width: 280px !important;
-          min-width: 280px !important;
-          max-width: 85vw !important;
-          z-index: 1001;
-          box-shadow: 12px 0 32px rgba(15, 23, 42, 0.55);
-          transform: translateX(-100%);
-          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        :host.is-mobile-active .sidebar-container {
-          transform: translateX(0);
-        }
-
-        .mobile-sidebar-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.65);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-          z-index: 1000;
-          animation: fadeInBackdrop 0.2s ease-out;
-        }
-
-        .mobile-close-btn {
-          display: flex;
-        }
-
-        .collapse-toggle-btn {
-          display: none;
-        }
-      }
-
-      @keyframes fadeInBackdrop {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-    `,
-  ],
+  styles: [SIDEBAR_LAYOUT_CSS],
 })
 export class SidebarComponent {
   @Input() isCollapsed = false;
@@ -706,7 +286,12 @@ export class SidebarComponent {
 
   public authService = inject(AuthService);
   public settingsService = inject(SettingsService);
-  private router = inject(Router);
+  public sidebarLayout = inject(SidebarLayoutService);
+  private notify = inject(NotificationService);
+
+  public searchQuery = signal('');
+  public tooltip = signal<{ label: string; top: number } | null>(null);
+  private foldedSections = signal<Record<string, boolean>>({});
 
   public navSections: NavSection[] = [
     {
@@ -833,6 +418,38 @@ export class SidebarComponent {
     },
   ];
 
+  /** Shortcut surfaced by templates with the quickActions capability. */
+  public readonly alertsShortcut: NavItem = {
+    id: 'quick-alerts',
+    label: 'Alerts',
+    route: '/orders',
+    iconName: 'notifications',
+    permission: 'order.manage',
+  };
+
+  /**
+   * Menu items are never added or removed by a template — search only hides
+   * rows that do not match, and permissions still gate every row downstream.
+   */
+  public readonly filteredSections = computed<NavSection[]>(() => {
+    const q = this.searchQuery().trim().toLowerCase();
+    if (!q) return this.navSections;
+    return this.navSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter(
+          (item) =>
+            item.label.toLowerCase().includes(q) ||
+            section.title.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  });
+
+  public hasAnyResult(): boolean {
+    return this.filteredSections().some((section) => this.hasVisibleItems(section));
+  }
+
   public canAccess(item: NavItem): boolean {
     if (!item.permission) return true;
     return this.authService.hasPermission(item.permission);
@@ -840,6 +457,55 @@ export class SidebarComponent {
 
   public hasVisibleItems(section: NavSection): boolean {
     return section.items.some((item) => this.canAccess(item));
+  }
+
+  public isFolded(section: NavSection): boolean {
+    if (this.isCollapsed) return false;
+    if (!this.sidebarLayout.caps().collapsibleSections) return false;
+    if (this.searchQuery().trim()) return false; // never hide search hits
+    return !!this.foldedSections()[section.title];
+  }
+
+  public toggleSection(section: NavSection): void {
+    const current = { ...this.foldedSections() };
+    current[section.title] = !current[section.title];
+    this.foldedSections.set(current);
+  }
+
+  /**
+   * Collapsed rails need the label somewhere; Compact keeps tooltips even when
+   * expanded because its 200px rail truncates the longer module names.
+   */
+  private showsTooltips(): boolean {
+    return this.isCollapsed || this.sidebarLayout.activeKey() === 'compact';
+  }
+
+  public showTip(event: Event, label: string): void {
+    if (!this.showsTooltips()) return;
+    const row = event.currentTarget as HTMLElement | null;
+    const rail = row?.closest('.sidebar-container') as HTMLElement | null;
+    if (!row || !rail) return;
+    const rowBox = row.getBoundingClientRect();
+    const railBox = rail.getBoundingClientRect();
+    this.tooltip.set({ label, top: rowBox.top - railBox.top + rowBox.height / 2 });
+  }
+
+  public hideTip(): void {
+    this.tooltip.set(null);
+  }
+
+  public onSearchInput(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  public clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  public showShortcutHelp(): void {
+    this.notify.info(
+      'F1 opens POS Billing. Use the rail toggle in the brand header to collapse navigation to icons — hover any icon for its label.',
+    );
   }
 
   public onNavItemClick(): void {
@@ -857,8 +523,11 @@ export class SidebarComponent {
     return name.slice(0, 2).toUpperCase();
   }
 
-  public handleLogout(): void {
+  public handleLogout(event?: MouseEvent): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     this.authService.logout();
-    this.router.navigate(['/auth/login']);
   }
 }

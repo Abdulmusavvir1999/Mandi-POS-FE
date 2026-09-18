@@ -201,30 +201,36 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
             </h2>
 
             <div class="grid grid-cols-3 gap-3.5 items-start">
-              <div class="form-group mb-0">
-                <label class="form-label">Selling Price ({{ settingsService.currencySymbol() }})</label>
-                <input
-                  title="Selling Price"
-                  type="number"
-                  min="0"
-                  step="any"
-                  [(ngModel)]="form.sellingPrice"
-                  name="sellingPrice"
-                  class="form-control font-mono font-bold text-sm w-full"
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label">Cost Price ({{ settingsService.currencySymbol() }})</label>
-                <input
-                  title="Cost Price"
-                  type="number"
-                  min="0"
-                  step="any"
-                  [(ngModel)]="form.costPrice"
-                  name="costPrice"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
+              <!-- Price is set per portion once the dish has any, so these two
+                   drop out rather than sit there as a second answer to the
+                   same question. They come back if every portion is removed,
+                   because a single-item dish has nothing else to price it. -->
+              <ng-container *ngIf="form.variants.length === 0">
+                <div class="form-group mb-0">
+                  <label class="form-label">Selling Price ({{ settingsService.currencySymbol() }})</label>
+                  <input
+                    title="Selling Price"
+                    type="number"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="form.sellingPrice"
+                    name="sellingPrice"
+                    class="form-control font-mono font-bold text-sm w-full"
+                  />
+                </div>
+                <div class="form-group mb-0">
+                  <label class="form-label">Cost Price ({{ settingsService.currencySymbol() }})</label>
+                  <input
+                    title="Cost Price"
+                    type="number"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="form.costPrice"
+                    name="costPrice"
+                    class="form-control font-mono text-sm w-full"
+                  />
+                </div>
+              </ng-container>
               <div class="form-group mb-0">
                 <label class="form-label">Tax Rate (%)</label>
                 <input
@@ -242,8 +248,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
             <p class="form-note" *ngIf="form.variants.length > 0">
               <span class="material-symbols-outlined">info</span>
               <span>
-                This dish is sold in portions, so the POS charges each variant's own price.
-                The selling price above is the fallback and the default for new portions.
+                This dish is priced by its portions — set each price under
+                <strong>Dish Variants</strong> below. The dish price shown elsewhere in the app
+                is the cheapest portion.
               </span>
             </p>
           </section>
@@ -553,18 +560,21 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
 
       .variant-rows { display: flex; flex-direction: column; gap: 0.5rem; }
 
+      /* gap and alignment belong to both modes — COMMON was inheriting
+         neither, which left its Price and Uses fields butted against the
+         column before them. */
       .variant-row-head,
       .variant-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.28fr) minmax(6rem, 0.22fr) 2.25rem;
+        gap: 0.5rem;
+        align-items: center;
       }
 
       /* EACH mode inserts the source column between name and price */
       .variant-rows.is-each .variant-row-head,
       .variant-rows.is-each .variant-row {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(7rem, 0.26fr) minmax(6rem, 0.2fr) 2.25rem;
-        gap: 0.5rem;
-        align-items: center;
       }
 
       .variant-row-head span {
@@ -863,6 +873,18 @@ export class ProductFormComponent implements OnInit {
         stockItemId: this.form.variantStockMode === 'EACH' ? v.stockItemId : null,
       })),
     };
+
+    // With portions in play the dish-level price is no longer typed, so it is
+    // derived from them here. Everything outside this form still reads
+    // selling_price — the catalog column, the POS fallback, the reports — and
+    // leaving it at 0 would make a priced dish look free in all three.
+    if (variants.length > 0) {
+      const prices = variants
+        .map((v: any) => Number(v.sellingPrice))
+        .filter((n: number) => Number.isFinite(n) && n > 0);
+      if (prices.length) payload.sellingPrice = Math.min(...prices);
+    }
+
     this.isSaving = true;
 
     const done = (message: string) => {

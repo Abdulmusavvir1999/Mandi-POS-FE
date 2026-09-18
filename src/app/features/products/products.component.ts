@@ -9,6 +9,8 @@ import { Product, Category } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { DishLayoutService } from '../../core/services/dish-layout.service';
+import { DISH_LAYOUT_CSS } from '../../shared/styles/dish-layout.styles';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 @Component({
@@ -320,7 +322,123 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- 5. PRODUCTS DATA TABLE                                          -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="table-container-card">
-        <div class="table-responsive-wrapper">
+        <!-- The chosen catalog design owns this block. Its class and its
+             palette go on one wrapper so every rule below is a plain
+             descendant selector. -->
+        <div [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.cssVars()">
+
+        <!-- ─── Card designs: Bento, Glass, Brutalist, Editorial ───────── -->
+        <div class="catalog-stage" *ngIf="showCatalogCards">
+          <div class="dishes-cards-grid" *ngIf="paginatedProducts.length > 0">
+            <div
+              *ngFor="let p of paginatedProducts"
+              class="dish-hero-card"
+              [class.is-out-of-stock]="isOutOfStock(p)"
+              role="button"
+              tabindex="0"
+              (click)="goToView(p)"
+              (keydown.enter)="goToView(p)"
+              (keydown.space)="goToView(p)"
+              [title]="'Open ' + p.name"
+            >
+              <!-- Decorative layers. Each design turns on what it needs: the
+                   tile sheen, the frosted highlight and halo, or the hatch. -->
+              <span class="dish-deco dish-deco-a" aria-hidden="true"></span>
+              <span class="dish-deco dish-deco-b" aria-hidden="true"></span>
+
+              <div *ngIf="isOutOfStock(p)" class="out-of-stock-badge">
+                <span>OUT OF STOCK</span>
+              </div>
+
+              <div class="dish-floating-avatar">
+                <img
+                  *ngIf="hasCardImage(p)"
+                  class="dish-photo"
+                  [src]="settingsService.assetUrl(p.image_url!)"
+                  [alt]="p.name"
+                  loading="lazy"
+                  draggable="false"
+                  (error)="onCardImageError(p)"
+                />
+                <span *ngIf="!hasCardImage(p)" class="material-symbols-outlined food-emoji">
+                  restaurant
+                </span>
+              </div>
+
+              <!-- DOM order is fixed; each design reorders it with CSS. -->
+              <div class="dish-body">
+                <h3 class="dish-title">{{ p.name }}</h3>
+
+                <div class="dish-price-tag font-mono">
+                  {{ p.selling_price | appCurrency:'1.0-0' }}
+                </div>
+
+                <p class="dish-desc">{{ p.description || 'Authentic traditional recipe' }}</p>
+
+                <div class="dish-specs">
+                  <div class="spec-row">
+                    <span class="spec-label">Category</span>
+                    <span class="spec-value">{{ p.category_name || 'General' }}</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="spec-label">In Stock</span>
+                    <span class="spec-value">{{ stockOf(p) }}</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="spec-label">SKU</span>
+                    <span class="spec-value">{{ p.sku }}</span>
+                  </div>
+                </div>
+
+                <div class="dish-card-footer">
+                  <span
+                    class="status-dot-pill"
+                    [ngClass]="p.status === 'ACTIVE' ? 'is-active' : 'is-inactive'"
+                  >
+                    <span class="status-dot"></span>
+                    {{ p.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
+                  </span>
+                  <span class="sales-count-badge">
+                    Cost {{ p.cost_price | appCurrency:'1.0-0' }}
+                  </span>
+                </div>
+
+                <div class="dish-cta" aria-hidden="true"><span>VIEW DISH</span></div>
+              </div>
+
+              <!-- Edit and delete still have to be reachable without going
+                   back to the table, so they ride on the card. -->
+              <div class="catalog-card-actions" (click)="$event.stopPropagation()">
+                <button type="button" (click)="goToEdit(p)" [title]="'Edit ' + p.name">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button
+                  type="button"
+                  class="is-danger"
+                  (click)="deleteProduct(p)"
+                  [title]="'Delete ' + p.name"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="catalog-empty-box" *ngIf="filteredProducts.length === 0">
+            <span class="material-symbols-outlined empty-icon">
+              {{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'restaurant_menu' }}
+            </span>
+            <div class="empty-title">
+              {{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Dishes Found' }}
+            </div>
+            <p class="empty-desc">
+              {{ isLoading ? 'Fetching records from the server…' : loadError ? loadError : 'No dishes match your active filter or search query in the menu catalog.' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- ─── Menu Table design, and whenever the setting is off ─────── -->
+        <div class="table-responsive-wrapper" *ngIf="!showCatalogCards">
           <table class="saas-data-table">
             <thead>
               <tr>
@@ -421,17 +539,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <td>
                   <div class="space-y-1 max-w-[120px]">
                     <div class="flex items-center justify-between text-[11px]">
-                      <span class="font-mono font-bold text-[#2E1065]">{{ p.current_stock }} units</span>
+                      <span class="font-mono font-bold text-[#2E1065]">{{ stockOf(p) }} units</span>
                       <span class="text-[#6B7280] text-[9px]">Min: {{ p.low_stock_threshold }}</span>
                     </div>
                     <div class="w-full bg-[#E9D5FF] rounded-full h-1.5 overflow-hidden">
                       <div
                         class="h-full rounded-full transition-all duration-300"
-                        [style.width.%]="calcStockPercent(p.current_stock, p.low_stock_threshold)"
+                        [style.width.%]="calcStockPercent(stockOf(p), p.low_stock_threshold)"
                         [ngClass]="{
-                          '!bg-[#DC2626]': p.current_stock <= 0,
-                          '!bg-[#EA580C]': p.current_stock > 0 && p.current_stock <= p.low_stock_threshold,
-                          '!bg-[#16A34A]': p.current_stock > p.low_stock_threshold
+                          '!bg-[#DC2626]': stockOf(p) <= 0,
+                          '!bg-[#EA580C]': stockOf(p) > 0 && stockOf(p) <= p.low_stock_threshold,
+                          '!bg-[#16A34A]': stockOf(p) > p.low_stock_threshold
                         }"
                       ></div>
                     </div>
@@ -491,8 +609,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </table>
         </div>
 
+        </div><!-- /catalog design wrapper -->
+
         <!-- ═══════════════════════════════════════════════════════════════ -->
-        <!-- 6. BOTTOM PAGINATION BAR                                        -->
+        <!-- 6. BOTTOM PAGINATION BAR (shared by every design)               -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <div class="pagination-footer-bar" *ngIf="filteredProducts.length > 0">
           <div class="pagination-info">
@@ -600,17 +720,60 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         color: var(--text-muted, #6B7280);
       }
 
-    `
+      /* ─── Catalog card designs ───
+         Only the grid geometry lives here; the look of each design comes from
+         the shared stylesheet below, which the Settings preview reads too. */
+      .dishes-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.25rem;
+      }
+
+      @media (min-width: 900px) {
+        .dishes-cards-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      }
+
+      @media (max-width: 560px) {
+        .dishes-cards-grid { grid-template-columns: minmax(0, 1fr); }
+      }
+
+      .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    `,
+    /* Must come last: it resets the card markup and then builds each design
+       back up. See the note at the top of dish-layout.styles.ts. */
+    DISH_LAYOUT_CSS,
   ]
 })
 export class ProductsComponent implements OnInit {
   public isLoading = false;
   public loadError: string | null = null;
   public settingsService = inject(SettingsService);
+  public dishLayout = inject(DishLayoutService);
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
   private notify = inject(NotificationService);
   private router = inject(Router);
+
+  /**
+   * Card designs replace the table; Menu Table recolours it instead, because
+   * the table already carries selection, SKU, status, the stock bar and the
+   * row actions and a card grid cannot show all of that at once.
+   */
+  public get showCatalogCards(): boolean {
+    return this.dishLayout.enabled() && this.dishLayout.activeKey() !== 'table';
+  }
+
+  /** Dishes whose photo failed to load, so the card falls back to the icon. */
+  private brokenCardImages = new Set<number>();
+
+  public hasCardImage(p: Product): boolean {
+    return !!p.image_url && !this.brokenCardImages.has(p.id);
+  }
+
+  public onCardImageError(p: Product): void {
+    this.brokenCardImages.add(p.id);
+  }
 
   public products: (Product & { selected?: boolean })[] = [];
   public categories: Category[] = [];
@@ -709,12 +872,40 @@ export class ProductsComponent implements OnInit {
       });
   }
 
+  /**
+   * Stock a dish actually has.
+   *
+   * Since dish variants arrived, stock lives on the linked ledger item
+   * (stock_items.current_quantity, surfaced as linked_stock_quantity) — that is
+   * what Purchase Entry and Adjustment move, and what checkout deducts from.
+   * The legacy per-product counter is only mirrored in some paths, so reading
+   * it alone reported every dish as out of stock. Prefer the ledger, fall back
+   * to the old column for rows that have no ledger item.
+   */
+  stockOf(p: Product): number {
+    // A product with no ledger row comes back with linked_stock_quantity NULL,
+    // and Number(null) is 0 — which is finite, so a plain isFinite check
+    // swallowed the fallback and reported every such dish as out of stock.
+    // The null/undefined test has to come first.
+    const ledger = p.linked_stock_quantity;
+    if (ledger !== null && ledger !== undefined && `${ledger}`.trim() !== '') {
+      const n = Number(ledger);
+      if (Number.isFinite(n)) return n;
+    }
+    return Number(p.current_stock) || 0;
+  }
+
+  /** True only when the dish genuinely has nothing left. */
+  isOutOfStock(p: Product): boolean {
+    return this.stockOf(p) <= 0;
+  }
+
   get activeCount(): number {
     return this.products.filter((p) => p.status === 'ACTIVE').length;
   }
 
   get lowStockCount(): number {
-    return this.products.filter((p) => p.current_stock <= p.low_stock_threshold).length;
+    return this.products.filter((p) => this.stockOf(p) <= p.low_stock_threshold).length;
   }
 
   get stockHealthPercent(): number {
@@ -724,7 +915,7 @@ export class ProductsComponent implements OnInit {
   }
 
   get totalInventoryValue(): number {
-    return this.products.reduce((sum, p) => sum + (p.current_stock * p.selling_price), 0);
+    return this.products.reduce((sum, p) => sum + this.stockOf(p) * p.selling_price, 0);
   }
 
   get filteredProducts(): (Product & { selected?: boolean })[] {
@@ -733,13 +924,13 @@ export class ProductsComponent implements OnInit {
     if (this.activeNavTab === 'active') {
       list = list.filter((p) => p.status === 'ACTIVE');
     } else if (this.activeNavTab === 'low_stock') {
-      list = list.filter((p) => p.current_stock <= p.low_stock_threshold);
+      list = list.filter((p) => this.stockOf(p) <= p.low_stock_threshold);
     }
 
     if (this.stockFilter === 'LOW') {
-      list = list.filter((p) => p.current_stock <= p.low_stock_threshold);
+      list = list.filter((p) => this.stockOf(p) <= p.low_stock_threshold);
     } else if (this.stockFilter === 'IN_STOCK') {
-      list = list.filter((p) => p.current_stock > p.low_stock_threshold);
+      list = list.filter((p) => this.stockOf(p) > p.low_stock_threshold);
     }
 
     if (this.sortBy === 'price_asc') {
@@ -747,7 +938,7 @@ export class ProductsComponent implements OnInit {
     } else if (this.sortBy === 'price_desc') {
       list = [...list].sort((a, b) => b.selling_price - a.selling_price);
     } else if (this.sortBy === 'stock') {
-      list = [...list].sort((a, b) => a.current_stock - b.current_stock);
+      list = [...list].sort((a, b) => this.stockOf(a) - this.stockOf(b));
     } else {
       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -864,7 +1055,7 @@ export class ProductsComponent implements OnInit {
       `"${(p.category_name || '').replace(/"/g, '""')}"`,
       p.selling_price,
       p.cost_price,
-      p.current_stock,
+      this.stockOf(p),
       p.status,
     ]);
 

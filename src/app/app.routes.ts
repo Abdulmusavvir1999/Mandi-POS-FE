@@ -157,6 +157,11 @@ export const routes: Routes = [
         data: { permission: 'audit.view' },
       },
       {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile.component').then((m) => m.ProfileComponent),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
