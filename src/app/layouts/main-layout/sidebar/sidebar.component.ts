@@ -401,11 +401,15 @@ export class SidebarComponent {
           permission: 'user.manage',
         },
         {
+          // Deliberately unpermissioned: `stafftrack.view` widens this page to
+          // the whole roster, it does not unlock it. Every authenticated user
+          // has their own activity to look at, and the API returns only that
+          // much without the permission, so hiding the row would conceal a
+          // page they are entitled to rather than protect anything.
           id: 'staff-track',
           label: 'Staff Track',
           route: '/staff-track',
           iconName: 'groups',
-          permission: 'stafftrack.view',
         },
         {
           id: 'audit',

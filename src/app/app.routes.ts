@@ -143,22 +143,25 @@ export const routes: Routes = [
         data: { permission: 'user.manage' },
       },
       {
+        // No `permission` here on purpose. `stafftrack.view` means "see every
+        // staff member", not "reach this page": without it the API scopes the
+        // caller to their own attribution rather than refusing them, so the
+        // page is reachable by any authenticated user and simply shows less.
+        // The parent shell's authGuard still applies, and the server decides
+        // what comes back — the route is not what protects anyone's figures.
         path: 'staff-track',
         loadComponent: () =>
           import('./features/staff-track/staff-track.component').then((m) => m.StaffTrackComponent),
-        canActivate: [roleGuard],
-        data: { permission: 'stafftrack.view' },
       },
       {
         // Declared before the shell's catch-all so a staff link resolves rather
-        // than falling through to the 404 page.
+        // than falling through to the 404 page. Requesting somebody else's id
+        // without the permission is refused by the API, not by this guard.
         path: 'staff-track/staff/:id',
         loadComponent: () =>
           import('./features/staff-track/staff-detail/staff-detail.component').then(
             (m) => m.StaffDetailComponent
           ),
-        canActivate: [roleGuard],
-        data: { permission: 'stafftrack.view' },
       },
       {
         path: 'settings',

@@ -7,6 +7,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { User, Role, Permission } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { StaffLayoutService } from '../../core/services/staff-layout.service';
+import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { STAFF_LAYOUT_CSS } from '../../shared/styles/staff-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
@@ -22,7 +23,7 @@ interface ModuleGroup {
   selector: 'app-users',
   standalone: true,
   imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink],
-  styles: [STAFF_LAYOUT_CSS],
+  styles: [STAFF_LAYOUT_CSS, DEFAULT_ACTION_BUTTON_CSS],
   template: `
     <div class="users-page-wrapper">
       <app-page-loader
@@ -632,10 +633,10 @@ interface ModuleGroup {
                   </td>
                   <td style="text-align: center;">
                     <div class="flex items-center justify-center gap-1">
-                      <button type="button" (click)="openEditUserModal(u)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-blue-700" title="Edit">
+                      <button type="button" (click)="openEditUserModal(u)" class="dv-btn is-icon" title="Edit">
                         <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
                       </button>
-                      <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="w-7 h-7 rounded flex items-center justify-center text-rose-500 hover:text-rose-700" title="Delete">
+                      <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="dv-btn is-icon is-danger" title="Delete">
                         <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
                       </button>
                     </div>

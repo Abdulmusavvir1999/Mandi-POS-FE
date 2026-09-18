@@ -213,6 +213,30 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </p>
             </div>
             <div class="flex items-center gap-2">
+              <!-- Whether sold-out dishes are listed at all. They can never be
+                   added to a bill either way; this only decides if the counter
+                   has to look at them. -->
+              <label
+                class="oos-switch"
+                [title]="showOutOfStock
+                  ? 'Hide dishes that are out of stock'
+                  : 'Show dishes that are out of stock'"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="showOutOfStock"
+                  (change)="onOutOfStockToggle($event)"
+                />
+                <span class="oos-track"><span class="oos-knob"></span></span>
+                <span class="oos-text">
+                  Out of stock
+                  <strong>{{ showOutOfStock ? 'Yes' : 'No' }}</strong>
+                  <span class="oos-hidden" *ngIf="!showOutOfStock && hiddenOutOfStockCount > 0">
+                    · {{ hiddenOutOfStockCount }} hidden
+                  </span>
+                </span>
+              </label>
+
               <span *ngIf="selectedCategoryId" class="popular-dish-side-tag">
                 <span class="dot-indicator"></span>
                 <span>{{ getSelectedCategoryName() }}</span>
@@ -230,6 +254,18 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div *ngIf="filteredProducts.length === 0" class="empty-dishes-box">
             <span class="material-symbols-outlined text-5xl text-slate-300">restaurant</span>
             <p class="text-sm font-semibold text-slate-500 mt-2">No active dishes found matching your selection.</p>
+            <!-- Without this the counter sees an empty grid and no reason for
+                 it, when the switch above is the whole explanation. -->
+            <button
+              type="button"
+              *ngIf="!showOutOfStock && hiddenOutOfStockCount > 0"
+              class="empty-oos-hint"
+              (click)="setShowOutOfStock(true)"
+            >
+              {{ hiddenOutOfStockCount }} out-of-stock
+              {{ hiddenOutOfStockCount === 1 ? 'dish is' : 'dishes are' }} hidden — show
+              {{ hiddenOutOfStockCount === 1 ? 'it' : 'them' }}
+            </button>
           </div>
 
           <!-- Grid of Popular Dish Cards -->
@@ -1455,6 +1491,94 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       color: var(--text-dark, #2E1065);
       background: rgba(255, 255, 255, 0.75);
     }
+
+    /* Out-of-stock switch. Shaped like the pill beside it so the two read as
+       one control strip. */
+    .oos-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.3rem 0.75rem 0.3rem 0.5rem;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid var(--card-border, #E9D5FF);
+      border-radius: 9999px;
+      box-shadow: 0 2px 6px rgba(126, 34, 206, 0.08);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .oos-switch input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .oos-track {
+      position: relative;
+      width: 2rem;
+      height: 1.05rem;
+      flex-shrink: 0;
+      border-radius: 9999px;
+      border: 1px solid var(--card-border, #E9D5FF);
+      background: var(--bg-app, #F3E8FF);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .oos-knob {
+      position: absolute;
+      top: 50%;
+      left: 0.12rem;
+      width: 0.72rem;
+      height: 0.72rem;
+      transform: translateY(-50%);
+      border-radius: 9999px;
+      background: #FFFFFF;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      transition: left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .oos-switch input:checked + .oos-track {
+      background: var(--primary, #7E22CE);
+      border-color: var(--primary, #7E22CE);
+    }
+
+    .oos-switch input:checked + .oos-track .oos-knob { left: 1.08rem; }
+
+    .oos-switch input:focus-visible + .oos-track {
+      box-shadow: 0 0 0 3px var(--primary-glow, rgba(126, 34, 206, 0.28));
+    }
+
+    .oos-text {
+      color: var(--text-dark, #2E1065);
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .oos-text strong { color: var(--primary, #7E22CE); font-weight: 900; }
+
+    .oos-hidden { color: var(--text-muted, #6B7280); font-weight: 600; }
+
+    .empty-oos-hint {
+      margin-top: 0.6rem;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid var(--card-border, #E9D5FF);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--primary, #7E22CE);
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .empty-oos-hint:hover { background: var(--bg-app, #FAF5FF); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .oos-track,
+      .oos-knob { transition-duration: 0.01ms; }
+    }
     .dot-indicator {
       width: 6px;
       height: 6px;
@@ -1492,10 +1616,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .dish-hero-card {
+      /* One knob for the photo band: its width divided by its height. Lower
+         is taller — 2.6 gives roughly a third of the card, 1.9 roughly half. */
+      --dish-media-ratio: 2.2;
+
       background: linear-gradient(145deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
       border-radius: 1rem;
       padding: 1rem;
-      padding-top: 2.75rem;
       position: relative;
       color: #FFFFFF;
       cursor: pointer;
@@ -1533,24 +1660,72 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       text-shadow: none;
     }
 
-    .dish-floating-avatar {
+    /* "New" ribbon. This card gave it no styling at all, so it landed as a
+       bare word on its own line and pushed the photo off the card's top edge.
+       It is a badge over the band now, mirroring the out-of-stock one on the
+       opposite corner. The designs hide it, and hide it more specifically. */
+    .dish-flag {
       position: absolute;
-      top: -1.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 4rem;
-      height: 4rem;
+      top: 0.5rem;
+      left: 0.5rem;
+      z-index: 2;
+      padding: 0.2rem 0.5rem;
       border-radius: 9999px;
-      background: var(--card-bg, #FFFFFF);
-      border: 3px solid var(--primary, #7E22CE);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      color: #FFFFFF;
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-shadow: none;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    /* Photo band.
+       This used to be a 4rem circle floating 1.5rem above the card. The card
+       clips its own overflow, so the top of that circle was cut off and an
+       uploaded dish photo came through as a sliver of a postage stamp.
+       It is now a full-bleed band across the top of the card, sized from its
+       own width so every card in a row gets the same share of its height
+       — a little over 40% at the usual four-per-row. */
+    .dish-floating-avatar {
+      position: relative;
+      top: auto;
+      left: auto;
+      transform: none;
+      align-self: stretch;
+      flex: 0 0 auto;
+      width: auto;
+      height: auto;
+      aspect-ratio: var(--dish-media-ratio, 2.2) / 1;
+      /* Negative side margins carry it past the card's own padding to the
+         edges; the card's radius and overflow round the top corners. */
+      margin: -1rem -1rem 0.7rem;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 1rem 1rem 0 0;
+      background: rgba(255, 255, 255, 0.16);
+      box-shadow: none;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
+    /* contain, not cover: a till operator has to recognise the dish at a
+       glance, and a crop through the middle of a platter helps nobody. */
+    .dish-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      -webkit-user-drag: none;
+      user-select: none;
+    }
+
     .food-emoji {
-      font-size: 2.2rem;
+      font-size: 3.2rem;
     }
 
     .dish-body {
@@ -2379,13 +2554,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .dish-floating-avatar {
-      background: var(--g-avatar);
+      background: rgba(255, 255, 255, 0.17);
       -webkit-backdrop-filter: blur(12px) saturate(170%);
       backdrop-filter: blur(12px) saturate(170%);
-      border: 1px solid rgba(255, 255, 255, 0.85);
-      box-shadow:
-        0 8px 18px -6px rgba(46, 16, 101, 0.35),
-        inset 1px 1px 0 rgba(255, 255, 255, 0.95);
+      border: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.34);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
 
     /* Degraded modes. Without backdrop-filter the panels would be flat
@@ -2456,6 +2630,48 @@ export class PosComponent implements OnInit, AfterViewInit {
 
   public products: Product[] = [];
   public filteredProducts: Product[] = [];
+
+  /**
+   * Whether the grid lists dishes with no stock left. On by default, which is
+   * how the till has always behaved; kept per device, because one counter may
+   * want to see them and the next may not — it is a view preference, not a
+   * rule about what may be sold.
+   */
+  public showOutOfStock = true;
+
+  /** How many dishes the switch is currently hiding, for its own label. */
+  public hiddenOutOfStockCount = 0;
+
+  private readonly SHOW_OUT_OF_STOCK_KEY = 'pos.dishes.showOutOfStock';
+
+  onOutOfStockToggle(event: Event): void {
+    this.setShowOutOfStock((event.target as HTMLInputElement).checked);
+  }
+
+  public setShowOutOfStock(value: boolean): void {
+    this.showOutOfStock = value;
+    this.persistOutOfStockPreference();
+    this.filterProducts();
+  }
+
+  private restoreOutOfStockPreference(): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const stored = window.localStorage.getItem(this.SHOW_OUT_OF_STOCK_KEY);
+      if (stored !== null) this.showOutOfStock = stored === 'true';
+    } catch {
+      /* storage blocked — the switch still works, it just is not remembered */
+    }
+  }
+
+  private persistOutOfStockPreference(): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      window.localStorage.setItem(this.SHOW_OUT_OF_STOCK_KEY, String(this.showOutOfStock));
+    } catch {
+      /* as above — remembering it is a convenience, never required */
+    }
+  }
   public categories: Category[] = [];
   public selectedCategoryId: number | null = null;
   public searchQuery = '';
@@ -2496,6 +2712,8 @@ export class PosComponent implements OnInit, AfterViewInit {
   public lastReceiptData: any = null;
 
   ngOnInit(): void {
+    // Read before the dishes land, so the first grid already honours it.
+    this.restoreOutOfStockPreference();
     this.loadPosData();
   }
 
@@ -2806,6 +3024,14 @@ export class PosComponent implements OnInit, AfterViewInit {
           p.sku.toLowerCase().includes(q) ||
           (p.description && p.description.toLowerCase().includes(q))
       );
+    }
+
+    // Sold-out dishes can never be added to a bill, so the counter can have
+    // them left out of the grid altogether rather than scrolling past them.
+    const soldOut = list.filter((prod) => this.isOutOfStock(prod));
+    this.hiddenOutOfStockCount = this.showOutOfStock ? 0 : soldOut.length;
+    if (!this.showOutOfStock) {
+      list = list.filter((prod) => !this.isOutOfStock(prod));
     }
 
     // Sort: In-stock dishes first (at the top), Out-of-stock dishes below (at the bottom)

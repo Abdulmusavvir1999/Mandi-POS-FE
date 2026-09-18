@@ -10,6 +10,7 @@ import { DiningTable, TableStatus } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DiningLayoutService } from '../../core/services/dining-layout.service';
+import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { DINING_LAYOUT_CSS } from '../../shared/styles/dining-layout.styles';
 
 /** Six ticks of fifteen minutes — the ninety-minute turn the floor is run to. */
@@ -505,21 +506,25 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   <span *ngIf="table.status !== 'OCCUPIED'" class="text-slate-400">—</span>
                 </td>
                 <td style="text-align: right;">
-                  <button
-                    type="button"
-                    class="list-action-btn"
-                    (click)="onTileClick(table, $event); $event.stopPropagation();"
-                  >
-                    {{ tileAction(table) }}
-                  </button>
-                  <button
-                    type="button"
-                    class="ml-2 text-slate-400 hover:text-purple-600 transition-colors"
-                    (click)="editTable(table, $event); $event.stopPropagation();"
-                    title="Edit Table"
-                  >
-                    <span class="material-symbols-outlined text-sm">settings</span>
-                  </button>
+                  <!-- The two actions need their own gap: the cell only
+                       right-aligns them, it does not space them. -->
+                  <div class="dv-actions">
+                    <button
+                      type="button"
+                      class="dv-btn is-primary"
+                      (click)="onTileClick(table, $event); $event.stopPropagation();"
+                    >
+                      {{ tileAction(table) }}
+                    </button>
+                    <button
+                      type="button"
+                      class="dv-btn is-icon"
+                      (click)="editTable(table, $event); $event.stopPropagation();"
+                      title="Edit Table"
+                    >
+                      <span class="material-symbols-outlined">settings</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -589,18 +594,18 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
               <button
                 type="button"
-                class="list-action-btn"
+                class="dv-btn is-primary"
                 (click)="onTileClick(table, $event); $event.stopPropagation();"
               >
                 {{ tileAction(table) }}
               </button>
               <button
                 type="button"
-                class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+                class="dv-btn is-icon"
                 (click)="editTable(table, $event); $event.stopPropagation();"
                 title="Edit Table"
               >
-                <span class="material-symbols-outlined text-base">settings</span>
+                <span class="material-symbols-outlined">settings</span>
               </button>
             </div>
           </article>
@@ -746,6 +751,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
   `,
   styles: [
     DINING_LAYOUT_CSS,
+    DEFAULT_ACTION_BUTTON_CSS,
     `
       .icon-purple {
         color: var(--primary, #7E22CE);

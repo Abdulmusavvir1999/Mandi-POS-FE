@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { StockItem, StockEntry, StockMovement, Product, StockUnitType } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { StockLayoutService } from '../../core/services/stock-layout.service';
+import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { STOCK_LAYOUT_CSS } from '../../shared/styles/stock-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
@@ -653,28 +654,28 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <button
                 type="button"
                 (click)="quickPurchaseEntry(item)"
-                class="stock-card-btn btn-entry"
+                class="dv-btn is-success"
                 title="Purchase Entry"
               >
-                <span class="material-symbols-outlined" style="font-size: 14px;">add_shopping_cart</span>
+                <span class="material-symbols-outlined">add_shopping_cart</span>
                 <span>Purchase</span>
               </button>
               <button
                 type="button"
                 (click)="quickAdjust(item)"
-                class="stock-card-btn"
+                class="dv-btn"
                 title="Adjust"
               >
-                <span class="material-symbols-outlined" style="font-size: 14px;">tune</span>
+                <span class="material-symbols-outlined">tune</span>
                 <span>Adjust</span>
               </button>
               <button
                 type="button"
                 (click)="viewItemHistory(item)"
-                class="stock-card-btn"
+                class="dv-btn"
                 title="Audit"
               >
-                <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
+                <span class="material-symbols-outlined">history</span>
               </button>
             </div>
           </div>
@@ -1722,6 +1723,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
   `,
   styles: [
     STOCK_LAYOUT_CSS,
+    DEFAULT_ACTION_BUTTON_CSS,
   ]
 })
 export class StockComponent implements OnInit {

@@ -125,7 +125,18 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         [showActivityType]="activeTab === 'activity'"
         [searchPlaceholder]="searchPlaceholder()"
         (filtersChange)="onFiltersChange($event)"
+        (scopeChange)="selfScoped = $event === 'SELF'"
       ></app-staff-track-filters>
+
+      <!--
+        Said plainly, because every figure on the page is genuinely smaller in
+        this mode and an unlabelled total reading zero looks like a bug rather
+        than a boundary.
+      -->
+      <div class="st-scope-note" *ngIf="selfScoped">
+        <span class="material-symbols-rounded">person</span>
+        <span>Showing your own activity only. Viewing the full team requires the Staff Track permission.</span>
+      </div>
 
       <!-- Live view has no date filter: it is, by definition, now. -->
       <div class="st-live-bar" *ngIf="activeTab === 'live'">
@@ -1218,6 +1229,14 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
       .st-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
       @media (max-width: 1100px) { .st-grid-2 { grid-template-columns: 1fr; } }
 
+      .st-scope-note {
+        display: flex; align-items: center; gap: 8px;
+        background: #F5F3FF; border: 1px solid #DDD6FE; border-radius: 16px;
+        padding: 10px 16px; margin-bottom: 16px;
+        font-size: 12px; font-weight: 600; color: #4C1D95;
+      }
+      .st-scope-note .material-symbols-rounded { font-size: 18px; }
+
       .st-live-bar {
         display: flex; align-items: center; justify-content: space-between;
         gap: 14px; flex-wrap: wrap;
@@ -1297,6 +1316,13 @@ export class StaffTrackComponent implements OnInit {
   private loadedTabs = new Set<TabKey>();
 
   public filters: StaffTrackFilters = {};
+
+  /**
+   * Set from the filter bar's `scopeChange`, which reports what the API said it
+   * was serving rather than what the client thinks the user may see. The
+   * default tab renders that bar, so this always resolves on load.
+   */
+  public selfScoped = false;
 
   public overview: StaffTrackOverview | null = null;
   public staff: StaffTrackRow[] = [];

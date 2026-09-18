@@ -11,6 +11,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { RouterLink } from '@angular/router';
 import { CustomerLayoutService } from '../../core/services/customer-layout.service';
+import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles';
 
 @Component({
@@ -619,13 +620,13 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
             <div class="cust-profile-card-footer">
               <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
               <div class="cust-card-actions">
-                <button type="button" (click)="viewHistory(c)" class="cust-act is-card" title="Invoices">
+                <button type="button" (click)="viewHistory(c)" class="dv-btn is-icon" title="Invoices">
                   <span class="material-symbols-outlined">receipt_long</span>
                 </button>
-                <button type="button" (click)="openEditModal(c)" class="cust-act is-card" title="Edit">
+                <button type="button" (click)="openEditModal(c)" class="dv-btn is-icon" title="Edit">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" (click)="deleteCustomer(c)" class="cust-act is-card is-delete" title="Delete">
+                <button type="button" (click)="deleteCustomer(c)" class="dv-btn is-icon is-danger" title="Delete">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -890,7 +891,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
       </div>
     </div>
   `,
-  styles: [CUSTOMER_LAYOUT_CSS],
+  styles: [CUSTOMER_LAYOUT_CSS, DEFAULT_ACTION_BUTTON_CSS],
 })
 export class CustomersComponent implements OnInit {
   public isLoading = false;

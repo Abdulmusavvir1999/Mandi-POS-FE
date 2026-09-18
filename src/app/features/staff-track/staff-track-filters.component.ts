@@ -53,8 +53,14 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
           minWidth="150px"
         ></app-date-picker>
 
+        <!--
+          Both pickers are hidden for a self-scoped viewer. The server pins
+          userId to them regardless of what is sent, so a staff dropdown holding
+          only their own name — and a role filter that can only ever match or
+          empty the view — would suggest a choice that does not exist.
+        -->
         <app-custom-dropdown
-          *ngIf="showStaff"
+          *ngIf="showStaff && !selfScoped"
           [options]="staffOptions"
           [(ngModel)]="filters.userId"
           (valueChange)="emit()"
@@ -64,7 +70,7 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         ></app-custom-dropdown>
 
         <app-custom-dropdown
-          *ngIf="showRole"
+          *ngIf="showRole && !selfScoped"
           [options]="roleOptions"
           [(ngModel)]="filters.roleId"
           (valueChange)="emit()"
@@ -210,6 +216,14 @@ export class StaffTrackFiltersComponent implements OnInit {
     { key: 'all', label: 'All Time' },
   ];
 
+  /**
+   * True when the API reported it is serving this caller their own rows only.
+   * Read from the response rather than from a local permission check, so the
+   * UI and the server can never disagree about which view is in force.
+   */
+  @Output() scopeChange = new EventEmitter<'ALL' | 'SELF'>();
+  public selfScoped = false;
+
   public staffOptions: DropdownOption[] = [{ value: null, label: 'All Staff', icon: 'groups' }];
   public roleOptions: DropdownOption[] = [{ value: null, label: 'All Roles', icon: 'badge' }];
   public tableOptions: DropdownOption[] = [{ value: null, label: 'All Tables', icon: 'table_restaurant' }];
@@ -240,6 +254,8 @@ export class StaffTrackFiltersComponent implements OnInit {
     this.staffTrackService.getFilterOptions().subscribe({
       next: (res) => {
         if (!res.success || !res.data) return;
+        this.selfScoped = res.data.scope === 'SELF';
+        this.scopeChange.emit(this.selfScoped ? 'SELF' : 'ALL');
         this.staffOptions = [
           { value: null, label: 'All Staff', icon: 'groups' },
           ...(res.data.staff || []).map((s: any) => ({

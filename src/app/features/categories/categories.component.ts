@@ -6,6 +6,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Category } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CategoryLayoutService } from '../../core/services/category-layout.service';
+import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { CATEGORY_LAYOUT_CSS } from '../../shared/styles/category-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
@@ -583,12 +584,12 @@ import { RouterLink } from '@angular/router';
             <div class="cat-card-footer">
               <span class="cat-card-seq-pill">Seq #{{ cat.display_order }}</span>
               <div class="cat-card-actions">
-                <button type="button" (click)="openEditModal(cat)" class="cat-card-btn" title="Edit">
-                  <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                <button type="button" (click)="openEditModal(cat)" class="dv-btn is-primary" title="Edit">
+                  <span class="material-symbols-outlined">edit</span>
                   <span>Edit</span>
                 </button>
-                <button type="button" (click)="deleteCategory(cat)" class="cat-card-btn !text-red-500 hover:!bg-red-50" title="Delete">
-                  <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                <button type="button" (click)="deleteCategory(cat)" class="dv-btn is-icon is-danger" title="Delete">
+                  <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
             </div>
@@ -928,6 +929,7 @@ import { RouterLink } from '@angular/router';
       }
     `,
     CATEGORY_LAYOUT_CSS,
+    DEFAULT_ACTION_BUTTON_CSS,
   ]
 })
 export class CategoriesComponent implements OnInit {
