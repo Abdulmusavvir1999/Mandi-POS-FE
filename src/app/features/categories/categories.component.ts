@@ -313,8 +313,8 @@ import { RouterLink } from '@angular/router';
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div
         class="category-stage"
-        [ngClass]="'category-layout-' + categoryLayout.activeKey()"
-        [ngStyle]="categoryLayout.cssVars()"
+        [ngClass]="categoryLayout.rootClass()"
+        [ngStyle]="categoryLayout.pageCssVars()"
       >
         <!-- Empty State -->
         <div *ngIf="filteredCategories.length === 0" class="empty-state-cell w-full py-12">
@@ -334,7 +334,7 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <!-- 1. BENTO SHOWCASE -->
-        <div *ngIf="categoryLayout.activeKey() === 'showcase' && filteredCategories.length > 0" class="cat-bento-grid">
+        <div *ngIf="categoryLayout.effectiveKey() === 'showcase' && filteredCategories.length > 0" class="cat-bento-grid">
           <div *ngFor="let cat of paginatedCategories" class="cat-bento-card" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <div class="cat-bento-header">
               <div class="flex items-center gap-3">
@@ -382,7 +382,7 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <!-- 2. MINIMALIST CLEAN TABLE -->
-        <div *ngIf="categoryLayout.activeKey() === 'clean' && filteredCategories.length > 0" class="cat-clean-table-card">
+        <div *ngIf="categoryLayout.effectiveKey() === 'clean' && filteredCategories.length > 0" class="cat-clean-table-card">
           <table class="cat-clean-table">
             <thead>
               <tr>
@@ -459,7 +459,7 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <!-- 3. COMPACT BADGE TILES -->
-        <div *ngIf="categoryLayout.activeKey() === 'compact' && filteredCategories.length > 0" class="cat-compact-grid">
+        <div *ngIf="categoryLayout.effectiveKey() === 'compact' && filteredCategories.length > 0" class="cat-compact-grid">
           <div *ngFor="let cat of paginatedCategories" class="cat-compact-tile" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <div class="cat-compact-header">
               <div class="flex items-center gap-2">
@@ -500,7 +500,7 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <!-- 4. LIST VIEW -->
-        <div *ngIf="categoryLayout.activeKey() === 'list' && filteredCategories.length > 0" class="cat-list-container">
+        <div *ngIf="categoryLayout.effectiveKey() === 'list' && filteredCategories.length > 0" class="cat-list-container">
           <div *ngFor="let cat of paginatedCategories" class="cat-list-row" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <input
               title="Select category"
@@ -544,7 +544,7 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <!-- 5. CARD VIEW -->
-        <div *ngIf="categoryLayout.activeKey() === 'card' && filteredCategories.length > 0" class="cat-card-grid">
+        <div *ngIf="categoryLayout.effectiveKey() === 'card' && filteredCategories.length > 0" class="cat-card-grid">
           <div *ngFor="let cat of paginatedCategories" class="cat-card-item" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <div class="cat-card-banner">
               <div class="flex items-center gap-2">
@@ -1033,7 +1033,16 @@ export class CategoriesComponent implements OnInit {
 
   /** Clears the image; the old file is deleted server-side when the row saves. */
   removeCategoryImage(): void {
-    this.form.image_url = '';
+    this.notify.confirm({
+      title: 'Remove Image',
+      message: 'Are you sure you want to remove this category image?',
+      confirmText: 'Remove',
+      cancelText: 'Keep',
+      isDestructive: true,
+      onConfirm: () => {
+        this.form.image_url = '';
+      },
+    });
   }
 
   ngOnInit(): void {

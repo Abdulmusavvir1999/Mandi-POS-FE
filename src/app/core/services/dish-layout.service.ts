@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 /**
  * Designs for the Products & Menu Catalog page.
@@ -272,17 +273,21 @@ interface StoredDishLayout {
 @Injectable({ providedIn: 'root' })
 export class DishLayoutService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
 
   private readonly layoutKeySignal = signal<DishLayoutKey>(DEFAULT_DISH_LAYOUT);
   private readonly overridesSignal = signal<StoredDishLayout['overrides']>({});
   private readonly columnsSignal = signal<number>(DISH_COLUMNS_DEFAULT);
-  private readonly enabledSignal = signal<boolean>(false);
 
   public readonly activeKey = this.layoutKeySignal.asReadonly();
   public readonly overrides = this.overridesSignal.asReadonly();
   public readonly columnsPerRow = this.columnsSignal.asReadonly();
-  /** Off until a design is picked, so an upgraded install keeps its table. */
-  public readonly enabled = this.enabledSignal.asReadonly();
+  /**
+   * Whether the catalog applies its saved design at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * design, its palette and its density stay saved either way.
+   */
+  public readonly enabled = this.customization.catalogCustomize;
 
   public readonly layouts = DISH_LAYOUTS;
   public readonly tokenMeta = DISH_TOKEN_META;
@@ -297,9 +302,15 @@ export class DishLayoutService {
     this.tokensFor(this.layoutKeySignal())
   );
 
-  /** The class the POS root carries, or '' while this setting is off. */
+  /** The class the catalog root carries, or '' while this setting is off. */
   public readonly rootClass = computed<string>(() =>
-    this.enabledSignal() ? 'dish-layout-' + this.layoutKeySignal() : ''
+    this.enabled() ? 'dish-layout-' + this.layoutKeySignal() : ''
+  );
+
+  /** Variables the catalog renders with; none while off, so the table keeps
+   *  the app's own palette rather than the saved catalog one. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled() ? this.cssVars() : {}
   );
 
   constructor() {
@@ -340,14 +351,14 @@ export class DishLayoutService {
   }
 
   public selectLayout(key: DishLayoutKey): void {
+    // Only the design is chosen here. Whether it is applied is the master
+    // switch's business, so picking one never turns a page's customization on
+    // behind the admin's back.
     this.layoutKeySignal.set(key);
-    // Picking a design is how the setting is switched on — a chooser that
-    // silently changed nothing would be a trap.
-    this.enabledSignal.set(true);
   }
 
   public setEnabled(value: boolean): void {
-    this.enabledSignal.set(value);
+    this.customization.setEnabled('catalogCustomize', value);
   }
 
   /** Clamped, because the number input accepts anything typed into it. */
@@ -379,7 +390,9 @@ export class DishLayoutService {
       layoutKey: this.layoutKeySignal(),
       overrides: this.overridesSignal(),
       columnsPerRow: this.columnsSignal(),
-      enabled: this.enabledSignal(),
+      // Mirrored for builds that predate the customization switches; the
+      // value read back is the one in `system_customization`.
+      enabled: this.enabled(),
     };
     return { system_dish_layout: JSON.stringify(stored) };
   }
@@ -404,9 +417,8 @@ export class DishLayoutService {
       if (parsed?.columnsPerRow !== undefined) {
         this.setColumnsPerRow(parsed.columnsPerRow);
       }
-      if (parsed?.enabled !== undefined) {
-        this.enabledSignal.set(parsed.enabled === true || String(parsed.enabled) === 'true');
-      }
+      // `enabled` is deliberately not read here: CustomizationService owns it
+      // and migrates this blob's old value on first load.
     } catch (_) {
       // A malformed blob is ignored rather than allowed to break the POS.
     }

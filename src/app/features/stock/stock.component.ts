@@ -335,8 +335,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <div
         class="stock-stage mb-6"
         *ngIf="activeTab === 'MASTER'"
-        [ngClass]="'stock-layout-' + stockLayout.activeKey()"
-        [ngStyle]="stockLayout.cssVars()"
+        [ngClass]="stockLayout.rootClass()"
+        [ngStyle]="stockLayout.pageCssVars()"
       >
         <!-- Empty State -->
         <div *ngIf="filteredMasterItems.length === 0" class="empty-state-cell w-full py-12">
@@ -348,7 +348,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- 1. WAREHOUSE METRIC GRID -->
-        <div *ngIf="stockLayout.activeKey() === 'warehouse' && filteredMasterItems.length > 0" class="stock-wh-grid">
+        <div *ngIf="stockLayout.effectiveKey() === 'warehouse' && filteredMasterItems.length > 0" class="stock-wh-grid">
           <div *ngFor="let item of paginatedMasterItems" class="stock-wh-card">
             <div>
               <div class="stock-wh-header">
@@ -430,7 +430,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- 2. AUDITED FINANCIAL LEDGER -->
-        <div *ngIf="stockLayout.activeKey() === 'financial' && filteredMasterItems.length > 0" class="stock-fin-table-card">
+        <div *ngIf="stockLayout.effectiveKey() === 'financial' && filteredMasterItems.length > 0" class="stock-fin-table-card">
           <table class="stock-fin-table">
             <thead>
               <tr>
@@ -488,7 +488,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- 3. COMPACT KANBAN STOCK TILES -->
-        <div *ngIf="stockLayout.activeKey() === 'kanban' && filteredMasterItems.length > 0" class="stock-kan-grid">
+        <div *ngIf="stockLayout.effectiveKey() === 'kanban' && filteredMasterItems.length > 0" class="stock-kan-grid">
           <div *ngFor="let item of paginatedMasterItems" class="stock-kan-tile">
             <div class="stock-kan-header">
               <span class="stock-kan-sku">{{ item.stock_code }}</span>
@@ -534,7 +534,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- 4. LIST VIEW -->
-        <div *ngIf="stockLayout.activeKey() === 'list' && filteredMasterItems.length > 0" class="stock-list-container">
+        <div *ngIf="stockLayout.effectiveKey() === 'list' && filteredMasterItems.length > 0" class="stock-list-container">
           <div *ngFor="let item of paginatedMasterItems" class="stock-list-row">
             <div class="stock-list-left">
               <span class="stock-list-sku">{{ item.stock_code }}</span>
@@ -603,7 +603,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- 5. CARD VIEW -->
-        <div *ngIf="stockLayout.activeKey() === 'card' && filteredMasterItems.length > 0" class="stock-card-grid">
+        <div *ngIf="stockLayout.effectiveKey() === 'card' && filteredMasterItems.length > 0" class="stock-card-grid">
           <div *ngFor="let item of paginatedMasterItems" class="stock-card-item">
             <div>
               <div class="stock-card-top">

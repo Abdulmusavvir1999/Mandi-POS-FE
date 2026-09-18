@@ -303,7 +303,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 5. CUSTOMERS STAGE (5 DYNAMIC DESIGNS)                           -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="customer-stage" [ngClass]="customerLayout.rootClass()" [ngStyle]="customerLayout.cssVars()">
+      <div class="customer-stage" [ngClass]="customerLayout.rootClass()" [ngStyle]="customerLayout.pageCssVars()">
         <!-- Empty State -->
         <div *ngIf="filteredCustomers.length === 0" class="empty-state-box p-8 text-center bg-white rounded-2xl border border-purple-100 shadow-sm">
           <span class="material-symbols-outlined empty-icon text-5xl text-purple-400">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'contacts' }}</span>
@@ -320,7 +320,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
         </div>
 
         <!-- DESIGN 1: EXECUTIVE VIP CARDS -->
-        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'vipcard'" class="cust-vip-grid">
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'vipcard'" class="cust-vip-grid">
           <div *ngFor="let c of paginatedCustomers" class="cust-vip-card">
             <div class="cust-vip-header">
               <div class="flex items-center gap-3">
@@ -379,14 +379,14 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
                 #CUST-{{ c.id }}
               </div>
               <div class="cust-vip-btn-group">
-                <button type="button" (click)="viewHistory(c)" class="cust-vip-btn" title="View Invoices">
-                  <span class="material-symbols-outlined" style="font-size: 16px;">receipt_long</span>
+                <button type="button" (click)="viewHistory(c)" class="cust-act is-vip" title="View Invoices">
+                  <span class="material-symbols-outlined">receipt_long</span>
                 </button>
-                <button type="button" (click)="openEditModal(c)" class="cust-vip-btn" title="Edit Customer">
-                  <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                <button type="button" (click)="openEditModal(c)" class="cust-act is-vip" title="Edit Customer">
+                  <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" (click)="deleteCustomer(c)" class="cust-vip-btn is-delete" title="Delete Customer">
-                  <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                <button type="button" (click)="deleteCustomer(c)" class="cust-act is-vip is-delete" title="Delete Customer">
+                  <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
             </div>
@@ -394,7 +394,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
         </div>
 
         <!-- DESIGN 2: MINIMALIST CLEAN TABLE -->
-        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'clean'" class="cust-clean-table-wrap">
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'clean'" class="cust-clean-table-wrap">
           <table class="cust-clean-table">
             <thead>
               <tr>
@@ -433,15 +433,15 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
                   <span class="cust-clean-spend">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
                 </td>
                 <td style="text-align: center;">
-                  <div class="flex items-center justify-center gap-1">
-                    <button type="button" (click)="viewHistory(c)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-purple-600">
-                      <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                  <div class="cust-clean-actions">
+                    <button type="button" (click)="viewHistory(c)" class="cust-act is-clean" title="View Invoices">
+                      <span class="material-symbols-outlined">receipt_long</span>
                     </button>
-                    <button type="button" (click)="openEditModal(c)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-blue-600">
-                      <span class="material-symbols-outlined text-[16px]">edit</span>
+                    <button type="button" (click)="openEditModal(c)" class="cust-act is-clean" title="Edit Customer">
+                      <span class="material-symbols-outlined">edit</span>
                     </button>
-                    <button type="button" (click)="deleteCustomer(c)" class="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:text-red-600">
-                      <span class="material-symbols-outlined text-[16px]">delete</span>
+                    <button type="button" (click)="deleteCustomer(c)" class="cust-act is-clean is-delete" title="Delete Customer">
+                      <span class="material-symbols-outlined">delete</span>
                     </button>
                   </div>
                 </td>
@@ -451,7 +451,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
         </div>
 
         <!-- DESIGN 3: COMPACT CRM TILES -->
-        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'compact'" class="cust-compact-grid">
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'compact'" class="cust-compact-grid">
           <div *ngFor="let c of paginatedCustomers" class="cust-compact-tile">
             <div class="cust-compact-top">
               <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
@@ -471,15 +471,15 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
             <div class="cust-compact-bottom">
               <span class="text-[11px] text-slate-500">{{ c.total_visits }} visits</span>
               <span class="cust-compact-spent">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
-              <div class="flex items-center gap-1">
-                <button type="button" (click)="viewHistory(c)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-slate-100" title="Invoices">
-                  <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+              <div class="cust-compact-actions">
+                <button type="button" (click)="viewHistory(c)" class="cust-act is-compact" title="Invoices">
+                  <span class="material-symbols-outlined">receipt_long</span>
                 </button>
-                <button type="button" (click)="openEditModal(c)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-slate-100" title="Edit">
-                  <span class="material-symbols-outlined text-[15px]">edit</span>
+                <button type="button" (click)="openEditModal(c)" class="cust-act is-compact" title="Edit">
+                  <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" (click)="deleteCustomer(c)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 text-red-500" title="Delete">
-                  <span class="material-symbols-outlined text-[15px]">delete</span>
+                <button type="button" (click)="deleteCustomer(c)" class="cust-act is-compact is-delete" title="Delete">
+                  <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
             </div>
@@ -487,7 +487,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
         </div>
 
         <!-- DESIGN 4: LIST VIEW (ENTERPRISE TABULAR) -->
-        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'list'" class="cust-list-table-wrap">
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'list'" class="cust-list-table-wrap">
           <table class="cust-list-table">
             <thead>
               <tr>
@@ -561,15 +561,15 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
                   </span>
                 </td>
                 <td style="text-align: center;">
-                  <div class="flex items-center justify-center gap-1">
-                    <button type="button" (click)="viewHistory(c)" class="action-icon-btn is-success" title="View Invoices">
-                      <span class="material-symbols-outlined" style="font-size: 18px;">receipt_long</span>
+                  <div class="cust-list-actions">
+                    <button type="button" (click)="viewHistory(c)" class="cust-act is-list" title="View Invoices">
+                      <span class="material-symbols-outlined">receipt_long</span>
                     </button>
-                    <button type="button" (click)="openEditModal(c)" class="action-icon-btn" title="Edit Customer">
-                      <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
+                    <button type="button" (click)="openEditModal(c)" class="cust-act is-list" title="Edit Customer">
+                      <span class="material-symbols-outlined">edit</span>
                     </button>
-                    <button type="button" (click)="deleteCustomer(c)" class="action-icon-btn is-danger" title="Delete Customer">
-                      <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+                    <button type="button" (click)="deleteCustomer(c)" class="cust-act is-list is-delete" title="Delete Customer">
+                      <span class="material-symbols-outlined">delete</span>
                     </button>
                   </div>
                 </td>
@@ -579,7 +579,7 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
         </div>
 
         <!-- DESIGN 5: CARD VIEW (GUEST PROFILE CARDS) -->
-        <div *ngIf="filteredCustomers.length > 0 && customerLayout.activeKey() === 'card'" class="cust-card-grid">
+        <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'card'" class="cust-card-grid">
           <div *ngFor="let c of paginatedCustomers" class="cust-profile-card">
             <div class="cust-profile-cover">
               <div class="cust-profile-avatar-pos">
@@ -618,15 +618,15 @@ import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles'
 
             <div class="cust-profile-card-footer">
               <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
-              <div class="flex items-center gap-1.5">
-                <button type="button" (click)="viewHistory(c)" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-purple-700" title="Invoices">
-                  <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+              <div class="cust-card-actions">
+                <button type="button" (click)="viewHistory(c)" class="cust-act is-card" title="Invoices">
+                  <span class="material-symbols-outlined">receipt_long</span>
                 </button>
-                <button type="button" (click)="openEditModal(c)" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-blue-700" title="Edit">
-                  <span class="material-symbols-outlined text-[16px]">edit</span>
+                <button type="button" (click)="openEditModal(c)" class="cust-act is-card" title="Edit">
+                  <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" (click)="deleteCustomer(c)" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-red-700" title="Delete">
-                  <span class="material-symbols-outlined text-[16px]">delete</span>
+                <button type="button" (click)="deleteCustomer(c)" class="cust-act is-card is-delete" title="Delete">
+                  <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
             </div>

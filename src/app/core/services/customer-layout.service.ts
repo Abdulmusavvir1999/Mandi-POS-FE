@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 export type CustomerDesignKey = 'vipcard' | 'clean' | 'compact' | 'list' | 'card';
 
@@ -243,6 +244,14 @@ export const CUSTOMER_DESIGN_OPTIONS = CUSTOMER_DESIGNS;
 
 export const DEFAULT_CUSTOMER_DESIGN: CustomerDesignKey = 'vipcard';
 
+/**
+ * The design the directory falls back to while its customization switch is
+ * off: Card View, the page's own built-in card listing. It renders with its
+ * own stock palette, never the saved overrides, so "off" always looks the same
+ * however the page was customized.
+ */
+export const BASELINE_CUSTOMER_DESIGN: CustomerDesignKey = 'card';
+
 interface StoredCustomerLayout {
   layoutKey: CustomerDesignKey;
   overrides: Partial<Record<CustomerDesignKey, Partial<CustomerTokens>>>;
@@ -252,14 +261,19 @@ interface StoredCustomerLayout {
 @Injectable({ providedIn: 'root' })
 export class CustomerLayoutService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
 
   private readonly layoutKeySignal = signal<CustomerDesignKey>(DEFAULT_CUSTOMER_DESIGN);
   private readonly overridesSignal = signal<StoredCustomerLayout['overrides']>({});
-  private readonly enabledSignal = signal<boolean>(true);
 
   public readonly activeKey = this.layoutKeySignal.asReadonly();
   public readonly overrides = this.overridesSignal.asReadonly();
-  public readonly enabled = this.enabledSignal.asReadonly();
+  /**
+   * Whether the page applies its saved design at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * design and its palette stay saved either way.
+   */
+  public readonly enabled = this.customization.customerCustomize;
 
   public readonly designs = CUSTOMER_DESIGNS;
   public readonly tokenMeta = CUSTOMER_TOKEN_META;
@@ -273,8 +287,20 @@ export class CustomerLayoutService {
     this.tokensFor(this.layoutKeySignal())
   );
 
+  /** The design the page renders: the saved one, or the baseline while off. */
+  public readonly effectiveKey = computed<CustomerDesignKey>(() =>
+    this.enabled() ? this.layoutKeySignal() : BASELINE_CUSTOMER_DESIGN
+  );
+
   public readonly rootClass = computed<string>(() =>
-    'customer-layout-' + this.layoutKeySignal()
+    'customer-layout-' + this.effectiveKey()
+  );
+
+  /** Variables the page renders with — stock defaults while off. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled()
+      ? this.varsFrom(this.activeTokens())
+      : this.varsFrom(this.defaultsFor(BASELINE_CUSTOMER_DESIGN))
   );
 
   public readonly tokens = this.activeTokens;
@@ -299,7 +325,10 @@ export class CustomerLayoutService {
   }
 
   public cssVars(key?: CustomerDesignKey): Record<string, string> {
-    const tokens = key ? this.tokensFor(key) : this.activeTokens();
+    return this.varsFrom(key ? this.tokensFor(key) : this.activeTokens());
+  }
+
+  private varsFrom(tokens: CustomerTokens): Record<string, string> {
     const vars: Record<string, string> = {};
 
     vars['--cust-canvas-bg'] = tokens.canvasBg;
@@ -323,8 +352,10 @@ export class CustomerLayoutService {
   }
 
   public selectDesign(key: CustomerDesignKey): void {
+    // Only the design is chosen here. Whether it is applied is the master
+    // switch's business, so picking one never turns a page's customization on
+    // behind the admin's back.
     this.layoutKeySignal.set(key);
-    this.enabledSignal.set(true);
   }
 
   public setActiveDesign(key: CustomerDesignKey): void {
@@ -372,7 +403,9 @@ export class CustomerLayoutService {
     const stored: StoredCustomerLayout = {
       layoutKey: this.layoutKeySignal(),
       overrides: this.overridesSignal(),
-      enabled: this.enabledSignal(),
+      // Mirrored for builds that predate the customization switches; the
+      // value read back is the one in `system_customization`.
+      enabled: this.enabled(),
     };
     return { system_customer_layout: JSON.stringify(stored) };
   }
@@ -393,9 +426,8 @@ export class CustomerLayoutService {
       if (parsed?.overrides && typeof parsed.overrides === 'object') {
         this.overridesSignal.set(parsed.overrides);
       }
-      if (parsed?.enabled !== undefined) {
-        this.enabledSignal.set(parsed.enabled === true || String(parsed.enabled) === 'true');
-      }
+      // `enabled` is deliberately not read here: CustomizationService owns it
+      // and migrates this blob's old value on first load.
     } catch (_) {
       // Retain defaults on error
     }

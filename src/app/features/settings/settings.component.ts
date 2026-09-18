@@ -76,8 +76,13 @@ import {
   STAFF_TOKEN_META,
 } from '../../core/services/staff-layout.service';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import {
+  CustomizationService,
+  CustomizationModule,
+  CustomizationModuleKey,
+} from '../../core/services/customization.service';
 
-type SettingsTab = 'theme' | 'toast' | 'business' | 'hardware' | 'posdesign' | 'dishpage' | 'dining' | 'categorydesign' | 'stockdesign' | 'customerdesign' | 'staffdesign' | 'sidebardesign';
+type SettingsTab = 'customization' | 'theme' | 'toast' | 'business' | 'hardware' | 'posdesign' | 'dishpage' | 'dining' | 'categorydesign' | 'stockdesign' | 'customerdesign' | 'staffdesign' | 'sidebardesign';
 
 /** Branding images that can be replaced from the Store tab. */
 import { SidebarLayoutPreviewComponent } from '../../shared/components/sidebar-layout-preview/sidebar-layout-preview.component';
@@ -185,6 +190,16 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         </button>
 
         <div class="tab-nav-bar" appDragScroll #tabRail="dragScroll">
+          <button
+            type="button"
+            (click)="activeTab = 'customization'"
+            class="tab-btn"
+            [class.is-active]="activeTab === 'customization'"
+          >
+            <span class="material-symbols-outlined">toggle_on</span>
+            <span>POS Customization</span>
+          </button>
+
           <button
             type="button"
             (click)="activeTab = 'theme'"
@@ -321,112 +336,142 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- POS DESIGN PREVIEW (sample dishes, read-only)                   -->
+      <!-- WHETHER THE PAGE BEING CONFIGURED ACTUALLY USES THIS DESIGN     -->
+      <!-- One bar for all eight customize tabs: the editor is always live,-->
+      <!-- but the design only reaches the page while the switch is on.    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="previewDesignKey" (click)="closePosPreview()">
-        <div class="modal-content p-6 max-w-4xl" (click)="$event.stopPropagation()">
-          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined">visibility</span>
-              </span>
+      <div
+        *ngIf="activeModule as m"
+        class="customization-status-bar"
+        [class.is-off]="!customization.isEnabled(m.key)"
+      >
+        <span class="material-symbols-outlined">
+          {{ customization.isEnabled(m.key) ? 'check_circle' : 'info' }}
+        </span>
+        <p>
+          <strong>{{ m.name }}</strong> customization is
+          <strong>{{ customization.isEnabled(m.key) ? 'ON' : 'OFF' }}</strong> —
+          <ng-container *ngIf="customization.isEnabled(m.key); else offCopy">
+            this page renders the design saved here.
+          </ng-container>
+          <ng-template #offCopy>
+            the page renders its existing default design. Anything you change here is
+            still saved, and applies the moment you switch it on.
+          </ng-template>
+        </p>
+        <button
+          type="button"
+          class="note-action"
+          [disabled]="savingModuleKey !== null"
+          (click)="toggleCustomizationFor(m)"
+        >
+          {{ customization.isEnabled(m.key) ? 'Turn off' : 'Turn on' }}
+        </button>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- TAB 0: POS CUSTOMIZATION — one switch per page                  -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'customization'" class="tab-content-pane">
+        <div class="setting-card">
+          <div class="card-header-bar">
+            <div class="card-title-group">
+              <span class="material-symbols-outlined card-icon">toggle_on</span>
               <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
-                  {{ previewDesignName }}
-                </h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">
-                  One row at {{ posDesign.cardsPerRow() }} per row, with your current colours
+                <h2 class="card-title">POS Customization</h2>
+                <p class="card-subtitle">
+                  Choose which customized designs are active. A page that is switched off
+                  uses the existing default design — its saved customization is kept, and
+                  switching it back on restores it exactly as it was. Each page is
+                  independent; changing one never changes another.
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              (click)="closePosPreview()"
-              class="modal-close-btn"
-              title="Close"
-              aria-label="Close"
-            >
-              <span class="material-symbols-outlined">close</span>
-            </button>
+            <div class="custom-master">
+              <span class="custom-count-pill">
+                {{ enabledCustomizationCount }} of {{ customization.modules.length }} on
+              </span>
+
+              <label
+                class="switch-row"
+                title="Turn every page's customization on, or all of them off"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="allCustomizationsOn"
+                  [indeterminate]="someCustomizationsOn"
+                  [disabled]="savingModuleKey !== null"
+                  (change)="onCustomizationMasterToggle($event)"
+                />
+                <span class="switch-track" [class.is-mixed]="someCustomizationsOn">
+                  <span class="switch-knob"></span>
+                </span>
+                <span class="switch-label">
+                  {{ savingModuleKey === 'all'
+                      ? 'Saving…'
+                      : (allCustomizationsOn ? 'All ON' : (someCustomizationsOn ? 'Mixed' : 'All OFF')) }}
+                </span>
+              </label>
+            </div>
           </div>
 
-          <app-pos-design-preview
-            *ngIf="previewDesignKey"
-            [designKey]="previewDesignKey!"
-            [cssVars]="posDesign.cssVars(previewDesignKey!)"
-            [cardsPerRow]="posDesign.cardsPerRow()"
-          ></app-pos-design-preview>
-
-          <div class="flex items-center justify-end gap-3 pt-5 mt-1 border-t border-[#E9D5FF]">
-            <button type="button" (click)="closePosPreview()" class="action-btn btn-outline-purple">
-              Close
-            </button>
-            <button
-              type="button"
-              *ngIf="posDesign.activeKey() !== previewDesignKey"
-              (click)="useAndClosePosPreview()"
-              class="action-btn btn-gradient-purple"
+          <div class="custom-row-list">
+            <div
+              *ngFor="let m of customization.modules"
+              class="custom-row"
+              [class.is-on]="customization.isEnabled(m.key)"
             >
-              <span class="material-symbols-outlined">check</span>
-              <span>Use this design</span>
-            </button>
+              <span class="material-symbols-outlined custom-row-icon">{{ m.icon }}</span>
+
+              <div class="custom-row-text">
+                <div class="custom-row-name">{{ m.name }}</div>
+                <p class="custom-row-desc">{{ m.description }}</p>
+                <p class="custom-row-status">
+                  Customization:
+                  <strong [class.is-on]="customization.isEnabled(m.key)">
+                    {{ customization.isEnabled(m.key) ? 'ON' : 'OFF' }}
+                  </strong>
+                  <span *ngIf="!customization.isEnabled(m.key)"> · {{ m.defaultBlurb }}</span>
+                </p>
+              </div>
+
+              <div class="custom-row-actions">
+                <label
+                  class="switch-row"
+                  [title]="'Apply the saved ' + m.name + ' design to its page'"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="customization.isEnabled(m.key)"
+                    [disabled]="savingModuleKey !== null"
+                    (change)="onCustomizationToggle(m, $event)"
+                  />
+                  <span class="switch-track"><span class="switch-knob"></span></span>
+                  <span class="switch-label">
+                    {{ savingModuleKey === m.key ? 'Saving…' : (customization.isEnabled(m.key) ? 'ON' : 'OFF') }}
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                  (click)="openCustomizationTab(m)"
+                  [title]="'Open the ' + m.name + ' editor'"
+                >
+                  <span class="material-symbols-outlined">tune</span>
+                  <span>Configure</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- POS DESIGN PREVIEW (sample dishes, read-only)                   -->
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- DISH PAGE DESIGN PREVIEW (sample dishes, read-only)             -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="previewLayoutKey" (click)="closeDishPreview()">
-        <div class="modal-content p-6 max-w-5xl" (click)="$event.stopPropagation()">
-          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined">visibility</span>
-              </span>
-              <div>
-                <h3 class="text-lg font-black text-[#2E1065] leading-tight">
-                  {{ previewLayoutName }}
-                </h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">
-                  {{ previewLayoutHint }}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              (click)="closeDishPreview()"
-              class="modal-close-btn"
-              title="Close"
-              aria-label="Close"
-            >
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <app-dish-layout-preview
-            *ngIf="previewLayoutKey"
-            [layoutKey]="previewLayoutKey!"
-            [cssVars]="dishLayout.cssVars(previewLayoutKey!)"
-            [columnsPerRow]="dishLayout.columnsPerRow()"
-          ></app-dish-layout-preview>
-
-          <div class="flex items-center justify-end gap-3 pt-5 mt-1 border-t border-[#E9D5FF]">
-            <button type="button" (click)="closeDishPreview()" class="action-btn btn-outline-purple">
-              Close
-            </button>
-            <button
-              type="button"
-              *ngIf="!dishLayout.enabled() || dishLayout.activeKey() !== previewLayoutKey"
-              (click)="useAndCloseDishPreview()"
-              class="action-btn btn-gradient-purple"
-            >
-              <span class="material-symbols-outlined">check</span>
-              <span>Use this design</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- TAB 5: POS CUSTOMIZE                                            -->
@@ -444,6 +489,16 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   from its reference artwork and can be recoloured below.
                 </p>
               </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                (click)="resetPosDesign()"
+              >
+                <span class="material-symbols-outlined">restart_alt</span>
+                <span>Reset Design</span>
+              </button>
             </div>
           </div>
 
@@ -472,25 +527,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="design-meta">
                 <div class="design-name-row">
                   <span class="design-name">{{ d.name }}</span>
-                  <div class="design-name-actions">
-                    <!-- A button inside a button is invalid, so this is a span
-                         acting as one; the card's own click is stopped here. -->
-                    <span
-                      class="design-preview-btn"
-                      role="button"
-                      tabindex="0"
-                      (click)="openPosPreview(d.key, $event)"
-                      (keydown.enter)="openPosPreview(d.key, $event)"
-                      (keydown.space)="openPosPreview(d.key, $event)"
-                      title="Preview with sample dishes"
-                    >
-                      <span class="material-symbols-outlined">visibility</span>
-                      <span>Preview</span>
-                    </span>
-                    <span class="design-check" *ngIf="posDesign.activeKey() === d.key">
-                      <span class="material-symbols-outlined">check_circle</span>
-                    </span>
-                  </div>
+                  <span class="design-check" *ngIf="posDesign.activeKey() === d.key">
+                    <span class="material-symbols-outlined">check_circle</span>
+                  </span>
                 </div>
                 <p class="design-blurb">{{ d.blurb }}</p>
               </div>
@@ -523,6 +562,38 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           </div>
         </div>
 
+        <!-- Live Interactive Preview Card. Always on: every colour and size
+             edit below renders here as it is made, with nothing to click. -->
+        <div class="setting-card">
+          <div class="card-header-bar">
+            <div class="card-title-group">
+              <span class="material-symbols-outlined card-icon">visibility</span>
+              <div>
+                <h2 class="card-title">Live Preview: {{ posDesign.activeDesign().name }}</h2>
+                <p class="card-subtitle">
+                  One row of sample dishes at {{ posDesign.cardsPerRow() }} per row, drawn with
+                  the same stylesheet the POS billing grid uses. Every change below appears here
+                  immediately.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="active-preset-tag !bg-blue-50 !text-blue-700 !border-blue-200">
+                <span class="swatch-dot !bg-blue-500"></span>
+                <span>Active Live Preview</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="p-4 md:p-6 bg-slate-50/70 border-t border-b border-purple-100/60">
+            <app-pos-design-preview
+              [designKey]="posDesign.activeKey()"
+              [cssVars]="posDesign.cssVars()"
+              [cardsPerRow]="posDesign.cardsPerRow()"
+            ></app-pos-design-preview>
+          </div>
+        </div>
+
         <!-- Token editor for whichever design is selected -->
         <div class="setting-card">
           <div class="card-header-bar">
@@ -532,27 +603,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <h2 class="card-title">Customize “{{ posDesign.activeDesign().name }}”</h2>
                 <p class="card-subtitle">
                   Every colour this design uses. Changes appear in the preview above
-                  immediately; press Save to apply them to the POS.
+                  immediately; press <strong>Save Configuration</strong> at the top of this page
+                  to apply them to the POS.
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs"
-                (click)="openPosPreview(posDesign.activeKey(), $event)"
-              >
-                <span class="material-symbols-outlined">visibility</span>
-                <span>Preview</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetPosDesign()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to design default</span>
-              </button>
             </div>
           </div>
 
@@ -627,23 +681,16 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </p>
               </div>
             </div>
-            <label class="switch-row" title="Drive the catalog listing with this setting">
-              <input
-                type="checkbox"
-                [checked]="dishLayout.enabled()"
-                (change)="onDishEnabledToggle($event)"
-              />
-              <span class="switch-track"><span class="switch-knob"></span></span>
-              <span class="switch-label">{{ dishLayout.enabled() ? 'On' : 'Off' }}</span>
-            </label>
-          </div>
-
-          <div *ngIf="!dishLayout.enabled()" class="design-override-note is-muted">
-            <span class="material-symbols-outlined">lightbulb</span>
-            <p>
-              While this is off the catalog keeps its current data table. Picking any design
-              below switches it on.
-            </p>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                (click)="resetDishLayout()"
+              >
+                <span class="material-symbols-outlined">restart_alt</span>
+                <span>Reset Design</span>
+              </button>
+            </div>
           </div>
 
           <div class="design-grid is-five">
@@ -651,9 +698,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               *ngFor="let l of dishLayout.layouts"
               type="button"
               class="design-card"
-              [class.is-selected]="dishLayout.enabled() && dishLayout.activeKey() === l.key"
+              [class.is-selected]="dishLayout.activeKey() === l.key"
               (click)="dishLayout.selectLayout(l.key)"
-              [attr.aria-pressed]="dishLayout.enabled() && dishLayout.activeKey() === l.key"
+              [attr.aria-pressed]="dishLayout.activeKey() === l.key"
             >
               <!-- Miniature of the real thing: same tokens the POS renders, so
                    recolouring shows up here immediately. -->
@@ -681,23 +728,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     {{ l.name }}
                   </span>
                   <div class="design-name-actions">
-                    <!-- A button inside a button is invalid, so this is a span
-                         acting as one; the card's own click is stopped here. -->
-                    <span
-                      class="design-preview-btn"
-                      role="button"
-                      tabindex="0"
-                      (click)="openDishPreview(l.key, $event)"
-                      (keydown.enter)="openDishPreview(l.key, $event)"
-                      (keydown.space)="openDishPreview(l.key, $event)"
-                      title="Preview with sample dishes"
-                    >
-                      <span class="material-symbols-outlined">visibility</span>
-                      <span>Preview</span>
-                    </span>
                     <span
                       class="design-check"
-                      *ngIf="dishLayout.enabled() && dishLayout.activeKey() === l.key"
+                      *ngIf="dishLayout.activeKey() === l.key"
                     >
                       <span class="material-symbols-outlined">check_circle</span>
                     </span>
@@ -744,6 +777,37 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           </div>
         </div>
 
+        <!-- Live Interactive Preview Card. Always on: every colour and size
+             edit below renders here as it is made, with nothing to click. -->
+        <div class="setting-card">
+          <div class="card-header-bar">
+            <div class="card-title-group">
+              <span class="material-symbols-outlined card-icon">visibility</span>
+              <div>
+                <h2 class="card-title">Live Preview: {{ dishLayout.activeLayout().name }}</h2>
+                <p class="card-subtitle">
+                  Sample dishes at {{ dishLayout.columnsPerRow() }} per row, drawn with the same
+                  stylesheet the catalogue uses. Every change below appears here immediately.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="active-preset-tag !bg-blue-50 !text-blue-700 !border-blue-200">
+                <span class="swatch-dot !bg-blue-500"></span>
+                <span>Active Live Preview</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="p-4 md:p-6 bg-slate-50/70 border-t border-b border-purple-100/60">
+            <app-dish-layout-preview
+              [layoutKey]="dishLayout.activeKey()"
+              [cssVars]="dishLayout.cssVars()"
+              [columnsPerRow]="dishLayout.columnsPerRow()"
+            ></app-dish-layout-preview>
+          </div>
+        </div>
+
         <!-- Token editor for whichever design is selected -->
         <div class="setting-card">
           <div class="card-header-bar">
@@ -753,27 +817,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <h2 class="card-title">Customize “{{ dishLayout.activeLayout().name }}”</h2>
                 <p class="card-subtitle">
                   Every colour this design uses. Changes appear in the previews above
-                  immediately; press Save to apply them to the POS.
+                  immediately; press <strong>Save Configuration</strong> at the top of this page
+                  to apply them to the POS.
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs"
-                (click)="openDishPreview(dishLayout.activeKey(), $event)"
-              >
-                <span class="material-symbols-outlined">visibility</span>
-                <span>Preview</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetDishLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to design default</span>
-              </button>
             </div>
           </div>
 
@@ -825,6 +872,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </p>
               </div>
             </div>
+            <!-- Saving is handled once, by "Save Configuration" in the sticky page
+                 header. Only the design-level reset lives here. -->
             <div class="flex items-center gap-2">
               <button
                 type="button"
@@ -833,15 +882,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               >
                 <span class="material-symbols-outlined">restart_alt</span>
                 <span>Reset Design</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Settings' }}</span>
               </button>
             </div>
           </div>
@@ -933,14 +973,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   <div class="thumb-cardlist-item">
                     <span class="thumb-cl-badge is-busy">T-01</span>
                     <div class="thumb-cl-body">
-                      <span class="thumb-cl-line w-16"></span>
+                      <span class="thumb-cl-line tbw-16"></span>
                       <span class="thumb-cl-dwell"></span>
                     </div>
                   </div>
                   <div class="thumb-cardlist-item">
                     <span class="thumb-cl-badge is-free">T-02</span>
                     <div class="thumb-cl-body">
-                      <span class="thumb-cl-line w-12"></span>
+                      <span class="thumb-cl-line tbw-12"></span>
                       <span class="thumb-cl-dwell"></span>
                     </div>
                   </div>
@@ -959,10 +999,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     </span>
                   </div>
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-purple-600 mt-0.5">
+                <div class="design-kicker">
                   {{ d.badge }}
                 </div>
-                <p class="design-blurb mt-1">{{ d.blurb }}</p>
+                <p class="design-blurb">{{ d.blurb }}</p>
               </div>
             </button>
           </div>
@@ -1009,25 +1049,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   saved customizations independently.
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetDiningLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Settings' }}</span>
-              </button>
             </div>
           </div>
 
@@ -1079,30 +1100,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             </div>
           </ng-container>
 
-          <!-- Bottom Action Bar -->
+          <!-- Bottom note — no buttons: one Save lives in the page header. -->
           <div class="flex items-center justify-between p-4 md:p-6 mt-4 border-t border-purple-100 bg-purple-50/40 rounded-b-2xl">
             <p class="text-xs text-slate-500 m-0">
-              Changes take effect immediately on the actual Dining page once saved.
+              Changes take effect on the actual Dining page once you press
+              <strong class="text-purple-700">Save Configuration</strong> at the top of this page.
             </p>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-2 !px-4 text-xs"
-                (click)="resetDiningLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-2 !px-5 text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Dining Settings' }}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1131,7 +1134,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 title="Reset layout overrides"
               >
                 <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
+                <span>Reset Design</span>
               </button>
             </div>
           </div>
@@ -1146,67 +1149,78 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               (click)="categoryLayout.setActiveDesign(d.key)"
               [attr.aria-pressed]="categoryLayout.activeKey() === d.key"
             >
-              <!-- Mini Graphic Thumbnail -->
+              <!-- Mini Graphic Thumbnail.
+                   Widths use the local .cw-* helpers below, never the global
+                   .w-N utilities: those force a square (width AND height, both
+                   !important) because they were written for icon boxes. -->
               <div class="category-mini-thumb" [ngClass]="'thumb-cat-' + d.key">
-                <!-- Showcase Thumbnail -->
-                <div *ngIf="d.key === 'showcase'" class="thumb-cat-showcase-wrap">
-                  <div class="thumb-cat-sc-card">
-                    <div class="thumb-cat-sc-head">
-                      <span class="thumb-cat-sc-icon">☕</span>
-                      <span class="thumb-cat-sc-pill">32 items</span>
+                <!-- Design 1 · Bento Showcase: one hero tile + two supporting tiles -->
+                <div *ngIf="d.key === 'showcase'" class="cat-thumb cat-bento">
+                  <div class="cat-bento-hero">
+                    <span class="cat-avatar is-lg">☕</span>
+                    <div class="cat-stack">
+                      <span class="cat-line is-title cw-70"></span>
+                      <span class="cat-line cw-45"></span>
                     </div>
-                    <div class="thumb-cat-sc-line"></div>
-                    <div class="thumb-cat-sc-sub"></div>
+                    <span class="cat-chip is-count">32</span>
+                  </div>
+                  <div class="cat-bento-row">
+                    <div class="cat-bento-tile">
+                      <span class="cat-avatar">🍕</span>
+                      <span class="cat-line cw-60"></span>
+                    </div>
+                    <div class="cat-bento-tile">
+                      <span class="cat-avatar">🥗</span>
+                      <span class="cat-line cw-60"></span>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Clean Table Thumbnail -->
-                <div *ngIf="d.key === 'clean'" class="thumb-cat-clean-wrap">
-                  <div class="thumb-cat-clean-row">
-                    <span class="thumb-cat-seq">#1</span>
-                    <span class="thumb-cat-bar w-14"></span>
-                    <span class="thumb-cat-metric">32</span>
+                <!-- Design 2 · Minimalist Clean Table: header rule + data rows -->
+                <div *ngIf="d.key === 'clean'" class="cat-thumb cat-table">
+                  <div class="cat-table-head">
+                    <span class="cat-col cw-20"></span>
+                    <span class="cat-col cw-50"></span>
+                    <span class="cat-col cw-25"></span>
                   </div>
-                  <div class="thumb-cat-clean-row">
-                    <span class="thumb-cat-seq">#2</span>
-                    <span class="thumb-cat-bar w-10"></span>
-                    <span class="thumb-cat-metric">18</span>
-                  </div>
-                </div>
-
-                <!-- Compact Badge Tiles Thumbnail -->
-                <div *ngIf="d.key === 'compact'" class="thumb-cat-compact-wrap">
-                  <div class="thumb-cat-compact-tile">
-                    <span class="thumb-cat-c-icon">🍕</span>
-                    <span class="thumb-cat-c-dot"></span>
-                  </div>
-                  <div class="thumb-cat-compact-tile">
-                    <span class="thumb-cat-c-icon">🍔</span>
-                    <span class="thumb-cat-c-dot"></span>
+                  <div class="cat-table-row" *ngFor="let r of [1, 2, 3]">
+                    <span class="cat-seq">#{{ r }}</span>
+                    <span class="cat-line is-name cw-60"></span>
+                    <span class="cat-chip is-soft">{{ r === 1 ? '32' : r === 2 ? '18' : '9' }}</span>
                   </div>
                 </div>
 
-                <!-- List View Thumbnail -->
-                <div *ngIf="d.key === 'list'" class="thumb-cat-list-wrap">
-                  <div class="thumb-cat-list-row">
-                    <span class="thumb-cat-dot"></span>
-                    <span class="thumb-cat-bar w-16"></span>
-                    <span class="thumb-cat-tag">Active</span>
-                  </div>
-                  <div class="thumb-cat-list-row">
-                    <span class="thumb-cat-dot"></span>
-                    <span class="thumb-cat-bar w-12"></span>
-                    <span class="thumb-cat-tag">Active</span>
+                <!-- Design 3 · Compact Badge Tiles: dense masonry of icon badges -->
+                <div *ngIf="d.key === 'compact'" class="cat-thumb cat-tiles">
+                  <div class="cat-tile" *ngFor="let g of ['🍕', '🍔', '🥗', '🍰', '☕', '🍜']">
+                    <span class="cat-tile-glyph">{{ g }}</span>
+                    <span class="cat-tile-dot"></span>
                   </div>
                 </div>
 
-                <!-- Card View Thumbnail -->
-                <div *ngIf="d.key === 'card'" class="thumb-cat-card-wrap">
-                  <div class="thumb-cat-exec-card">
-                    <div class="thumb-cat-banner"></div>
-                    <div class="thumb-cat-exec-body">
-                      <span class="thumb-cat-bar w-12"></span>
-                      <span class="thumb-cat-progress"></span>
+                <!-- Design 4 · List View: full-width rows with status + actions -->
+                <div *ngIf="d.key === 'list'" class="cat-thumb cat-list">
+                  <div class="cat-list-row" *ngFor="let r of [1, 2, 3]">
+                    <span class="cat-seq is-boxed">{{ r }}</span>
+                    <span class="cat-avatar is-sm"></span>
+                    <div class="cat-stack is-grow">
+                      <span class="cat-line is-name cw-70"></span>
+                      <span class="cat-line cw-40"></span>
+                    </div>
+                    <span class="cat-chip is-live">●</span>
+                    <span class="cat-kebab"></span>
+                  </div>
+                </div>
+
+                <!-- Design 5 · Card View: banner cards with overlapping avatar + meter -->
+                <div *ngIf="d.key === 'card'" class="cat-thumb cat-cards">
+                  <div class="cat-card" *ngFor="let c of [1, 2]">
+                    <span class="cat-card-banner"></span>
+                    <span class="cat-avatar is-float">{{ c === 1 ? '🍕' : '☕' }}</span>
+                    <div class="cat-card-body">
+                      <span class="cat-line is-name cw-75"></span>
+                      <span class="cat-line cw-50"></span>
+                      <span class="cat-meter"><i [style.width.%]="c === 1 ? 72 : 44"></i></span>
                     </div>
                   </div>
                 </div>
@@ -1224,10 +1238,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     </span>
                   </div>
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-purple-600 mt-0.5">
+                <div class="design-kicker">
                   {{ d.badge || d.subtitle }}
                 </div>
-                <p class="design-blurb mt-1">{{ d.description }}</p>
+                <p class="design-blurb">{{ d.description }}</p>
               </div>
             </button>
           </div>
@@ -1272,25 +1286,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   Fine-tune colors, cards, borders, typography, and spacing metrics. Each design retains its own independent values.
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetCategoryLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Category Settings' }}</span>
-              </button>
             </div>
           </div>
 
@@ -1342,30 +1337,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             </div>
           </ng-container>
 
-          <!-- Bottom Action Bar -->
+          <!-- Bottom note - no buttons: one Save lives in the page header. -->
           <div class="flex items-center justify-between p-4 md:p-6 mt-4 border-t border-purple-100 bg-purple-50/40 rounded-b-2xl">
             <p class="text-xs text-slate-500 m-0">
-              Changes take effect immediately on the actual Category page once saved.
+              Changes take effect on the Category page once you press
+              <strong class="text-purple-700">Save Configuration</strong> at the top of this page.
             </p>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-2 !px-4 text-xs"
-                (click)="resetCategoryLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-2 !px-5 text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Category Settings' }}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1394,7 +1371,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 title="Reset layout overrides"
               >
                 <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
+                <span>Reset Design</span>
               </button>
             </div>
           </div>
@@ -1419,7 +1396,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                       <span class="thumb-stk-dot-green"></span>
                     </div>
                     <div class="thumb-stk-bar-bg">
-                      <span class="thumb-stk-bar-green w-14"></span>
+                      <span class="thumb-stk-bar-green tbw-14"></span>
                     </div>
                     <div class="thumb-stk-chips">
                       <span class="thumb-stk-val">$682</span>
@@ -1432,12 +1409,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div *ngIf="d.key === 'financial'" class="thumb-stk-fin-wrap">
                   <div class="thumb-stk-fin-row">
                     <span class="thumb-stk-sku-sm">#01</span>
-                    <span class="thumb-stk-line w-12"></span>
+                    <span class="thumb-stk-line tbw-12"></span>
                     <span class="thumb-stk-val-sm">$450</span>
                   </div>
                   <div class="thumb-stk-fin-row">
                     <span class="thumb-stk-sku-sm">#02</span>
-                    <span class="thumb-stk-line w-8"></span>
+                    <span class="thumb-stk-line tbw-8"></span>
                     <span class="thumb-stk-val-sm">$120</span>
                   </div>
                 </div>
@@ -1458,13 +1435,13 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div *ngIf="d.key === 'list'" class="thumb-stk-list-wrap">
                   <div class="thumb-stk-list-row">
                     <span class="thumb-stk-sku-sm">STK</span>
-                    <span class="thumb-stk-line w-16"></span>
-                    <span class="thumb-stk-bar-green w-10"></span>
+                    <span class="thumb-stk-line tbw-16"></span>
+                    <span class="thumb-stk-bar-green tbw-10"></span>
                   </div>
                   <div class="thumb-stk-list-row">
                     <span class="thumb-stk-sku-sm">STK</span>
-                    <span class="thumb-stk-line w-10"></span>
-                    <span class="thumb-stk-bar-amber w-6"></span>
+                    <span class="thumb-stk-line tbw-10"></span>
+                    <span class="thumb-stk-bar-amber tbw-6"></span>
                   </div>
                 </div>
 
@@ -1476,7 +1453,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                       <span class="thumb-stk-unit">PCS</span>
                     </div>
                     <div class="thumb-stk-big-num">120</div>
-                    <div class="thumb-stk-bar-green w-16"></div>
+                    <div class="thumb-stk-bar-green tbw-16"></div>
                   </div>
                 </div>
               </div>
@@ -1493,10 +1470,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     </span>
                   </div>
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-blue-600 mt-0.5">
+                <div class="design-kicker">
                   {{ d.badge || d.subtitle }}
                 </div>
-                <p class="design-blurb mt-1">{{ d.description }}</p>
+                <p class="design-blurb">{{ d.description }}</p>
               </div>
             </button>
           </div>
@@ -1542,26 +1519,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetStockLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Stock Settings' }}</span>
-              </button>
-            </div>
           </div>
+
 
           <!-- Token Groups -->
           <ng-container *ngFor="let group of stockTokenGroups">
@@ -1611,30 +1570,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             </div>
           </ng-container>
 
-          <!-- Bottom Action Bar -->
+          <!-- Bottom note - no buttons: one Save lives in the page header. -->
           <div class="flex items-center justify-between p-4 md:p-6 mt-4 border-t border-purple-100 bg-purple-50/40 rounded-b-2xl">
             <p class="text-xs text-slate-500 m-0">
-              Changes take effect immediately on the actual Stock page once saved.
+              Changes take effect on the Stock page once you press
+              <strong class="text-purple-700">Save Configuration</strong> at the top of this page.
             </p>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-2 !px-4 text-xs"
-                (click)="resetStockLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-2 !px-5 text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Stock Settings' }}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1663,7 +1604,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 title="Reset layout overrides"
               >
                 <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
+                <span>Reset Design</span>
               </button>
             </div>
           </div>
@@ -1687,8 +1628,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                       <div class="thumb-cust-avatar-sm">SJ</div>
                       <span class="thumb-cust-vip-pill">GOLD</span>
                     </div>
-                    <div class="thumb-cust-line w-14"></div>
-                    <div class="thumb-cust-bar-gold w-10"></div>
+                    <div class="thumb-cust-line tbw-14"></div>
+                    <div class="thumb-cust-bar-gold tbw-10"></div>
                   </div>
                 </div>
 
@@ -1696,12 +1637,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div *ngIf="d.key === 'clean'" class="thumb-cust-clean-wrap">
                   <div class="thumb-cust-clean-row">
                     <span class="thumb-cust-seq">#1</span>
-                    <span class="thumb-cust-line w-12"></span>
+                    <span class="thumb-cust-line tbw-12"></span>
                     <span class="thumb-cust-pill-blue">VIP</span>
                   </div>
                   <div class="thumb-cust-clean-row">
                     <span class="thumb-cust-seq">#2</span>
-                    <span class="thumb-cust-line w-10"></span>
+                    <span class="thumb-cust-line tbw-10"></span>
                     <span class="thumb-cust-pill-green">REG</span>
                   </div>
                 </div>
@@ -1710,11 +1651,11 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div *ngIf="d.key === 'compact'" class="thumb-cust-compact-wrap">
                   <div class="thumb-cust-compact-tile">
                     <span class="thumb-cust-avatar-xs">SJ</span>
-                    <span class="thumb-cust-line w-8"></span>
+                    <span class="thumb-cust-line tbw-8"></span>
                   </div>
                   <div class="thumb-cust-compact-tile">
                     <span class="thumb-cust-avatar-xs">RM</span>
-                    <span class="thumb-cust-line w-8"></span>
+                    <span class="thumb-cust-line tbw-8"></span>
                   </div>
                 </div>
 
@@ -1722,12 +1663,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div *ngIf="d.key === 'list'" class="thumb-cust-list-wrap">
                   <div class="thumb-cust-list-row">
                     <span class="thumb-cust-check"></span>
-                    <span class="thumb-cust-line w-14"></span>
+                    <span class="thumb-cust-line tbw-14"></span>
                     <span class="thumb-cust-tag-green">Active</span>
                   </div>
                   <div class="thumb-cust-list-row">
                     <span class="thumb-cust-check"></span>
-                    <span class="thumb-cust-line w-10"></span>
+                    <span class="thumb-cust-line tbw-10"></span>
                     <span class="thumb-cust-tag-green">Active</span>
                   </div>
                 </div>
@@ -1738,7 +1679,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     <div class="thumb-cust-card-banner"></div>
                     <div class="thumb-cust-card-body">
                       <div class="thumb-cust-avatar-xs">SJ</div>
-                      <span class="thumb-cust-line w-10"></span>
+                      <span class="thumb-cust-line tbw-10"></span>
                     </div>
                   </div>
                 </div>
@@ -1756,10 +1697,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     </span>
                   </div>
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-purple-600 mt-0.5">
+                <div class="design-kicker">
                   {{ d.badge || d.subtitle }}
                 </div>
-                <p class="design-blurb mt-1">{{ d.description }}</p>
+                <p class="design-blurb">{{ d.description }}</p>
               </div>
             </button>
           </div>
@@ -1804,25 +1745,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   Configure surfaces, VIP tier badges, spend accents, typography, and card scaling for this layout.
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetCustomerLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Customer Settings' }}</span>
-              </button>
             </div>
           </div>
 
@@ -1874,30 +1796,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             </div>
           </ng-container>
 
-          <!-- Bottom Action Bar -->
+          <!-- Bottom note - no buttons: one Save lives in the page header. -->
           <div class="flex items-center justify-between p-4 md:p-6 mt-4 border-t border-purple-100 bg-purple-50/40 rounded-b-2xl">
             <p class="text-xs text-slate-500 m-0">
-              Changes take effect immediately on the actual Customer page once saved.
+              Changes take effect on the Customer page once you press
+              <strong class="text-purple-700">Save Configuration</strong> at the top of this page.
             </p>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-2 !px-4 text-xs"
-                (click)="resetCustomerLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-2 !px-5 text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Customer Settings' }}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1926,7 +1830,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 title="Reset layout overrides"
               >
                 <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
+                <span>Reset Design</span>
               </button>
             </div>
           </div>
@@ -1951,7 +1855,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                       <div class="thumb-staff-avatar-sm">SJ</div>
                       <span class="thumb-staff-pill-green">ON</span>
                     </div>
-                    <div class="thumb-staff-line w-12"></div>
+                    <div class="thumb-staff-line tbw-12"></div>
                     <div class="thumb-staff-pill-indigo">CLEARANCE</div>
                     <div class="thumb-staff-barcode-line"></div>
                   </div>
@@ -1967,8 +1871,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     <div class="thumb-staff-darkneon-body">
                       <div class="thumb-staff-avatar-neon">SJ</div>
                       <div class="thumb-staff-darkneon-lines">
-                        <div class="thumb-staff-line-neon w-10"></div>
-                        <div class="thumb-staff-line-dim w-6"></div>
+                        <div class="thumb-staff-line-neon tbw-10"></div>
+                        <div class="thumb-staff-line-dim tbw-6"></div>
                       </div>
                     </div>
                     <div class="thumb-staff-darkneon-btn">EXEC</div>
@@ -1980,7 +1884,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   <div class="thumb-staff-roster-row">
                     <span class="thumb-staff-avatar-xs !bg-teal-100 !text-teal-700">SJ</span>
                     <div class="thumb-staff-roster-info">
-                      <span class="thumb-staff-line w-8"></span>
+                      <span class="thumb-staff-line tbw-8"></span>
                       <div class="thumb-staff-roster-gauge"><div class="thumb-staff-gauge-bar" style="width: 75%;"></div></div>
                     </div>
                     <span class="thumb-staff-pill-teal">12/16</span>
@@ -1988,7 +1892,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   <div class="thumb-staff-roster-row">
                     <span class="thumb-staff-avatar-xs !bg-teal-100 !text-teal-700">EC</span>
                     <div class="thumb-staff-roster-info">
-                      <span class="thumb-staff-line w-6"></span>
+                      <span class="thumb-staff-line tbw-6"></span>
                       <div class="thumb-staff-roster-gauge"><div class="thumb-staff-gauge-bar" style="width: 45%;"></div></div>
                     </div>
                     <span class="thumb-staff-pill-teal">7/16</span>
@@ -1999,18 +1903,18 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 <div *ngIf="d.key === 'list'" class="thumb-staff-list-wrap">
                   <div class="thumb-staff-list-head">
                     <span class="thumb-staff-check"></span>
-                    <span class="thumb-staff-line-head w-6"></span>
-                    <span class="thumb-staff-line-head w-8"></span>
-                    <span class="thumb-staff-line-head w-4"></span>
+                    <span class="thumb-staff-line-head tbw-6"></span>
+                    <span class="thumb-staff-line-head tbw-8"></span>
+                    <span class="thumb-staff-line-head tbw-4"></span>
                   </div>
                   <div class="thumb-staff-list-row zebra-w">
                     <span class="thumb-staff-check"></span>
-                    <span class="thumb-staff-line w-10"></span>
+                    <span class="thumb-staff-line tbw-10"></span>
                     <span class="thumb-staff-tag-blue">Lead</span>
                   </div>
                   <div class="thumb-staff-list-row zebra-s">
                     <span class="thumb-staff-check"></span>
-                    <span class="thumb-staff-line w-8"></span>
+                    <span class="thumb-staff-line tbw-8"></span>
                     <span class="thumb-staff-tag-blue">Staff</span>
                   </div>
                 </div>
@@ -2023,6 +1927,93 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     <div class="thumb-staff-bento-metrics">
                       <div class="thumb-staff-bento-box">TIER 1</div>
                       <div class="thumb-staff-bento-box">14 PERMS</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 6. Frosted Glass Aurora Thumb -->
+                <div *ngIf="d.key === 'glassmorphism'" class="thumb-staff-glass-wrap">
+                  <div class="thumb-staff-glass-card">
+                    <div class="thumb-staff-glass-orb"></div>
+                    <div class="thumb-staff-avatar-xs !bg-violet-200/50 !text-violet-300 !border !border-violet-300/30 !rounded-full">SJ</div>
+                    <div class="thumb-staff-line-glass tbw-10"></div>
+                    <div class="thumb-staff-pill-glass">MGR</div>
+                  </div>
+                </div>
+
+                <!-- 7. Neo-Brutalism Pop Thumb -->
+                <div *ngIf="d.key === 'retrobrutalist'" class="thumb-staff-brutal-wrap">
+                  <div class="thumb-staff-brutal-card">
+                    <div class="thumb-staff-brutal-head"></div>
+                    <div class="thumb-staff-brutal-body-inner">
+                      <div class="thumb-staff-avatar-xs !bg-cyan-200 !text-black !border-2 !border-black !rounded-none">SJ</div>
+                      <div class="thumb-staff-brutal-lines">
+                        <div class="thumb-staff-line tbw-10"></div>
+                        <div class="thumb-staff-brutal-sticker">ADMIN</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 8. Flat Metro Grid Thumb -->
+                <div *ngIf="d.key === 'metro'" class="thumb-staff-metro-wrap">
+                  <div class="thumb-staff-metro-tile tile-blue">
+                    <span class="thumb-staff-metro-wm">M</span>
+                    <div class="thumb-staff-line-white tbw-10"></div>
+                  </div>
+                  <div class="thumb-staff-metro-tile tile-red">
+                    <span class="thumb-staff-metro-wm">C</span>
+                    <div class="thumb-staff-line-white tbw-8"></div>
+                  </div>
+                  <div class="thumb-staff-metro-tile tile-green">
+                    <span class="thumb-staff-metro-wm">S</span>
+                    <div class="thumb-staff-line-white tbw-6"></div>
+                  </div>
+                  <div class="thumb-staff-metro-tile tile-amber">
+                    <span class="thumb-staff-metro-wm">L</span>
+                    <div class="thumb-staff-line-white tbw-8"></div>
+                  </div>
+                </div>
+
+                <!-- 9. Vertical Activity Timeline Thumb -->
+                <div *ngIf="d.key === 'timeline'" class="thumb-staff-timeline-wrap">
+                  <div class="thumb-staff-timeline-track"></div>
+                  <div class="thumb-staff-timeline-node-t"></div>
+                  <div class="thumb-staff-timeline-bubble">
+                    <span class="thumb-staff-avatar-xs !bg-violet-100 !text-violet-600">SJ</span>
+                    <span class="thumb-staff-line tbw-8"></span>
+                  </div>
+                  <div class="thumb-staff-timeline-node-t"></div>
+                  <div class="thumb-staff-timeline-bubble">
+                    <span class="thumb-staff-avatar-xs !bg-violet-100 !text-violet-600">AR</span>
+                    <span class="thumb-staff-line tbw-6"></span>
+                  </div>
+                </div>
+
+                <!-- 10. Floating Capsule Chips Thumb -->
+                <div *ngIf="d.key === 'compactpill'" class="thumb-staff-pill-wrap">
+                  <div class="thumb-staff-pill-row">
+                    <span class="thumb-staff-avatar-xs !rounded-full !bg-orange-100 !text-orange-600">SJ</span>
+                    <span class="thumb-staff-line tbw-8"></span>
+                    <span class="thumb-staff-pill-orange">MGR</span>
+                  </div>
+                  <div class="thumb-staff-pill-row">
+                    <span class="thumb-staff-avatar-xs !rounded-full !bg-orange-100 !text-orange-600">EC</span>
+                    <span class="thumb-staff-line tbw-6"></span>
+                    <span class="thumb-staff-pill-orange">STAFF</span>
+                  </div>
+                </div>
+
+                <!-- 11. Sci-Fi Radial HUD Thumb -->
+                <div *ngIf="d.key === 'radialhud'" class="thumb-staff-hud-wrap">
+                  <div class="thumb-staff-hud-card">
+                    <div class="thumb-staff-hud-ring">
+                      <div class="thumb-staff-avatar-xs !rounded-full !bg-emerald-900/40 !text-emerald-400 !border !border-emerald-400/50">SJ</div>
+                    </div>
+                    <div class="thumb-staff-line-emerald tbw-10"></div>
+                    <div class="thumb-staff-hud-stats">
+                      <span class="thumb-staff-hud-box">24</span>
+                      <span class="thumb-staff-hud-box">L4</span>
                     </div>
                   </div>
                 </div>
@@ -2040,10 +2031,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     </span>
                   </div>
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-purple-600 mt-0.5">
+                <div class="design-kicker">
                   {{ d.badge || d.subtitle }}
                 </div>
-                <p class="design-blurb mt-1">{{ d.description }}</p>
+                <p class="design-blurb">{{ d.description }}</p>
               </div>
             </button>
           </div>
@@ -2088,25 +2079,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                   Configure surfaces, role badges, active status indicator, typography, and card scaling for this layout.
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetStaffLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Staff Settings' }}</span>
-              </button>
             </div>
           </div>
 
@@ -2158,30 +2130,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             </div>
           </ng-container>
 
-          <!-- Bottom Action Bar -->
+          <!-- Bottom note - no buttons: one Save lives in the page header. -->
           <div class="flex items-center justify-between p-4 md:p-6 mt-4 border-t border-purple-100 bg-purple-50/40 rounded-b-2xl">
             <p class="text-xs text-slate-500 m-0">
-              Changes take effect immediately on the Staff Accounts page once saved.
+              Changes take effect on the Staff Accounts page once you press
+              <strong class="text-purple-700">Save Configuration</strong> at the top of this page.
             </p>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-2 !px-4 text-xs"
-                (click)="resetStaffLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-2 !px-5 text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Staff Settings' }}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -2211,7 +2165,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 title="Reset this template's tweaks"
               >
                 <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset</span>
+                <span>Reset Design</span>
               </button>
             </div>
           </div>
@@ -2265,10 +2219,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                     </span>
                   </div>
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-purple-600 mt-0.5">
+                <div class="design-kicker">
                   {{ t.badge || t.subtitle }}
                 </div>
-                <p class="design-blurb mt-1">{{ t.description }}</p>
+                <p class="design-blurb">{{ t.description }}</p>
 
                 <!-- Motion / interaction highlights -->
                 <div class="sb-highlight-row">
@@ -2329,25 +2283,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 </p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                (click)="resetSidebarLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-1.5 !px-4 !text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Sidebar Settings' }}</span>
-              </button>
-            </div>
           </div>
 
           <ng-container *ngFor="let group of sidebarTokenGroups">
@@ -2379,27 +2314,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
           <div class="flex items-center justify-between p-4 md:p-6 mt-4 border-t border-purple-100 bg-purple-50/40 rounded-b-2xl">
             <p class="text-xs text-slate-500 m-0">
-              The rail on the left updates instantly; saving stores the template for every till on this store.
+              The rail on the left updates instantly; press
+              <strong class="text-purple-700">Save Configuration</strong> at the top of this page to store
+              the template for every till on this store.
             </p>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="action-btn btn-outline-purple !py-2 !px-4 text-xs"
-                (click)="resetSidebarLayout()"
-              >
-                <span class="material-symbols-outlined">restart_alt</span>
-                <span>Reset to Default</span>
-              </button>
-              <button
-                type="button"
-                class="action-btn btn-gradient-purple !py-2 !px-5 text-xs"
-                (click)="saveSettings()"
-                [disabled]="isSaving"
-              >
-                <span class="material-symbols-outlined" [class.spin-icon]="isSaving">save</span>
-                <span>{{ isSaving ? 'Saving…' : 'Save Sidebar Settings' }}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -3149,6 +3067,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             </div>
           </div>
 
+
           <!-- 2. Tax / GST Engine -->
           <div class="setting-card">
             <div class="card-header-bar pb-3">
@@ -3386,7 +3305,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       }
 
       /* Top Header Card */
+      /* Sticky: it now carries the only Save on the page, so it has to stay
+         reachable however far down a customize tab the user has scrolled. */
       .settings-header-card {
+        position: sticky;
+        top: 0;
+        z-index: 30;
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-left: 4px solid var(--primary, #7E22CE);
@@ -3611,6 +3535,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1.15rem;
       padding: 1.25rem 1.5rem 1.5rem;
+      align-items: stretch;
     }
 
     .design-card {
@@ -3618,6 +3543,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       flex-direction: column;
       gap: 0.85rem;
       padding: 0.85rem;
+      height: 100%;
+      box-sizing: border-box;
       border-radius: 18px;
       border: 2px solid var(--card-border, #E9D5FF);
       background: var(--card-bg, #ffffff);
@@ -3729,7 +3656,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     }
 
     .design-blurb {
-      margin: 0.2rem 0 0;
+      margin: 0;
       font-size: 0.6875rem;
       line-height: 1.5;
       color: var(--text-muted, #6B7280);
@@ -3853,10 +3780,51 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
     /* Five designs rather than four, so the cards are allowed to be a little
        narrower before the grid wraps. */
-    .design-grid.is-five { grid-template-columns: repeat(auto-fit, minmax(242px, 1fr)); }
+    /* Five-card choosers: auto-fit used to leave a single orphan card on its
+       own row at common widths. An explicit column ladder keeps the set
+       balanced — all five abreast on a wide screen, then 3 / 2 / 1. */
+    .design-grid.is-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+    @media (max-width: 1439px) {
+      .design-grid.is-five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 1023px) {
+      .design-grid.is-five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 639px) {
+      .design-grid,
+      .design-grid.is-five {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 1rem 1rem 1.25rem;
+        gap: 0.9rem;
+      }
+    }
 
     .design-name { display: inline-flex; align-items: center; gap: 0.35rem; }
     .design-name .design-name-icon { font-size: 16px; color: var(--primary, #7E22CE); }
+
+    /* The meta block had no layout of its own, so its rows relied entirely on
+       utility margins and sat unevenly. It owns its rhythm now, and grows to
+       fill the card so every card in a row ends at the same height. */
+    .design-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* "DESIGN 1 · BENTO" kicker. Replaces a text-purple-600 / text-blue-600
+       utility pair that is not defined in styles.css, so the line was
+       rendering in the default near-black instead of the accent. */
+    .design-kicker {
+      font-size: 0.625rem;
+      font-weight: 800;
+      line-height: 1.3;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--primary, #7E22CE);
+    }
 
     /* Note explaining which of the two design settings owns the grid. */
     .design-override-note {
@@ -3954,6 +3922,193 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       font-size: 0.75rem;
       font-weight: 800;
       color: var(--text-main, #2E1065);
+      min-width: 2.4rem;
+    }
+
+    /* ─── POS Customization: one switch per page ───────────────────────── */
+    .custom-count-pill {
+      flex-shrink: 0;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: var(--bg-app, #FAF5FF);
+      font-size: 0.6875rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--text-main, #2E1065);
+      white-space: nowrap;
+    }
+
+    .custom-master {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .custom-master .switch-label { min-width: 3.9rem; }
+
+    /* Some on, some off: the knob sits centred so the master switch never
+       claims a state none of the eight pages are actually in. */
+    .custom-master .switch-track.is-mixed {
+      background: var(--primary-light, rgba(126, 34, 206, 0.25));
+      border-color: var(--primary, #C084FC);
+    }
+
+    .custom-master .switch-track.is-mixed .switch-knob { left: 0.74rem; }
+
+    .custom-master .switch-row input:disabled + .switch-track {
+      opacity: 0.55;
+      cursor: progress;
+    }
+
+    .custom-row-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0.35rem 1.5rem 1.5rem;
+    }
+
+    .custom-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 0.15rem;
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
+    }
+
+    .custom-row:last-child { border-bottom: none; }
+
+    .custom-row-icon {
+      flex-shrink: 0;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: var(--bg-app, #FAF5FF);
+      color: var(--text-muted, #6B7280);
+      font-size: 20px;
+      transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .custom-row.is-on .custom-row-icon {
+      border-color: var(--primary, #C084FC);
+      background: var(--primary-light, rgba(126, 34, 206, 0.09));
+      color: var(--primary, #7E22CE);
+    }
+
+    .custom-row-text { flex: 1; min-width: 0; }
+
+    .custom-row-name {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: var(--text-main, #2E1065);
+    }
+
+    .custom-row-desc {
+      margin: 0.15rem 0 0;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .custom-row-status {
+      margin: 0.3rem 0 0;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .custom-row-status strong {
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .custom-row-status strong.is-on { color: var(--primary, #7E22CE); }
+
+    .custom-row-actions {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .custom-row-actions .switch-row input:disabled + .switch-track {
+      opacity: 0.55;
+      cursor: progress;
+    }
+
+    @media (max-width: 720px) {
+      .custom-row {
+        flex-wrap: wrap;
+        row-gap: 0.75rem;
+      }
+
+      .custom-row-text { flex-basis: calc(100% - 3.5rem); }
+
+      .custom-row-actions {
+        flex-basis: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    /* Applied-or-not bar shown above every customize tab. */
+    .customization-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.25rem;
+      padding: 0.7rem 0.95rem;
+      border-radius: 14px;
+      border: 1.5px solid var(--primary, #C084FC);
+      background: var(--primary-light, rgba(126, 34, 206, 0.09));
+    }
+
+    .customization-status-bar.is-off {
+      border-color: var(--card-border, #E9D5FF);
+      background: var(--bg-app, #FAF5FF);
+    }
+
+    .customization-status-bar .material-symbols-outlined {
+      flex-shrink: 0;
+      font-size: 20px;
+      color: var(--primary, #7E22CE);
+    }
+
+    .customization-status-bar.is-off .material-symbols-outlined {
+      color: var(--text-muted, #6B7280);
+    }
+
+    .customization-status-bar p {
+      flex: 1;
+      margin: 0;
+      font-size: 0.75rem;
+      line-height: 1.55;
+      color: var(--text-main, #2E1065);
+    }
+
+    .customization-status-bar .note-action {
+      flex-shrink: 0;
+      padding: 0.35rem 0.7rem;
+      border: 1.5px solid var(--primary, #C084FC);
+      border-radius: 9px;
+      background: var(--card-bg, #fff);
+      color: var(--primary, #7E22CE);
+      font-family: inherit;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .customization-status-bar .note-action:hover:not(:disabled) {
+      background: var(--bg-app, #FAF5FF);
+    }
+
+    .customization-status-bar .note-action:disabled {
+      opacity: 0.55;
+      cursor: progress;
     }
 
     /* ─── Miniatures, driven by the same tokens the POS renders ────────── */
@@ -4351,96 +4506,269 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     /* CATEGORY DESIGN CHOOSER MINI THUMBNAILS                            */
     /* ═══════════════════════════════════════════════════════════════════ */
     .category-mini-thumb {
-      height: 110px;
+      height: 112px;
       width: 100%;
       border-radius: 12px;
       overflow: hidden;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px;
-      background: #F9F9FB;
-      border: 1px solid rgba(0, 0, 0, 0.05);
+      align-items: stretch;
+      padding: 9px;
+      background: linear-gradient(135deg, #FDFCFF 0%, #F5F3FF 100%);
+      border: 1px solid #EDE9FE;
       position: relative;
+      box-sizing: border-box;
+      transition: box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.25s ease;
+    }
+    .design-card:hover .category-mini-thumb {
+      border-color: #C084FC;
+      box-shadow: 0 10px 22px -14px rgba(126, 34, 206, 0.65);
+    }
+    .design-card.is-selected .category-mini-thumb {
+      border-color: #A855F7;
     }
 
-    /* Showcase Thumb */
-    .thumb-cat-showcase-wrap { width: 100%; display: flex; justify-content: center; }
-    .thumb-cat-sc-card {
-      width: 110px;
-      background: #FFFFFF;
-      border: 1.5px solid #E9D5FF;
-      border-radius: 10px;
-      padding: 8px;
-      box-shadow: 0 4px 10px rgba(126, 34, 206, 0.08);
+    /* ═══════════════════════════════════════════════════════════════════ */
+    /* THUMBNAIL BAR WIDTHS                                               */
+    /* Every design chooser draws its "text" as thin bars and used to size */
+    /* them with the global .w-N utilities. Those set width AND height,    */
+    /* both !important (they exist for square icon boxes), so each bar     */
+    /* rendered as a block — and .w-14 is not defined at all, so those     */
+    /* bars collapsed to nothing. These are width-only replacements that   */
+    /* keep the original 0.25rem scale.                                    */
+    /* ═══════════════════════════════════════════════════════════════════ */
+    .tbw-4 { width: 16px; }
+    .tbw-6 { width: 24px; }
+    .tbw-8 { width: 32px; }
+    .tbw-10 { width: 40px; }
+    .tbw-12 { width: 48px; }
+    .tbw-14 { width: 56px; }
+    .tbw-16 { width: 64px; }
+
+    /* Percentage width helpers for the rebuilt category thumbnails. */
+    .category-mini-thumb .cw-20 { width: 20%; }
+    .category-mini-thumb .cw-25 { width: 25%; }
+    .category-mini-thumb .cw-40 { width: 40%; }
+    .category-mini-thumb .cw-45 { width: 45%; }
+    .category-mini-thumb .cw-50 { width: 50%; }
+    .category-mini-thumb .cw-60 { width: 60%; }
+    .category-mini-thumb .cw-70 { width: 70%; }
+    .category-mini-thumb .cw-75 { width: 75%; }
+
+    /* Shared miniature primitives */
+    .cat-thumb {
+      flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 5px;
     }
-    .thumb-cat-sc-head { display: flex; align-items: center; justify-content: space-between; }
-    .thumb-cat-sc-icon { font-size: 14px; }
-    .thumb-cat-sc-pill { font-size: 8px; font-weight: 700; color: #7E22CE; background: #F3E8FF; padding: 1px 4px; border-radius: 4px; }
-    .thumb-cat-sc-line { height: 4px; width: 70%; background: #2E1065; border-radius: 2px; }
-    .thumb-cat-sc-sub { height: 3px; width: 45%; background: #94A3B8; border-radius: 2px; }
-
-    /* Clean Table Thumb */
-    .thumb-cat-clean-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .thumb-cat-clean-row {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+    .cat-line {
+      display: block;
+      height: 4px;
+      border-radius: 2px;
+      background: #CBD5E1;
+      flex-shrink: 0;
+    }
+    .cat-line.is-title { height: 5px; background: #5B21B6; }
+    .cat-line.is-name { height: 4px; background: #7C3AED; }
+    .cat-stack { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .cat-stack.is-grow { flex: 1; }
+    .cat-avatar {
+      width: 18px;
+      height: 18px;
       border-radius: 6px;
-      padding: 4px 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .thumb-cat-seq { font-size: 8px; font-weight: 700; color: #0F766E; }
-    .thumb-cat-bar { height: 4px; background: #334155; border-radius: 2px; }
-    .thumb-cat-metric { font-size: 8px; font-weight: 800; color: #059669; }
-
-    /* Compact Tiles Thumb */
-    .thumb-cat-compact-wrap { display: flex; gap: 8px; justify-content: center; width: 100%; }
-    .thumb-cat-compact-tile {
-      width: 48px;
-      height: 48px;
-      background: #FFFFFF;
-      border: 1.5px solid #E9D5FF;
-      border-radius: 8px;
+      background: #F3E8FF;
+      border: 1px solid #E9D5FF;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
+      font-size: 10px;
+      line-height: 1;
+      flex-shrink: 0;
     }
-    .thumb-cat-c-icon { font-size: 18px; }
-    .thumb-cat-c-dot { position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: #10B981; }
+    .cat-avatar.is-lg { width: 26px; height: 26px; border-radius: 8px; font-size: 14px; }
+    .cat-avatar.is-sm { width: 14px; height: 14px; border-radius: 5px; background: #EDE9FE; }
+    .cat-chip {
+      font-size: 7.5px;
+      font-weight: 800;
+      line-height: 1;
+      padding: 3px 5px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+    .cat-chip.is-count { color: #FFFFFF; background: #7E22CE; }
+    .cat-chip.is-soft { color: #6D28D9; background: #F3E8FF; }
+    .cat-chip.is-live { color: #16A34A; background: #DCFCE7; font-size: 6px; padding: 3px 4px; }
+    .cat-seq { font-size: 7.5px; font-weight: 800; color: #94A3B8; flex-shrink: 0; }
+    .cat-seq.is-boxed {
+      color: #6D28D9;
+      background: #F5F3FF;
+      border: 1px solid #EDE9FE;
+      border-radius: 4px;
+      padding: 2px 4px;
+      line-height: 1;
+    }
+    .cat-kebab {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #CBD5E1;
+      box-shadow: 0 -4px 0 #CBD5E1, 0 4px 0 #CBD5E1;
+      flex-shrink: 0;
+      margin-right: 1px;
+    }
 
-    /* List View Thumb */
-    .thumb-cat-list-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .thumb-cat-list-row {
+    /* Design 1 · Bento Showcase */
+    .cat-bento { gap: 6px; }
+    .cat-bento-hero {
+      flex: 1.25;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 8px;
       background: #FFFFFF;
-      border: 1px solid #E5E7EB;
-      border-radius: 6px;
-      padding: 5px 8px;
+      border: 1px solid #E9D5FF;
+      border-radius: 9px;
+      box-shadow: 0 3px 8px -4px rgba(126, 34, 206, 0.28);
+    }
+    .cat-bento-hero .cat-stack { flex: 1; }
+    .cat-bento-row { flex: 1; display: flex; gap: 6px; }
+    .cat-bento-tile {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 6px;
+      background: #FFFFFF;
+      border: 1px solid #EDE9FE;
+      border-radius: 8px;
+    }
+
+    /* Design 2 · Minimalist Clean Table */
+    .cat-table {
+      gap: 0;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .cat-table-head {
       display: flex;
       align-items: center;
       gap: 6px;
+      padding: 0 8px;
+      height: 18px;
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
     }
-    .thumb-cat-dot { width: 6px; height: 6px; border-radius: 50%; background: #7E22CE; }
-    .thumb-cat-tag { margin-left: auto; font-size: 7px; font-weight: 700; color: #16A34A; background: #DCFCE7; padding: 1px 3px; border-radius: 3px; }
+    .cat-col { height: 3px; border-radius: 2px; background: #94A3B8; opacity: 0.55; }
+    .cat-table-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 8px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .cat-table-row:last-child { border-bottom: none; }
+    .cat-table-row .cat-line { flex: 1; }
+    .cat-table-row .cat-chip { margin-left: auto; }
 
-    /* Card View Thumb */
-    .thumb-cat-card-wrap { width: 100%; display: flex; justify-content: center; }
-    .thumb-cat-exec-card {
-      width: 100px;
+    /* Design 3 · Compact Badge Tiles */
+    .cat-tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .cat-tile {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #FFFFFF;
       border: 1px solid #E9D5FF;
       border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 2px 5px -3px rgba(126, 34, 206, 0.3);
     }
-    .thumb-cat-banner { height: 16px; background: linear-gradient(135deg, #7E22CE, #C084FC); }
-    .thumb-cat-exec-body { padding: 6px; display: flex; flex-direction: column; gap: 4px; }
-    .thumb-cat-progress { height: 3px; width: 80%; background: #7E22CE; border-radius: 2px; }
+    .cat-tile-glyph { font-size: 13px; line-height: 1; }
+    .cat-tile-dot {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #10B981;
+    }
+
+    /* Design 4 · List View */
+    .cat-list { gap: 5px; }
+    .cat-list-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 7px;
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      border-radius: 7px;
+    }
+
+    /* Design 5 · Card View */
+    .cat-cards { flex-direction: row; gap: 7px; }
+    .cat-card {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      background: #FFFFFF;
+      border: 1px solid #E9D5FF;
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px -6px rgba(15, 23, 42, 0.3);
+      display: flex;
+      flex-direction: column;
+    }
+    .cat-card-banner {
+      display: block;
+      height: 26px;
+      background: linear-gradient(135deg, #7E22CE, #C084FC);
+      flex-shrink: 0;
+    }
+    .cat-avatar.is-float {
+      position: absolute;
+      top: 16px;
+      left: 7px;
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1.5px solid #FFFFFF;
+      box-shadow: 0 2px 5px rgba(15, 23, 42, 0.18);
+    }
+    .cat-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 7px 6px;
+    }
+    .cat-meter {
+      display: block;
+      height: 3px;
+      width: 100%;
+      border-radius: 2px;
+      background: #F1F5F9;
+      overflow: hidden;
+      margin-top: 1px;
+    }
+    .cat-meter i {
+      display: block;
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #7E22CE, #C084FC);
+    }
 
     /* ═══════════════════════════════════════════════════════════════════ */
     /* SIDEBAR TEMPLATE CHOOSER MINI THUMBNAILS                           */
@@ -4627,11 +4955,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-sb-collapsiblepro .sb-mini-row:nth-child(4) b { opacity: 0.25; }
 
     /* Highlight & capability chips on the chooser cards */
+    /* .design-meta owns the vertical rhythm, so these rows carry no margin. */
     .sb-highlight-row {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      margin-top: 0.5rem;
+      margin-top: 0.15rem;
     }
     .sb-highlight-chip {
       display: inline-flex;
@@ -4653,7 +4982,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      margin-top: 0.35rem;
+      margin-top: 0;
+      padding-top: 0.1rem;
     }
     .sb-cap-chip {
       padding: 2px 7px;
@@ -4948,6 +5278,110 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       padding: 1px 0;
     }
 
+    /* 6. Glassmorphism Thumb */
+    .thumb-staff-glass-wrap { width: 100%; display: flex; justify-content: center; }
+    .thumb-staff-glass-card {
+      width: 50px; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.22); border-radius: 8px;
+      padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+      position: relative; overflow: hidden;
+    }
+    .thumb-staff-glass-orb {
+      position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
+      border-radius: 50%; background: radial-gradient(circle, rgba(167,139,250,0.35), transparent 70%); filter: blur(4px);
+    }
+    .thumb-staff-line-glass { height: 2px; background: rgba(255,255,255,0.25); border-radius: 1px; }
+    .thumb-staff-pill-glass {
+      font-size: 4px; font-weight: 800; text-transform: uppercase;
+      background: rgba(167,139,250,0.25); color: #C4B5FD; border-radius: 99px;
+      padding: 1px 5px; border: 1px solid rgba(167,139,250,0.2);
+    }
+
+    /* 7. Brutalist Thumb */
+    .thumb-staff-brutal-wrap { width: 100%; display: flex; justify-content: center; }
+    .thumb-staff-brutal-card {
+      width: 56px; background: #FFF; border: 2px solid #000; box-shadow: 3px 3px 0 #000;
+      overflow: hidden;
+    }
+    .thumb-staff-brutal-head { height: 8px; background: #F43F5E; border-bottom: 2px solid #000; }
+    .thumb-staff-brutal-body-inner { padding: 4px; display: flex; gap: 3px; align-items: flex-start; }
+    .thumb-staff-brutal-lines { display: flex; flex-direction: column; gap: 2px; }
+    .thumb-staff-brutal-sticker {
+      font-size: 4px; font-weight: 900; text-transform: uppercase;
+      background: #A5F3FC; color: #000; border: 1px solid #000; padding: 0 3px;
+      transform: rotate(-1deg);
+    }
+
+    /* 8. Metro Thumb */
+    .thumb-staff-metro-wrap { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
+    .thumb-staff-metro-tile {
+      padding: 4px; position: relative; overflow: hidden; display: flex;
+      flex-direction: column; justify-content: flex-end; min-height: 22px;
+    }
+    .thumb-staff-metro-tile.tile-blue { background: #2563EB; }
+    .thumb-staff-metro-tile.tile-red { background: #DC2626; }
+    .thumb-staff-metro-tile.tile-green { background: #059669; }
+    .thumb-staff-metro-tile.tile-amber { background: #D97706; }
+    .thumb-staff-metro-wm {
+      position: absolute; top: -2px; right: 0; font-size: 18px; font-weight: 900;
+      color: rgba(0,0,0,0.12); line-height: 1;
+    }
+    .thumb-staff-line-white { height: 2px; background: rgba(255,255,255,0.5); border-radius: 1px; }
+
+    /* 9. Timeline Thumb */
+    .thumb-staff-timeline-wrap {
+      width: 100%; display: flex; flex-direction: column; align-items: flex-start;
+      padding-left: 12px; gap: 3px; position: relative;
+    }
+    .thumb-staff-timeline-track {
+      position: absolute; left: 8px; top: 0; bottom: 0; width: 2px;
+      background: linear-gradient(180deg, #7C3AED, rgba(124,58,237,0.1)); border-radius: 2px;
+    }
+    .thumb-staff-timeline-node-t {
+      width: 6px; height: 6px; border-radius: 50%; background: #7C3AED;
+      margin-left: -4px; z-index: 1; box-shadow: 0 0 0 1.5px #F8FAFC, 0 0 0 3px #7C3AED;
+    }
+    .thumb-staff-timeline-bubble {
+      display: flex; gap: 3px; align-items: center;
+      background: #FFF; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 4px;
+      margin-left: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* 10. Capsule Pill Thumb */
+    .thumb-staff-pill-wrap { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+    .thumb-staff-pill-row {
+      display: flex; align-items: center; gap: 3px;
+      background: #FFF; border: 1px solid #E2E8F0; border-radius: 99px;
+      padding: 2px 4px 2px 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .thumb-staff-pill-orange {
+      font-size: 4px; font-weight: 800; text-transform: uppercase;
+      background: #FFF7ED; color: #C2410C; border-radius: 99px;
+      padding: 1px 4px;
+    }
+
+    /* 11. Radial HUD Thumb */
+    .thumb-staff-hud-wrap { width: 100%; display: flex; justify-content: center; }
+    .thumb-staff-hud-card {
+      width: 52px; background: rgba(15,23,42,0.85);
+      border: 1px solid rgba(52,211,153,0.35); border-radius: 8px;
+      padding: 5px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .thumb-staff-hud-ring {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: conic-gradient(#34D399 65%, rgba(148,163,184,0.15) 0);
+      display: flex; align-items: center; justify-content: center;
+      padding: 3px;
+    }
+    .thumb-staff-line-emerald { height: 2px; background: rgba(52,211,153,0.4); border-radius: 1px; }
+    .thumb-staff-hud-stats { display: flex; gap: 2px; width: 100%; }
+    .thumb-staff-hud-box {
+      flex: 1; text-align: center; font-size: 5px; font-weight: 800;
+      color: #34D399; font-family: monospace;
+      background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.15);
+      border-radius: 2px; padding: 1px 0;
+    }
+
     .token-range-row { width: 100%; }
     .range-slider {
       -webkit-appearance: none;
@@ -4995,6 +5429,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       align-items: center;
       gap: 0.5rem;
     }
+
 
     .token-range {
       flex: 1;
@@ -5941,7 +6376,134 @@ export class SettingsComponent implements OnInit {
   public themeService = inject(ThemeService);
   public notify = inject(NotificationService);
 
-  public activeTab: SettingsTab = 'theme';
+  public activeTab: SettingsTab = 'customization';
+
+  // ── POS Customization: which pages apply their saved design ───────────
+  public customization = inject(CustomizationService);
+
+  /**
+   * What is in flight, so no two saves overlap: one page's key, or 'all' for
+   * the master switch.
+   */
+  public savingModuleKey: CustomizationModuleKey | 'all' | null = null;
+
+  get allCustomizationsOn(): boolean {
+    return this.customization.modules.every((m) => this.customization.isEnabled(m.key));
+  }
+
+  /** True only in the in-between state, which the master switch shows as mixed. */
+  get someCustomizationsOn(): boolean {
+    return this.enabledCustomizationCount > 0 && !this.allCustomizationsOn;
+  }
+
+  get enabledCustomizationCount(): number {
+    return this.customization.modules.filter((m) => this.customization.isEnabled(m.key)).length;
+  }
+
+  /** The module the open tab configures, or null on a non-customize tab. */
+  get activeModule(): CustomizationModule | null {
+    return this.customization.modules.find((m) => m.tab === this.activeTab) || null;
+  }
+
+  onCustomizationToggle(module: CustomizationModule, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.persistCustomization(module, input.checked, input);
+  }
+
+  toggleCustomizationFor(module: CustomizationModule): void {
+    this.persistCustomization(module, !this.customization.isEnabled(module.key));
+  }
+
+  /**
+   * The master switch: every page on, or every page off once they all are.
+   * From a mixed state it switches them all on, which is what the checkbox
+   * itself does when clicked out of indeterminate.
+   */
+  onCustomizationMasterToggle(event: Event): void {
+    this.persistAllCustomization(!this.allCustomizationsOn, event.target as HTMLInputElement);
+  }
+
+  /**
+   * Writes all eight flags in one save. They stay eight independent settings —
+   * this only spares the admin eight round trips — so a page can be switched
+   * back on its own immediately afterwards.
+   */
+  private persistAllCustomization(next: boolean, input?: HTMLInputElement): void {
+    if (this.savingModuleKey !== null) return;
+
+    const previous = this.customization.snapshot();
+    if (this.customization.modules.every((m) => previous[m.key] === next)) return;
+
+    this.customization.setAll(next);
+    this.savingModuleKey = 'all';
+
+    this.settingsService.saveTabSettings('customization', this.customization.toPayload()).subscribe({
+      next: (res) => {
+        this.savingModuleKey = null;
+        if (res.success && res.data) {
+          this.settingsMap = this.flattenGroupedSettings(res.data.map || res.data);
+        }
+        this.notify.success(
+          next
+            ? 'Customization turned ON for all pages.'
+            : 'Customization turned OFF for all pages. Saved designs are kept.'
+        );
+      },
+      error: (err) => {
+        this.savingModuleKey = null;
+        this.customization.restore(previous);
+        if (input) input.checked = this.allCustomizationsOn;
+        const errorMsg = err?.error?.message || 'Server connection error';
+        this.notify.error('Failed to persist to database: ' + errorMsg);
+      },
+    });
+  }
+
+  /**
+   * Saves one page's switch on its own. Only the customization key is sent, so
+   * no design, palette or unrelated setting is rewritten, and a rejected save
+   * puts the previous flags back rather than leaving the UI ahead of the
+   * database.
+   */
+  private persistCustomization(
+    module: CustomizationModule,
+    next: boolean,
+    input?: HTMLInputElement
+  ): void {
+    if (this.savingModuleKey !== null) return;
+
+    const previous = this.customization.snapshot();
+    if (previous[module.key] === next) return;
+
+    this.customization.setEnabled(module.key, next);
+    this.savingModuleKey = module.key;
+
+    this.settingsService.saveTabSettings('customization', this.customization.toPayload()).subscribe({
+      next: (res) => {
+        this.savingModuleKey = null;
+        if (res.success && res.data) {
+          this.settingsMap = this.flattenGroupedSettings(res.data.map || res.data);
+        }
+        this.notify.success(
+          module.name + ' customization turned ' + (next ? 'ON' : 'OFF') + '.'
+        );
+      },
+      error: (err) => {
+        this.savingModuleKey = null;
+        this.customization.restore(previous);
+        if (input) input.checked = previous[module.key];
+        const errorMsg = err?.error?.message || 'Server connection error';
+        this.notify.error('Failed to persist to database: ' + errorMsg);
+      },
+    });
+  }
+
+  /** Opens the editor for one page, from its row's Configure button. */
+  openCustomizationTab(module: CustomizationModule): void {
+    if (!this.isValidTab(module.tab)) return;
+    this.activeTab = module.tab as SettingsTab;
+    setTimeout(() => this.scrollActiveTabIntoView(), 150);
+  }
 
   // ── POS Customize ─────────────────────────────────────────────────
   public posDesign = inject(PosDesignService);
@@ -5989,34 +6551,6 @@ export class SettingsComponent implements OnInit {
     const value = (event.target as HTMLInputElement).value?.trim();
     if (!value) return;
     this.posDesign.setToken(this.posDesign.activeKey(), token, value);
-  }
-
-  /** Design being previewed, or null when the modal is closed. */
-  public previewDesignKey: PosDesignKey | null = null;
-
-  get previewDesignName(): string {
-    const found = this.posDesign.designs.find((d) => d.key === this.previewDesignKey);
-    return found ? found.name : 'Preview';
-  }
-
-  /**
-   * Opens the sample-dish preview. The click is stopped because the button sits
-   * inside the design card, whose own click would otherwise also select it —
-   * previewing a design should not change the active one.
-   */
-  openPosPreview(key: PosDesignKey, event?: Event): void {
-    event?.stopPropagation();
-    this.previewDesignKey = key;
-  }
-
-  closePosPreview(): void {
-    this.previewDesignKey = null;
-  }
-
-  /** Selecting from inside the preview, for when the sample sells it. */
-  useAndClosePosPreview(): void {
-    if (this.previewDesignKey) this.posDesign.selectDesign(this.previewDesignKey);
-    this.previewDesignKey = null;
   }
 
   public readonly cardsPerRowMin = CARDS_PER_ROW_MIN;
@@ -6071,10 +6605,6 @@ export class SettingsComponent implements OnInit {
     const value = (event.target as HTMLInputElement).value?.trim();
     if (!value) return;
     this.dishLayout.setToken(this.dishLayout.activeKey(), token, value);
-  }
-
-  onDishEnabledToggle(event: Event): void {
-    this.dishLayout.setEnabled((event.target as HTMLInputElement).checked);
   }
 
   onDishColumnsInput(event: Event): void {
@@ -6589,6 +7119,7 @@ export class SettingsComponent implements OnInit {
 
   private isValidTab(tab: string): tab is SettingsTab {
     return [
+      'customization',
       'theme',
       'toast',
       'business',
@@ -6827,6 +7358,7 @@ export class SettingsComponent implements OnInit {
 
   public getTabTitle(tab: SettingsTab): string {
     switch (tab) {
+      case 'customization': return 'POS Customization';
       case 'theme': return 'Brand Theme & UI Palette';
       case 'toast': return 'Super Toaster Notifications';
       case 'business': return 'Store & Tax Engine';
@@ -6846,7 +7378,9 @@ export class SettingsComponent implements OnInit {
   private getTabSettingsPayload(tab: SettingsTab): Record<string, any> {
     const payload: Record<string, any> = {};
 
-    if (tab === 'theme') {
+    if (tab === 'customization') {
+      Object.assign(payload, this.customization.toPayload());
+    } else if (tab === 'theme') {
       const palette = this.themeService.currentPalette();
       const activeKey = this.themeService.activePresetKey();
       const themePayload = {

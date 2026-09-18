@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 /**
  * POS dish-card design templates.
@@ -235,6 +236,10 @@ export const CARDS_PER_ROW_DEFAULT = 4;
 @Injectable({ providedIn: 'root' })
 export class PosDesignService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
+
+  /** Whether Settings -> POS Customization has this page switched on. */
+  public readonly customizationEnabled = this.customization.posCustomize;
 
   private readonly designKeySignal = signal<PosDesignKey>(DEFAULT_POS_DESIGN);
   private readonly overridesSignal = signal<StoredPosDesign['overrides']>({});
@@ -252,9 +257,23 @@ export class PosDesignService {
     () => POS_DESIGNS.find((d) => d.key === this.designKeySignal()) || POS_DESIGNS[0]
   );
 
-  /** Defaults with the user's overrides applied — what the POS actually renders. */
+  /** Defaults with the user's overrides applied — the design being edited. */
   public readonly activeTokens = computed<PosDesignTokens>(() =>
     this.tokensFor(this.designKeySignal())
+  );
+
+  /**
+   * The class the till carries, or '' while customization is off. With no
+   * design class the POS falls back to its own base styles — the existing
+   * default interface — and nothing about the saved design is consulted.
+   */
+  public readonly rootClass = computed<string>(() =>
+    this.customizationEnabled() ? 'pos-design-' + this.designKeySignal() : ''
+  );
+
+  /** Variables for the till root; none while customization is off. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.customizationEnabled() ? this.cssVars() : {}
   );
 
   constructor() {

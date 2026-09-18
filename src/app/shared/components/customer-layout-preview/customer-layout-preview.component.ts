@@ -81,11 +81,14 @@ export interface PreviewCustomerItem {
               ID #CUST-00{{ c.id }}
             </div>
             <div class="cust-vip-btn-group">
-              <button type="button" class="cust-vip-btn" title="View Invoices">
-                <span class="material-symbols-outlined" style="font-size: 16px;">receipt_long</span>
+              <button type="button" class="cust-act is-vip" title="View Invoices">
+                <span class="material-symbols-outlined">receipt_long</span>
               </button>
-              <button type="button" class="cust-vip-btn" title="Edit Customer">
-                <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+              <button type="button" class="cust-act is-vip" title="Edit Customer">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button type="button" class="cust-act is-vip is-delete" title="Delete Customer">
+                <span class="material-symbols-outlined">delete</span>
               </button>
             </div>
           </div>
@@ -132,12 +135,15 @@ export interface PreviewCustomerItem {
                 <span class="cust-clean-spend">₹{{ c.total_spent | number:'1.0-0' }}</span>
               </td>
               <td style="text-align: center;">
-                <div class="flex items-center justify-center gap-1">
-                  <button type="button" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-purple-600">
-                    <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                <div class="cust-clean-actions">
+                  <button type="button" class="cust-act is-clean" title="View Invoices">
+                    <span class="material-symbols-outlined">receipt_long</span>
                   </button>
-                  <button type="button" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-blue-600">
-                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                  <button type="button" class="cust-act is-clean" title="Edit Customer">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="cust-act is-clean is-delete" title="Delete Customer">
+                    <span class="material-symbols-outlined">delete</span>
                   </button>
                 </div>
               </td>
@@ -165,6 +171,17 @@ export interface PreviewCustomerItem {
           <div class="cust-compact-bottom">
             <span class="text-[11px] text-slate-500">{{ c.total_visits }} visits</span>
             <span class="cust-compact-spent">₹{{ c.total_spent | number:'1.0-0' }}</span>
+            <div class="cust-compact-actions">
+              <button type="button" class="cust-act is-compact" title="Invoices">
+                <span class="material-symbols-outlined">receipt_long</span>
+              </button>
+              <button type="button" class="cust-act is-compact" title="Edit">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button type="button" class="cust-act is-compact is-delete" title="Delete">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -225,12 +242,15 @@ export interface PreviewCustomerItem {
                 <span class="font-mono text-xs font-black text-green-700">₹{{ c.total_spent | number:'1.0-0' }}</span>
               </td>
               <td style="text-align: center;">
-                <div class="flex items-center justify-center gap-1">
-                  <button type="button" class="w-7 h-7 rounded border border-slate-200 flex items-center justify-center hover:bg-slate-100">
-                    <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                <div class="cust-list-actions">
+                  <button type="button" class="cust-act is-list" title="View Invoices">
+                    <span class="material-symbols-outlined">receipt_long</span>
                   </button>
-                  <button type="button" class="w-7 h-7 rounded border border-slate-200 flex items-center justify-center hover:bg-slate-100">
-                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                  <button type="button" class="cust-act is-list" title="Edit Customer">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="cust-act is-list is-delete" title="Delete Customer">
+                    <span class="material-symbols-outlined">delete</span>
                   </button>
                 </div>
               </td>
@@ -275,12 +295,15 @@ export interface PreviewCustomerItem {
 
           <div class="cust-profile-card-footer">
             <span class="text-[11px] font-mono text-purple-700 font-bold">#CUST-{{ c.id }}</span>
-            <div class="flex items-center gap-1.5">
-              <button type="button" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-purple-700">
-                <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+            <div class="cust-card-actions">
+              <button type="button" class="cust-act is-card" title="Invoices">
+                <span class="material-symbols-outlined">receipt_long</span>
               </button>
-              <button type="button" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-blue-700">
-                <span class="material-symbols-outlined text-[16px]">edit</span>
+              <button type="button" class="cust-act is-card" title="Edit">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button type="button" class="cust-act is-card is-delete" title="Delete">
+                <span class="material-symbols-outlined">delete</span>
               </button>
             </div>
           </div>

@@ -151,15 +151,15 @@ interface PreviewNavSection {
         <!-- Faux content canvas -->
         <div class="sb-preview-canvas">
           <div class="sb-preview-topbar">
-            <span class="sb-fake-pill w-24"></span>
-            <span class="sb-fake-pill w-14"></span>
+            <span class="sb-fake-pill sbw-24"></span>
+            <span class="sb-fake-pill sbw-14"></span>
             <span class="sb-fake-avatar"></span>
           </div>
           <div class="sb-preview-body">
             <div class="sb-fake-card" *ngFor="let n of [1, 2, 3, 4]">
-              <span class="sb-fake-line w-16"></span>
-              <span class="sb-fake-line-lg w-10"></span>
-              <span class="sb-fake-line w-20"></span>
+              <span class="sb-fake-line sbw-16"></span>
+              <span class="sb-fake-line-lg sbw-10"></span>
+              <span class="sb-fake-line sbw-20"></span>
             </div>
           </div>
         </div>
@@ -283,11 +283,13 @@ interface PreviewNavSection {
         border-radius: 50%;
         background: color-mix(in srgb, var(--sidebar-active-accent, #C084FC) 40%, #E2E8F0);
       }
-      .w-10 { width: 40%; }
-      .w-14 { width: 56px; }
-      .w-16 { width: 64%; }
-      .w-20 { width: 48%; }
-      .w-24 { width: 96px; }
+      /* Named sbw-* rather than w-*: the global utilities in styles.css set
+         width AND height with !important, which would square these bars off. */
+      .sbw-10 { width: 40%; }
+      .sbw-14 { width: 56px; }
+      .sbw-16 { width: 64%; }
+      .sbw-20 { width: 48%; }
+      .sbw-24 { width: 96px; }
 
       .sb-preview-controls {
         display: flex;
@@ -354,7 +356,7 @@ interface PreviewNavSection {
   ],
 })
 export class SidebarLayoutPreviewComponent {
-  @Input() layoutKey: SidebarTemplateKey = 'default';
+  @Input() layoutKey: SidebarTemplateKey = 'classic';
   @Input() cssVars: Record<string, string> = {};
   @Input() caps: SidebarTemplateCaps | null = null;
 

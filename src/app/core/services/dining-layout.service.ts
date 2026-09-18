@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 export type DiningDesignKey = 'checkered' | 'neumorphic' | 'illustrated' | 'list' | 'cardlist';
 
@@ -246,6 +247,14 @@ export const DINING_DESIGNS: DiningDesignOption[] = [
 
 export const DEFAULT_DINING_DESIGN: DiningDesignKey = 'checkered';
 
+/**
+ * The design the floor falls back to while its customization switch is off:
+ * Card List View, this page's own built-in card listing — it has no plain
+ * "Card View" of its own. It renders with its own stock palette, never the
+ * saved overrides, so "off" always looks the same however it was customized.
+ */
+export const BASELINE_DINING_DESIGN: DiningDesignKey = 'cardlist';
+
 interface StoredDiningLayout {
   layoutKey: DiningDesignKey;
   overrides: Partial<Record<DiningDesignKey, Partial<DiningTokens>>>;
@@ -255,14 +264,19 @@ interface StoredDiningLayout {
 @Injectable({ providedIn: 'root' })
 export class DiningLayoutService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
 
   private readonly layoutKeySignal = signal<DiningDesignKey>(DEFAULT_DINING_DESIGN);
   private readonly overridesSignal = signal<StoredDiningLayout['overrides']>({});
-  private readonly enabledSignal = signal<boolean>(true);
 
   public readonly activeKey = this.layoutKeySignal.asReadonly();
   public readonly overrides = this.overridesSignal.asReadonly();
-  public readonly enabled = this.enabledSignal.asReadonly();
+  /**
+   * Whether the page applies its saved design at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * design and its palette stay saved either way.
+   */
+  public readonly enabled = this.customization.diningCustomize;
 
   public readonly designs = DINING_DESIGNS;
   public readonly tokenMeta = DINING_TOKEN_META;
@@ -276,8 +290,25 @@ export class DiningLayoutService {
     this.tokensFor(this.layoutKeySignal())
   );
 
+  /** The design the page renders: the saved one, or the baseline while off. */
+  public readonly effectiveKey = computed<DiningDesignKey>(() =>
+    this.enabled() ? this.layoutKeySignal() : BASELINE_DINING_DESIGN
+  );
+
   public readonly rootClass = computed<string>(() =>
-    'dining-layout-' + this.layoutKeySignal()
+    'dining-layout-' + this.effectiveKey()
+  );
+
+  /** The design definition the page renders, for its own header line. */
+  public readonly effectiveDesign = computed<DiningDesignOption>(
+    () => this.designFor(this.effectiveKey())
+  );
+
+  /** Variables the page renders with — stock defaults while off. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled()
+      ? this.varsFrom(this.activeTokens())
+      : this.varsFrom(this.defaultsFor(BASELINE_DINING_DESIGN))
   );
 
   constructor() {
@@ -300,7 +331,10 @@ export class DiningLayoutService {
   }
 
   public cssVars(key?: DiningDesignKey): Record<string, string> {
-    const tokens = key ? this.tokensFor(key) : this.activeTokens();
+    return this.varsFrom(key ? this.tokensFor(key) : this.activeTokens());
+  }
+
+  private varsFrom(tokens: DiningTokens): Record<string, string> {
     const vars: Record<string, string> = {};
 
     vars['--dining-canvas-bg'] = tokens.canvasBg;
@@ -327,8 +361,10 @@ export class DiningLayoutService {
   }
 
   public selectDesign(key: DiningDesignKey): void {
+    // Only the design is chosen here. Whether it is applied is the master
+    // switch's business, so picking one never turns a page's customization on
+    // behind the admin's back.
     this.layoutKeySignal.set(key);
-    this.enabledSignal.set(true);
   }
 
   public setToken(key: DiningDesignKey, token: DiningTokenKey, value: string | number): void {
@@ -350,7 +386,9 @@ export class DiningLayoutService {
     const stored: StoredDiningLayout = {
       layoutKey: this.layoutKeySignal(),
       overrides: this.overridesSignal(),
-      enabled: this.enabledSignal(),
+      // Mirrored for builds that predate the customization switches; the
+      // value read back is the one in `system_customization`.
+      enabled: this.enabled(),
     };
     return { system_dining_layout: JSON.stringify(stored) };
   }
@@ -371,9 +409,8 @@ export class DiningLayoutService {
       if (parsed?.overrides && typeof parsed.overrides === 'object') {
         this.overridesSignal.set(parsed.overrides);
       }
-      if (parsed?.enabled !== undefined) {
-        this.enabledSignal.set(parsed.enabled === true || String(parsed.enabled) === 'true');
-      }
+      // `enabled` is deliberately not read here: CustomizationService owns it
+      // and migrates this blob's old value on first load.
     } catch (_) {
       // Keep defaults on parse failure
     }

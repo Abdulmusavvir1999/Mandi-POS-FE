@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 export type StockDesignKey = 'warehouse' | 'financial' | 'kanban' | 'list' | 'card';
 
@@ -223,6 +224,14 @@ export const STOCK_DEFAULT_TOKENS: Record<StockDesignKey, StockTokens> = {
   },
 };
 
+/**
+ * The design the ledger falls back to while its customization switch is off:
+ * Card View, the page's own built-in card listing. It renders with its own
+ * stock palette, never the saved overrides, so "off" always looks the same
+ * however the page was customized.
+ */
+export const BASELINE_STOCK_DESIGN: StockDesignKey = 'card';
+
 export interface StockPersistedConfig {
   activeKey: StockDesignKey;
   overrides?: Partial<Record<StockDesignKey, Partial<StockTokens>>>;
@@ -233,11 +242,26 @@ export interface StockPersistedConfig {
 })
 export class StockLayoutService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
 
   private _activeKey = signal<StockDesignKey>('warehouse');
   private _overrides = signal<Partial<Record<StockDesignKey, Partial<StockTokens>>>>({});
 
   public readonly activeKey = computed(() => this._activeKey());
+
+  /**
+   * Whether the page applies its saved design at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * design and its palette stay saved either way.
+   */
+  public readonly enabled = this.customization.stockLedgerCustomize;
+
+  /** The design the page renders: the saved one, or the baseline while off. */
+  public readonly effectiveKey = computed<StockDesignKey>(() =>
+    this.enabled() ? this._activeKey() : BASELINE_STOCK_DESIGN
+  );
+
+  public readonly rootClass = computed<string>(() => 'stock-layout-' + this.effectiveKey());
 
   public readonly tokens = computed<StockTokens>(() => {
     const key = this._activeKey();
@@ -246,8 +270,16 @@ export class StockLayoutService {
     return { ...defaults, ...designOverrides };
   });
 
-  public readonly cssVars = computed<Record<string, string>>(() => {
-    const t = this.tokens();
+  public readonly cssVars = computed<Record<string, string>>(() => this.varsFrom(this.tokens()));
+
+  /** Variables the page renders with — stock defaults while off. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled()
+      ? this.varsFrom(this.tokens())
+      : this.varsFrom({ ...STOCK_DEFAULT_TOKENS[BASELINE_STOCK_DESIGN] })
+  );
+
+  private varsFrom(t: StockTokens): Record<string, string> {
     return {
       '--stock-canvas-bg': t.canvasBg,
       '--stock-card-bg': t.cardBg,
@@ -267,7 +299,7 @@ export class StockLayoutService {
       '--stock-btn-bg': t.buttonBg,
       '--stock-btn-color': t.buttonColor,
     };
-  });
+  }
 
   constructor() {
     this.settingsService.loadPublicSettings().subscribe({
@@ -277,27 +309,31 @@ export class StockLayoutService {
   }
 
   public hydrateFromSettings(): void {
-    const raw =
-      this.settingsService.settingsMap()['system_stock_layout'] ||
-      this.settingsService.settingsMap()['SYSTEM_STOCK_LAYOUT'];
-    if (!raw) return;
+    const parsed = this.readPersistedConfig();
+    if (!parsed) return;
+
+    if (
+      parsed.activeKey &&
+      ['warehouse', 'financial', 'kanban', 'list', 'card'].includes(parsed.activeKey)
+    ) {
+      this._activeKey.set(parsed.activeKey);
+    }
+    if (parsed.overrides && typeof parsed.overrides === 'object') {
+      this._overrides.set(parsed.overrides);
+    }
+  }
+
+  private readPersistedConfig(): StockPersistedConfig | null {
+    const map = this.settingsService.settingsMap();
+    const raw = map['system_stock_layout'] || map['SYSTEM_STOCK_LAYOUT'];
+    if (!raw) return null;
 
     try {
-      const parsed: StockPersistedConfig =
-        typeof raw === 'string' ? JSON.parse(raw) : (raw as StockPersistedConfig);
-      if (parsed && typeof parsed === 'object') {
-        if (
-          parsed.activeKey &&
-          ['warehouse', 'financial', 'kanban', 'list', 'card'].includes(parsed.activeKey)
-        ) {
-          this._activeKey.set(parsed.activeKey);
-        }
-        if (parsed.overrides && typeof parsed.overrides === 'object') {
-          this._overrides.set(parsed.overrides);
-        }
-      }
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return parsed && typeof parsed === 'object' ? (parsed as StockPersistedConfig) : null;
     } catch (e) {
       console.warn('Could not parse system_stock_layout setting:', e);
+      return null;
     }
   }
 
@@ -330,4 +366,5 @@ export class StockLayoutService {
       system_stock_layout: JSON.stringify(config),
     };
   }
+
 }

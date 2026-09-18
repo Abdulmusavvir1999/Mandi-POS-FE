@@ -40,8 +40,8 @@ export interface NavSection {
     <aside
       class="sidebar-container"
       [class.is-collapsed]="isCollapsed"
-      [ngClass]="'tpl-' + sidebarLayout.activeKey()"
-      [ngStyle]="sidebarLayout.cssVars()"
+      [ngClass]="sidebarLayout.rootClass()"
+      [ngStyle]="sidebarLayout.pageCssVars()"
       aria-label="Main Navigation"
     >
       <!-- 1. Brand Header (64px) -->
@@ -91,7 +91,7 @@ export interface NavSection {
       <!-- 1b. Quick Action Shortcuts (template capability) -->
       <div
         class="sb-quick-actions"
-        *ngIf="sidebarLayout.caps().quickActions && !isCollapsed"
+        *ngIf="sidebarLayout.pageCaps().quickActions && !isCollapsed"
       >
         <a
           *ngIf="canAccess(alertsShortcut)"
@@ -116,7 +116,7 @@ export interface NavSection {
       </div>
 
       <!-- 1c. Menu Search (template capability) -->
-      <div class="sb-search-wrap" *ngIf="sidebarLayout.caps().hasSearch && !isCollapsed">
+      <div class="sb-search-wrap" *ngIf="sidebarLayout.pageCaps().hasSearch && !isCollapsed">
         <div class="sb-search-field">
           <span class="material-symbols-outlined sb-search-icon">search</span>
           <input
@@ -147,7 +147,7 @@ export interface NavSection {
               <!-- Section Label — a button when the template allows folding -->
               <ng-container *ngIf="!isCollapsed">
                 <button
-                  *ngIf="sidebarLayout.caps().collapsibleSections; else staticLabel"
+                  *ngIf="sidebarLayout.pageCaps().collapsibleSections; else staticLabel"
                   type="button"
                   class="section-label"
                   [class.is-folded]="isFolded(section)"
@@ -401,6 +401,13 @@ export class SidebarComponent {
           permission: 'user.manage',
         },
         {
+          id: 'staff-track',
+          label: 'Staff Track',
+          route: '/staff-track',
+          iconName: 'groups',
+          permission: 'stafftrack.view',
+        },
+        {
           id: 'audit',
           label: 'Audit Trail',
           route: '/audit',
@@ -461,7 +468,7 @@ export class SidebarComponent {
 
   public isFolded(section: NavSection): boolean {
     if (this.isCollapsed) return false;
-    if (!this.sidebarLayout.caps().collapsibleSections) return false;
+    if (!this.sidebarLayout.pageCaps().collapsibleSections) return false;
     if (this.searchQuery().trim()) return false; // never hide search hits
     return !!this.foldedSections()[section.title];
   }
@@ -477,7 +484,7 @@ export class SidebarComponent {
    * expanded because its 200px rail truncates the longer module names.
    */
   private showsTooltips(): boolean {
-    return this.isCollapsed || this.sidebarLayout.activeKey() === 'compact';
+    return this.isCollapsed || this.sidebarLayout.effectiveKey() === 'iconfocus';
   }
 
   public showTip(event: Event, label: string): void {

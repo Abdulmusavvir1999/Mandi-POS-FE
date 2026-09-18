@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 export type CategoryDesignKey = 'showcase' | 'clean' | 'compact' | 'list' | 'card';
 
@@ -236,6 +237,14 @@ export const CATEGORY_DESIGN_OPTIONS = CATEGORY_DESIGNS;
 
 export const DEFAULT_CATEGORY_DESIGN: CategoryDesignKey = 'showcase';
 
+/**
+ * The design the page falls back to while its customization switch is off:
+ * Card View, the page's own built-in card listing. It renders with its own
+ * stock palette, never the saved overrides, so "off" always looks the same
+ * however the page was customized.
+ */
+export const BASELINE_CATEGORY_DESIGN: CategoryDesignKey = 'card';
+
 interface StoredCategoryLayout {
   layoutKey: CategoryDesignKey;
   overrides: Partial<Record<CategoryDesignKey, Partial<CategoryTokens>>>;
@@ -245,14 +254,19 @@ interface StoredCategoryLayout {
 @Injectable({ providedIn: 'root' })
 export class CategoryLayoutService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
 
   private readonly layoutKeySignal = signal<CategoryDesignKey>(DEFAULT_CATEGORY_DESIGN);
   private readonly overridesSignal = signal<StoredCategoryLayout['overrides']>({});
-  private readonly enabledSignal = signal<boolean>(true);
 
   public readonly activeKey = this.layoutKeySignal.asReadonly();
   public readonly overrides = this.overridesSignal.asReadonly();
-  public readonly enabled = this.enabledSignal.asReadonly();
+  /**
+   * Whether the page applies its saved design at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * design and its palette stay saved either way.
+   */
+  public readonly enabled = this.customization.categoryCustomize;
 
   public readonly designs = CATEGORY_DESIGNS;
   public readonly tokenMeta = CATEGORY_TOKEN_META;
@@ -266,8 +280,20 @@ export class CategoryLayoutService {
     this.tokensFor(this.layoutKeySignal())
   );
 
+  /** The design the page renders: the saved one, or the baseline while off. */
+  public readonly effectiveKey = computed<CategoryDesignKey>(() =>
+    this.enabled() ? this.layoutKeySignal() : BASELINE_CATEGORY_DESIGN
+  );
+
   public readonly rootClass = computed<string>(() =>
-    'category-layout-' + this.layoutKeySignal()
+    'category-layout-' + this.effectiveKey()
+  );
+
+  /** Variables the page renders with — stock defaults while off. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled()
+      ? this.varsFrom(this.activeTokens())
+      : this.varsFrom(this.defaultsFor(BASELINE_CATEGORY_DESIGN))
   );
 
   constructor() {
@@ -290,7 +316,10 @@ export class CategoryLayoutService {
   }
 
   public cssVars(key?: CategoryDesignKey): Record<string, string> {
-    const tokens = key ? this.tokensFor(key) : this.activeTokens();
+    return this.varsFrom(key ? this.tokensFor(key) : this.activeTokens());
+  }
+
+  private varsFrom(tokens: CategoryTokens): Record<string, string> {
     const vars: Record<string, string> = {};
 
     vars['--cat-canvas-bg'] = tokens.canvasBg;
@@ -315,8 +344,10 @@ export class CategoryLayoutService {
   public readonly tokens = this.activeTokens;
 
   public selectDesign(key: CategoryDesignKey): void {
+    // Only the design is chosen here. Whether it is applied is the master
+    // switch's business, so picking one never turns a page's customization on
+    // behind the admin's back.
     this.layoutKeySignal.set(key);
-    this.enabledSignal.set(true);
   }
 
   public setActiveDesign(key: CategoryDesignKey): void {
@@ -364,7 +395,9 @@ export class CategoryLayoutService {
     const stored: StoredCategoryLayout = {
       layoutKey: this.layoutKeySignal(),
       overrides: this.overridesSignal(),
-      enabled: this.enabledSignal(),
+      // Mirrored for builds that predate the customization switches; the
+      // value read back is the one in `system_customization`.
+      enabled: this.enabled(),
     };
     return { system_category_layout: JSON.stringify(stored) };
   }
@@ -385,9 +418,8 @@ export class CategoryLayoutService {
       if (parsed?.overrides && typeof parsed.overrides === 'object') {
         this.overridesSignal.set(parsed.overrides);
       }
-      if (parsed?.enabled !== undefined) {
-        this.enabledSignal.set(parsed.enabled === true || String(parsed.enabled) === 'true');
-      }
+      // `enabled` is deliberately not read here: CustomizationService owns it
+      // and migrates this blob's old value on first load.
     } catch (_) {
       // Retain defaults on error
     }

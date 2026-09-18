@@ -317,6 +317,152 @@ export interface PreviewStaffItem {
           </div>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DESIGN 6: FROSTED GLASS AURORA                                 -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="layoutKey === 'glassmorphism'" class="staff-glass-grid">
+        <div *ngFor="let u of sampleStaff" class="staff-glass-card">
+          <div class="staff-glass-avatar">{{ u.initials }}</div>
+          <h4 class="staff-glass-name">{{ u.name }}</h4>
+          <div class="staff-glass-handle">&#64;{{ u.username }}</div>
+          <div class="staff-glass-role">
+            <span class="staff-glass-status" style="color: #34D399; background-color: #34D399;"></span>
+            <span class="material-symbols-outlined" style="font-size: 13px;">{{ u.roleIcon }}</span>
+            <span>{{ u.role }}</span>
+          </div>
+          <div class="staff-glass-info">
+            <div class="flex items-center gap-1.5 truncate"><span class="material-symbols-outlined" style="font-size: 13px;">mail</span><span>{{ u.email }}</span></div>
+            <div class="flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size: 13px;">call</span><span>{{ u.phone }}</span></div>
+          </div>
+          <div class="staff-glass-actions">
+            <button type="button" class="staff-glass-btn"><span class="material-symbols-outlined" style="font-size: 14px;">edit</span><span>Edit</span></button>
+            <button type="button" class="staff-glass-btn is-delete"><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DESIGN 7: NEO-BRUTALISM POP                                    -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="layoutKey === 'retrobrutalist'" class="staff-brutal-grid">
+        <div *ngFor="let u of sampleStaff" class="staff-brutal-card">
+          <div class="staff-brutal-header">
+            <span class="staff-brutal-header-label">STAFF // {{ u.role | uppercase }}</span>
+            <span class="staff-brutal-status-tag" [class.is-off]="u.status !== 'ACTIVE'">{{ u.status === 'ACTIVE' ? 'ONLINE' : 'OFFLINE' }}</span>
+          </div>
+          <div class="staff-brutal-body">
+            <div class="staff-brutal-avatar">{{ u.initials }}</div>
+            <div class="staff-brutal-meta">
+              <h4 class="staff-brutal-name">{{ u.name }}</h4>
+              <div class="staff-brutal-handle">&#64;{{ u.username }}</div>
+              <span class="staff-brutal-role-sticker">{{ u.role }}</span>
+            </div>
+          </div>
+          <div class="staff-brutal-contact">
+            <span>{{ u.email }}</span><span class="font-mono">{{ u.phone }}</span>
+          </div>
+          <div class="staff-brutal-footer">
+            <span class="text-[10px] font-mono font-bold">PERMS: {{ u.permissionsGranted }}/{{ u.permissionsTotal }}</span>
+            <div class="flex items-center gap-2">
+              <button type="button" class="staff-brutal-btn"><span class="material-symbols-outlined" style="font-size: 13px;">edit</span><span>EDIT</span></button>
+              <button type="button" class="staff-brutal-btn is-delete"><span class="material-symbols-outlined" style="font-size: 13px;">delete</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DESIGN 8: FLAT METRO GRID                                      -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="layoutKey === 'metro'" class="staff-metro-grid">
+        <div *ngFor="let u of sampleStaff" class="staff-metro-tile">
+          <span class="staff-metro-watermark">{{ u.role }}</span>
+          <span class="staff-metro-status" [style.backgroundColor]="u.status === 'ACTIVE' ? '#34D399' : '#EF4444'"></span>
+          <div class="staff-metro-content">
+            <div class="staff-metro-avatar">{{ u.initials }}</div>
+            <h4 class="staff-metro-name">{{ u.name }}</h4>
+            <div class="staff-metro-sub">&#64;{{ u.username }} · {{ u.email }}</div>
+            <span class="staff-metro-role-tag"><span class="material-symbols-outlined" style="font-size: 12px;">{{ u.roleIcon }}</span> {{ u.role }}</span>
+            <div class="staff-metro-actions">
+              <button type="button" class="staff-metro-btn"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></button>
+              <button type="button" class="staff-metro-btn"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DESIGN 9: VERTICAL ACTIVITY TIMELINE                           -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="layoutKey === 'timeline'" class="staff-timeline-feed">
+        <div *ngFor="let u of sampleStaff" class="staff-timeline-item">
+          <div class="staff-timeline-node" [class.is-active]="u.status === 'ACTIVE'"></div>
+          <div class="staff-timeline-card">
+            <div class="staff-timeline-avatar">{{ u.initials }}</div>
+            <div class="staff-timeline-meta">
+              <h4 class="staff-timeline-name">{{ u.name }}</h4>
+              <div class="staff-timeline-handle">&#64;{{ u.username }}</div>
+              <div class="staff-timeline-tags">
+                <span class="staff-timeline-role"><span class="material-symbols-outlined" style="font-size: 11px;">{{ u.roleIcon }}</span> {{ u.role }}</span>
+                <span class="staff-timeline-time"><span class="material-symbols-outlined" style="font-size: 11px;">schedule</span> {{ u.lastLogin }}</span>
+              </div>
+              <div class="staff-timeline-contact"><span>{{ u.email }}</span><span class="font-mono text-xs">{{ u.phone }}</span></div>
+            </div>
+            <div class="staff-timeline-actions">
+              <button type="button" class="staff-timeline-btn"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></button>
+              <button type="button" class="staff-timeline-btn is-delete"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DESIGN 10: FLOATING CAPSULE CHIPS                              -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="layoutKey === 'compactpill'" class="staff-pill-grid">
+        <div *ngFor="let u of sampleStaff" class="staff-pill-chip">
+          <div class="staff-pill-avatar">
+            <span class="staff-pill-halo is-active"></span>
+            {{ u.initials }}
+          </div>
+          <div class="staff-pill-meta">
+            <span class="staff-pill-name">{{ u.name }}</span>
+            <span class="staff-pill-handle">&#64;{{ u.username }}</span>
+          </div>
+          <span class="staff-pill-role"><span class="material-symbols-outlined" style="font-size: 12px;">{{ u.roleIcon }}</span> {{ u.role }}</span>
+          <div class="staff-pill-contact"><span>{{ u.email }}</span><span class="font-mono text-xs">{{ u.phone }}</span></div>
+          <div class="staff-pill-actions">
+            <button type="button" class="staff-pill-btn"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></button>
+            <button type="button" class="staff-pill-btn is-delete"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DESIGN 11: SCI-FI RADIAL HUD                                   -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="layoutKey === 'radialhud'" class="staff-hud-grid">
+        <div *ngFor="let u of sampleStaff" class="staff-hud-card">
+          <div class="staff-hud-coords"><span>UNIT-{{ u.id }}</span><span>{{ u.status === 'ACTIVE' ? '◉ ONLINE' : '○ OFFLINE' }}</span></div>
+          <div class="staff-hud-ring-wrap" [style.--perm-pct]="u.progressPercent">
+            <div class="staff-hud-perm-ring"></div>
+            <div class="staff-hud-avatar">{{ u.initials }}</div>
+          </div>
+          <h4 class="staff-hud-name">{{ u.name }}</h4>
+          <div class="staff-hud-handle">&#64;{{ u.username }}</div>
+          <span class="staff-hud-role"><span class="material-symbols-outlined" style="font-size: 12px;">{{ u.roleIcon }}</span> {{ u.role }}</span>
+          <div class="staff-hud-telemetry">
+            <div class="staff-hud-stat"><span class="staff-hud-stat-label">Perms</span><span class="staff-hud-stat-value">{{ u.permissionsGranted }}/{{ u.permissionsTotal }}</span></div>
+            <div class="staff-hud-stat"><span class="staff-hud-stat-label">Access</span><span class="staff-hud-stat-value">{{ u.clearance.split('·')[0].trim() }}</span></div>
+          </div>
+          <div class="staff-hud-contact"><span>{{ u.email }}</span><span>{{ u.phone }}</span></div>
+          <div class="staff-hud-actions">
+            <button type="button" class="staff-hud-btn"><span class="material-symbols-outlined" style="font-size: 14px;">edit</span><span>MODIFY</span></button>
+            <button type="button" class="staff-hud-btn is-delete"><span class="material-symbols-outlined" style="font-size: 14px;">delete</span></button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [STAFF_LAYOUT_CSS],

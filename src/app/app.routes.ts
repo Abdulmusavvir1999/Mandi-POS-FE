@@ -143,6 +143,24 @@ export const routes: Routes = [
         data: { permission: 'user.manage' },
       },
       {
+        path: 'staff-track',
+        loadComponent: () =>
+          import('./features/staff-track/staff-track.component').then((m) => m.StaffTrackComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'stafftrack.view' },
+      },
+      {
+        // Declared before the shell's catch-all so a staff link resolves rather
+        // than falling through to the 404 page.
+        path: 'staff-track/staff/:id',
+        loadComponent: () =>
+          import('./features/staff-track/staff-detail/staff-detail.component').then(
+            (m) => m.StaffDetailComponent
+          ),
+        canActivate: [roleGuard],
+        data: { permission: 'stafftrack.view' },
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/settings.component').then((m) => m.SettingsComponent),

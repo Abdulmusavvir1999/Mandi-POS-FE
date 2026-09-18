@@ -209,13 +209,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 4. VISUAL FLOOR MAP                                             -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="floor-panel dining-stage" [ngClass]="'dining-layout-' + diningLayout.activeKey()" [ngStyle]="diningLayout.cssVars()">
+      <div class="floor-panel dining-stage" [ngClass]="diningLayout.rootClass()" [ngStyle]="diningLayout.pageCssVars()">
         <div class="floor-panel-head">
           <div class="flex-align-center gap-2">
             <span class="material-symbols-outlined icon-purple">map</span>
             <div>
               <h3 class="floor-panel-title">
-                {{ selectedSection || 'Entire Floor' }} · {{ diningLayout.activeDesign().name }}
+                {{ selectedSection || 'Entire Floor' }} · {{ diningLayout.effectiveDesign().name }}
               </h3>
               <p class="floor-panel-sub">
                 {{ filteredTables.length }} table{{ filteredTables.length === 1 ? '' : 's' }} shown · click a free table to start its order
@@ -271,7 +271,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <!-- DESIGN 1: CHECKERED FLOOR PLAN (Reference 1)                    -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
-        <div class="chk-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'checkered'">
+        <div class="chk-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.effectiveKey() === 'checkered'">
           <span class="chk-plant" style="top: 15px; left: 20px;"></span>
           <span class="chk-plant" style="top: 15px; right: 25px;"></span>
           <span class="chk-plant" style="top: 50%; left: 45%;"></span>
@@ -356,7 +356,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <!-- DESIGN 2: TABLE VIEW / SOFT NEUMORPHIC (Reference 2)            -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
-        <div class="neu-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'neumorphic'">
+        <div class="neu-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.effectiveKey() === 'neumorphic'">
           <article
             *ngFor="let table of filteredTables; trackBy: trackByTableId"
             class="neu-table-card"
@@ -407,7 +407,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <!-- DESIGN 3: ILLUSTRATED CAPACITY FLOOR (Reference 3)              -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
-        <div class="ill-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'illustrated'">
+        <div class="ill-floor-canvas" *ngIf="filteredTables.length > 0 && diningLayout.effectiveKey() === 'illustrated'">
           <article
             *ngFor="let table of filteredTables; trackBy: trackByTableId"
             class="ill-table-card"
@@ -461,7 +461,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <!-- DESIGN 4: LIST VIEW                                             -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
-        <div class="list-table-container" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'list'">
+        <div class="list-table-container" *ngIf="filteredTables.length > 0 && diningLayout.effectiveKey() === 'list'">
           <table class="list-table-grid">
             <thead>
               <tr>
@@ -529,7 +529,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <!-- DESIGN 5: CARD LIST VIEW                                        -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
-        <div class="cardlist-container" *ngIf="filteredTables.length > 0 && diningLayout.activeKey() === 'cardlist'">
+        <div class="cardlist-container" *ngIf="filteredTables.length > 0 && diningLayout.effectiveKey() === 'cardlist'">
           <article
             *ngFor="let table of filteredTables; trackBy: trackByTableId"
             class="cardlist-row-card"

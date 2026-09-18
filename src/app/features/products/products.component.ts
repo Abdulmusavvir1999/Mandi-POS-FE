@@ -325,7 +325,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- The chosen catalog design owns this block. Its class and its
              palette go on one wrapper so every rule below is a plain
              descendant selector. -->
-        <div [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.cssVars()">
+        <div [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.pageCssVars()">
 
         <!-- ─── Card designs: Bento, Glass, Brutalist, Editorial ───────── -->
         <div class="catalog-stage" *ngIf="showCatalogCards">

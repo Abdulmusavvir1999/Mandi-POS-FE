@@ -1,7 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
-export type StaffDesignKey = 'idcard' | 'darkneon' | 'roster' | 'list' | 'bento';
+export type StaffDesignKey = 'idcard' | 'darkneon' | 'roster' | 'list' | 'bento' | 'glassmorphism' | 'retrobrutalist' | 'metro' | 'timeline' | 'compactpill' | 'radialhud';
 
 export interface StaffTokens {
   /** Page / Canvas background behind staff elements */
@@ -238,11 +239,188 @@ export const STAFF_DESIGNS: StaffDesignOption[] = [
       buttonColor: '#FFFFFF',
     },
   },
+  {
+    key: 'glassmorphism',
+    name: 'Frosted Glass Aurora',
+    label: 'Frosted Glass Aurora',
+    blurb: 'Liquid glassmorphic aesthetic with translucent frosted panels on a colorful aurora mesh gradient, iridescent borders, ambient floating orbs, and frosted pill tags.',
+    description: 'Liquid glassmorphic aesthetic with translucent frosted panels on a colorful aurora mesh gradient, iridescent borders, ambient floating orbs, and frosted pill tags.',
+    subtitle: 'Glassmorphism Cards',
+    badge: 'Design 6 · Glass',
+    icon: 'blur_on',
+    defaults: {
+      canvasBg: '#0F0C29',
+      cardBg: 'rgba(255, 255, 255, 0.12)',
+      cardBorder: 'rgba(255, 255, 255, 0.22)',
+      textColor: '#F8FAFC',
+      textMuted: '#CBD5E1',
+      accentColor: '#A78BFA',
+      roleBadgeBg: 'rgba(167, 139, 250, 0.2)',
+      roleBadgeColor: '#C4B5FD',
+      statusActiveColor: '#34D399',
+      cardScale: 100,
+      cardRadius: 24,
+      padding: 22,
+      gridGap: 22,
+      fontSize: 15,
+      buttonBg: 'rgba(167, 139, 250, 0.3)',
+      buttonColor: '#F8FAFC',
+    },
+  },
+  {
+    key: 'retrobrutalist',
+    name: 'Neo-Brutalism Pop',
+    label: 'Neo-Brutalism Pop',
+    blurb: 'High-contrast graphic design with thick 3px black borders, hard offset drop shadows, electric pop sticker colors (acid yellow, vivid cyan, punchy pink), and tactile click animation.',
+    description: 'High-contrast graphic design with thick 3px black borders, hard offset drop shadows, electric pop sticker colors (acid yellow, vivid cyan, punchy pink), and tactile click animation.',
+    subtitle: 'Bold Graphic Brutalism',
+    badge: 'Design 7 · Brutalist',
+    icon: 'format_bold',
+    defaults: {
+      canvasBg: '#FEF9C3',
+      cardBg: '#FFFFFF',
+      cardBorder: '#000000',
+      textColor: '#000000',
+      textMuted: '#374151',
+      accentColor: '#F43F5E',
+      roleBadgeBg: '#A5F3FC',
+      roleBadgeColor: '#000000',
+      statusActiveColor: '#22C55E',
+      cardScale: 100,
+      cardRadius: 0,
+      padding: 18,
+      gridGap: 20,
+      fontSize: 15,
+      buttonBg: '#FACC15',
+      buttonColor: '#000000',
+    },
+  },
+  {
+    key: 'metro',
+    name: 'Flat Metro Grid',
+    label: 'Flat Metro Grid',
+    blurb: 'Modern geometric flat tiles inspired by Swiss/Metro UI: zero border-radius, rich solid color-blocked surfaces (cobalt, crimson, amber, emerald), oversized role watermarks, and clean geometric typography.',
+    description: 'Modern geometric flat tiles inspired by Swiss/Metro UI: zero border-radius, rich solid color-blocked surfaces (cobalt, crimson, amber, emerald), oversized role watermarks, and clean geometric typography.',
+    subtitle: 'Swiss Flat Color Tiles',
+    badge: 'Design 8 · Metro',
+    icon: 'grid_view',
+    defaults: {
+      canvasBg: '#1E293B',
+      cardBg: '#2563EB',
+      cardBorder: 'transparent',
+      textColor: '#FFFFFF',
+      textMuted: 'rgba(255,255,255,0.7)',
+      accentColor: '#FACC15',
+      roleBadgeBg: 'rgba(0, 0, 0, 0.25)',
+      roleBadgeColor: '#FFFFFF',
+      statusActiveColor: '#34D399',
+      cardScale: 100,
+      cardRadius: 0,
+      padding: 20,
+      gridGap: 4,
+      fontSize: 15,
+      buttonBg: 'rgba(0, 0, 0, 0.3)',
+      buttonColor: '#FFFFFF',
+    },
+  },
+  {
+    key: 'timeline',
+    name: 'Vertical Activity Timeline',
+    label: 'Vertical Activity Timeline',
+    blurb: 'Continuous vertical shift activity feed: central connecting timeline track with animated glowing node pulses, speech-bubble staff cards branching off, and last check-in telemetry.',
+    description: 'Continuous vertical shift activity feed: central connecting timeline track with animated glowing node pulses, speech-bubble staff cards branching off, and last check-in telemetry.',
+    subtitle: 'Chrono Feed Timeline',
+    badge: 'Design 9 · Timeline',
+    icon: 'timeline',
+    defaults: {
+      canvasBg: '#F8FAFC',
+      cardBg: '#FFFFFF',
+      cardBorder: '#E2E8F0',
+      textColor: '#0F172A',
+      textMuted: '#64748B',
+      accentColor: '#7C3AED',
+      roleBadgeBg: '#EDE9FE',
+      roleBadgeColor: '#6D28D9',
+      statusActiveColor: '#10B981',
+      cardScale: 100,
+      cardRadius: 16,
+      padding: 18,
+      gridGap: 0,
+      fontSize: 14,
+      buttonBg: '#7C3AED',
+      buttonColor: '#FFFFFF',
+    },
+  },
+  {
+    key: 'compactpill',
+    name: 'Floating Capsule Chips',
+    label: 'Floating Capsule Chips',
+    blurb: 'Ultra-sleek lightweight horizontal capsule pills with 9999px radius for fast scanning, ambient status halo glow, compact micro-avatar, inline role tag, and expandable hover drawer.',
+    description: 'Ultra-sleek lightweight horizontal capsule pills with 9999px radius for fast scanning, ambient status halo glow, compact micro-avatar, inline role tag, and expandable hover drawer.',
+    subtitle: 'Capsule Island Pills',
+    badge: 'Design 10 · Capsule',
+    icon: 'more_horiz',
+    defaults: {
+      canvasBg: '#F1F5F9',
+      cardBg: '#FFFFFF',
+      cardBorder: '#E2E8F0',
+      textColor: '#0F172A',
+      textMuted: '#64748B',
+      accentColor: '#F97316',
+      roleBadgeBg: '#FFF7ED',
+      roleBadgeColor: '#C2410C',
+      statusActiveColor: '#10B981',
+      cardScale: 100,
+      cardRadius: 999,
+      padding: 12,
+      gridGap: 12,
+      fontSize: 14,
+      buttonBg: '#F97316',
+      buttonColor: '#FFFFFF',
+    },
+  },
+  {
+    key: 'radialhud',
+    name: 'Sci-Fi Radial HUD',
+    label: 'Sci-Fi Radial HUD',
+    blurb: 'Futuristic aerospace HUD with circular card container, animated radial conic-gradient permission ring around the avatar, rotating orbital ring border, holographic coordinates, and targeting reticles.',
+    description: 'Futuristic aerospace HUD with circular card container, animated radial conic-gradient permission ring around the avatar, rotating orbital ring border, holographic coordinates, and targeting reticles.',
+    subtitle: 'Holographic Orb HUD',
+    badge: 'Design 11 · Radial',
+    icon: 'radar',
+    defaults: {
+      canvasBg: '#020617',
+      cardBg: 'rgba(15, 23, 42, 0.85)',
+      cardBorder: 'rgba(52, 211, 153, 0.35)',
+      textColor: '#E2E8F0',
+      textMuted: '#94A3B8',
+      accentColor: '#34D399',
+      roleBadgeBg: 'rgba(52, 211, 153, 0.15)',
+      roleBadgeColor: '#6EE7B7',
+      statusActiveColor: '#34D399',
+      cardScale: 100,
+      cardRadius: 20,
+      padding: 20,
+      gridGap: 24,
+      fontSize: 14,
+      buttonBg: 'rgba(52, 211, 153, 0.25)',
+      buttonColor: '#34D399',
+    },
+  },
 ];
 
 export const STAFF_DESIGN_OPTIONS = STAFF_DESIGNS;
 
 export const DEFAULT_STAFF_DESIGN: StaffDesignKey = 'idcard';
+
+/**
+ * The design the directory falls back to while its customization switch is
+ * off: List View. The other pages fall back to their Card View, but this one
+ * ships no card design, so its built-in table stands in. It renders with its
+ * own stock palette, never the saved overrides, so "off" always looks the same
+ * however it was customized.
+ */
+export const BASELINE_STAFF_DESIGN: StaffDesignKey = 'list';
 
 interface StoredStaffLayout {
   layoutKey: StaffDesignKey;
@@ -255,11 +433,26 @@ interface StoredStaffLayout {
 })
 export class StaffLayoutService {
   private readonly settingsService = inject(SettingsService);
+  private readonly customization = inject(CustomizationService);
 
   private readonly layoutKeySignal = signal<StaffDesignKey>(DEFAULT_STAFF_DESIGN);
   private readonly overridesSignal = signal<Partial<Record<StaffDesignKey, Partial<StaffTokens>>>>({});
 
   public readonly activeKey = this.layoutKeySignal.asReadonly();
+
+  /**
+   * Whether the page applies its saved design at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * design and its palette stay saved either way.
+   */
+  public readonly enabled = this.customization.staffRolesCustomize;
+
+  /** The design the page renders: the saved one, or the baseline while off. */
+  public readonly effectiveKey = computed<StaffDesignKey>(() =>
+    this.enabled() ? this.layoutKeySignal() : BASELINE_STAFF_DESIGN
+  );
+
+  public readonly rootClass = computed<string>(() => 'staff-layout-' + this.effectiveKey());
   public readonly allOverrides = this.overridesSignal.asReadonly();
 
   public readonly activeDesign = computed<StaffDesignOption>(() => {
@@ -277,6 +470,13 @@ export class StaffLayoutService {
   public readonly activeCssVars = computed<Record<string, string>>(() => {
     return this.tokensToCssVars(this.activeTokens());
   });
+
+  /** Variables the page renders with — stock defaults while off. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled()
+      ? this.tokensToCssVars(this.activeTokens())
+      : this.tokensToCssVars(this.defaultsFor(BASELINE_STAFF_DESIGN))
+  );
 
   constructor() {
     this.loadFromSettings();
@@ -385,7 +585,9 @@ export class StaffLayoutService {
     const stored: StoredStaffLayout = {
       layoutKey: this.layoutKeySignal(),
       overrides: this.overridesSignal(),
-      enabled: true,
+      // Mirrored for builds that predate the customization switches; the
+      // value read back is the one in `system_customization`.
+      enabled: this.enabled(),
     };
     return { system_staff_layout: JSON.stringify(stored) };
   }

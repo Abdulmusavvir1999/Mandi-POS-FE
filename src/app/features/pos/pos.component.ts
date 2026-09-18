@@ -24,7 +24,7 @@ import { BillService } from '../../core/services/bill.service';
 import { OrderService } from '../../core/services/order.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { Product, ProductVariant, Category, Customer, DiningTable, DraftBill, Order, OrderType, PaymentMethod } from '../../core/models';
+import { Product, ProductVariant, Category, Customer, CartItem, DiningTable, DraftBill, Order, OrderType, PaymentMethod } from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
@@ -36,8 +36,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
   template: `
     <div
       class="pos-fullscreen-container"
-      [ngClass]="'pos-design-' + posDesign.activeKey()"
-      [ngStyle]="posDesign.cssVars()"
+      [ngClass]="posDesign.rootClass()"
+      [ngStyle]="posDesign.pageCssVars()"
     >
       <app-page-loader
         [loading]="isLoading"
@@ -553,7 +553,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
             <button
               type="button"
-              (click)="cartService.removeItem(item.lineId)"
+              (click)="removeCartItem(item)"
               class="cart-item-remove-btn"
               title="Remove item"
             >
@@ -3041,15 +3041,41 @@ export class PosComponent implements OnInit, AfterViewInit {
     });
   }
 
-  deleteDraft(id: number): void {
-    this.draftBillService.deleteDraft(id).subscribe({
-      next: () => {
-        this.loadDraftCount();
-        this.notify.info('Draft deleted');
+  removeCartItem(item: CartItem): void {
+    const label = item.variant?.name
+      ? `${item.product.name} (${item.variant.name})`
+      : item.product.name;
+
+    this.notify.confirm({
+      title: 'Remove Item',
+      message: `Remove ${label} from the cart?`,
+      confirmText: 'Remove',
+      cancelText: 'Keep',
+      isDestructive: true,
+      onConfirm: () => {
+        this.cartService.removeItem(item.lineId);
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
-      error: () => {},
+    });
+  }
+
+  deleteDraft(id: number): void {
+    this.notify.confirm({
+      title: 'Delete Held Bill',
+      message: 'Are you sure you want to permanently delete this held bill? This cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Keep',
+      isDestructive: true,
+      onConfirm: () => {
+        this.draftBillService.deleteDraft(id).subscribe({
+          next: () => {
+            this.loadDraftCount();
+            this.notify.info('Draft deleted');
+          },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
+        });
+      },
     });
   }
 

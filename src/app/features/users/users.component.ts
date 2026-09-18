@@ -393,12 +393,12 @@ interface ModuleGroup {
         <!-- Users Dynamic Staff Stage (5 Radically Distinct Layouts) -->
         <div
           class="staff-stage"
-          [ngClass]="'staff-layout-' + staffLayout.activeKey()"
-          [ngStyle]="staffLayout.activeCssVars()"
+          [ngClass]="staffLayout.rootClass()"
+          [ngStyle]="staffLayout.pageCssVars()"
           id="staff-table-section"
         >
           <!-- 1. Executive Security ID Badge (idcard) -->
-          <div *ngIf="staffLayout.activeKey() === 'idcard'" class="staff-id-grid">
+          <div *ngIf="staffLayout.effectiveKey() === 'idcard'" class="staff-id-grid">
             <div *ngFor="let u of paginatedUsers" class="staff-id-card">
               <!-- Physical Lanyard Strap & Punch Slot -->
               <div class="staff-id-top-strap">
@@ -475,7 +475,7 @@ interface ModuleGroup {
           </div>
 
           <!-- 2. Obsidian Dark Matrix (darkneon) -->
-          <div *ngIf="staffLayout.activeKey() === 'darkneon'" class="staff-dark-grid">
+          <div *ngIf="staffLayout.effectiveKey() === 'darkneon'" class="staff-dark-grid">
             <div *ngFor="let u of paginatedUsers" class="staff-dark-card">
               <div class="staff-dark-hud-bar">
                 <span>TERMINAL // SYS-0{{ u.id }}</span>
@@ -532,7 +532,7 @@ interface ModuleGroup {
           </div>
 
           <!-- 3. Horizontal Roster Stream (roster) -->
-          <div *ngIf="staffLayout.activeKey() === 'roster'" class="staff-roster-list">
+          <div *ngIf="staffLayout.effectiveKey() === 'roster'" class="staff-roster-list">
             <div *ngFor="let u of paginatedUsers" class="staff-roster-strip">
               <div class="staff-roster-left">
                 <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
@@ -575,7 +575,7 @@ interface ModuleGroup {
           </div>
 
           <!-- 4. Enterprise SaaS Power Table (list) -->
-          <div *ngIf="staffLayout.activeKey() === 'list'" class="staff-power-table-card">
+          <div *ngIf="staffLayout.effectiveKey() === 'list'" class="staff-power-table-card">
             <table class="staff-power-table">
               <thead>
                 <tr>
@@ -646,7 +646,7 @@ interface ModuleGroup {
           </div>
 
           <!-- 5. Modern Bento Metric Profile (bento) -->
-          <div *ngIf="staffLayout.activeKey() === 'bento'" class="staff-bento-grid">
+          <div *ngIf="staffLayout.effectiveKey() === 'bento'" class="staff-bento-grid">
             <div *ngFor="let u of paginatedUsers" class="staff-bento-card">
               <div class="staff-bento-hero">
                 <div class="flex items-center gap-2">
@@ -702,6 +702,245 @@ interface ModuleGroup {
                     <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. Frosted Glass Aurora (glassmorphism) -->
+          <div *ngIf="staffLayout.effectiveKey() === 'glassmorphism'" class="staff-glass-grid">
+            <div *ngFor="let u of paginatedUsers" class="staff-glass-card">
+              <div class="staff-glass-avatar">
+                <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
+                <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
+              </div>
+              <div class="flex items-center gap-2 mb-1">
+                <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
+                <h4 class="staff-glass-name">{{ u.name }}</h4>
+              </div>
+              <div class="staff-glass-handle">&#64;{{ u.username }}</div>
+              <div class="staff-glass-role">
+                <span class="staff-glass-status" [style.color]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : '#EF4444'" [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : '#EF4444'"></span>
+                <span class="material-symbols-outlined" style="font-size: 13px;">{{ getRoleIcon(u.role) }}</span>
+                <span>{{ u.role }}</span>
+              </div>
+              <div class="staff-glass-info">
+                <div class="flex items-center gap-1.5 truncate">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">mail</span>
+                  <span class="truncate">{{ u.email }}</span>
+                </div>
+                <div class="flex items-center gap-1.5" *ngIf="u.phone">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">call</span>
+                  <span>{{ u.phone }}</span>
+                </div>
+              </div>
+              <div class="staff-glass-actions">
+                <button type="button" (click)="openEditUserModal(u)" class="staff-glass-btn" title="Edit">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                  <span>Edit</span>
+                </button>
+                <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="staff-glass-btn is-delete" title="Delete">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. Neo-Brutalism Pop (retrobrutalist) -->
+          <div *ngIf="staffLayout.effectiveKey() === 'retrobrutalist'" class="staff-brutal-grid">
+            <div *ngFor="let u of paginatedUsers" class="staff-brutal-card">
+              <div class="staff-brutal-header">
+                <span class="staff-brutal-header-label">STAFF // {{ u.role | uppercase }}</span>
+                <span class="staff-brutal-status-tag" [class.is-off]="u.status !== 'ACTIVE'">
+                  {{ u.status === 'ACTIVE' ? 'ONLINE' : 'OFFLINE' }}
+                </span>
+              </div>
+              <div class="staff-brutal-body">
+                <div class="staff-brutal-avatar">
+                  <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
+                  <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
+                </div>
+                <div class="staff-brutal-meta">
+                  <div class="flex items-center gap-2">
+                    <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
+                    <h4 class="staff-brutal-name">{{ u.name }}</h4>
+                  </div>
+                  <div class="staff-brutal-handle">&#64;{{ u.username }}</div>
+                  <span class="staff-brutal-role-sticker" [ngStyle]="getRoleBadgeStyle(u.role)">{{ u.role }}</span>
+                </div>
+              </div>
+              <div class="staff-brutal-contact">
+                <span>{{ u.email }}</span>
+                <span *ngIf="u.phone" class="font-mono">{{ u.phone }}</span>
+              </div>
+              <div class="staff-brutal-footer">
+                <span class="text-[10px] font-mono font-bold text-slate-700">
+                  PERMS: {{ countUserPermissions(u) }} / {{ permissions.length || 24 }}
+                </span>
+                <div class="flex items-center gap-2">
+                  <button type="button" (click)="openEditUserModal(u)" class="staff-brutal-btn" title="Edit">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">edit</span>
+                    <span>EDIT</span>
+                  </button>
+                  <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="staff-brutal-btn is-delete" title="Delete">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. Flat Metro Grid (metro) -->
+          <div *ngIf="staffLayout.effectiveKey() === 'metro'" class="staff-metro-grid">
+            <div *ngFor="let u of paginatedUsers" class="staff-metro-tile">
+              <span class="staff-metro-watermark">{{ u.role }}</span>
+              <div class="staff-metro-check">
+                <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
+              </div>
+              <span class="staff-metro-status" [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : '#EF4444'"></span>
+              <div class="staff-metro-content">
+                <div class="staff-metro-avatar">
+                  <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
+                  <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
+                </div>
+                <h4 class="staff-metro-name">{{ u.name }}</h4>
+                <div class="staff-metro-sub">&#64;{{ u.username }} · {{ u.email }}</div>
+                <span class="staff-metro-role-tag">
+                  <span class="material-symbols-outlined" style="font-size: 12px;">{{ getRoleIcon(u.role) }}</span>
+                  {{ u.role }}
+                </span>
+                <div class="staff-metro-actions">
+                  <button type="button" (click)="openEditUserModal(u)" class="staff-metro-btn" title="Edit">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                  </button>
+                  <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="staff-metro-btn" title="Delete">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 9. Vertical Activity Timeline (timeline) -->
+          <div *ngIf="staffLayout.effectiveKey() === 'timeline'" class="staff-timeline-feed">
+            <div *ngFor="let u of paginatedUsers" class="staff-timeline-item">
+              <div class="staff-timeline-node" [class.is-active]="u.status === 'ACTIVE'"></div>
+              <div class="staff-timeline-card">
+                <div class="staff-timeline-avatar">
+                  <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
+                  <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
+                </div>
+                <div class="staff-timeline-meta">
+                  <div class="flex items-center gap-2">
+                    <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
+                    <h4 class="staff-timeline-name">{{ u.name }}</h4>
+                  </div>
+                  <div class="staff-timeline-handle">&#64;{{ u.username }}</div>
+                  <div class="staff-timeline-tags">
+                    <span class="staff-timeline-role" [ngStyle]="getRoleBadgeStyle(u.role)">
+                      <span class="material-symbols-outlined" style="font-size: 11px;">{{ getRoleIcon(u.role) }}</span>
+                      {{ u.role }}
+                    </span>
+                    <span class="staff-timeline-time">
+                      <span class="material-symbols-outlined" style="font-size: 11px;">schedule</span>
+                      {{ (u.last_login_at || u.lastLoginAt) ? ((u.last_login_at || u.lastLoginAt) | date:'dd/MM HH:mm') : 'Never' }}
+                    </span>
+                  </div>
+                  <div class="staff-timeline-contact">
+                    <span>{{ u.email }}</span>
+                    <span *ngIf="u.phone" class="font-mono text-xs">{{ u.phone }}</span>
+                  </div>
+                </div>
+                <div class="staff-timeline-actions">
+                  <button type="button" (click)="openEditUserModal(u)" class="staff-timeline-btn" title="Edit">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                  </button>
+                  <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="staff-timeline-btn is-delete" title="Delete">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 10. Floating Capsule Chips (compactpill) -->
+          <div *ngIf="staffLayout.effectiveKey() === 'compactpill'" class="staff-pill-grid">
+            <div *ngFor="let u of paginatedUsers" class="staff-pill-chip">
+              <div class="staff-pill-avatar">
+                <span class="staff-pill-halo" [class.is-active]="u.status === 'ACTIVE'"></span>
+                <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
+                <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
+              </div>
+              <div class="staff-pill-meta">
+                <div class="flex items-center gap-2">
+                  <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
+                  <span class="staff-pill-name">{{ u.name }}</span>
+                </div>
+                <span class="staff-pill-handle">&#64;{{ u.username }}</span>
+              </div>
+              <span class="staff-pill-role" [ngStyle]="getRoleBadgeStyle(u.role)">
+                <span class="material-symbols-outlined" style="font-size: 12px;">{{ getRoleIcon(u.role) }}</span>
+                {{ u.role }}
+              </span>
+              <div class="staff-pill-contact hidden md:flex">
+                <span>{{ u.email }}</span>
+                <span *ngIf="u.phone" class="font-mono text-xs">{{ u.phone }}</span>
+              </div>
+              <div class="staff-pill-actions">
+                <button type="button" (click)="openEditUserModal(u)" class="staff-pill-btn" title="Edit">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                </button>
+                <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="staff-pill-btn is-delete" title="Delete">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 11. Sci-Fi Radial HUD (radialhud) -->
+          <div *ngIf="staffLayout.effectiveKey() === 'radialhud'" class="staff-hud-grid">
+            <div *ngFor="let u of paginatedUsers" class="staff-hud-card">
+              <div class="staff-hud-coords">
+                <span>UNIT-{{ u.id }}</span>
+                <span>{{ u.status === 'ACTIVE' ? '◉ ONLINE' : '○ OFFLINE' }}</span>
+              </div>
+              <div class="staff-hud-ring-wrap" [style.--perm-pct]="calculatePermissionProgress(u)">
+                <div class="staff-hud-perm-ring"></div>
+                <div class="staff-hud-avatar">
+                  <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
+                  <span *ngIf="!u.image_url">{{ getInitials(u.name) }}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 mb-1">
+                <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
+                <h4 class="staff-hud-name">{{ u.name }}</h4>
+              </div>
+              <div class="staff-hud-handle">&#64;{{ u.username }}</div>
+              <span class="staff-hud-role" [ngStyle]="getRoleBadgeStyle(u.role)">
+                <span class="material-symbols-outlined" style="font-size: 12px;">{{ getRoleIcon(u.role) }}</span>
+                {{ u.role }}
+              </span>
+              <div class="staff-hud-telemetry">
+                <div class="staff-hud-stat">
+                  <span class="staff-hud-stat-label">Perms</span>
+                  <span class="staff-hud-stat-value">{{ countUserPermissions(u) }}/{{ permissions.length || 24 }}</span>
+                </div>
+                <div class="staff-hud-stat">
+                  <span class="staff-hud-stat-label">Access</span>
+                  <span class="staff-hud-stat-value">L{{ u.id }}</span>
+                </div>
+              </div>
+              <div class="staff-hud-contact">
+                <span>{{ u.email }}</span>
+                <span *ngIf="u.phone">{{ u.phone }}</span>
+              </div>
+              <div class="staff-hud-actions">
+                <button type="button" (click)="openEditUserModal(u)" class="staff-hud-btn" title="Edit">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                  <span>MODIFY</span>
+                </button>
+                <button *ngIf="u.username !== 'admin'" type="button" (click)="deleteUser(u)" class="staff-hud-btn is-delete" title="Delete">
+                  <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                </button>
               </div>
             </div>
           </div>

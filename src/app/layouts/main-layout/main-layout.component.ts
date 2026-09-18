@@ -78,15 +78,15 @@ export class MainLayoutComponent {
     // Each sidebar template opens with the operator's remembered rail state,
     // falling back to that template's own preference (Compact starts narrow).
     effect(() => {
-      const key = this.sidebarLayout.activeKey();
-      this.isSidebarCollapsed.set(this.sidebarLayout.resolveInitialCollapsed(key));
+      const slot = this.sidebarLayout.collapseSlot();
+      this.isSidebarCollapsed.set(this.sidebarLayout.resolveInitialCollapsed(slot));
     });
   }
 
   public onToggleCollapse(): void {
     const next = !this.isSidebarCollapsed();
     this.isSidebarCollapsed.set(next);
-    this.sidebarLayout.persistCollapsed(this.sidebarLayout.activeKey(), next);
+    this.sidebarLayout.persistCollapsed(this.sidebarLayout.collapseSlot(), next);
   }
 
   private checkPosRoute(url: string): void {

@@ -534,14 +534,23 @@ export class QueueComponent implements OnInit {
   }
 
   cancelToken(id: number): void {
-    this.queueService.cancelToken(id).subscribe({
-      next: () => {
-        this.notify.info('Token cancelled');
-        this.loadTokens();
+    this.notify.confirm({
+      title: 'Cancel Queue Token',
+      message: 'Are you sure you want to cancel this token? The customer will be removed from the queue.',
+      confirmText: 'Cancel Token',
+      cancelText: 'Keep',
+      isDestructive: true,
+      onConfirm: () => {
+        this.queueService.cancelToken(id).subscribe({
+          next: () => {
+            this.notify.info('Token cancelled');
+            this.loadTokens();
+          },
+          // Reported by the global error interceptor; present so a failure
+          // cannot escape as an unhandled rejection.
+          error: () => {},
+        });
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
-      error: () => {},
     });
   }
 }

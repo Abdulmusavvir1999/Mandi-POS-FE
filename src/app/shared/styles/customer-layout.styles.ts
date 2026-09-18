@@ -193,34 +193,8 @@ export const CUSTOMER_LAYOUT_CSS = `
     padding-top: 10px;
     border-top: 1px solid rgba(233, 213, 255, 0.6);
   }
-  .cust-vip-btn-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .cust-vip-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--cust-card-border, #E9D5FF);
-    background: #FFFFFF;
-    color: var(--cust-text-color, #2E1065);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .cust-vip-btn:hover {
-    background: var(--cust-button-bg, #7E22CE);
-    color: var(--cust-button-color, #FFFFFF);
-    border-color: var(--cust-button-bg, #7E22CE);
-  }
-  .cust-vip-btn.is-delete:hover {
-    background: #DC2626;
-    color: #FFFFFF;
-    border-color: #DC2626;
-  }
+  /* The row actions for every design now live together at the foot of this
+     file, so the five treatments can be compared side by side. */
 
   /* ═══════════════════════════════════════════════════════════════ */
   /* DESIGN 2: MINIMALIST CLEAN TABLE                                */
@@ -489,5 +463,211 @@ export const CUSTOMER_LAYOUT_CSS = `
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════ */
+  /* ROW ACTIONS — a different button character per design           */
+  /* ═══════════════════════════════════════════════════════════════ */
+  /* These were plain Tailwind utility classes (w-7 h-7 hover:bg-…),
+     which this project has no Tailwind build to resolve, so three of
+     the five designs rendered as default grey boxes. Each design now
+     gets a button whose shape and motion match its own character:
+
+       VIP      lifting pill, fills with the accent
+       Clean    borderless glyph with a sliding underline
+       Compact  dense tinted tile that presses inward
+       List     one segmented bar with hairline dividers
+       Card     floating circle that scales up
+
+     Colour comes from the design's own tokens, so recolouring a
+     template in Settings recolours its buttons with it. */
+
+  /* Geometry and transitions only — all character lives per design. */
+  .cust-act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease,
+      border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+  .cust-act .material-symbols-outlined {
+    font-size: 17px;
+    line-height: 1;
+  }
+  .cust-act:focus-visible {
+    outline: 2px solid var(--cust-button-bg, #7E22CE);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cust-act {
+      transition-duration: 0.01ms;
+    }
+    .cust-act:hover {
+      transform: none;
+    }
+  }
+
+  /* DESIGN 1 — Executive VIP: a pill that lifts off the card. */
+  .cust-vip-btn-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cust-act.is-vip {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: #FFFFFF;
+    color: var(--cust-text-color, #2E1065);
+    border: 1px solid var(--cust-card-border, #E9D5FF);
+    box-shadow: 0 1px 2px rgba(46, 16, 101, 0.08);
+  }
+  .cust-act.is-vip:hover {
+    background: var(--cust-button-bg, #7E22CE);
+    color: var(--cust-button-color, #FFFFFF);
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px
+      color-mix(in srgb, var(--cust-button-bg, #7E22CE) 38%, transparent);
+  }
+  .cust-act.is-vip.is-delete:hover {
+    background: #DC2626;
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+  }
+
+  /* DESIGN 2 — Minimalist Clean: no box at all, just an underline. */
+  .cust-clean-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .cust-act.is-clean {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    color: var(--cust-text-muted, #64748B);
+  }
+  .cust-act.is-clean::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    right: 50%;
+    bottom: 2px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--cust-button-bg, #7E22CE);
+    transition: left 0.18s ease, right 0.18s ease;
+  }
+  .cust-act.is-clean:hover {
+    color: var(--cust-button-bg, #7E22CE);
+  }
+  .cust-act.is-clean:hover::after {
+    left: 5px;
+    right: 5px;
+  }
+  .cust-act.is-clean.is-delete::after {
+    background: #DC2626;
+  }
+  .cust-act.is-clean.is-delete:hover {
+    color: #DC2626;
+  }
+
+  /* DESIGN 3 — Compact CRM: dense tinted tiles that press inward. */
+  .cust-compact-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cust-act.is-compact {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--cust-button-bg, #7E22CE) 10%, #FFFFFF);
+    color: var(--cust-button-bg, #7E22CE);
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--cust-button-bg, #7E22CE) 18%, transparent);
+  }
+  .cust-act.is-compact .material-symbols-outlined {
+    font-size: 15px;
+  }
+  .cust-act.is-compact:hover {
+    background: var(--cust-button-bg, #7E22CE);
+    color: var(--cust-button-color, #FFFFFF);
+    transform: translateY(1px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .cust-act.is-compact.is-delete {
+    background: rgba(220, 38, 38, 0.1);
+    color: #DC2626;
+    box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.2);
+  }
+  .cust-act.is-compact.is-delete:hover {
+    background: #DC2626;
+    color: #FFFFFF;
+  }
+
+  /* DESIGN 4 — List View: the three actions read as one segmented bar. */
+  .cust-list-actions {
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid var(--cust-card-border, #E2E8F0);
+    border-radius: 8px;
+    background: #FFFFFF;
+  }
+  .cust-act.is-list {
+    width: 34px;
+    height: 28px;
+    color: var(--cust-text-muted, #64748B);
+    border-right: 1px solid var(--cust-card-border, #E2E8F0);
+  }
+  .cust-act.is-list:last-child {
+    border-right: 0;
+  }
+  .cust-act.is-list .material-symbols-outlined {
+    font-size: 16px;
+  }
+  .cust-act.is-list:hover {
+    background: color-mix(in srgb, var(--cust-button-bg, #7E22CE) 12%, #FFFFFF);
+    color: var(--cust-button-bg, #7E22CE);
+  }
+  .cust-act.is-list.is-delete:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #DC2626;
+  }
+
+  /* DESIGN 5 — Card View: circles floating above the card footer. */
+  .cust-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cust-act.is-card {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    color: var(--cust-text-muted, #64748B);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14);
+  }
+  .cust-act.is-card .material-symbols-outlined {
+    font-size: 16px;
+  }
+  .cust-act.is-card:hover {
+    transform: scale(1.14);
+    background: var(--cust-button-bg, #7E22CE);
+    color: var(--cust-button-color, #FFFFFF);
+    box-shadow: 0 6px 16px
+      color-mix(in srgb, var(--cust-button-bg, #7E22CE) 42%, transparent);
+  }
+  .cust-act.is-card.is-delete:hover {
+    background: #DC2626;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
   }
 `;

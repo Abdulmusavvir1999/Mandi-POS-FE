@@ -1,31 +1,34 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { CustomizationService } from './customization.service';
 
 export type SidebarTemplateKey =
-  | 'default'
   | 'classic'
   | 'minimal'
-  | 'compact'
   | 'floating'
   | 'iconfocus'
-  | 'elegant'
-  | 'dashboardpro'
-  | 'glass'
-  | 'smart'
-  | 'collapsiblepro';
+  | 'glass';
+
+/**
+ * Templates removed when the set was reduced to five distinct designs, and the
+ * survivor each one maps to. Kept so a setting saved before the change still
+ * resolves to something sensible instead of snapping back to the default.
+ */
+export const SIDEBAR_LEGACY_TEMPLATES: Record<string, SidebarTemplateKey> = {
+  default: 'classic',
+  compact: 'classic',
+  dashboardpro: 'classic',
+  collapsiblepro: 'classic',
+  elegant: 'minimal',
+  smart: 'minimal',
+};
 
 export const SIDEBAR_TEMPLATE_KEYS: SidebarTemplateKey[] = [
-  'default',
   'classic',
   'minimal',
-  'compact',
   'floating',
   'iconfocus',
-  'elegant',
-  'dashboardpro',
   'glass',
-  'smart',
-  'collapsiblepro',
 ];
 
 /**
@@ -140,18 +143,7 @@ const CAPS_BASE: SidebarTemplateCaps = {
   prefersCollapsed: false,
 };
 
-export const SIDEBAR_TEMPLATE_OPTIONS: SidebarTemplateOption[] = [
-  {
-    key: 'default',
-    label: 'Default',
-    subtitle: 'The Shipped POS Rail',
-    badge: 'Stock',
-    description:
-      'The rail this build ships with — 240px dock, grouped sections, left accent indicator and a profile footer, now with refined icon-pop hover and a growing active bar.',
-    highlights: ['Accent bar grows from center', 'Icon pop on hover', 'Flat, zero-distraction surface'],
-    caps: { ...CAPS_BASE },
-  },
-  {
+export const SIDEBAR_TEMPLATE_OPTIONS: SidebarTemplateOption[] = [  {
     key: 'classic',
     label: 'Classic Sidebar',
     subtitle: 'Traditional ERP / Admin Dock',
@@ -168,17 +160,7 @@ export const SIDEBAR_TEMPLATE_OPTIONS: SidebarTemplateOption[] = [
       'Airy, border-free navigation with generous breathing room. Hover is a whisper-light tint, the active row is a soft pill with an accent dot — almost no shadow anywhere.',
     highlights: ['Whisper tint hover', 'Pill active + trailing dot', 'Near-flat elevation'],
     caps: { ...CAPS_BASE },
-  },
-  {
-    key: 'compact',
-    label: 'Compact Sidebar',
-    subtitle: 'High-Density Module Rail',
-    description:
-      'Narrow 200px rail with 34px rows so large module trees fit on one screen. Icons lead, labels stay small, tooltips appear the moment the rail collapses.',
-    highlights: ['Icon scales 1.15 on hover', 'Tight 34px rows', 'Tooltips in collapsed mode'],
-    caps: { ...CAPS_BASE, prefersCollapsed: true },
-  },
-  {
+  },  {
     key: 'floating',
     label: 'Floating Sidebar',
     subtitle: 'Detached Elevated Panel',
@@ -195,27 +177,7 @@ export const SIDEBAR_TEMPLATE_OPTIONS: SidebarTemplateOption[] = [
       'Every row leads with a large rounded icon tile. Active tiles fill with the accent and glow; labels shrink to a supporting caption for fast visual module jumps.',
     highlights: ['Tile tilts + scales on hover', 'Accent-filled glowing tile', 'Caption-weight labels'],
     caps: { ...CAPS_BASE, collapsibleSections: true },
-  },
-  {
-    key: 'elegant',
-    label: 'Elegant Navigation',
-    subtitle: 'Premium Structured Groups',
-    description:
-      'Refined typography with letter-spaced group headings, hairline rules and a gradient sweep that washes across the row on hover. Polished rather than loud.',
-    highlights: ['Gradient sweep hover', 'Hairline rule headings', 'Letter-spaced active label'],
-    caps: { ...CAPS_BASE },
-  },
-  {
-    key: 'dashboardpro',
-    label: 'Dashboard Pro',
-    subtitle: 'Full ERP Command Rail',
-    badge: 'Most Features',
-    description:
-      'The complete admin rail: menu search, notification and help shortcuts, collapsible module groups, strong hierarchy and a solid accent-filled active row.',
-    highlights: ['Menu search filter', 'Notification / help strip', 'Solid accent active row'],
-    caps: { hasSearch: true, collapsibleSections: true, quickActions: true, prefersCollapsed: false },
-  },
-  {
+  },  {
     key: 'glass',
     label: 'Glass Sidebar',
     subtitle: 'Translucent Blurred Surface',
@@ -223,45 +185,9 @@ export const SIDEBAR_TEMPLATE_OPTIONS: SidebarTemplateOption[] = [
       'Semi-transparent rail with a real backdrop blur, frosted hairline borders and rounded rows. The active row becomes tinted glass with an inner accent glow.',
     highlights: ['Backdrop blur surface', 'Border-glow hover', 'Inner-glow active glass'],
     caps: { ...CAPS_BASE },
-  },
-  {
-    key: 'smart',
-    label: 'Smart Navigation',
-    subtitle: 'Adaptive Productivity Rail',
-    description:
-      'Adapts to how you work: collapsible groups, remembered expand/collapse state, tooltips when narrow, and an indicator that animates its height into place.',
-    highlights: ['Indicator animates height', 'Remembers rail state', 'Icon micro-bounce'],
-    caps: { hasSearch: true, collapsibleSections: true, quickActions: false, prefersCollapsed: false },
-  },
-  {
-    key: 'collapsiblepro',
-    label: 'Collapsible Pro',
-    subtitle: 'Advanced Collapse Choreography',
-    description:
-      'Built around the collapse gesture — labels fade and slide out on a spring curve, collapsed rows become glowing centred tiles, and the toggle rotates as it flips.',
-    highlights: ['Spring width choreography', 'Labels fade + slide', 'Rotating toggle, glowing tiles'],
-    caps: { ...CAPS_BASE, collapsibleSections: true },
-  },
-];
+  },];
 
-export const SIDEBAR_DEFAULT_TOKENS: Record<SidebarTemplateKey, SidebarTokens> = {
-  default: {
-    width: 240,
-    collapsedWidth: 68,
-    itemHeight: 40,
-    itemRadius: 8,
-    itemGap: 2,
-    sectionGap: 16,
-    navPadding: 8,
-    fontSize: 13,
-    iconSize: 20,
-    shadowStrength: 18,
-    hoverShift: 0,
-    animSpeed: 160,
-    panelRadius: 0,
-    panelInset: 0,
-  },
-  classic: {
+export const SIDEBAR_DEFAULT_TOKENS: Record<SidebarTemplateKey, SidebarTokens> = {  classic: {
     width: 252,
     collapsedWidth: 66,
     itemHeight: 38,
@@ -292,24 +218,7 @@ export const SIDEBAR_DEFAULT_TOKENS: Record<SidebarTemplateKey, SidebarTokens> =
     animSpeed: 200,
     panelRadius: 0,
     panelInset: 0,
-  },
-  compact: {
-    width: 200,
-    collapsedWidth: 60,
-    itemHeight: 34,
-    itemRadius: 6,
-    itemGap: 1,
-    sectionGap: 12,
-    navPadding: 6,
-    fontSize: 12,
-    iconSize: 19,
-    shadowStrength: 20,
-    hoverShift: 2,
-    animSpeed: 140,
-    panelRadius: 0,
-    panelInset: 0,
-  },
-  floating: {
+  },  floating: {
     width: 244,
     collapsedWidth: 74,
     itemHeight: 42,
@@ -340,40 +249,7 @@ export const SIDEBAR_DEFAULT_TOKENS: Record<SidebarTemplateKey, SidebarTokens> =
     animSpeed: 200,
     panelRadius: 0,
     panelInset: 0,
-  },
-  elegant: {
-    width: 258,
-    collapsedWidth: 70,
-    itemHeight: 40,
-    itemRadius: 10,
-    itemGap: 3,
-    sectionGap: 22,
-    navPadding: 12,
-    fontSize: 13,
-    iconSize: 20,
-    shadowStrength: 22,
-    hoverShift: 3,
-    animSpeed: 240,
-    panelRadius: 0,
-    panelInset: 0,
-  },
-  dashboardpro: {
-    width: 268,
-    collapsedWidth: 72,
-    itemHeight: 40,
-    itemRadius: 9,
-    itemGap: 2,
-    sectionGap: 16,
-    navPadding: 10,
-    fontSize: 13,
-    iconSize: 20,
-    shadowStrength: 40,
-    hoverShift: 3,
-    animSpeed: 170,
-    panelRadius: 0,
-    panelInset: 0,
-  },
-  glass: {
+  },  glass: {
     width: 250,
     collapsedWidth: 74,
     itemHeight: 42,
@@ -388,45 +264,32 @@ export const SIDEBAR_DEFAULT_TOKENS: Record<SidebarTemplateKey, SidebarTokens> =
     animSpeed: 230,
     panelRadius: 18,
     panelInset: 8,
-  },
-  smart: {
-    width: 252,
-    collapsedWidth: 70,
-    itemHeight: 40,
-    itemRadius: 10,
-    itemGap: 3,
-    sectionGap: 18,
-    navPadding: 9,
-    fontSize: 13,
-    iconSize: 20,
-    shadowStrength: 30,
-    hoverShift: 3,
-    animSpeed: 190,
-    panelRadius: 0,
-    panelInset: 0,
-  },
-  collapsiblepro: {
-    width: 256,
-    collapsedWidth: 76,
-    itemHeight: 42,
-    itemRadius: 11,
-    itemGap: 3,
-    sectionGap: 18,
-    navPadding: 10,
-    fontSize: 13,
-    iconSize: 21,
-    shadowStrength: 38,
-    hoverShift: 4,
-    animSpeed: 280,
-    panelRadius: 0,
-    panelInset: 0,
-  },
+  },};
+
+/**
+ * How the rail behaves while its customization switch is off: the stock
+ * sidebar, wearing no template class and no saved variables, so the base
+ * styles' own values apply.
+ *
+ * Collapsible groups stay on because they are navigation behaviour, not
+ * decoration — this switch is only ever allowed to change how the rail looks.
+ * Search and the quick-action strip are template extras the stock rail has
+ * never carried, so they stay off.
+ */
+export const BASELINE_SIDEBAR_CAPS: SidebarTemplateCaps = {
+  hasSearch: false,
+  collapsibleSections: true,
+  quickActions: false,
+  prefersCollapsed: false,
 };
 
 export interface SidebarPersistedConfig {
   activeKey: SidebarTemplateKey;
   overrides?: Partial<Record<SidebarTemplateKey, Partial<SidebarTokens>>>;
 }
+
+/** A template, or the stock rail shown while customization is off. */
+export type SidebarCollapseSlot = SidebarTemplateKey | 'default';
 
 const COLLAPSE_STORAGE_KEY = 'pos.sidebar.collapsed';
 const COLLAPSE_TEMPLATE_KEY = 'pos.sidebar.collapsed.template';
@@ -436,11 +299,48 @@ const COLLAPSE_TEMPLATE_KEY = 'pos.sidebar.collapsed.template';
 })
 export class SidebarLayoutService {
   private settingsService = inject(SettingsService);
+  private customization = inject(CustomizationService);
 
-  private _activeKey = signal<SidebarTemplateKey>('default');
+  private _activeKey = signal<SidebarTemplateKey>('classic');
   private _overrides = signal<Partial<Record<SidebarTemplateKey, Partial<SidebarTokens>>>>({});
 
   public readonly activeKey = computed(() => this._activeKey());
+
+  /**
+   * Whether the rail applies its saved template at all. The switch lives in
+   * Settings -> POS Customization, which is the single place it is stored; the
+   * template and its tokens stay saved either way.
+   */
+  public readonly enabled = this.customization.sidebarTemplateCustomize;
+
+  /** The template class the rail carries, or '' while customization is off. */
+  public readonly rootClass = computed<string>(() =>
+    this.enabled() ? 'tpl-' + this._activeKey() : ''
+  );
+
+  /** What the rail may render. Appearance only — menus and routes never change. */
+  public readonly pageCaps = computed<SidebarTemplateCaps>(() =>
+    this.enabled() ? this.activeTemplate().caps : BASELINE_SIDEBAR_CAPS
+  );
+
+  /** Variables the rail renders with; none while off, so the base values apply. */
+  public readonly pageCssVars = computed<Record<string, string>>(() =>
+    this.enabled() ? this.cssVars() : {}
+  );
+
+  /** The template driving the rail's behaviour, or null while customization is off. */
+  public readonly effectiveKey = computed<SidebarTemplateKey | null>(() =>
+    this.enabled() ? this._activeKey() : null
+  );
+
+  /**
+   * Which slot the remembered rail width belongs to: the active template while
+   * customization is on, a fixed slot for the stock rail while it is off, so
+   * the two states never inherit each other's collapse state.
+   */
+  public readonly collapseSlot = computed<SidebarCollapseSlot>(
+    () => this.effectiveKey() ?? 'default'
+  );
 
   public readonly activeTemplate = computed<SidebarTemplateOption>(() => {
     const key = this._activeKey();
@@ -495,8 +395,15 @@ export class SidebarLayoutService {
       const parsed: SidebarPersistedConfig =
         typeof raw === 'string' ? JSON.parse(raw) : (raw as SidebarPersistedConfig);
       if (parsed && typeof parsed === 'object') {
-        if (parsed.activeKey && SIDEBAR_TEMPLATE_KEYS.includes(parsed.activeKey)) {
-          this._activeKey.set(parsed.activeKey);
+        if (parsed.activeKey) {
+          // A saved template that no longer exists maps to its closest
+          // survivor rather than reverting to the default, so an install
+          // upgraded past the eleven-template set keeps a similar rail.
+          const next =
+            SIDEBAR_LEGACY_TEMPLATES[parsed.activeKey as string] || parsed.activeKey;
+          if (SIDEBAR_TEMPLATE_KEYS.includes(next as SidebarTemplateKey)) {
+            this._activeKey.set(next as SidebarTemplateKey);
+          }
         }
         if (parsed.overrides && typeof parsed.overrides === 'object') {
           this._overrides.set(parsed.overrides);
@@ -547,7 +454,7 @@ export class SidebarLayoutService {
    * a value the operator chose for that template, otherwise the template's
    * own `prefersCollapsed` preference.
    */
-  public resolveInitialCollapsed(key: SidebarTemplateKey): boolean {
+  public resolveInitialCollapsed(key: SidebarCollapseSlot): boolean {
     const option = SIDEBAR_TEMPLATE_OPTIONS.find((o) => o.key === key);
     const preferred = option ? option.caps.prefersCollapsed : false;
     if (typeof window === 'undefined' || !window.localStorage) return preferred;
@@ -564,7 +471,7 @@ export class SidebarLayoutService {
     return preferred;
   }
 
-  public persistCollapsed(key: SidebarTemplateKey, collapsed: boolean): void {
+  public persistCollapsed(key: SidebarCollapseSlot, collapsed: boolean): void {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
       window.localStorage.setItem(COLLAPSE_TEMPLATE_KEY, key);

@@ -784,7 +784,19 @@ export class ProductFormComponent implements OnInit {
   }
 
   removeVariant(index: number): void {
-    this.form.variants.splice(index, 1);
+    const variant = this.form.variants[index];
+    const label = variant?.name?.trim() || 'this portion';
+
+    this.notify.confirm({
+      title: 'Remove Portion',
+      message: `Are you sure you want to remove ${label} from this dish?`,
+      confirmText: 'Remove',
+      cancelText: 'Keep',
+      isDestructive: true,
+      onConfirm: () => {
+        this.form.variants.splice(index, 1);
+      },
+    });
   }
 
   onImageFile(event: Event, picker: HTMLInputElement): void {
