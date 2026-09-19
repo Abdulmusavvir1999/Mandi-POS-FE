@@ -205,7 +205,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             type="button"
             (click)="activeTab = 'theme'"
             class="tab-btn"
-            [class.is-active]="activeTab === 'theme'"
+            [class.is-active]="isThemeGroupTab(activeTab)"
           >
             <span class="material-symbols-outlined">palette</span>
             <span>Brand Theme & UI Palette</span>
@@ -240,86 +240,6 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           >
             <span class="material-symbols-outlined">print</span>
             <span>Receipts & Hardware</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'posdesign'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'posdesign'"
-          >
-            <span class="material-symbols-outlined">dashboard_customize</span>
-            <span>POS Customize</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'dishpage'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'dishpage'"
-          >
-            <span class="material-symbols-outlined">view_quilt</span>
-            <span>Catalog Page Design</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'dining'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'dining'"
-          >
-            <span class="material-symbols-outlined">table_restaurant</span>
-            <span>Dining Customize</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'categorydesign'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'categorydesign'"
-          >
-            <span class="material-symbols-outlined">category</span>
-            <span>Category Customize</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'stockdesign'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'stockdesign'"
-          >
-            <span class="material-symbols-outlined">warehouse</span>
-            <span>Stock Ledger Customize</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'customerdesign'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'customerdesign'"
-          >
-            <span class="material-symbols-outlined">badge</span>
-            <span>Customer Customize</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'staffdesign'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'staffdesign'"
-          >
-            <span class="material-symbols-outlined">admin_panel_settings</span>
-            <span>Staff &amp; Roles Customize</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="activeTab = 'sidebardesign'"
-            class="tab-btn"
-            [class.is-active]="activeTab === 'sidebardesign'"
-          >
-            <span class="material-symbols-outlined">left_panel_open</span>
-            <span>Sidebar Template</span>
           </button>
 
           <button
@@ -365,6 +285,52 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           <span class="material-symbols-outlined">chevron_right</span>
         </button>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- BRAND THEME SUB-TABS                                            -->
+      <!-- The palette and the eight page designs all belong to branding,  -->
+      <!-- so they share one rail here instead of crowding the main tab    -->
+      <!-- bar. activeTab stays the single source of truth, which keeps    -->
+      <!-- ?tab= deep links and the Configure buttons working unchanged.   -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="isThemeGroupTab(activeTab)" class="subtab-scroll-shell">
+        <button
+          type="button"
+          class="tab-scroll-arrow prev"
+          [class.is-hidden]="!subTabRail.canScroll"
+          [disabled]="!subTabRail.canScrollLeft"
+          (click)="subTabRail.step(-280)"
+          aria-label="Scroll theme tabs left"
+          title="Scroll theme tabs left"
+        >
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+
+        <div class="subtab-nav-bar" appDragScroll #subTabRail="dragScroll">
+          <button
+            type="button"
+            *ngFor="let t of themeGroupTabs"
+            (click)="activeTab = t.tab"
+            class="subtab-btn"
+            [class.is-active]="activeTab === t.tab"
+          >
+            {{ t.label }}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="tab-scroll-arrow next"
+          [class.is-hidden]="!subTabRail.canScroll"
+          [disabled]="!subTabRail.canScrollRight"
+          (click)="subTabRail.step(280)"
+          aria-label="Scroll theme tabs right"
+          title="Scroll theme tabs right"
+        >
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- WHETHER THE PAGE BEING CONFIGURED ACTUALLY USES THIS DESIGN     -->
@@ -4204,6 +4170,93 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         .tab-nav-bar { scroll-behavior: auto; }
       }
 
+      /* ─── Brand Theme sub-tab rail ─── */
+      /* Plain text tabs on a hairline: the active one goes bold and claims its
+         stretch of the rule. No pills or icons here, so the main rail above
+         stays the louder of the two. */
+      .subtab-scroll-shell {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        min-width: 0;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .subtab-nav-bar {
+        display: flex;
+        align-items: stretch;
+        gap: 1.75rem;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        touch-action: pan-x;
+        cursor: grab;
+        scrollbar-width: none;
+      }
+
+      .subtab-nav-bar.is-dragging {
+        cursor: grabbing;
+        scroll-behavior: auto;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .subtab-nav-bar { scroll-behavior: auto; }
+      }
+
+      .subtab-nav-bar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .subtab-btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.7rem 0.15rem 0.8rem;
+        border: none;
+        background: none;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-muted, #7C6BA0);
+        cursor: pointer;
+        outline: none;
+        white-space: nowrap;
+        user-select: none;
+        transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* Sits on the shell's hairline rather than under it, so the two read as
+         one line the active tab has taken over. */
+      .subtab-btn::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--primary, #7E22CE);
+        opacity: 0;
+        transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .subtab-btn:hover {
+        color: var(--text-main, #2E1065);
+      }
+
+      .subtab-btn.is-active {
+        color: var(--text-main, #2E1065);
+        font-weight: 800;
+      }
+
+      .subtab-btn.is-active::after {
+        opacity: 1;
+      }
+
+
       .tab-nav-bar::-webkit-scrollbar {
         display: none;
       }
@@ -7151,6 +7204,25 @@ export class SettingsComponent implements OnInit {
 
   public activeTab: SettingsTab = 'customization';
 
+  /** The palette plus the eight page designs, as one rail under Brand Theme. */
+  public readonly themeGroupTabs: ReadonlyArray<{ tab: SettingsTab; label: string }> = [
+    { tab: 'theme', label: 'Brand Palette' },
+    { tab: 'posdesign', label: 'POS Customize' },
+    { tab: 'dishpage', label: 'Catalog Page Design' },
+    { tab: 'dining', label: 'Dining Customize' },
+    { tab: 'categorydesign', label: 'Category Customize' },
+    { tab: 'stockdesign', label: 'Stock Ledger Customize' },
+    { tab: 'customerdesign', label: 'Customer Customize' },
+    { tab: 'staffdesign', label: 'Staff & Roles Customize' },
+    { tab: 'sidebardesign', label: 'Sidebar Template' },
+  ];
+
+  /** True while any Brand Theme sub-tab is open, so the sub-rail shows and the
+   *  main Brand Theme button stays lit for all nine of them. */
+  public isThemeGroupTab(tab: SettingsTab): boolean {
+    return this.themeGroupTabs.some((t) => t.tab === tab);
+  }
+
   // ── POS Customization: which pages apply their saved design ───────────
   public customization = inject(CustomizationService);
 
@@ -8372,6 +8444,13 @@ export class SettingsComponent implements OnInit {
       const activeBtn = document.querySelector('.tab-nav-bar .tab-btn.is-active') as HTMLElement;
       if (activeBtn) {
         activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+
+      // A Brand Theme sub-tab reached by deep link or Configure button also has
+      // to be brought into view on its own rail, not just the main one.
+      const activeSubBtn = document.querySelector('.subtab-nav-bar .subtab-btn.is-active') as HTMLElement;
+      if (activeSubBtn) {
+        activeSubBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
     }
   }

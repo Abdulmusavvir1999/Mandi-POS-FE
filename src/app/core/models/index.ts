@@ -562,7 +562,12 @@ export interface StockEntry {
   total_price: number;
   unit_price: number;
   status: StockEntryStatus;
+  /** Name snapshot at purchase time; survives the vendor being renamed. */
   supplier?: string | null;
+  vendor_id?: number | null;
+  vendor_name?: string | null;
+  vendor_code?: string | null;
+  vendor_status?: string | null;
   invoice_number?: string | null;
   batch_number?: string | null;
   expiry_date?: string | null;

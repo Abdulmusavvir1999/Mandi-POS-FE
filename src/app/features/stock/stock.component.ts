@@ -5,7 +5,8 @@ import { Router, RouterModule } from '@angular/router';
 import { StockService } from '../../core/services/stock.service';
 import { ProductService } from '../../core/services/product.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { StockItem, StockEntry, StockMovement, Product, StockUnitType } from '../../core/models';
+import { StockItem, StockEntry, StockMovement, Product, StockUnitType, Vendor } from '../../core/models';
+import { VendorService } from '../../core/services/vendor.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { StockLayoutService } from '../../core/services/stock-layout.service';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
@@ -296,6 +297,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             [(ngModel)]="selectedMovementType"
             (valueChange)="currentPage = 1; loadStockMovements()"
             placeholder="All Movement Types"
+            minWidth="200px"
+          ></app-custom-dropdown>
+
+          <!-- Vendor filter (for Entries tab) -->
+          <app-custom-dropdown
+            *ngIf="activeTab === 'ENTRIES'"
+            [options]="vendorFilterOptions"
+            [(ngModel)]="selectedVendorFilter"
+            (valueChange)="currentPage = 1; loadStockEntries()"
+            placeholder="All Vendors"
+            [searchable]="true"
             minWidth="200px"
           ></app-custom-dropdown>
 
@@ -694,7 +706,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <th style="width: 12%;">Total Qty</th>
                 <th style="width: 12%;">Total Price</th>
                 <th style="width: 12%;">Unit Price</th>
-                <th style="width: 14%;">Supplier & Invoice</th>
+                <th style="width: 14%;">Vendor & Invoice</th>
               </tr>
             </thead>
             <tbody>
@@ -740,9 +752,23 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   </span>
                 </td>
 
-                <!-- Supplier & Invoice -->
+                <!-- Vendor & Invoice -->
                 <td>
-                  <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase' }}</div>
+                  <!-- A linked vendor is clickable through to its record; an
+                       unlinked one is still shown, just as plain text. -->
+                  <a
+                    *ngIf="entry.vendor_id; else plainSupplier"
+                    [routerLink]="['/vendors']"
+                    [queryParams]="{ vendorId: entry.vendor_id }"
+                    class="text-xs font-semibold text-[var(--primary)] hover:underline truncate block"
+                    [title]="'Open vendor ' + entry.vendor_name"
+                  >
+                    {{ entry.vendor_name || entry.supplier }}
+                    <span class="text-[10px] font-mono text-[var(--text-muted)]">{{ entry.vendor_code }}</span>
+                  </a>
+                  <ng-template #plainSupplier>
+                    <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase' }}</div>
+                  </ng-template>
                   <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ entry.invoice_number || 'No Invoice #' }}</div>
                 </td>
               </tr>
@@ -1271,18 +1297,34 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
             </div>
 
-            <!-- Supplier & Invoice Details -->
+            <!-- Vendor & Invoice Details -->
             <div class="grid grid-cols-2 gap-4 items-start pt-1">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Supplier Name</label>
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Vendor</label>
+                <app-custom-dropdown
+                  [options]="vendorPickerOptions"
+                  [(ngModel)]="purchaseForm.vendorId"
+                  name="vendorId"
+                  placeholder="Select a vendor"
+                  [searchable]="true"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+
+                <!-- Only for a purchase from someone with no vendor record.
+                     Picking a real vendor makes this redundant: the backend
+                     snapshots that vendor's name onto the entry itself. -->
                 <input
+                  *ngIf="!purchaseForm.vendorId"
                   title="Supplier Name"
                   type="text"
                   [(ngModel)]="purchaseForm.supplier"
                   name="supplier"
                   placeholder="e.g. Al-Watania Poultry"
-                  class="form-control text-sm w-full"
+                  class="form-control text-sm w-full mt-2"
                 />
+                <p *ngIf="!purchaseForm.vendorId" class="text-[10px] text-[var(--text-muted)] mt-1">
+                  Not linked to a vendor — this name stays as plain text.
+                </p>
               </div>
               <div class="form-group mb-0">
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Invoice / Bill #</label>
@@ -2011,6 +2053,37 @@ export class StockComponent implements OnInit {
     { value: 'other', label: 'Other', icon: 'widgets' },
   ];
 
+  // ── Vendors (purchase entries link to a real vendor record) ─────────
+  private vendorService = inject(VendorService);
+
+  public vendors: Vendor[] = [];
+
+  /** Ledger toolbar filter. Empty string means "every vendor". */
+  public selectedVendorFilter: number | '' = '';
+
+  /** Picker inside the purchase form. 0 is the deliberate "not a vendor"
+   *  choice, which reveals the free-text box for one-off suppliers. */
+  get vendorPickerOptions(): DropdownOption[] {
+    return [
+      { value: 0, label: 'One-off supplier (type a name)', icon: 'edit_note' },
+      ...this.vendors.map((v) => ({
+        value: v.id,
+        label: v.name,
+        icon: 'local_shipping',
+        badge: v.vendor_code,
+        description: v.category,
+      })),
+    ];
+  }
+
+  /** Same list as a ledger filter, with an "all" row on top. */
+  get vendorFilterOptions(): DropdownOption[] {
+    return [
+      { value: '', label: 'All Vendors', icon: 'groups' },
+      ...this.vendors.map((v) => ({ value: v.id, label: v.name, icon: 'local_shipping', badge: v.vendor_code })),
+    ];
+  }
+
   public unitFilterOptions: DropdownOption[] = [
     { value: '', label: 'All Units', icon: 'apps' },
     { value: 'piece', label: 'Piece (pcs)', icon: 'category' },
@@ -2062,6 +2135,8 @@ export class StockComponent implements OnInit {
     quantity: 5,
     multiplier: 4,
     totalPrice: 2000,
+    // 0 = one-off supplier, and `supplier` carries the typed name instead.
+    vendorId: 0,
     supplier: '',
     invoiceNumber: '',
     batchNumber: '',
@@ -2163,6 +2238,19 @@ export class StockComponent implements OnInit {
     this.loadLowStockAlerts();
     this.loadStockAlerts();
     this.loadAllProducts();
+    this.loadVendors();
+  }
+
+  // ── Vendors for the picker and the ledger filter ────────────────────
+  loadVendors(): void {
+    this.vendorService.getVendors({ page: 1, limit: 200, status: 'ACTIVE', sortBy: 'name', sortOrder: 'ASC' }).subscribe({
+      next: (res) => {
+        if (res.success) this.vendors = res.data;
+      },
+      // Reported by the global error interceptor. A missing vendor list
+      // must not break the stock screen: the form falls back to free text.
+      error: () => {},
+    });
   }
 
   refreshActiveTab(): void {
@@ -2196,16 +2284,18 @@ export class StockComponent implements OnInit {
 
   // ── 2. Load Purchase Entries (stock_entries) ────────────────────────
   loadStockEntries(): void {
-    this.stockService.getStockEntries(1, 200).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.stockEntries = res.data;
-        }
-      },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
-      error: () => {},
-    });
+    this.stockService
+      .getStockEntries(1, 200, undefined, undefined, undefined, undefined, undefined, this.selectedVendorFilter || undefined)
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.stockEntries = res.data;
+          }
+        },
+        // Reported by the global error interceptor; present so a failure
+        // cannot escape as an unhandled rejection.
+        error: () => {},
+      });
   }
 
   // ── 3. Load Movements (stock_movements) ─────────────────────────────
@@ -2342,6 +2432,8 @@ export class StockComponent implements OnInit {
         e.stock_item_name?.toLowerCase().includes(q) ||
         e.stock_code?.toLowerCase().includes(q) ||
         e.supplier?.toLowerCase().includes(q) ||
+        e.vendor_name?.toLowerCase().includes(q) ||
+        e.vendor_code?.toLowerCase().includes(q) ||
         e.invoice_number?.toLowerCase().includes(q)
     );
   }
@@ -2496,7 +2588,18 @@ export class StockComponent implements OnInit {
       return;
     }
 
-    this.stockService.createStockEntry(this.purchaseForm).subscribe({
+    // vendorId 0 is this form's "one-off supplier" choice, not a vendor row —
+    // the API only accepts a positive id, so it is dropped rather than sent.
+    // When a real vendor IS picked, the typed supplier text is dropped too:
+    // the backend snapshots the vendor's own name onto the entry.
+    const payload = { ...this.purchaseForm };
+    if (payload.vendorId) {
+      payload.supplier = '';
+    } else {
+      delete payload.vendorId;
+    }
+
+    this.stockService.createStockEntry(payload).subscribe({
       next: (res) => {
         this.notify.success(
           `Entry ${res.data.entryNumber} recorded: +${res.data.totalQuantity} units added to ${res.data.stockItemName}`
@@ -2594,7 +2697,7 @@ export class StockComponent implements OnInit {
       this.downloadCSV('Stock_Master_Balances', headers, rows);
     } else if (this.activeTab === 'ENTRIES') {
       const entries = this.filteredStockEntries;
-      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Supplier', 'Invoice #'];
+      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Supplier', 'Vendor Code', 'Invoice #'];
       const rows = entries.map((e) => [
         e.entry_number,
         `"${e.entry_date}"`,
@@ -2605,7 +2708,8 @@ export class StockComponent implements OnInit {
         e.total_quantity,
         e.total_price,
         e.unit_price,
-        `"${e.supplier || ''}"`,
+        `"${e.vendor_name || e.supplier || ''}"`,
+        `"${e.vendor_code || ''}"`,
         `"${e.invoice_number || ''}"`,
       ]);
       this.downloadCSV('Stock_Purchase_Entries_Ledger', headers, rows);

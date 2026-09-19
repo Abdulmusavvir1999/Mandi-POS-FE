@@ -119,7 +119,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </button>
 
           <button
-            *ngIf="!['addons', 'combos', 'deals'].includes(activeNavTab)"
+            *ngIf="isCatalogTab"
             type="button"
             (click)="goToAdd()"
             class="action-btn btn-gradient-purple"
@@ -314,7 +314,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="currentPage = 1"
-              placeholder="Search dish name, SKU, category..."
+              [placeholder]="searchPlaceholder"
               class="toolbar-search-input"
             />
             <button
@@ -327,8 +327,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </button>
           </div>
 
+          <!-- Category / Status / Stock / Sort only describe dishes, so they
+               step aside on the add-on, combo and deal tabs rather than sitting
+               there inert. Search, the count and Export serve every tab. -->
+
           <!-- Category Selector -->
           <app-custom-dropdown
+            *ngIf="isCatalogTab"
             [options]="categoryOptions"
             [(ngModel)]="selectedCategory"
             (valueChange)="currentPage = 1"
@@ -338,6 +343,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Status Selector -->
           <app-custom-dropdown
+            *ngIf="isCatalogTab"
             [options]="statusOptions"
             [(ngModel)]="selectedStatus"
             (valueChange)="currentPage = 1"
@@ -347,6 +353,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Stock Status Selector -->
           <app-custom-dropdown
+            *ngIf="isCatalogTab"
             [options]="stockFilterOptions"
             [(ngModel)]="stockFilter"
             (valueChange)="currentPage = 1"
@@ -356,13 +363,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Meta Record Count -->
           <span class="toolbar-meta-count hidden sm:inline-block">
-            Displaying {{ filteredProducts.length }} dishes
+            Displaying {{ currentCountLabel }}
           </span>
         </div>
 
         <div class="toolbar-actions-group">
           <!-- Sort Dropdown -->
           <app-custom-dropdown
+            *ngIf="isCatalogTab"
             [options]="sortOptions"
             [(ngModel)]="sortBy"
             (valueChange)="currentPage = 1"
@@ -388,18 +396,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <div class="table-container-card">
 
         <!-- ─── TAB: ADD-ONS ─── -->
-        <div *ngIf="activeNavTab === 'addons'" class="p-4">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-base font-black text-[#2E1065]">Dish Add-ons & Modifiers</h3>
-              <p class="text-xs text-gray-500">Extra sauces, toppings, portions and customizations selectable at POS order taking</p>
-            </div>
-            <button type="button" (click)="openAddonModal()" class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs">
-              <span class="material-symbols-outlined !text-sm">add</span>
-              <span>Create Add-on</span>
-            </button>
-          </div>
-
+        <!-- No pane header or Create button here: the page header already
+             carries "New Add-on", and the toolbar above owns search and
+             export, exactly as the dish catalog tabs work. -->
+        <div *ngIf="activeNavTab === 'addons'">
           <div class="table-responsive-wrapper">
             <table class="saas-data-table">
               <thead>
@@ -412,7 +412,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let a of addonsList">
+                <tr *ngFor="let a of filteredAddons">
                   <td class="font-bold text-xs text-[var(--text-main)]">{{ a.name }}</td>
                   <td>
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
@@ -436,12 +436,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     </div>
                   </td>
                 </tr>
-                <tr *ngIf="addonsList.length === 0">
+                <tr *ngIf="filteredAddons.length === 0">
                   <td colspan="5" class="empty-state-cell">
                     <div class="empty-state-box">
                       <span class="material-symbols-outlined empty-icon">extension</span>
                       <div class="empty-title">No Add-ons Created</div>
-                      <p class="empty-desc">Click "Create Add-on" to configure extra toppings, sauces, or sides.</p>
+                      <p class="empty-desc">Use "New Add-on" above to configure extra toppings, sauces, or sides.</p>
                     </div>
                   </td>
                 </tr>
@@ -452,19 +452,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
         <!-- ─── TAB: COMBO MEALS ─── -->
         <div *ngIf="activeNavTab === 'combos'" class="p-4">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-base font-black text-[#2E1065]">Combo Meals & Value Bundles</h3>
-              <p class="text-xs text-gray-500">Bundled dishes with promotional pricing and clear customer savings</p>
-            </div>
-            <button type="button" (click)="openComboModal()" class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs">
-              <span class="material-symbols-outlined !text-sm">add</span>
-              <span>Create Combo Meal</span>
-            </button>
-          </div>
-
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div *ngFor="let c of combosList" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+            <div *ngFor="let c of filteredCombos" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
               <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
                   <span class="font-mono text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ c.code || 'COMBO' }}</span>
@@ -508,7 +497,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
             </div>
           </div>
-          <div *ngIf="combosList.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
+          <div *ngIf="filteredCombos.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
             <span class="material-symbols-outlined text-4xl text-purple-400 mb-2">lunch_dining</span>
             <h4 class="text-sm font-bold text-gray-700">No Combo Meals Created</h4>
             <p class="text-xs text-gray-500">Create delicious bundles like "Duo Mandi Combo" or "Family Pack".</p>
@@ -517,19 +506,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
         <!-- ─── TAB: MEAL DEALS ─── -->
         <div *ngIf="activeNavTab === 'deals'" class="p-4">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-base font-black text-[#2E1065]">Promotional Meal Deals & Limited Offers</h3>
-              <p class="text-xs text-gray-500">Scheduled promotions (Friday Feast, Lunch Special, Happy Hour) with discounts</p>
-            </div>
-            <button type="button" (click)="openDealModal()" class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs">
-              <span class="material-symbols-outlined !text-sm">add</span>
-              <span>Create Meal Deal</span>
-            </button>
-          </div>
-
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div *ngFor="let d of dealsList" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+            <div *ngFor="let d of filteredDeals" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
               <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
                   <span class="font-mono text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ d.code || 'DEAL' }}</span>
@@ -578,7 +556,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
             </div>
           </div>
-          <div *ngIf="dealsList.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
+          <div *ngIf="filteredDeals.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
             <span class="material-symbols-outlined text-4xl text-purple-400 mb-2">local_offer</span>
             <h4 class="text-sm font-bold text-gray-700">No Meal Deals Created</h4>
             <p class="text-xs text-gray-500">Create time-sensitive specials like "Friday Feast" or "Lunch Special 20% Off".</p>
@@ -586,7 +564,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- ─── STANDARD DISH CATALOG ─── -->
-        <div *ngIf="!['addons', 'combos', 'deals'].includes(activeNavTab)" [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.pageCssVars()">
+        <div *ngIf="isCatalogTab" [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.pageCssVars()">
 
         <!-- ─── Card designs: Bento, Glass, Brutalist, Editorial ───────── -->
         <div class="catalog-stage" *ngIf="showCatalogCards">
@@ -1209,6 +1187,54 @@ export class ProductsComponent implements OnInit {
   public dealForm: any = { title: '', code: '', description: '', deal_price: 499, discount_percentage: 20, days_of_week: 'ALL', start_time: '11:00', end_time: '23:00', items: [] };
 
   public activeNavTab = 'overview';
+
+  /** Add-ons, combos and deals are their own records, not dishes, so the
+   *  dish-shaped filters and the dish table only apply outside them. */
+  get isCatalogTab(): boolean {
+    return !['addons', 'combos', 'deals'].includes(this.activeNavTab);
+  }
+
+  get searchPlaceholder(): string {
+    switch (this.activeNavTab) {
+      case 'addons': return 'Search add-on name or category...';
+      case 'combos': return 'Search combo name or code...';
+      case 'deals': return 'Search deal title or code...';
+      default: return 'Search dish name, SKU, category...';
+    }
+  }
+
+  get currentCountLabel(): string {
+    switch (this.activeNavTab) {
+      case 'addons': return `${this.filteredAddons.length} add-ons`;
+      case 'combos': return `${this.filteredCombos.length} combo meals`;
+      case 'deals': return `${this.filteredDeals.length} meal deals`;
+      default: return `${this.filteredProducts.length} dishes`;
+    }
+  }
+
+  get filteredAddons(): ProductAddon[] {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.addonsList;
+    return this.addonsList.filter(
+      (a) => a.name?.toLowerCase().includes(q) || a.category?.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredCombos(): ComboMeal[] {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.combosList;
+    return this.combosList.filter(
+      (c) => c.name?.toLowerCase().includes(q) || c.code?.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredDeals(): MealDeal[] {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.dealsList;
+    return this.dealsList.filter(
+      (d) => d.title?.toLowerCase().includes(q) || d.code?.toLowerCase().includes(q)
+    );
+  }
   public selectAll = false;
 
   public pageSize = 10;
@@ -1698,27 +1724,59 @@ export class ProductsComponent implements OnInit {
   }
 
   exportCSV(): void {
-    if (this.products.length === 0) {
-      this.notify.info('No products to export');
-      return;
+    // Export follows the open tab, so the button means the same thing
+    // everywhere: "download what I am looking at".
+    const q = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+    let name: string;
+    let headers: string[];
+    let rows: any[][];
+
+    switch (this.activeNavTab) {
+      case 'addons':
+        name = 'menu_addons';
+        headers = ['Name', 'Category', 'Price', 'Available'];
+        rows = this.filteredAddons.map((a) => [q(a.name), q(a.category || 'General'), a.price, a.is_available ? 'Yes' : 'No']);
+        break;
+
+      case 'combos':
+        name = 'menu_combo_meals';
+        headers = ['Code', 'Name', 'Combo Price', 'Original Price', 'Savings', 'Items', 'Available'];
+        rows = this.filteredCombos.map((c) => [
+          q(c.code), q(c.name), c.combo_price, c.original_price ?? '', c.savings_amount ?? '',
+          c.items?.length ?? 0, c.is_available ? 'Yes' : 'No',
+        ]);
+        break;
+
+      case 'deals':
+        name = 'menu_meal_deals';
+        headers = ['Code', 'Title', 'Deal Price', 'Discount %', 'Days', 'Start', 'End', 'Active'];
+        rows = this.filteredDeals.map((d) => [
+          q(d.code), q(d.title), d.deal_price, d.discount_percentage ?? '',
+          q(d.days_of_week || 'ALL'), q(d.start_time || ''), q(d.end_time || ''), d.is_active ? 'Yes' : 'No',
+        ]);
+        break;
+
+      default:
+        name = 'menu_products';
+        headers = ['SKU', 'Name', 'Category', 'Selling Price', 'Cost Price', 'Stock', 'Status'];
+        rows = this.products.map((p) => [
+          q(p.sku), q(p.name), q(p.category_name || ''),
+          p.selling_price, p.cost_price, this.stockOf(p), p.status,
+        ]);
+        break;
     }
 
-    const headers = ['SKU', 'Name', 'Category', 'Selling Price', 'Cost Price', 'Stock', 'Status'];
-    const rows = this.products.map((p) => [
-      p.sku,
-      `"${p.name.replace(/"/g, '""')}"`,
-      `"${(p.category_name || '').replace(/"/g, '""')}"`,
-      p.selling_price,
-      p.cost_price,
-      this.stockOf(p),
-      p.status,
-    ]);
+    if (rows.length === 0) {
+      this.notify.info('Nothing to export on this tab');
+      return;
+    }
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `menu_products_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `${name}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

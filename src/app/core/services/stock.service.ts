@@ -91,7 +91,8 @@ export class StockService {
     search?: string,
     supplier?: string,
     dateFrom?: string,
-    dateTo?: string
+    dateTo?: string,
+    vendorId?: number
   ): Observable<ApiResponse<StockEntry[]>> {
     let params = new HttpParams().set('page', page).set('limit', limit);
     if (stockItemId) params = params.set('stockItemId', stockItemId);
@@ -99,6 +100,7 @@ export class StockService {
     if (supplier) params = params.set('supplier', supplier);
     if (dateFrom) params = params.set('dateFrom', dateFrom);
     if (dateTo) params = params.set('dateTo', dateTo);
+    if (vendorId) params = params.set('vendorId', vendorId);
 
     return this.http.get<ApiResponse<StockEntry[]>>(`${this.API_URL}/entries`, { params });
   }
@@ -114,6 +116,7 @@ export class StockService {
     totalPrice: number;
     unitPrice?: number;
     supplier?: string;
+    vendorId?: number;
     invoiceNumber?: string;
     batchNumber?: string;
     expiryDate?: string;
