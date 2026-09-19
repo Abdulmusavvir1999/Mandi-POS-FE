@@ -5,6 +5,80 @@ import { catchError, map, shareReplay, tap } from 'rxjs/operators';
 import { ApiResponse } from '../models';
 import { environment } from '../../../environments/environment';
 
+/**
+ * The Printer / Notification / Invoice tabs each save one JSON settings row.
+ * These maps spread that row back out over the flat keys the rest of the app
+ * reads, mirroring the field maps held by the Settings screen.
+ */
+const EXTENDED_MODULE_FIELDS: Record<string, Record<string, string>> = {
+  system_printer: {
+    receiptEnabled: 'PRINTER_RECEIPT_ENABLED',
+    receiptName: 'PRINTER_RECEIPT_NAME',
+    receiptPaperWidth: 'PRINTER_RECEIPT_WIDTH',
+    receiptAutoPrint: 'PRINTER_RECEIPT_AUTO',
+    receiptCopies: 'PRINTER_RECEIPT_COPIES',
+    kitchenEnabled: 'PRINTER_KITCHEN_ENABLED',
+    kitchenName: 'PRINTER_KITCHEN_NAME',
+    kitchenPaperWidth: 'PRINTER_KITCHEN_WIDTH',
+    kitchenAutoPrint: 'PRINTER_KITCHEN_AUTO',
+    kitchenCopies: 'PRINTER_KITCHEN_COPIES',
+    barEnabled: 'PRINTER_BAR_ENABLED',
+    barName: 'PRINTER_BAR_NAME',
+    barPaperWidth: 'PRINTER_BAR_WIDTH',
+    barAutoPrint: 'PRINTER_BAR_AUTO',
+    barCopies: 'PRINTER_BAR_COPIES',
+    connection: 'PRINTER_CONNECTION',
+    deviceIp: 'PRINTER_DEVICE_IP',
+    devicePort: 'PRINTER_DEVICE_PORT',
+    charset: 'PRINTER_CHARSET',
+    density: 'PRINTER_DENSITY',
+    autoCut: 'PRINTER_AUTO_CUT',
+    cashDrawer: 'PRINTER_CASH_DRAWER',
+    buzzer: 'PRINTER_BUZZER',
+    feedLines: 'PRINTER_FEED_LINES',
+  },
+  system_notification: {
+    newOrder: 'NOTIFY_NEW_ORDER',
+    orderReady: 'NOTIFY_ORDER_READY',
+    billVoided: 'NOTIFY_BILL_VOID',
+    lowStock: 'NOTIFY_LOW_STOCK',
+    lowStockThreshold: 'NOTIFY_LOW_STOCK_THRESHOLD',
+    dayClose: 'NOTIFY_DAY_CLOSE',
+    channelInApp: 'NOTIFY_CHANNEL_INAPP',
+    channelDesktop: 'NOTIFY_CHANNEL_DESKTOP',
+    channelEmail: 'NOTIFY_CHANNEL_EMAIL',
+    emailRecipients: 'NOTIFY_EMAIL_RECIPIENTS',
+    channelSms: 'NOTIFY_CHANNEL_SMS',
+    smsRecipients: 'NOTIFY_SMS_RECIPIENTS',
+    sound: 'NOTIFY_SOUND',
+    soundTone: 'NOTIFY_SOUND_TONE',
+    quietStart: 'NOTIFY_QUIET_START',
+    quietEnd: 'NOTIFY_QUIET_END',
+    dailySummary: 'NOTIFY_DAILY_SUMMARY',
+    dailySummaryTime: 'NOTIFY_DAILY_SUMMARY_TIME',
+  },
+  system_invoice: {
+    prefix: 'INVOICE_PREFIX',
+    nextNumber: 'INVOICE_NEXT_NUMBER',
+    padLength: 'INVOICE_PAD_LENGTH',
+    resetCycle: 'INVOICE_RESET_CYCLE',
+    title: 'INVOICE_TITLE',
+    paperSize: 'INVOICE_PAPER_SIZE',
+    dateFormat: 'INVOICE_DATE_FORMAT',
+    decimals: 'INVOICE_DECIMALS',
+    currencyPosition: 'INVOICE_CURRENCY_POSITION',
+    showLogo: 'INVOICE_SHOW_LOGO',
+    showTaxBreakdown: 'INVOICE_SHOW_TAX_BREAKDOWN',
+    showQr: 'INVOICE_SHOW_QR',
+    upiId: 'INVOICE_UPI_ID',
+    showSignature: 'INVOICE_SHOW_SIGNATURE',
+    signatory: 'INVOICE_SIGNATORY',
+    dueDays: 'INVOICE_DUE_DAYS',
+    terms: 'INVOICE_TERMS',
+    footerNote: 'INVOICE_FOOTER_NOTE',
+  },
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -82,7 +156,7 @@ export class SettingsService {
 
     const flat: Record<string, string> = {};
     for (const [key, value] of Object.entries(data)) {
-      if (value && typeof value === 'object' && !Array.isArray(value) && !['system_theme', 'system_toast', 'system_business', 'system_hardware', 'system_branding', 'system_pos_design', 'system_dish_layout', 'system_dining_layout', 'system_category_layout', 'system_stock_layout', 'system_customer_layout', 'system_staff_layout'].includes(key)) {
+      if (value && typeof value === 'object' && !Array.isArray(value) && !['system_theme', 'system_toast', 'system_business', 'system_hardware', 'system_branding', 'system_pos_design', 'system_dish_layout', 'system_dining_layout', 'system_category_layout', 'system_stock_layout', 'system_customer_layout', 'system_staff_layout', 'system_printer', 'system_notification', 'system_invoice'].includes(key)) {
         Object.assign(flat, this.flatten(value));
       } else {
         flat[key] = typeof value === 'object' ? JSON.stringify(value) : (value as string);
@@ -205,6 +279,21 @@ export class SettingsService {
           if (t.showClose !== undefined) flat['TOAST_SHOW_CLOSE'] = String(t.showClose);
           if (t.pauseOnHover !== undefined) flat['TOAST_PAUSE_HOVER'] = String(t.pauseOnHover);
           if (t.animation) flat['TOAST_ANIMATION'] = t.animation;
+        }
+      } catch (_) {}
+    }
+
+    // Unpack the Printer / Notification / Invoice JSON rows onto their flat keys
+    for (const [rawKey, fields] of Object.entries(EXTENDED_MODULE_FIELDS)) {
+      const raw = flat[rawKey] || flat[rawKey.toUpperCase()];
+      if (!raw) continue;
+      try {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!parsed || typeof parsed !== 'object') continue;
+        for (const [jsonKey, flatKey] of Object.entries(fields)) {
+          if (parsed[jsonKey] !== undefined && parsed[jsonKey] !== null) {
+            flat[flatKey] = String(parsed[jsonKey]);
+          }
         }
       } catch (_) {}
     }

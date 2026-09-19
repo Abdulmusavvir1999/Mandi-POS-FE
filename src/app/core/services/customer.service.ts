@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Customer, ApiResponse } from '../models';
+import { Customer, CustomerNote, CustomerAnalytics, CustomerSummaryKpis, ApiResponse } from '../models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -12,10 +12,15 @@ export class CustomerService {
 
   constructor(private http: HttpClient) {}
 
-  public getCustomers(page = 1, limit = 50, search?: string): Observable<ApiResponse<Customer[]>> {
+  public getCustomers(page = 1, limit = 50, search?: string, segment?: string): Observable<ApiResponse<Customer[]>> {
     let params = new HttpParams().set('page', page).set('limit', limit);
     if (search) params = params.set('search', search);
+    if (segment && segment !== 'ALL') params = params.set('segment', segment);
     return this.http.get<ApiResponse<Customer[]>>(this.API_URL, { params });
+  }
+
+  public getCrmSummary(): Observable<ApiResponse<CustomerSummaryKpis>> {
+    return this.http.get<ApiResponse<CustomerSummaryKpis>>(`${this.API_URL}/summary`);
   }
 
   public getCustomerById(id: number): Observable<ApiResponse<Customer>> {
@@ -41,5 +46,21 @@ export class CustomerService {
 
   public getPurchaseHistory(id: number): Observable<ApiResponse<any[]>> {
     return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/${id}/purchase-history`);
+  }
+
+  public getCustomerAnalytics(id: number): Observable<ApiResponse<CustomerAnalytics>> {
+    return this.http.get<ApiResponse<CustomerAnalytics>>(`${this.API_URL}/${id}/analytics`);
+  }
+
+  public getCustomerNotes(customerId: number): Observable<ApiResponse<CustomerNote[]>> {
+    return this.http.get<ApiResponse<CustomerNote[]>>(`${this.API_URL}/${customerId}/notes`);
+  }
+
+  public createCustomerNote(customerId: number, data: { note_type: string; note_text: string; author_name?: string }): Observable<ApiResponse<CustomerNote>> {
+    return this.http.post<ApiResponse<CustomerNote>>(`${this.API_URL}/${customerId}/notes`, data);
+  }
+
+  public deleteCustomerNote(customerId: number, noteId: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/${customerId}/notes/${noteId}`);
   }
 }

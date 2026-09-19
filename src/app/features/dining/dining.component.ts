@@ -6,7 +6,7 @@ import { DiningService } from '../../core/services/dining.service';
 import { CartService } from '../../core/services/cart.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { DiningTable, TableStatus } from '../../core/models';
+import { DiningTable, TableStatus, TableReservation, TableWaitlist, TableHistoryItem } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DiningLayoutService } from '../../core/services/dining-layout.service';
@@ -76,7 +76,29 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <div class="header-action-buttons">
           <button
             type="button"
-            (click)="loadTables()"
+            (click)="openWaitlistDrawer()"
+            class="action-btn btn-outline-purple relative"
+            title="Waiting list & token queue management"
+          >
+            <span class="material-symbols-outlined">queue</span>
+            <span>Waitlist Queue</span>
+            <span *ngIf="waitingCount > 0" class="header-badge-count">{{ waitingCount }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="openReservationsDrawer()"
+            class="action-btn btn-outline-purple relative"
+            title="Advance table reservations"
+          >
+            <span class="material-symbols-outlined">event_seat</span>
+            <span>Reservations</span>
+            <span *ngIf="confirmedReservationsCount > 0" class="header-badge-count">{{ confirmedReservationsCount }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="loadTables(); loadWaitlist(); loadReservations();"
             [disabled]="isLoading"
             class="action-btn btn-outline-purple"
             title="Refresh the floor map from the server"
@@ -135,6 +157,45 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
+        <div class="kpi-card card-accent-indigo">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Reserved</span>
+            <span class="kpi-icon-bubble bg-indigo-tint">
+              <span class="material-symbols-outlined">event_seat</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number">{{ countStatus('RESERVED') }}</span>
+            <span class="kpi-pill pill-reserved">Booked</span>
+          </div>
+        </div>
+
+        <div class="kpi-card card-accent-teal">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Cleaning</span>
+            <span class="kpi-icon-bubble bg-teal-tint">
+              <span class="material-symbols-outlined">cleaning_services</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number">{{ countStatus('CLEANING') }}</span>
+            <span class="kpi-pill pill-cleaning">Bussing</span>
+          </div>
+        </div>
+
+        <div class="kpi-card card-accent-purple" (click)="openWaitlistDrawer()" style="cursor: pointer;">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Waitlist Queue</span>
+            <span class="kpi-icon-bubble bg-purple-tint">
+              <span class="material-symbols-outlined">groups</span>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number">{{ waitingCount }}</span>
+            <span class="kpi-pill pill-waitlist">Tokens</span>
+          </div>
+        </div>
+
         <div class="kpi-card card-accent-rose">
           <div class="kpi-header-row">
             <span class="kpi-title">Out of Service</span>
@@ -161,8 +222,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- Occupancy is the number a floor manager actually watches, so it -->
-        <!-- gets a bar rather than another bare figure.                     -->
         <div class="kpi-card card-accent-purple">
           <div class="kpi-header-row">
             <span class="kpi-title">Floor Occupancy</span>
@@ -228,6 +287,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div class="status-legend">
             <span class="legend-item"><i class="legend-dot dot-free"></i>Free</span>
             <span class="legend-item"><i class="legend-dot dot-busy"></i>Occupied</span>
+            <span class="legend-item"><i class="legend-dot dot-reserved"></i>Reserved</span>
+            <span class="legend-item"><i class="legend-dot dot-cleaning"></i>Cleaning</span>
             <span class="legend-item"><i class="legend-dot dot-blocked"></i>Out of service</span>
           </div>
         </div>
@@ -307,13 +368,26 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
               <div class="chk-guest-label">
                 {{ table.customer_name || table.name || 'Table' }}
-                <span class="chk-guest-time">{{ seatedClock(table) || (table.capacity + ' seats') }}</span>
+                <span class="chk-guest-time">
+                  {{ seatedClock(table) || (table.capacity + ' seats') }}
+                  <span *ngIf="table.status === 'OCCUPIED'" class="timer-pill ml-1" [ngClass]="'timer-' + turnoverTier(table)">
+                    ⏱️{{ tableElapsedMinutes(table) }}m
+                  </span>
+                  <span *ngIf="table.status === 'CLEANING'" class="timer-pill timer-warn ml-1">
+                    🧹{{ tableCleaningMinutes(table) }}m
+                  </span>
+                  <span *ngIf="table.status === 'RESERVED'" class="timer-pill timer-safe ml-1">
+                    📅Res
+                  </span>
+                </span>
               </div>
 
               <div
                 class="chk-status-badge"
                 [class.is-free]="table.status === 'AVAILABLE'"
                 [class.is-busy]="table.status === 'OCCUPIED'"
+                [class.is-reserved]="table.status === 'RESERVED'"
+                [class.is-cleaning]="table.status === 'CLEANING'"
                 [class.is-blocked]="table.status === 'UNAVAILABLE'"
               >
                 {{ table.table_number }}
@@ -334,6 +408,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               ></div>
               <div class="chk-coaster">
                 <span class="chk-coaster-code">{{ table.table_number }}</span>
+                <span class="text-[9px] block font-bold leading-none" *ngIf="table.status === 'OCCUPIED'">⏱️{{ tableElapsedMinutes(table) }}m</span>
+                <span class="text-[9px] block font-bold text-cyan-700 leading-none" *ngIf="table.status === 'CLEANING'">🧹Clean</span>
+                <span class="text-[9px] block font-bold text-indigo-700 leading-none" *ngIf="table.status === 'RESERVED'">📅Res</span>
               </div>
             </ng-container>
 
@@ -349,6 +426,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               ></div>
               <div class="chk-coaster">
                 <span class="chk-coaster-code">{{ table.table_number }}</span>
+                <span class="text-[9px] block font-bold leading-none" *ngIf="table.status === 'OCCUPIED'">⏱️{{ tableElapsedMinutes(table) }}m</span>
+                <span class="text-[9px] block font-bold text-cyan-700 leading-none" *ngIf="table.status === 'CLEANING'">🧹Clean</span>
+                <span class="text-[9px] block font-bold text-indigo-700 leading-none" *ngIf="table.status === 'RESERVED'">📅Res</span>
               </div>
             </ng-container>
           </article>
@@ -391,12 +471,23 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <div
               class="neu-code-badge"
               [class.badge-red]="table.status === 'OCCUPIED'"
+              [class.badge-indigo]="table.status === 'RESERVED'"
+              [class.badge-teal]="table.status === 'CLEANING'"
               [class.badge-blue]="table.status === 'AVAILABLE' && sectionIndex(table.section) % 2 === 0"
               [class.badge-dark]="table.status === 'AVAILABLE' && sectionIndex(table.section) % 2 !== 0"
             >
               <span>{{ table.table_number }}</span>
               <span class="neu-bill-sub" *ngIf="table.status === 'OCCUPIED' && table.order_current_total">
-                {{ table.order_current_total | appCurrency:'1.0-0' }}
+                {{ table.order_current_total | appCurrency:'1.0-0' }} · ⏱️{{ tableElapsedMinutes(table) }}m
+              </span>
+              <span class="neu-bill-sub" *ngIf="table.status === 'OCCUPIED' && !table.order_current_total">
+                ⏱️{{ tableElapsedMinutes(table) }}m
+              </span>
+              <span class="neu-bill-sub" *ngIf="table.status === 'RESERVED'">
+                📅 Reserved
+              </span>
+              <span class="neu-bill-sub" *ngIf="table.status === 'CLEANING'">
+                🧹 Cleaning
               </span>
               <span class="neu-bill-sub" *ngIf="table.status === 'AVAILABLE'">
                 {{ table.capacity }} seats
@@ -454,7 +545,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <div class="ill-table-title">{{ table.table_number }} · {{ table.name }}</div>
             <div class="ill-table-capacity">
               <span>👥</span>
-              <span>{{ table.capacity }}</span>
+              <span>{{ table.status === 'OCCUPIED' ? (table.active_guest_count || table.capacity) + '/' + table.capacity : table.capacity }}</span>
+              <span *ngIf="table.status === 'OCCUPIED'" class="timer-pill ml-1" [ngClass]="'timer-' + turnoverTier(table)">
+                ⏱️{{ tableElapsedMinutes(table) }}m
+              </span>
+              <span *ngIf="table.status === 'CLEANING'" class="timer-pill timer-warn ml-1">
+                🧹{{ tableCleaningMinutes(table) }}m
+              </span>
+              <span *ngIf="table.status === 'RESERVED'" class="timer-pill timer-safe ml-1">
+                📅Res
+              </span>
             </div>
           </article>
         </div>
@@ -490,14 +590,25 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     class="list-status-pill"
                     [class.is-free]="table.status === 'AVAILABLE'"
                     [class.is-busy]="table.status === 'OCCUPIED'"
+                    [class.is-reserved]="table.status === 'RESERVED'"
+                    [class.is-cleaning]="table.status === 'CLEANING'"
                     [class.is-blocked]="table.status === 'UNAVAILABLE'"
                   >
                     ● {{ statusLabel(table.status) }}
                   </span>
                 </td>
                 <td>
-                  <span *ngIf="table.status === 'OCCUPIED'">{{ dwellText(table) || 'Seated ' + seatedClock(table) }}</span>
-                  <span *ngIf="table.status !== 'OCCUPIED'" class="text-slate-400">—</span>
+                  <div *ngIf="table.status === 'OCCUPIED'" class="flex items-center gap-1.5">
+                    <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(table)">⏱️ {{ tableElapsedMinutes(table) }}m</span>
+                    <span class="text-xs text-slate-500">({{ table.active_guest_count || table.capacity }} guests)</span>
+                  </div>
+                  <div *ngIf="table.status === 'CLEANING'">
+                    <span class="timer-pill timer-warn">🧹 Cleaning ({{ tableCleaningMinutes(table) }}m)</span>
+                  </div>
+                  <div *ngIf="table.status === 'RESERVED'" class="text-xs text-indigo-700 font-semibold">
+                    📅 {{ table.reservation_customer || 'Booked' }}
+                  </div>
+                  <span *ngIf="table.status === 'AVAILABLE' || table.status === 'UNAVAILABLE'" class="text-slate-400">—</span>
                 </td>
                 <td>
                   <span *ngIf="table.status === 'OCCUPIED' && table.order_current_total" class="font-bold font-mono">
@@ -515,6 +626,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                       (click)="onTileClick(table, $event); $event.stopPropagation();"
                     >
                       {{ tileAction(table) }}
+                    </button>
+                    <button
+                      type="button"
+                      class="dv-btn is-icon"
+                      (click)="openHistory(table, $event)"
+                      title="View Dining History"
+                    >
+                      <span class="material-symbols-outlined">history</span>
                     </button>
                     <button
                       type="button"
@@ -547,13 +666,15 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 class="cardlist-badge"
                 [class.is-free]="table.status === 'AVAILABLE'"
                 [class.is-busy]="table.status === 'OCCUPIED'"
+                [class.is-reserved]="table.status === 'RESERVED'"
+                [class.is-cleaning]="table.status === 'CLEANING'"
                 [class.is-blocked]="table.status === 'UNAVAILABLE'"
               >
                 {{ table.table_number }}
               </span>
               <div>
                 <span class="cardlist-section">{{ table.section }}</span>
-                <div class="cardlist-seats">👥 {{ table.capacity }} Seats</div>
+                <div class="cardlist-seats">👥 {{ table.status === 'OCCUPIED' ? (table.active_guest_count || table.capacity) + '/' + table.capacity : table.capacity }} Seats</div>
               </div>
             </div>
 
@@ -564,6 +685,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   class="list-status-pill"
                   [class.is-free]="table.status === 'AVAILABLE'"
                   [class.is-busy]="table.status === 'OCCUPIED'"
+                  [class.is-reserved]="table.status === 'RESERVED'"
+                  [class.is-cleaning]="table.status === 'CLEANING'"
                   [class.is-blocked]="table.status === 'UNAVAILABLE'"
                 >
                   ● {{ statusLabel(table.status) }}
@@ -576,9 +699,24 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   [class.on]="lit"
                 ></i>
               </div>
-              <span class="text-xs text-slate-500" *ngIf="table.status === 'OCCUPIED'">
-                {{ dwellText(table) }} on table · {{ table.customer_name ? 'Guest: ' + table.customer_name : 'Order ' + (table.order_number || '') }}
-              </span>
+              <div class="flex items-center gap-2 mt-0.5" *ngIf="table.status === 'OCCUPIED'">
+                <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(table)">
+                  ⏱️ {{ tableElapsedMinutes(table) }}m seated
+                </span>
+                <span class="text-xs text-slate-600">
+                  {{ table.customer_name ? 'Party: ' + table.customer_name : 'Party of ' + (table.active_guest_count || table.capacity) }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5" *ngIf="table.status === 'CLEANING'">
+                <span class="timer-pill timer-warn">🧹 Bussing ({{ tableCleaningMinutes(table) }}m)</span>
+                <span class="text-xs text-cyan-700 font-semibold cursor-pointer underline" (click)="finishCleaning(table.id); $event.stopPropagation()">Mark Clean ✓</span>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5" *ngIf="table.status === 'RESERVED'">
+                <span class="timer-pill timer-safe">📅 Reserved</span>
+                <span class="text-xs text-indigo-800 font-semibold">
+                  {{ table.reservation_customer || 'Guest' }} · {{ table.reservation_guests || table.capacity }} guests
+                </span>
+              </div>
               <span class="text-xs text-slate-500" *ngIf="table.status === 'AVAILABLE'">
                 Laid and ready · Seats up to {{ table.capacity }}
               </span>
@@ -598,6 +736,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 (click)="onTileClick(table, $event); $event.stopPropagation();"
               >
                 {{ tileAction(table) }}
+              </button>
+              <button
+                type="button"
+                class="dv-btn is-icon"
+                (click)="openHistory(table, $event)"
+                title="View Table Dining History"
+              >
+                <span class="material-symbols-outlined">history</span>
               </button>
               <button
                 type="button"
@@ -742,6 +888,757 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 class="action-btn btn-gradient-purple"
               >
                 {{ editingTableId ? 'Save Changes ✓' : 'Add Dining Table ✓' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 6. WAITLIST QUEUE & TOKEN SYSTEM DRAWER                         -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="drawer-backdrop" *ngIf="showWaitlistDrawer" (click)="showWaitlistDrawer = false">
+        <div class="drawer-panel" (click)="$event.stopPropagation()">
+          <div class="drawer-header">
+            <div class="flex items-center gap-3">
+              <span class="drawer-icon-bubble bg-purple-tint">
+                <span class="material-symbols-outlined text-purple-700 text-xl">queue</span>
+              </span>
+              <div>
+                <h3 class="drawer-title">Waiting List & Queue</h3>
+                <p class="drawer-subtitle">{{ waitlist.length }} parties tracked · {{ waitingCount }} waiting now</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" (click)="openAddWaitlistModal()" class="action-btn btn-gradient-purple btn-sm">
+                <span class="material-symbols-outlined text-base">person_add</span>
+                <span>Issue Token</span>
+              </button>
+              <button type="button" (click)="showWaitlistDrawer = false" class="modal-close-btn" title="Close">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="drawer-body">
+            <div *ngIf="waitlist.length === 0" class="empty-state-box p-8 text-center">
+              <span class="material-symbols-outlined text-4xl text-purple-300">hourglass_empty</span>
+              <div class="font-bold text-sm text-[#2E1065] mt-2">No Parties in Queue</div>
+              <p class="text-xs text-slate-500 mt-1">Walk-in parties can be issued queue tokens (e.g. W001) anytime.</p>
+              <button type="button" (click)="openAddWaitlistModal()" class="action-btn btn-gradient-purple btn-sm mt-3 inline-flex">
+                <span class="material-symbols-outlined text-base">add</span>
+                <span>Add Walk-In Party</span>
+              </button>
+            </div>
+
+            <div *ngFor="let item of waitlist" class="waitlist-card" [class.is-notified]="item.status === 'NOTIFIED'" [class.is-seated]="item.status === 'SEATED'">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="token-badge">{{ item.token_number }}</span>
+                  <div>
+                    <div class="font-bold text-sm text-[#2E1065]">{{ item.customer_name }}</div>
+                    <div class="text-xs text-slate-500">{{ item.customer_phone || 'No phone' }}</div>
+                  </div>
+                </div>
+                <span class="status-chip" [ngClass]="{
+                  'chip-waiting': item.status === 'WAITING',
+                  'chip-notified': item.status === 'NOTIFIED',
+                  'chip-seated': item.status === 'SEATED',
+                  'chip-cancelled': item.status === 'CANCELLED'
+                }">
+                  ● {{ item.status }}
+                </span>
+              </div>
+
+              <div class="waitlist-meta-row mt-2.5">
+                <span class="meta-tag">👥 {{ item.guest_count }} Guests</span>
+                <span class="meta-tag" *ngIf="item.preferred_section">📍 {{ item.preferred_section }}</span>
+                <span class="meta-tag" [ngClass]="(item.elapsed_wait_minutes || 0) > item.estimated_wait_minutes ? 'text-amber-700 font-bold' : ''">
+                  ⏱️ {{ item.elapsed_wait_minutes || 0 }}m / est. {{ item.estimated_wait_minutes }}m
+                </span>
+              </div>
+
+              <!-- Action buttons for active waitlist party -->
+              <div class="waitlist-actions-row mt-3 pt-2.5 border-t border-slate-100" *ngIf="item.status === 'WAITING' || item.status === 'NOTIFIED'">
+                <div class="flex items-center gap-2 flex-1">
+                  <select class="form-control text-xs flex-1 py-1 px-2" [(ngModel)]="item.assigned_table_id">
+                    <option [ngValue]="null" disabled selected>Select Available Table...</option>
+                    <option *ngFor="let t of availableTables" [ngValue]="t.id">
+                      {{ t.table_number }} ({{ t.capacity }} seats) - {{ t.section }}
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    (click)="seatWaitlistParty(item.id, item.assigned_table_id!)"
+                    [disabled]="!item.assigned_table_id"
+                    class="action-btn btn-gradient-purple btn-sm"
+                  >
+                    Seat Now
+                  </button>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button
+                    *ngIf="item.status === 'WAITING'"
+                    type="button"
+                    (click)="updateWaitlistStatus(item.id, 'NOTIFIED')"
+                    class="action-btn btn-outline-purple btn-sm"
+                    title="Notify Guest table is preparing"
+                  >
+                    Notify
+                  </button>
+                  <button
+                    type="button"
+                    (click)="updateWaitlistStatus(item.id, 'CANCELLED')"
+                    class="action-btn btn-outline-danger btn-sm"
+                    title="Cancel Queue Token"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-2 text-xs text-emerald-700 font-medium" *ngIf="item.status === 'SEATED'">
+                ✓ Seated at Table {{ item.table_number }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 7. TABLE RESERVATIONS DRAWER                                    -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="drawer-backdrop" *ngIf="showReservationDrawer" (click)="showReservationDrawer = false">
+        <div class="drawer-panel" (click)="$event.stopPropagation()">
+          <div class="drawer-header">
+            <div class="flex items-center gap-3">
+              <span class="drawer-icon-bubble bg-purple-tint">
+                <span class="material-symbols-outlined text-purple-700 text-xl">event_seat</span>
+              </span>
+              <div>
+                <h3 class="drawer-title">Table Reservations</h3>
+                <p class="drawer-subtitle">{{ reservations.length }} total bookings · {{ confirmedReservationsCount }} confirmed</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" (click)="openNewReservationModal()" class="action-btn btn-gradient-purple btn-sm">
+                <span class="material-symbols-outlined text-base">add</span>
+                <span>New Booking</span>
+              </button>
+              <button type="button" (click)="showReservationDrawer = false" class="modal-close-btn" title="Close">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="drawer-body">
+            <div *ngIf="reservations.length === 0" class="empty-state-box p-8 text-center">
+              <span class="material-symbols-outlined text-4xl text-purple-300">calendar_today</span>
+              <div class="font-bold text-sm text-[#2E1065] mt-2">No Reservations Found</div>
+              <p class="text-xs text-slate-500 mt-1">Book tables ahead for VIP guests, family dinners, and large parties.</p>
+              <button type="button" (click)="openNewReservationModal()" class="action-btn btn-gradient-purple btn-sm mt-3 inline-flex">
+                <span class="material-symbols-outlined text-base">add</span>
+                <span>Create Reservation</span>
+              </button>
+            </div>
+
+            <div *ngFor="let res of reservations" class="reservation-card" [class.is-seated]="res.status === 'SEATED'">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="res-code-badge">{{ res.reservation_code }}</span>
+                    <span class="font-bold text-sm text-[#2E1065]">{{ res.customer_name }}</span>
+                  </div>
+                  <div class="text-xs text-slate-500 mt-0.5">📞 {{ res.customer_phone }}</div>
+                </div>
+                <span class="status-chip" [ngClass]="{
+                  'chip-confirmed': res.status === 'CONFIRMED',
+                  'chip-seated': res.status === 'SEATED',
+                  'chip-cancelled': res.status === 'CANCELLED'
+                }">
+                  ● {{ res.status }}
+                </span>
+              </div>
+
+              <div class="reservation-meta-row mt-2.5">
+                <span class="meta-tag">📅 {{ res.reservation_time | date:'medium' }}</span>
+                <span class="meta-tag">👥 {{ res.guest_count }} Guests</span>
+                <span class="meta-tag" *ngIf="res.table_number">🪑 Table {{ res.table_number }} ({{ res.table_section }})</span>
+                <span class="meta-tag" *ngIf="!res.table_number">📍 Prefers: {{ res.preferred_section || 'Any Section' }}</span>
+              </div>
+
+              <div *ngIf="res.special_requests" class="text-xs text-slate-600 bg-purple-50/70 p-2 rounded-lg mt-2 border border-purple-100">
+                💬 <i>"{{ res.special_requests }}"</i>
+              </div>
+
+              <div class="reservation-actions-row mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between" *ngIf="res.status === 'CONFIRMED'">
+                <button
+                  type="button"
+                  (click)="seatReservation(res)"
+                  class="action-btn btn-gradient-purple btn-sm"
+                >
+                  <span class="material-symbols-outlined text-base">how_to_reg</span>
+                  <span>Seat Guests</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="cancelReservation(res.id)"
+                  class="action-btn btn-outline-danger btn-sm"
+                >
+                  Cancel Booking
+                </button>
+              </div>
+
+              <div class="mt-2 text-xs text-emerald-700 font-medium" *ngIf="res.status === 'SEATED'">
+                ✓ Seated at Table {{ res.table_number || 'Floor' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 8. TABLE DINING HISTORY MODAL                                   -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showHistoryModal">
+        <div class="modal-content p-6 md:p-7 w-full max-w-2xl shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl text-purple-700">history</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
+                  Dining History · Table {{ selectedHistoryTable?.table_number }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">
+                  {{ selectedHistoryTable?.name }} ({{ selectedHistoryTable?.section }}) · {{ selectedHistoryTable?.capacity }} Seats
+                </p>
+              </div>
+            </div>
+            <button type="button" (click)="showHistoryModal = false" class="modal-close-btn" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- History Quick KPIs -->
+          <div class="grid grid-cols-3 gap-3 mb-4">
+            <div class="p-3 rounded-xl bg-purple-50 border border-purple-100 text-center">
+              <div class="text-xs text-purple-700 font-semibold">Total Sessions</div>
+              <div class="text-lg font-black text-[#2E1065] font-mono">{{ tableHistory.length }}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
+              <div class="text-xs text-emerald-700 font-semibold">Total Revenue</div>
+              <div class="text-lg font-black text-emerald-800 font-mono">{{ tableHistoryTotalRevenue | appCurrency:'1.0-0' }}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-center">
+              <div class="text-xs text-blue-700 font-semibold">Avg Turn Time</div>
+              <div class="text-lg font-black text-blue-800 font-mono">{{ tableHistoryAvgDuration }} mins</div>
+            </div>
+          </div>
+
+          <!-- History Table -->
+          <div class="max-h-72 overflow-y-auto border border-slate-200 rounded-xl">
+            <div *ngIf="tableHistory.length === 0" class="p-8 text-center text-xs text-slate-500">
+              No completed dining sessions recorded on this table yet.
+            </div>
+            <table *ngIf="tableHistory.length > 0" class="w-full text-left text-xs border-collapse">
+              <thead class="bg-purple-50/70 border-b border-purple-100 text-[#4B5563] font-bold sticky top-0">
+                <tr>
+                  <th class="p-2.5">Order #</th>
+                  <th class="p-2.5">Date & Time</th>
+                  <th class="p-2.5">Guests</th>
+                  <th class="p-2.5">Turn Time</th>
+                  <th class="p-2.5">Bill Total</th>
+                  <th class="p-2.5">Server</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr *ngFor="let h of tableHistory" class="hover:bg-purple-50/40">
+                  <td class="p-2.5 font-bold font-mono text-purple-900">{{ h.order_number }}</td>
+                  <td class="p-2.5 text-slate-600">{{ h.order_date | date:'short' }}</td>
+                  <td class="p-2.5 font-semibold">👥 {{ h.guest_count || '—' }}</td>
+                  <td class="p-2.5">
+                    <span class="timer-pill timer-safe">⏱️ {{ h.duration_minutes }}m</span>
+                  </td>
+                  <td class="p-2.5 font-bold font-mono text-slate-900">{{ h.total_amount | appCurrency:'1.2-2' }}</td>
+                  <td class="p-2.5 text-slate-600">{{ h.waiter_name || 'Staff' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-end pt-4 mt-4 border-t border-[#E9D5FF]">
+            <button type="button" (click)="showHistoryModal = false" class="action-btn btn-outline-purple">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 9. SEAT GUESTS MODAL                                            -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showSeatModal">
+        <div class="modal-content p-6 md:p-7 w-full max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl text-purple-700">person_add</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
+                  Seat Table {{ tableToSeat?.table_number }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">
+                  {{ tableToSeat?.name }} · Capacity: {{ tableToSeat?.capacity }} seats
+                </p>
+              </div>
+            </div>
+            <button type="button" (click)="showSeatModal = false" class="modal-close-btn" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <!-- Optional Quick Pick from Waitlist -->
+            <div *ngIf="waitingCount > 0" class="p-3 bg-purple-50/70 border border-purple-100 rounded-xl">
+              <label class="block text-xs font-bold text-[#2E1065] uppercase tracking-wider mb-1">
+                Seat from Waiting Queue?
+              </label>
+              <select class="form-control text-xs w-full" [(ngModel)]="seatForm.selectedWaitlistId" (change)="onWaitlistSelectionChange()">
+                <option [ngValue]="null">-- Walk-In Party (Not in Waitlist) --</option>
+                <option *ngFor="let w of waitlist" [ngValue]="w.id" [disabled]="w.status !== 'WAITING' && w.status !== 'NOTIFIED'">
+                  Token {{ w.token_number }} - {{ w.customer_name }} ({{ w.guest_count }} guests)
+                </option>
+              </select>
+            </div>
+
+            <!-- Guest Count Counter -->
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                Party Guest Count / Covers
+              </label>
+              <div class="flex items-center gap-3">
+                <button
+                  type="button"
+                  (click)="seatForm.guestCount = (seatForm.guestCount > 1 ? seatForm.guestCount - 1 : 1)"
+                  class="w-10 h-10 rounded-xl border border-purple-200 bg-purple-50 font-black text-purple-900 text-lg flex items-center justify-center hover:bg-purple-100"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  [(ngModel)]="seatForm.guestCount"
+                  class="form-control text-center font-mono font-bold text-lg w-24"
+                />
+                <button
+                  type="button"
+                  (click)="seatForm.guestCount = seatForm.guestCount + 1"
+                  class="w-10 h-10 rounded-xl border border-purple-200 bg-purple-50 font-black text-purple-900 text-lg flex items-center justify-center hover:bg-purple-100"
+                >
+                  +
+                </button>
+                <span class="text-xs text-slate-500">
+                  (Table capacity is {{ tableToSeat?.capacity }})
+                </span>
+              </div>
+              <p *ngIf="seatForm.guestCount > (tableToSeat?.capacity || 0)" class="text-xs text-amber-600 mt-1 font-semibold">
+                ⚠️ Guest count exceeds table seating capacity.
+              </p>
+            </div>
+
+            <!-- Customer Details (optional) -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Customer Name
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="seatForm.customerName"
+                  placeholder="e.g. John Doe"
+                  class="form-control text-xs w-full"
+                />
+              </div>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Phone (Optional)
+                </label>
+                <input
+                  type="tel"
+                  [(ngModel)]="seatForm.customerPhone"
+                  placeholder="Phone number"
+                  class="form-control text-xs w-full"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-4 border-t border-[#E9D5FF]">
+              <button type="button" (click)="showSeatModal = false" class="action-btn btn-outline-purple">
+                Cancel
+              </button>
+              <button
+                type="button"
+                (click)="confirmSeatTable(false)"
+                class="action-btn btn-outline-purple"
+                title="Mark table occupied without jumping straight to POS"
+              >
+                Seat Only
+              </button>
+              <button
+                type="button"
+                (click)="confirmSeatTable(true)"
+                class="action-btn btn-gradient-purple"
+              >
+                Seat & Start Order →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 10. MANAGE OCCUPIED TABLE MODAL                                 -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showManageModal">
+        <div class="modal-content p-6 md:p-7 w-full max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl text-amber-700">restaurant</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
+                  Manage Table {{ selectedManageTable?.table_number }}
+                </h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">
+                  {{ selectedManageTable?.name }} · {{ selectedManageTable?.section }}
+                </p>
+              </div>
+            </div>
+            <button type="button" (click)="showManageModal = false" class="modal-close-btn" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="space-y-3.5">
+            <!-- Active Dine-in Live Timer KPI -->
+            <div class="p-3.5 rounded-xl bg-purple-50/60 border border-purple-100 flex items-center justify-between">
+              <div>
+                <div class="text-xs text-purple-700 font-semibold">Active Dine-in Turn Time</div>
+                <div class="text-base font-black text-[#2E1065] mt-0.5 flex items-center gap-1.5">
+                  <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(selectedManageTable)">
+                    ⏱️ {{ tableElapsedMinutes(selectedManageTable) }} mins
+                  </span>
+                  <span class="text-xs font-normal text-slate-500">
+                    ({{ turnoverTier(selectedManageTable) === 'over' ? 'Turnover Overdue' : turnoverTier(selectedManageTable) === 'warn' ? 'Approaching Turn Limit' : 'In Progress' }})
+                  </span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-500">Active Guests</div>
+                <div class="text-base font-bold text-slate-800">
+                  👥 {{ selectedManageTable?.active_guest_count || selectedManageTable?.capacity }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Current Order & Running Bill -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div>
+                <div class="text-xs text-slate-500 font-medium">Active Order</div>
+                <div class="font-bold text-sm font-mono text-purple-900">
+                  {{ selectedManageTable?.order_number || 'Manual Dine-In Party' }}
+                </div>
+                <div class="text-xs text-slate-500" *ngIf="selectedManageTable?.customer_name">
+                  Guest: {{ selectedManageTable?.customer_name }}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-500">Running Total</div>
+                <div class="text-lg font-black font-mono text-slate-900">
+                  {{ selectedManageTable?.order_current_total | appCurrency:'1.2-2' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons Grid -->
+            <div class="space-y-2 pt-2">
+              <button
+                type="button"
+                (click)="startOrderForTable(selectedManageTable!); showManageModal = false;"
+                class="w-full action-btn btn-gradient-purple justify-center"
+              >
+                <span class="material-symbols-outlined">point_of_sale</span>
+                <span>Open in POS Register →</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="cleanTable(selectedManageTable!.id)"
+                class="w-full action-btn btn-outline-purple justify-center text-cyan-700"
+              >
+                <span class="material-symbols-outlined">cleaning_services</span>
+                <span>Guests Finished · Send to Cleaning / Bussing</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openHistory(selectedManageTable!); showManageModal = false;"
+                class="w-full action-btn btn-outline-purple justify-center"
+              >
+                <span class="material-symbols-outlined">history</span>
+                <span>View Past Orders on this Table</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openTableOptions(selectedManageTable!); showManageModal = false;"
+                class="w-full action-btn btn-outline-danger justify-center"
+              >
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>Release Table to Available</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 11. ADD WAITLIST PARTY MODAL                                    -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showAddWaitlistModal">
+        <div class="modal-content p-6 md:p-7 w-full max-w-md shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl text-purple-700">person_add</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Add Walk-In Party to Queue</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Issue next queue token number</p>
+              </div>
+            </div>
+            <button type="button" (click)="showAddWaitlistModal = false" class="modal-close-btn" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form (ngSubmit)="saveWaitlistEntry()" class="space-y-3.5">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                Customer Name *
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="waitlistForm.customer_name"
+                name="w_cust_name"
+                placeholder="e.g. Abdullah"
+                class="form-control text-sm w-full"
+                required
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Customer Phone
+                </label>
+                <input
+                  type="tel"
+                  [(ngModel)]="waitlistForm.customer_phone"
+                  name="w_cust_phone"
+                  placeholder="e.g. +91 98765 43210"
+                  class="form-control text-sm w-full"
+                />
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Party Size *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  [(ngModel)]="waitlistForm.guest_count"
+                  name="w_guest_count"
+                  class="form-control font-mono text-sm w-full"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Preferred Section
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="waitlistForm.preferred_section"
+                  name="w_pref_section"
+                  placeholder="e.g. Family Cabin"
+                  list="diningSectionOptions"
+                  class="form-control text-sm w-full"
+                />
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Estimated Wait (mins)
+                </label>
+                <input
+                  type="number"
+                  min="5"
+                  step="5"
+                  [(ngModel)]="waitlistForm.estimated_wait_minutes"
+                  name="w_est_wait"
+                  class="form-control font-mono text-sm w-full"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-4 border-t border-[#E9D5FF]">
+              <button type="button" (click)="showAddWaitlistModal = false" class="action-btn btn-outline-purple">
+                Cancel
+              </button>
+              <button type="submit" class="action-btn btn-gradient-purple">
+                Issue Queue Token ✓
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 12. NEW RESERVATION MODAL                                       -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showNewReservationModal">
+        <div class="modal-content p-6 md:p-7 w-full max-w-lg shadow-2xl">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl text-purple-700">event_seat</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Create Table Reservation</h3>
+                <p class="text-xs text-[var(--text-muted)] mt-0.5">Advance booking for upcoming dining guests</p>
+              </div>
+            </div>
+            <button type="button" (click)="showNewReservationModal = false" class="modal-close-btn" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form (ngSubmit)="saveReservation()" class="space-y-3.5">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Customer Name *
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="reservationForm.customer_name"
+                  name="r_cust_name"
+                  placeholder="e.g. Mohammed Farooq"
+                  class="form-control text-sm w-full"
+                  required
+                />
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  [(ngModel)]="reservationForm.customer_phone"
+                  name="r_cust_phone"
+                  placeholder="e.g. +91 99887 76655"
+                  class="form-control text-sm w-full"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Reservation Date & Time *
+                </label>
+                <input
+                  type="datetime-local"
+                  [(ngModel)]="reservationForm.reservation_time"
+                  name="r_res_time"
+                  class="form-control text-sm w-full"
+                  required
+                />
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Party Size (Covers) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  [(ngModel)]="reservationForm.guest_count"
+                  name="r_guest_count"
+                  class="form-control font-mono text-sm w-full"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Assign Table (Optional)
+                </label>
+                <select class="form-control text-sm w-full" [(ngModel)]="reservationForm.table_id" name="r_table_id">
+                  <option [ngValue]="null">-- Assign on Arrival / Any Table --</option>
+                  <option *ngFor="let t of tables" [ngValue]="t.id">
+                    {{ t.table_number }} - {{ t.name }} ({{ t.capacity }} seats, {{ t.section }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                  Preferred Section
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="reservationForm.preferred_section"
+                  name="r_pref_section"
+                  placeholder="e.g. VIP Majlis"
+                  list="diningSectionOptions"
+                  class="form-control text-sm w-full"
+                />
+              </div>
+            </div>
+
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
+                Special Requests / Dietary Notes
+              </label>
+              <textarea
+                [(ngModel)]="reservationForm.special_requests"
+                name="r_special_reqs"
+                rows="2"
+                placeholder="e.g. Birthday celebration, High chair requested, Window view"
+                class="form-control text-sm w-full"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-4 border-t border-[#E9D5FF]">
+              <button type="button" (click)="showNewReservationModal = false" class="action-btn btn-outline-purple">
+                Cancel
+              </button>
+              <button type="submit" class="action-btn btn-gradient-purple">
+                Confirm Reservation ✓
               </button>
             </div>
           </form>
@@ -911,6 +1808,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
       .dot-free { background: #16A34A; box-shadow: 0 0 8px rgba(22, 163, 74, 0.7); }
       .dot-busy { background: #EA580C; box-shadow: 0 0 8px rgba(234, 88, 12, 0.7); }
+      .dot-reserved { background: #6366F1; box-shadow: 0 0 8px rgba(99, 102, 241, 0.7); }
+      .dot-cleaning { background: #06B6D4; box-shadow: 0 0 8px rgba(6, 182, 212, 0.7); }
       .dot-blocked { background: #DC2626; box-shadow: 0 0 8px rgba(220, 38, 38, 0.7); }
 
       .floor-empty {
@@ -1060,6 +1959,18 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         --status-wash: rgba(234, 88, 12, 0.18);
       }
 
+      .table-tile.is-reserved {
+        --tile-accent: #6366F1;
+        --tile-shadow: rgba(99, 102, 241, 0.38);
+        --status-wash: rgba(99, 102, 241, 0.18);
+      }
+
+      .table-tile.is-cleaning {
+        --tile-accent: #06B6D4;
+        --tile-shadow: rgba(6, 182, 212, 0.38);
+        --status-wash: rgba(6, 182, 212, 0.18);
+      }
+
       .table-tile.is-blocked {
         --tile-accent: #DC2626;
         --tile-shadow: rgba(220, 38, 38, 0.3);
@@ -1187,6 +2098,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
       .status-free { color: #15803D; }
       .status-busy { color: #C2410C; }
+      .status-reserved { color: #4F46E5; }
+      .status-cleaning { color: #0891B2; }
       .status-blocked { color: #B91C1C; }
 
       /* A seated table is the one staff need to spot across the room. */
@@ -1472,6 +2385,188 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       .font-mono {
         font-family: 'JetBrains Mono', monospace;
       }
+
+      /* Header count badge */
+      .header-badge-count {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: 9999px;
+        background: #DC2626;
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);
+      }
+
+      /* KPI Tints */
+      .bg-indigo-tint {
+        background: #EEF2FF;
+        color: #4F46E5;
+      }
+      .bg-teal-tint {
+        background: #ECFEFF;
+        color: #0891B2;
+      }
+
+      /* Sliding Drawers */
+      .drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(4px);
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .drawer-panel {
+        width: 100%;
+        max-width: 440px;
+        height: 100%;
+        background: #ffffff;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes drawerSlideIn {
+        from { transform: translateX(100%); }
+        to   { transform: translateX(0); }
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.15rem 1.35rem;
+        background: #FAF5FF;
+        border-bottom: 1.5px solid #E9D5FF;
+      }
+
+      .drawer-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #2E1065;
+        margin: 0;
+      }
+
+      .drawer-subtitle {
+        font-size: 0.72rem;
+        color: #6B7280;
+        margin: 0.15rem 0 0;
+      }
+
+      .drawer-icon-bubble {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+      }
+
+      .btn-sm {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+      }
+
+      /* Waitlist & Reservation Cards */
+      .waitlist-card, .reservation-card {
+        background: #ffffff;
+        border: 1.5px solid #E9D5FF;
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        box-shadow: 0 2px 6px rgba(46, 16, 101, 0.04);
+        transition: all 0.2s ease;
+      }
+
+      .waitlist-card:hover, .reservation-card:hover {
+        border-color: #C084FC;
+        box-shadow: 0 6px 16px rgba(126, 34, 206, 0.08);
+      }
+
+      .waitlist-card.is-notified {
+        border-color: #60A5FA;
+        background: #F8FAFC;
+      }
+
+      .waitlist-card.is-seated, .reservation-card.is-seated {
+        opacity: 0.65;
+        background: #F9FAFB;
+      }
+
+      .token-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        font-weight: 900;
+        color: #7E22CE;
+        background: #FAF5FF;
+        border: 1.5px solid #D8B4FE;
+        border-radius: 8px;
+        padding: 0.2rem 0.5rem;
+      }
+
+      .res-code-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 900;
+        color: #4F46E5;
+        background: #EEF2FF;
+        border: 1.5px solid #C7D2FE;
+        border-radius: 8px;
+        padding: 0.15rem 0.45rem;
+      }
+
+      .status-chip {
+        font-size: 0.65rem;
+        font-weight: 800;
+        padding: 0.2rem 0.55rem;
+        border-radius: 9999px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .chip-waiting { background: #FFFBEB; color: #D97706; }
+      .chip-notified { background: #EFF6FF; color: #2563EB; }
+      .chip-confirmed { background: #EEF2FF; color: #4F46E5; }
+      .chip-seated { background: #ECFDF5; color: #059669; }
+      .chip-cancelled { background: #FEF2F2; color: #DC2626; }
+
+      .waitlist-meta-row, .reservation-meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .meta-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.7rem;
+        color: #4B5563;
+        background: #F3F4F6;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+      }
     `,
   ],
 })
@@ -1490,19 +2585,56 @@ export class DiningComponent implements OnInit, OnDestroy {
   public sections: string[] = [];
   public selectedSection: string | null = null;
 
-  /**
-   * One clock for the whole grid, nudged every half minute. Calling Date.now()
-   * straight from the template would give two change-detection passes different
-   * answers across a minute boundary.
-   */
-  private nowMs = Date.now();
-  private clockTimer: ReturnType<typeof setInterval> | null = null;
+  public reservations: TableReservation[] = [];
+  public waitlist: TableWaitlist[] = [];
+  public tableHistory: TableHistoryItem[] = [];
+  public selectedHistoryTable: DiningTable | null = null;
+  public selectedManageTable: DiningTable | null = null;
+  public tableToSeat: DiningTable | null = null;
 
   public showTableModal = false;
   public editingTableId: number | null = null;
+  public showWaitlistDrawer = false;
+  public showReservationDrawer = false;
+  public showHistoryModal = false;
+  public showSeatModal = false;
+  public showManageModal = false;
+  public showAddWaitlistModal = false;
+  public showNewReservationModal = false;
+
+  public seatForm = {
+    guestCount: 2,
+    customerName: '',
+    customerPhone: '',
+    selectedWaitlistId: null as number | null,
+  };
+
+  public waitlistForm: any = {
+    customer_name: '',
+    customer_phone: '',
+    guest_count: 2,
+    preferred_section: '',
+    estimated_wait_minutes: 15,
+  };
+
+  public reservationForm: any = {
+    customer_name: '',
+    customer_phone: '',
+    guest_count: 4,
+    reservation_time: '',
+    table_id: null as number | null,
+    preferred_section: '',
+    special_requests: '',
+  };
+
+  private nowMs = Date.now();
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
+
   public tableStatusOptions: DropdownOption[] = [
     { value: 'AVAILABLE', label: 'AVAILABLE', icon: 'check_circle', description: 'Table ready for incoming guests' },
     { value: 'OCCUPIED', label: 'OCCUPIED', icon: 'restaurant', description: 'Guests dining currently' },
+    { value: 'RESERVED', label: 'RESERVED', icon: 'event_seat', description: 'Reserved for upcoming booking' },
+    { value: 'CLEANING', label: 'CLEANING', icon: 'cleaning_services', description: 'Bussing & sanitizing' },
     { value: 'UNAVAILABLE', label: 'UNAVAILABLE', icon: 'block', description: 'Table out of service' },
   ];
 
@@ -1516,6 +2648,8 @@ export class DiningComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTables();
+    this.loadReservations();
+    this.loadWaitlist();
     this.clockTimer = setInterval(() => {
       this.nowMs = Date.now();
     }, 30000);
@@ -1525,12 +2659,48 @@ export class DiningComponent implements OnInit, OnDestroy {
     if (this.clockTimer) clearInterval(this.clockTimer);
   }
 
-  /** Tables in a given status, for the occupancy strip. */
+  public get waitingCount(): number {
+    return this.waitlist.filter((w) => w.status === 'WAITING' || w.status === 'NOTIFIED').length;
+  }
+
+  public get confirmedReservationsCount(): number {
+    return this.reservations.filter((r) => r.status === 'CONFIRMED').length;
+  }
+
+  public get availableTables(): DiningTable[] {
+    return this.tables.filter((t) => t.status === 'AVAILABLE');
+  }
+
+  public get tableHistoryTotalRevenue(): number {
+    return this.tableHistory.reduce((sum, h) => sum + (Number(h.total_amount) || 0), 0);
+  }
+
+  public get tableHistoryAvgDuration(): number {
+    if (!this.tableHistory.length) return 0;
+    const total = this.tableHistory.reduce((sum, h) => sum + (Number(h.duration_minutes) || 0), 0);
+    return Math.round(total / this.tableHistory.length);
+  }
+
+  public get totalSeats(): number {
+    return this.tables.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
+  }
+
+  public get seatsOccupied(): number {
+    return this.tables
+      .filter((t) => t.status === 'OCCUPIED')
+      .reduce((sum, t) => sum + (Number(t.active_guest_count || t.capacity) || 0), 0);
+  }
+
+  public get occupancyRate(): number {
+    const seatable = this.tables.filter((t) => t.status !== 'UNAVAILABLE').length;
+    if (!seatable) return 0;
+    return Math.round((this.countStatus('OCCUPIED') / seatable) * 100);
+  }
+
   public countStatus(status: TableStatus): number {
     return this.tables.filter((t) => t.status === status).length;
   }
 
-  /** Tables in a section, shown as the count badge on its filter tab. */
   public sectionCount(section: string): number {
     return this.tables.filter((t) => t.section === section).length;
   }
@@ -1543,27 +2713,42 @@ export class DiningComponent implements OnInit, OnDestroy {
     return index;
   }
 
-  /* ─────────── Tile appearance ─────────── */
-
-  /** Status class on the tile, plus the section's colour class. */
   public tileClasses(table: DiningTable): string[] {
     const status =
-      table.status === 'AVAILABLE' ? 'is-free' : table.status === 'OCCUPIED' ? 'is-busy' : 'is-blocked';
+      table.status === 'AVAILABLE'
+        ? 'is-free'
+        : table.status === 'OCCUPIED'
+          ? 'is-busy'
+          : table.status === 'RESERVED'
+            ? 'is-reserved'
+            : table.status === 'CLEANING'
+              ? 'is-cleaning'
+              : 'is-blocked';
     return [status, 'zone-' + this.sectionIndex(table.section)];
   }
 
   public statusClass(status: TableStatus): string {
-    return status === 'AVAILABLE' ? 'status-free' : status === 'OCCUPIED' ? 'status-busy' : 'status-blocked';
+    switch (status) {
+      case 'AVAILABLE': return 'status-free';
+      case 'OCCUPIED': return 'status-busy';
+      case 'RESERVED': return 'status-reserved';
+      case 'CLEANING': return 'status-cleaning';
+      case 'UNAVAILABLE': return 'status-blocked';
+      default: return 'status-free';
+    }
   }
 
   public statusLabel(status: TableStatus): string {
-    return status === 'AVAILABLE' ? 'Free' : status === 'OCCUPIED' ? 'Occupied' : 'Out of service';
+    switch (status) {
+      case 'AVAILABLE': return 'Free';
+      case 'OCCUPIED': return 'Occupied';
+      case 'RESERVED': return 'Reserved';
+      case 'CLEANING': return 'Cleaning';
+      case 'UNAVAILABLE': return 'Out of service';
+      default: return status;
+    }
   }
 
-  /**
-   * A section gets its colour from a hash of its name, so a section added later
-   * still lands on a stable hue without anyone maintaining a colour map.
-   */
   public sectionIndex(section: string): number {
     const name = (section || '').trim().toLowerCase();
     let hash = 0;
@@ -1573,47 +2758,78 @@ export class DiningComponent implements OnInit, OnDestroy {
     return hash % 8;
   }
 
-  /* ─────────── Whole-tile action ─────────── */
-
   public tileAction(table: DiningTable): string {
-    return table.status === 'AVAILABLE'
-      ? 'Start Order'
-      : table.status === 'OCCUPIED'
-        ? 'Manage Table'
-        : 'Return to Service';
+    switch (table.status) {
+      case 'AVAILABLE': return 'Seat Guests';
+      case 'OCCUPIED': return 'Manage';
+      case 'RESERVED': return 'Seat Booking';
+      case 'CLEANING': return 'Finish Cleaning';
+      case 'UNAVAILABLE': return 'Restore';
+      default: return 'Manage';
+    }
   }
 
   public tileActionIcon(table: DiningTable): string {
-    return table.status === 'AVAILABLE'
-      ? 'bolt'
-      : table.status === 'OCCUPIED'
-        ? 'restaurant_menu'
-        : 'build';
+    switch (table.status) {
+      case 'AVAILABLE': return 'person_add';
+      case 'OCCUPIED': return 'restaurant_menu';
+      case 'RESERVED': return 'event_seat';
+      case 'CLEANING': return 'cleaning_services';
+      case 'UNAVAILABLE': return 'build';
+      default: return 'bolt';
+    }
+  }
+
+  public tableElapsedMinutes(table?: DiningTable | null): number {
+    if (!table) return 0;
+    if (table.elapsed_minutes !== undefined && table.elapsed_minutes !== null) {
+      return table.elapsed_minutes;
+    }
+    const started = this.startedAt(table);
+    if (!started) return 0;
+    return Math.max(0, Math.floor((this.nowMs - started) / 60000));
+  }
+
+  public tableCleaningMinutes(table?: DiningTable | null): number {
+    if (!table) return 0;
+    if (table.cleaning_minutes !== undefined && table.cleaning_minutes !== null) {
+      return table.cleaning_minutes;
+    }
+    if (!table.cleaning_started_at) return 0;
+    const started = new Date(table.cleaning_started_at).getTime();
+    if (isNaN(started)) return 0;
+    return Math.max(0, Math.floor((this.nowMs - started) / 60000));
+  }
+
+  public turnoverTier(table?: DiningTable | null): 'safe' | 'warn' | 'over' {
+    const mins = this.tableElapsedMinutes(table);
+    if (mins > 75) return 'over';
+    if (mins >= 45) return 'warn';
+    return 'safe';
   }
 
   public onTileClick(table: DiningTable, event: Event): void {
-    // Space scrolls the page by default once a non-button acts as a button.
     if (event instanceof KeyboardEvent) event.preventDefault();
 
     if (table.status === 'AVAILABLE') {
-      this.startOrderForTable(table);
+      this.openSeatModal(table);
     } else if (table.status === 'OCCUPIED') {
-      this.openTableOptions(table);
+      this.openManageModal(table);
+    } else if (table.status === 'RESERVED') {
+      this.promptSeatReservation(table);
+    } else if (table.status === 'CLEANING') {
+      this.finishCleaning(table.id);
     } else {
       this.editTable(table, event);
     }
   }
 
-  /* ─────────── Dwell time ─────────── */
-
-  /** Minutes since the order on this table was opened, or null if unknown. */
   public minutesSeated(table: DiningTable): number | null {
     const started = this.startedAt(table);
     if (started === null) return null;
     return Math.max(0, Math.floor((this.nowMs - started) / 60000));
   }
 
-  /** "1h 12m" / "47m" — blank when the backend sent no start time. */
   public dwellText(table: DiningTable): string {
     const mins = this.minutesSeated(table);
     if (mins === null) return '';
@@ -1622,7 +2838,6 @@ export class DiningComponent implements OnInit, OnDestroy {
       : `${mins}m`;
   }
 
-  /** Clock time the party was seated, e.g. "19:42". */
   public seatedClock(table: DiningTable): string {
     const started = this.startedAt(table);
     if (started === null) return '';
@@ -1630,10 +2845,6 @@ export class DiningComponent implements OnInit, OnDestroy {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
-  /**
-   * Six ticks, one per quarter hour of a ninety-minute turn. A table past its
-   * turn shows a full rail, which is the point — it should look full.
-   */
   public dwellTicks(table: DiningTable): boolean[] {
     const mins = this.minutesSeated(table);
     const lit = mins === null ? 0 : Math.min(DwellRail.TICKS, Math.max(1, Math.ceil(mins / DwellRail.MINUTES_PER_TICK)));
@@ -1645,40 +2856,18 @@ export class DiningComponent implements OnInit, OnDestroy {
     return mins !== null && mins > DwellRail.TICKS * DwellRail.MINUTES_PER_TICK;
   }
 
-  /** Spend per seat. Covers are not tracked, so capacity is the honest divisor. */
   public perSeat(table: DiningTable): number {
     const capacity = Number(table.capacity) || 0;
     const total = Number(table.order_current_total) || 0;
     return capacity > 0 ? total / capacity : total;
   }
 
-  /** Order start time in ms, tolerant of the "YYYY-MM-DD HH:mm:ss" SQL form. */
   private startedAt(table: DiningTable): number | null {
-    if (!table.order_start_time) return null;
-    const raw = String(table.order_start_time).trim().replace(' ', 'T');
+    const time = table.seated_at || table.order_start_time;
+    if (!time) return null;
+    const raw = String(time).trim().replace(' ', 'T');
     const ms = new Date(raw).getTime();
     return Number.isFinite(ms) ? ms : null;
-  }
-
-  public get totalSeats(): number {
-    return this.tables.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
-  }
-
-  /** Seats on tables that are currently serving guests. */
-  public get seatsOccupied(): number {
-    return this.tables
-      .filter((t) => t.status === 'OCCUPIED')
-      .reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
-  }
-
-  /**
-   * Share of the seatable floor that is in use. Out-of-service tables are left
-   * out of the denominator - a blocked table is not capacity anyone can sell.
-   */
-  public get occupancyRate(): number {
-    const seatable = this.tables.filter((t) => t.status !== 'UNAVAILABLE').length;
-    if (!seatable) return 0;
-    return Math.round((this.countStatus('OCCUPIED') / seatable) * 100);
   }
 
   public selectSection(section: string | null): void {
@@ -1691,18 +2880,36 @@ export class DiningComponent implements OnInit, OnDestroy {
     this.loadError = null;
     this.diningService.getTables().subscribe({
       next: (res) => {
-          this.isLoading = false;
+        this.isLoading = false;
         if (res.success) {
           this.tables = res.data;
           this.extractSections();
           this.filterTables();
         }
       },
-        error: (err) => {
-          this.isLoading = false;
-          this.loadError = err?.error?.message || 'Unable to load data from the server.';
-        },
-      });
+      error: (err) => {
+        this.isLoading = false;
+        this.loadError = err?.error?.message || 'Unable to load data from the server.';
+      },
+    });
+  }
+
+  loadReservations(): void {
+    this.diningService.getReservations().subscribe({
+      next: (res) => {
+        if (res.success) this.reservations = res.data;
+      },
+      error: () => {},
+    });
+  }
+
+  loadWaitlist(): void {
+    this.diningService.getWaitlist().subscribe({
+      next: (res) => {
+        if (res.success) this.waitlist = res.data;
+      },
+      error: () => {},
+    });
   }
 
   extractSections(): void {
@@ -1711,7 +2918,6 @@ export class DiningComponent implements OnInit, OnDestroy {
       if (t.section) secSet.add(t.section);
     }
     this.sections = Array.from(secSet);
-    // A section can disappear when its last table is deleted or moved.
     if (this.selectedSection && !this.sections.includes(this.selectedSection)) {
       this.selectedSection = null;
     }
@@ -1725,9 +2931,269 @@ export class DiningComponent implements OnInit, OnDestroy {
     }
   }
 
-  startOrderForTable(table: DiningTable): void {
+  openSeatModal(table: DiningTable): void {
+    this.tableToSeat = table;
+    this.seatForm = {
+      guestCount: Math.min(table.capacity, 2),
+      customerName: '',
+      customerPhone: '',
+      selectedWaitlistId: null,
+    };
+    this.showSeatModal = true;
+  }
+
+  onWaitlistSelectionChange(): void {
+    if (this.seatForm.selectedWaitlistId) {
+      const party = this.waitlist.find((w) => w.id === Number(this.seatForm.selectedWaitlistId));
+      if (party) {
+        this.seatForm.customerName = party.customer_name;
+        this.seatForm.customerPhone = party.customer_phone || '';
+        this.seatForm.guestCount = party.guest_count;
+      }
+    }
+  }
+
+  confirmSeatTable(startPosOrder: boolean = true): void {
+    if (!this.tableToSeat) return;
+    const table = this.tableToSeat;
+    const count = Number(this.seatForm.guestCount) || table.capacity;
+
+    if (this.seatForm.selectedWaitlistId) {
+      this.diningService.seatWaitlistParty(Number(this.seatForm.selectedWaitlistId), table.id).subscribe({
+        next: () => {
+          this.notify.success(`Party seated at Table ${table.table_number}`);
+          this.showSeatModal = false;
+          this.loadTables();
+          this.loadWaitlist();
+          if (startPosOrder) {
+            this.startOrderForTable(table, count);
+          }
+        },
+        error: () => {},
+      });
+    } else {
+      this.diningService.seatGuests(table.id, count).subscribe({
+        next: () => {
+          this.notify.success(`Table ${table.table_number} seated with ${count} guests`);
+          this.showSeatModal = false;
+          this.loadTables();
+          if (startPosOrder) {
+            this.startOrderForTable(table, count);
+          }
+        },
+        error: () => {},
+      });
+    }
+  }
+
+  openManageModal(table: DiningTable): void {
+    this.selectedManageTable = table;
+    this.showManageModal = true;
+  }
+
+  cleanTable(tableId: number): void {
+    this.diningService.cleanTable(tableId).subscribe({
+      next: () => {
+        this.notify.info('Table marked for cleaning');
+        this.showManageModal = false;
+        this.loadTables();
+      },
+      error: () => {},
+    });
+  }
+
+  finishCleaning(tableId: number): void {
+    this.diningService.finishCleaning(tableId).subscribe({
+      next: () => {
+        this.notify.success('Table is clean and ready for guests!');
+        this.loadTables();
+      },
+      error: () => {},
+    });
+  }
+
+  promptSeatReservation(table: DiningTable): void {
+    if (table.reservation_id) {
+      this.notify.confirm({
+        title: `Seat Reservation on ${table.table_number}`,
+        message: `Seat ${table.reservation_customer || 'the reserved party'} (${table.reservation_guests || table.capacity} guests)?`,
+        confirmText: 'Seat Guests & Start Order',
+        onConfirm: () => {
+          this.diningService.seatReservation(table.reservation_id!, table.id).subscribe({
+            next: () => {
+              this.notify.success(`Reservation seated at Table ${table.table_number}`);
+              this.loadTables();
+              this.loadReservations();
+              this.startOrderForTable(table, table.reservation_guests || table.capacity);
+            },
+            error: () => {},
+          });
+        },
+      });
+    } else {
+      this.openSeatModal(table);
+    }
+  }
+
+  openHistory(table: DiningTable, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.selectedHistoryTable = table;
+    this.diningService.getTableHistory(table.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.tableHistory = res.data;
+          this.showHistoryModal = true;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  openWaitlistDrawer(): void {
+    this.loadWaitlist();
+    this.showWaitlistDrawer = true;
+  }
+
+  openReservationsDrawer(): void {
+    this.loadReservations();
+    this.showReservationDrawer = true;
+  }
+
+  openAddWaitlistModal(): void {
+    this.waitlistForm = {
+      customer_name: '',
+      customer_phone: '',
+      guest_count: 2,
+      preferred_section: this.selectedSection || '',
+      estimated_wait_minutes: 15,
+    };
+    this.showAddWaitlistModal = true;
+  }
+
+  saveWaitlistEntry(): void {
+    if (!this.waitlistForm.customer_name) {
+      this.notify.error('Customer name is required');
+      return;
+    }
+    this.diningService.addToWaitlist(this.waitlistForm).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.notify.success(`Token ${res.data.token_number} issued for ${res.data.customer_name}`);
+          this.showAddWaitlistModal = false;
+          this.loadWaitlist();
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  seatWaitlistParty(waitlistId: number, tableId: number): void {
+    if (!tableId) {
+      this.notify.error('Please select an available table');
+      return;
+    }
+    this.diningService.seatWaitlistParty(waitlistId, tableId).subscribe({
+      next: () => {
+        this.notify.success('Waitlist party seated successfully!');
+        this.loadTables();
+        this.loadWaitlist();
+      },
+      error: () => {},
+    });
+  }
+
+  updateWaitlistStatus(waitlistId: number, status: 'WAITING' | 'NOTIFIED' | 'CANCELLED'): void {
+    this.diningService.updateWaitlistStatus(waitlistId, status).subscribe({
+      next: () => {
+        this.notify.info(`Waitlist token status updated to ${status}`);
+        this.loadWaitlist();
+      },
+      error: () => {},
+    });
+  }
+
+  openNewReservationModal(): void {
+    const d = new Date();
+    d.setHours(d.getHours() + 2);
+    d.setMinutes(0);
+    const timeStr = d.toISOString().slice(0, 16);
+
+    this.reservationForm = {
+      customer_name: '',
+      customer_phone: '',
+      guest_count: 4,
+      reservation_time: timeStr,
+      table_id: null,
+      preferred_section: this.selectedSection || '',
+      special_requests: '',
+    };
+    this.showNewReservationModal = true;
+  }
+
+  saveReservation(): void {
+    if (!this.reservationForm.customer_name || !this.reservationForm.customer_phone || !this.reservationForm.reservation_time) {
+      this.notify.error('Please enter customer name, phone number, and reservation time');
+      return;
+    }
+    this.diningService.createReservation(this.reservationForm).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.notify.success(`Reservation ${res.data.reservation_code} confirmed!`);
+          this.showNewReservationModal = false;
+          this.loadReservations();
+          this.loadTables();
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  seatReservation(reservation: TableReservation): void {
+    let targetTableId = reservation.table_id;
+    if (!targetTableId) {
+      const match = this.tables.find((t) => t.status === 'AVAILABLE' && t.capacity >= reservation.guest_count);
+      if (!match) {
+        this.notify.error('No available table found with sufficient capacity. Please free a table first.');
+        return;
+      }
+      targetTableId = match.id;
+    }
+
+    this.diningService.seatReservation(reservation.id, targetTableId).subscribe({
+      next: () => {
+        this.notify.success(`Reservation ${reservation.reservation_code} seated!`);
+        this.loadReservations();
+        this.loadTables();
+      },
+      error: () => {},
+    });
+  }
+
+  cancelReservation(reservationId: number): void {
+    this.notify.confirm({
+      title: 'Cancel Reservation',
+      message: 'Are you sure you want to cancel this booking?',
+      confirmText: 'Cancel Booking',
+      isDestructive: true,
+      onConfirm: () => {
+        this.diningService.cancelReservation(reservationId).subscribe({
+          next: () => {
+            this.notify.info('Reservation cancelled');
+            this.loadReservations();
+            this.loadTables();
+          },
+          error: () => {},
+        });
+      },
+    });
+  }
+
+  startOrderForTable(table: DiningTable, guestCount?: number): void {
     this.cartService.orderType.set('DINING');
-    this.cartService.selectedTable.set(table);
+    this.cartService.selectedTable.set({
+      ...table,
+      active_guest_count: guestCount || table.active_guest_count || table.capacity,
+    });
     this.router.navigate(['/pos']);
   }
 
@@ -1742,8 +3208,6 @@ export class DiningComponent implements OnInit, OnDestroy {
             this.notify.success(`Table ${table.table_number} is now AVAILABLE`);
             this.loadTables();
           },
-          // Reported by the global error interceptor; present so a failure
-          // cannot escape as an unhandled rejection.
           error: () => {},
         });
       },
@@ -1788,8 +3252,6 @@ export class DiningComponent implements OnInit, OnDestroy {
           this.showTableModal = false;
           this.loadTables();
         },
-        // Reported by the global error interceptor; present so a failure
-        // cannot escape as an unhandled rejection.
         error: () => {},
       });
     } else {
@@ -1799,8 +3261,6 @@ export class DiningComponent implements OnInit, OnDestroy {
           this.showTableModal = false;
           this.loadTables();
         },
-        // Reported by the global error interceptor; present so a failure
-        // cannot escape as an unhandled rejection.
         error: () => {},
       });
     }
@@ -1819,11 +3279,10 @@ export class DiningComponent implements OnInit, OnDestroy {
             this.showTableModal = false;
             this.loadTables();
           },
-          // Reported by the global error interceptor; present so a failure
-          // cannot escape as an unhandled rejection.
           error: () => {},
         });
       },
     });
   }
 }
+

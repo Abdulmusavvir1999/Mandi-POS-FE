@@ -81,8 +81,9 @@ import {
   CustomizationModule,
   CustomizationModuleKey,
 } from '../../core/services/customization.service';
+import { PrinterService } from '../../core/services/printer.service';
 
-type SettingsTab = 'customization' | 'theme' | 'toast' | 'business' | 'hardware' | 'posdesign' | 'dishpage' | 'dining' | 'categorydesign' | 'stockdesign' | 'customerdesign' | 'staffdesign' | 'sidebardesign';
+type SettingsTab = 'customization' | 'theme' | 'toast' | 'business' | 'hardware' | 'posdesign' | 'dishpage' | 'dining' | 'categorydesign' | 'stockdesign' | 'customerdesign' | 'staffdesign' | 'sidebardesign' | 'printer' | 'notification' | 'invoice';
 
 /** Branding images that can be replaced from the Store tab. */
 import { SidebarLayoutPreviewComponent } from '../../shared/components/sidebar-layout-preview/sidebar-layout-preview.component';
@@ -319,6 +320,36 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           >
             <span class="material-symbols-outlined">left_panel_open</span>
             <span>Sidebar Template</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="activeTab = 'printer'"
+            class="tab-btn"
+            [class.is-active]="activeTab === 'printer'"
+          >
+            <span class="material-symbols-outlined">print_connect</span>
+            <span>Printer Settings</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="activeTab = 'notification'"
+            class="tab-btn"
+            [class.is-active]="activeTab === 'notification'"
+          >
+            <span class="material-symbols-outlined">campaign</span>
+            <span>Notification Settings</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="activeTab = 'invoice'"
+            class="tab-btn"
+            [class.is-active]="activeTab === 'invoice'"
+          >
+            <span class="material-symbols-outlined">receipt</span>
+            <span>Invoice Settings</span>
           </button>
         </div>
 
@@ -3287,6 +3318,654 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
                 minWidth="150px"
               ></app-custom-dropdown>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- TAB 5: PRINTER SETTINGS — the physical print stations           -->
+      <!-- Receipts & Hardware owns what is *printed*; this tab owns which -->
+      <!-- device prints it, how it is reached and how the paper behaves.  -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'printer'" class="tab-content-pane">
+        <div class="module-note">
+          <span class="material-symbols-outlined">info</span>
+          <p>
+            <strong>Receipts &amp; Hardware</strong> sets the wording printed on a receipt.
+            This tab sets the <strong>machines</strong> that print it — one station per role,
+            plus how the POS reaches them. The receipt and kitchen print paths pick the
+            stations up as soon as they are edited; everything else publishes on save.
+          </p>
+        </div>
+
+        <div class="three-col-grid">
+          <div class="setting-card" *ngFor="let station of printerStations">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">{{ station.icon }}</span>
+                <div>
+                  <h3 class="card-title-sm">{{ station.title }}</h3>
+                  <p class="card-subtitle">{{ station.subtitle }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="switch-row">
+              <div>
+                <div class="switch-row-title">Station Status</div>
+                <div class="switch-row-sub">Disabled keeps this station out of the print queue</div>
+              </div>
+              <app-custom-dropdown
+                [options]="stationStatusOptions"
+                [(ngModel)]="settingsMap[station.enabledKey]"
+                (ngModelChange)="onPrinterConfigChanged()"
+                placeholder="Status"
+                minWidth="150px"
+              ></app-custom-dropdown>
+            </div>
+
+            <div class="form-vertical-group">
+              <label class="control-label">Printer / Queue Name</label>
+              <input
+                [title]="station.title + ' queue name'"
+                type="text"
+                [(ngModel)]="settingsMap[station.nameKey]"
+                (ngModelChange)="onPrinterConfigChanged()"
+                class="control-input"
+              />
+              <p class="control-hint">Spell it exactly as the operating system lists the printer.</p>
+            </div>
+
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Paper Width</label>
+                <app-custom-dropdown
+                  [options]="paperWidthOptions"
+                  [(ngModel)]="settingsMap[station.widthKey]"
+                  (ngModelChange)="onPrinterConfigChanged()"
+                  placeholder="Select width"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Copies Per Job</label>
+                <input
+                  [title]="station.title + ' copies per job'"
+                  type="number"
+                  min="1"
+                  max="5"
+                  [(ngModel)]="settingsMap[station.copiesKey]"
+                  class="control-input font-mono font-bold text-purple"
+                />
+              </div>
+            </div>
+
+            <div class="form-vertical-group">
+              <label class="control-label">{{ station.autoLabel }}</label>
+              <app-custom-dropdown
+                [options]="autoPrintOptions"
+                [(ngModel)]="settingsMap[station.autoKey]"
+                (ngModelChange)="onPrinterConfigChanged()"
+                placeholder="Select behaviour"
+                minWidth="100%"
+              ></app-custom-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col-grid">
+          <!-- How this terminal reaches the hardware -->
+          <div class="setting-card">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">cable</span>
+                <div>
+                  <h3 class="card-title-sm">Device Connection</h3>
+                  <p class="card-subtitle">How this terminal reaches the thermal hardware</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-vertical-group">
+              <label class="control-label">Connection Type</label>
+              <app-custom-dropdown
+                [options]="printerConnectionOptions"
+                [(ngModel)]="settingsMap['PRINTER_CONNECTION']"
+                placeholder="Select connection"
+                minWidth="100%"
+              ></app-custom-dropdown>
+            </div>
+
+            <div class="two-input-row" *ngIf="settingsMap['PRINTER_CONNECTION'] === 'network'">
+              <div class="form-vertical-group">
+                <label class="control-label">Printer IP Address</label>
+                <input
+                  title="Printer IP address"
+                  type="text"
+                  [(ngModel)]="settingsMap['PRINTER_DEVICE_IP']"
+                  placeholder="192.168.1.50"
+                  class="control-input font-mono"
+                />
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Port</label>
+                <input
+                  title="Printer network port"
+                  type="number"
+                  [(ngModel)]="settingsMap['PRINTER_DEVICE_PORT']"
+                  class="control-input font-mono font-bold text-purple"
+                />
+              </div>
+            </div>
+
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Character Set</label>
+                <app-custom-dropdown
+                  [options]="printerCharsetOptions"
+                  [(ngModel)]="settingsMap['PRINTER_CHARSET']"
+                  placeholder="Select code page"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Print Density</label>
+                <app-custom-dropdown
+                  [options]="printerDensityOptions"
+                  [(ngModel)]="settingsMap['PRINTER_DENSITY']"
+                  placeholder="Select density"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="sub-section-divider">
+              <div class="sub-section-title">Verify The Wiring</div>
+              <p class="control-hint">
+                Sends a sample page through the print dialog using the stations above —
+                nothing is billed and no kitchen action is triggered.
+              </p>
+              <div class="printer-test-actions">
+                <button type="button" class="custom-btn btn-outline-purple" (click)="sendTestPrint('receipt')">
+                  <span class="material-symbols-outlined">receipt_long</span>
+                  <span>Test Receipt</span>
+                </button>
+                <button type="button" class="custom-btn btn-outline-purple" (click)="sendTestPrint('kot')">
+                  <span class="material-symbols-outlined">soup_kitchen</span>
+                  <span>Test Kitchen Ticket</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- What the paper and drawer do once a job finishes -->
+          <div class="setting-card">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">content_cut</span>
+                <div>
+                  <h3 class="card-title-sm">Paper &amp; Drawer Behaviour</h3>
+                  <p class="card-subtitle">What the hardware does once a job finishes</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="switch-stack">
+              <div class="switch-row">
+                <div>
+                  <div class="switch-row-title">Auto Cut Paper</div>
+                  <div class="switch-row-sub">Guillotines the roll after every printed job</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['PRINTER_AUTO_CUT']"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+
+              <div class="switch-row">
+                <div>
+                  <div class="switch-row-title">Open Cash Drawer</div>
+                  <div class="switch-row-sub">Kicks the drawer open on cash settlements</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['PRINTER_CASH_DRAWER']"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+
+              <div class="switch-row">
+                <div>
+                  <div class="switch-row-title">Buzzer On Kitchen Ticket</div>
+                  <div class="switch-row-sub">Sounds the printer buzzer when a KOT lands</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['PRINTER_BUZZER']"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="form-vertical-group">
+              <label class="control-label">Blank Feed Lines After Cut</label>
+              <input
+                title="Blank feed lines after cut"
+                type="number"
+                min="0"
+                max="10"
+                [(ngModel)]="settingsMap['PRINTER_FEED_LINES']"
+                class="control-input font-mono font-bold text-purple"
+              />
+              <p class="control-hint">Extra blank lines so the tear-off edge clears the print head.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- TAB 6: NOTIFICATION SETTINGS — which events raise an alert      -->
+      <!-- Super Toaster owns how a toast *looks*; this tab owns which     -->
+      <!-- operational events are worth raising, and who they reach.       -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'notification'" class="tab-content-pane">
+        <div class="module-note">
+          <span class="material-symbols-outlined">info</span>
+          <p>
+            <strong>Super Toaster Notifications</strong> styles the on-screen toast — position,
+            duration, animation. This tab decides <strong>which events</strong> are worth raising
+            at all, and which channels carry them.
+          </p>
+        </div>
+
+        <div class="two-col-grid">
+          <!-- 1. Which floor events raise an alert -->
+          <div class="setting-card">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">notification_important</span>
+                <div>
+                  <h3 class="card-title-sm">Operational Alert Triggers</h3>
+                  <p class="card-subtitle">Floor events the system announces to staff</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="switch-stack">
+              <div class="switch-row" *ngFor="let trigger of notificationTriggers">
+                <div>
+                  <div class="switch-row-title">{{ trigger.title }}</div>
+                  <div class="switch-row-sub">{{ trigger.subtitle }}</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap[trigger.key]"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="form-vertical-group" *ngIf="settingsMap['NOTIFY_LOW_STOCK'] === 'true'">
+              <label class="control-label">Low Stock Threshold (units)</label>
+              <input
+                title="Low stock threshold"
+                type="number"
+                min="1"
+                [(ngModel)]="settingsMap['NOTIFY_LOW_STOCK_THRESHOLD']"
+                class="control-input font-mono font-bold text-purple"
+              />
+              <p class="control-hint">An item at or below this count raises the low-stock alert.</p>
+            </div>
+          </div>
+
+          <!-- 2. Where a raised alert is delivered -->
+          <div class="setting-card">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">forward_to_inbox</span>
+                <div>
+                  <h3 class="card-title-sm">Delivery Channels</h3>
+                  <p class="card-subtitle">Where an alert is sent once it is raised</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="switch-stack">
+              <div class="switch-row">
+                <div>
+                  <div class="switch-row-title">In-App Toast</div>
+                  <div class="switch-row-sub">Shown on the terminal that is signed in</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['NOTIFY_CHANNEL_INAPP']"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+
+              <div class="switch-row">
+                <div>
+                  <div class="switch-row-title">Desktop Notification</div>
+                  <div class="switch-row-sub">System pop-up, even when the POS sits behind another window</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['NOTIFY_CHANNEL_DESKTOP']"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+
+              <div class="switch-row">
+                <div>
+                  <div class="switch-row-title">Email</div>
+                  <div class="switch-row-sub">Sends owner-facing alerts to a mailbox</div>
+                </div>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['NOTIFY_CHANNEL_EMAIL']"
+                  placeholder="Select"
+                  minWidth="150px"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="form-vertical-group" *ngIf="settingsMap['NOTIFY_CHANNEL_EMAIL'] === 'true'">
+              <label class="control-label">Email Recipients</label>
+              <input
+                title="Email recipients"
+                type="text"
+                [(ngModel)]="settingsMap['NOTIFY_EMAIL_RECIPIENTS']"
+                placeholder="owner@restaurant.com, manager@restaurant.com"
+                class="control-input font-mono"
+              />
+              <p class="control-hint">Separate several addresses with a comma.</p>
+            </div>
+
+            <div class="switch-row">
+              <div>
+                <div class="switch-row-title">SMS</div>
+                <div class="switch-row-sub">Text message for alerts that cannot wait for a screen</div>
+              </div>
+              <app-custom-dropdown
+                [options]="enabledDisabledOptions"
+                [(ngModel)]="settingsMap['NOTIFY_CHANNEL_SMS']"
+                placeholder="Select"
+                minWidth="150px"
+              ></app-custom-dropdown>
+            </div>
+
+            <div class="form-vertical-group" *ngIf="settingsMap['NOTIFY_CHANNEL_SMS'] === 'true'">
+              <label class="control-label">SMS Recipients</label>
+              <input
+                title="SMS recipients"
+                type="text"
+                [(ngModel)]="settingsMap['NOTIFY_SMS_RECIPIENTS']"
+                placeholder="+91 98765 43210, +91 90000 11111"
+                class="control-input font-mono"
+              />
+              <p class="control-hint">Separate several numbers with a comma.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Sound, quiet hours and the daily digest -->
+        <div class="setting-card">
+          <div class="card-header-bar pb-3">
+            <div class="flex-align-center gap-2">
+              <span class="material-symbols-outlined icon-purple">schedule</span>
+              <div>
+                <h3 class="card-title-sm">Sound, Quiet Hours &amp; Daily Digest</h3>
+                <p class="card-subtitle">When an alert may make a noise, and when the day is summarised</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="two-input-row">
+            <div class="form-vertical-group">
+              <label class="control-label">Alert Sound</label>
+              <app-custom-dropdown
+                [options]="enabledDisabledOptions"
+                [(ngModel)]="settingsMap['NOTIFY_SOUND']"
+                placeholder="Select"
+                minWidth="100%"
+              ></app-custom-dropdown>
+            </div>
+            <div class="form-vertical-group">
+              <label class="control-label">Alert Tone</label>
+              <app-custom-dropdown
+                [options]="notifyToneOptions"
+                [(ngModel)]="settingsMap['NOTIFY_SOUND_TONE']"
+                placeholder="Select tone"
+                minWidth="100%"
+              ></app-custom-dropdown>
+            </div>
+          </div>
+
+          <div class="sub-section-divider">
+            <div class="sub-section-title">Quiet Hours</div>
+            <p class="control-hint">
+              Alerts still appear on screen inside this window, but stay silent. Leave both
+              times empty to never mute.
+            </p>
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Silence From</label>
+                <input title="Quiet hours start" type="time" [(ngModel)]="settingsMap['NOTIFY_QUIET_START']" class="control-input font-mono" />
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Silence Until</label>
+                <input title="Quiet hours end" type="time" [(ngModel)]="settingsMap['NOTIFY_QUIET_END']" class="control-input font-mono" />
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-section-divider">
+            <div class="sub-section-title">Daily Sales Digest</div>
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Send A Daily Summary</label>
+                <app-custom-dropdown
+                  [options]="enabledDisabledOptions"
+                  [(ngModel)]="settingsMap['NOTIFY_DAILY_SUMMARY']"
+                  placeholder="Select"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-vertical-group" *ngIf="settingsMap['NOTIFY_DAILY_SUMMARY'] === 'true'">
+                <label class="control-label">Digest Time</label>
+                <input title="Daily digest time" type="time" [(ngModel)]="settingsMap['NOTIFY_DAILY_SUMMARY_TIME']" class="control-input font-mono" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- TAB 7: INVOICE SETTINGS — numbering, format and printed blocks  -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'invoice'" class="tab-content-pane">
+        <div class="preview-strip">
+          <div>
+            <div class="preview-strip-label">Next Invoice Number</div>
+            <div class="preview-strip-value">{{ invoiceNumberPreview }}</div>
+          </div>
+          <div>
+            <div class="preview-strip-label">Series Resets</div>
+            <div class="preview-strip-value">{{ invoiceResetLabel }}</div>
+          </div>
+        </div>
+
+        <div class="two-col-grid">
+          <!-- 1. How every invoice reference is composed -->
+          <div class="setting-card">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">tag</span>
+                <div>
+                  <h3 class="card-title-sm">Invoice Numbering Series</h3>
+                  <p class="card-subtitle">How every invoice reference is composed</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Prefix</label>
+                <input title="Invoice prefix" type="text" [(ngModel)]="settingsMap['INVOICE_PREFIX']" placeholder="INV-" class="control-input font-mono font-bold" />
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Next Number</label>
+                <input title="Next invoice number" type="number" min="1" [(ngModel)]="settingsMap['INVOICE_NEXT_NUMBER']" class="control-input font-mono font-bold text-purple" />
+              </div>
+            </div>
+
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Number Padding</label>
+                <app-custom-dropdown
+                  [options]="invoicePadOptions"
+                  [(ngModel)]="settingsMap['INVOICE_PAD_LENGTH']"
+                  placeholder="Select padding"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Reset Cycle</label>
+                <app-custom-dropdown
+                  [options]="invoiceResetOptions"
+                  [(ngModel)]="settingsMap['INVOICE_RESET_CYCLE']"
+                  placeholder="Select cycle"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <p class="control-hint">
+              Moving the next number forward never renumbers invoices already issued — the
+              series simply continues from the value set here.
+            </p>
+          </div>
+
+          <!-- 2. Paper, dates and how money is written -->
+          <div class="setting-card">
+            <div class="card-header-bar pb-3">
+              <div class="flex-align-center gap-2">
+                <span class="material-symbols-outlined icon-purple">description</span>
+                <div>
+                  <h3 class="card-title-sm">Document Format</h3>
+                  <p class="card-subtitle">Paper, dates and how money is written</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-vertical-group">
+              <label class="control-label">Document Title</label>
+              <input title="Invoice document title" type="text" [(ngModel)]="settingsMap['INVOICE_TITLE']" placeholder="TAX INVOICE" class="control-input font-bold" />
+            </div>
+
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Paper Size</label>
+                <app-custom-dropdown
+                  [options]="invoicePaperOptions"
+                  [(ngModel)]="settingsMap['INVOICE_PAPER_SIZE']"
+                  placeholder="Select size"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Date Format</label>
+                <app-custom-dropdown
+                  [options]="invoiceDateFormatOptions"
+                  [(ngModel)]="settingsMap['INVOICE_DATE_FORMAT']"
+                  placeholder="Select format"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="two-input-row">
+              <div class="form-vertical-group">
+                <label class="control-label">Decimal Places</label>
+                <app-custom-dropdown
+                  [options]="invoiceDecimalOptions"
+                  [(ngModel)]="settingsMap['INVOICE_DECIMALS']"
+                  placeholder="Select precision"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-vertical-group">
+                <label class="control-label">Currency Position</label>
+                <app-custom-dropdown
+                  [options]="invoiceCurrencyPositionOptions"
+                  [(ngModel)]="settingsMap['INVOICE_CURRENCY_POSITION']"
+                  placeholder="Select position"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
+            </div>
+
+            <div class="form-vertical-group">
+              <label class="control-label">Payment Due (days)</label>
+              <input title="Payment due days" type="number" min="0" [(ngModel)]="settingsMap['INVOICE_DUE_DAYS']" class="control-input font-mono font-bold text-purple" />
+              <p class="control-hint">Zero prints the invoice as payable immediately.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. What appears besides the line items -->
+        <div class="setting-card">
+          <div class="card-header-bar pb-3">
+            <div class="flex-align-center gap-2">
+              <span class="material-symbols-outlined icon-purple">checklist</span>
+              <div>
+                <h3 class="card-title-sm">Printed Blocks &amp; Legal Text</h3>
+                <p class="card-subtitle">What appears on the invoice besides the line items</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="switch-stack">
+            <div class="switch-row" *ngFor="let block of invoiceBlocks">
+              <div>
+                <div class="switch-row-title">{{ block.title }}</div>
+                <div class="switch-row-sub">{{ block.subtitle }}</div>
+              </div>
+              <app-custom-dropdown
+                [options]="shownHiddenOptions"
+                [(ngModel)]="settingsMap[block.key]"
+                placeholder="Select"
+                minWidth="150px"
+              ></app-custom-dropdown>
+            </div>
+          </div>
+
+          <div class="two-input-row">
+            <div class="form-vertical-group" *ngIf="settingsMap['INVOICE_SHOW_QR'] === 'true'">
+              <label class="control-label">UPI / Payment ID For The QR</label>
+              <input title="UPI payment id" type="text" [(ngModel)]="settingsMap['INVOICE_UPI_ID']" placeholder="restaurant@upi" class="control-input font-mono" />
+            </div>
+            <div class="form-vertical-group" *ngIf="settingsMap['INVOICE_SHOW_SIGNATURE'] === 'true'">
+              <label class="control-label">Signatory Line</label>
+              <input title="Signatory line" type="text" [(ngModel)]="settingsMap['INVOICE_SIGNATORY']" placeholder="Authorised Signatory" class="control-input" />
+            </div>
+          </div>
+
+          <div class="form-vertical-group">
+            <label class="control-label">Terms &amp; Conditions</label>
+            <textarea [(ngModel)]="settingsMap['INVOICE_TERMS']" rows="3" class="control-textarea"></textarea>
+          </div>
+
+          <div class="form-vertical-group">
+            <label class="control-label">Invoice Footer Note</label>
+            <textarea [(ngModel)]="settingsMap['INVOICE_FOOTER_NOTE']" rows="2" class="control-textarea"></textarea>
           </div>
         </div>
       </div>
@@ -6347,6 +7026,99 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         margin-top: 0.15rem;
       }
 
+      /* Printer / Notification / Invoice modules */
+      .module-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.625rem;
+        padding: 0.875rem 1.125rem;
+        border-radius: 14px;
+        background: rgba(126, 34, 206, 0.06);
+        border: 1.5px dashed var(--card-border, #E9D5FF);
+      }
+
+      .module-note p {
+        margin: 0;
+        font-size: 0.72rem;
+        line-height: 1.55;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .module-note strong {
+        color: var(--text-main, #2E1065);
+        font-weight: 800;
+      }
+
+      .module-note .material-symbols-outlined {
+        font-size: 19px;
+        color: var(--primary, #7E22CE);
+        flex-shrink: 0;
+      }
+
+      .switch-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
+      }
+
+      .switch-row {
+        padding: 0.875rem 1rem;
+        border-radius: 12px;
+        background: var(--bg-app, #FAF5FF);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .switch-row-title {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--text-main, #2E1065);
+      }
+
+      .switch-row-sub {
+        font-size: 0.7rem;
+        color: var(--text-muted, #6B7280);
+        margin-top: 0.15rem;
+      }
+
+      .preview-strip {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        padding: 1.125rem 1.375rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(126, 34, 206, 0.1), rgba(147, 51, 234, 0.03));
+        border: 1.5px solid var(--card-border, #E9D5FF);
+      }
+
+      .preview-strip-label {
+        font-size: 0.62rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .preview-strip-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+        margin-top: 0.2rem;
+        word-break: break-all;
+      }
+
+      .printer-test-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+      }
+
       /* Helpers */
       .flex-align-center {
         display: flex;
@@ -6375,6 +7147,7 @@ export class SettingsComponent implements OnInit {
   public settingsService = inject(SettingsService);
   public themeService = inject(ThemeService);
   public notify = inject(NotificationService);
+  public printer = inject(PrinterService);
 
   public activeTab: SettingsTab = 'customization';
 
@@ -6982,6 +7755,462 @@ export class SettingsComponent implements OnInit {
     { value: 'false', label: 'Muted / Silent', icon: 'volume_off', description: 'Completely silent operations' },
   ];
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // PRINTER / NOTIFICATION / INVOICE MODULES
+  //
+  // Each one is a single JSON settings row (`system_printer`, and so on) that
+  // is unpacked into flat `PRINTER_*` / `NOTIFY_*` / `INVOICE_*` keys for the
+  // template to bind against. The field maps below are the only place the two
+  // spellings meet, so packing and unpacking cannot drift apart.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /** Printer stations, connection and paper behaviour — stored as `system_printer`. */
+  public readonly printerFieldMap: Record<string, string> = {
+    receiptEnabled: 'PRINTER_RECEIPT_ENABLED',
+    receiptName: 'PRINTER_RECEIPT_NAME',
+    receiptPaperWidth: 'PRINTER_RECEIPT_WIDTH',
+    receiptAutoPrint: 'PRINTER_RECEIPT_AUTO',
+    receiptCopies: 'PRINTER_RECEIPT_COPIES',
+    kitchenEnabled: 'PRINTER_KITCHEN_ENABLED',
+    kitchenName: 'PRINTER_KITCHEN_NAME',
+    kitchenPaperWidth: 'PRINTER_KITCHEN_WIDTH',
+    kitchenAutoPrint: 'PRINTER_KITCHEN_AUTO',
+    kitchenCopies: 'PRINTER_KITCHEN_COPIES',
+    barEnabled: 'PRINTER_BAR_ENABLED',
+    barName: 'PRINTER_BAR_NAME',
+    barPaperWidth: 'PRINTER_BAR_WIDTH',
+    barAutoPrint: 'PRINTER_BAR_AUTO',
+    barCopies: 'PRINTER_BAR_COPIES',
+    connection: 'PRINTER_CONNECTION',
+    deviceIp: 'PRINTER_DEVICE_IP',
+    devicePort: 'PRINTER_DEVICE_PORT',
+    charset: 'PRINTER_CHARSET',
+    density: 'PRINTER_DENSITY',
+    autoCut: 'PRINTER_AUTO_CUT',
+    cashDrawer: 'PRINTER_CASH_DRAWER',
+    buzzer: 'PRINTER_BUZZER',
+    feedLines: 'PRINTER_FEED_LINES',
+  };
+
+  /** Which events alert, through which channel — stored as `system_notification`. */
+  public readonly notificationFieldMap: Record<string, string> = {
+    newOrder: 'NOTIFY_NEW_ORDER',
+    orderReady: 'NOTIFY_ORDER_READY',
+    billVoided: 'NOTIFY_BILL_VOID',
+    lowStock: 'NOTIFY_LOW_STOCK',
+    lowStockThreshold: 'NOTIFY_LOW_STOCK_THRESHOLD',
+    dayClose: 'NOTIFY_DAY_CLOSE',
+    channelInApp: 'NOTIFY_CHANNEL_INAPP',
+    channelDesktop: 'NOTIFY_CHANNEL_DESKTOP',
+    channelEmail: 'NOTIFY_CHANNEL_EMAIL',
+    emailRecipients: 'NOTIFY_EMAIL_RECIPIENTS',
+    channelSms: 'NOTIFY_CHANNEL_SMS',
+    smsRecipients: 'NOTIFY_SMS_RECIPIENTS',
+    sound: 'NOTIFY_SOUND',
+    soundTone: 'NOTIFY_SOUND_TONE',
+    quietStart: 'NOTIFY_QUIET_START',
+    quietEnd: 'NOTIFY_QUIET_END',
+    dailySummary: 'NOTIFY_DAILY_SUMMARY',
+    dailySummaryTime: 'NOTIFY_DAILY_SUMMARY_TIME',
+  };
+
+  /** Invoice numbering, format and printed blocks — stored as `system_invoice`. */
+  public readonly invoiceFieldMap: Record<string, string> = {
+    prefix: 'INVOICE_PREFIX',
+    nextNumber: 'INVOICE_NEXT_NUMBER',
+    padLength: 'INVOICE_PAD_LENGTH',
+    resetCycle: 'INVOICE_RESET_CYCLE',
+    title: 'INVOICE_TITLE',
+    paperSize: 'INVOICE_PAPER_SIZE',
+    dateFormat: 'INVOICE_DATE_FORMAT',
+    decimals: 'INVOICE_DECIMALS',
+    currencyPosition: 'INVOICE_CURRENCY_POSITION',
+    showLogo: 'INVOICE_SHOW_LOGO',
+    showTaxBreakdown: 'INVOICE_SHOW_TAX_BREAKDOWN',
+    showQr: 'INVOICE_SHOW_QR',
+    upiId: 'INVOICE_UPI_ID',
+    showSignature: 'INVOICE_SHOW_SIGNATURE',
+    signatory: 'INVOICE_SIGNATORY',
+    dueDays: 'INVOICE_DUE_DAYS',
+    terms: 'INVOICE_TERMS',
+    footerNote: 'INVOICE_FOOTER_NOTE',
+  };
+
+  /**
+   * What a terminal shows before any of these three tabs has ever been saved.
+   * Only keys the settings map is missing entirely are filled in, so a value
+   * deliberately cleared to an empty string is never resurrected.
+   */
+  public readonly extendedModuleDefaults: Record<string, string> = {
+    PRINTER_RECEIPT_ENABLED: 'true',
+    PRINTER_RECEIPT_NAME: 'Cashier Thermal Receipt Printer',
+    PRINTER_RECEIPT_WIDTH: '80mm',
+    PRINTER_RECEIPT_AUTO: 'true',
+    PRINTER_RECEIPT_COPIES: '1',
+    PRINTER_KITCHEN_ENABLED: 'true',
+    PRINTER_KITCHEN_NAME: 'Kitchen Order Ticket (KOT) Printer',
+    PRINTER_KITCHEN_WIDTH: '80mm',
+    PRINTER_KITCHEN_AUTO: 'true',
+    PRINTER_KITCHEN_COPIES: '1',
+    PRINTER_BAR_ENABLED: 'false',
+    PRINTER_BAR_NAME: 'Bar Beverage Printer',
+    PRINTER_BAR_WIDTH: '80mm',
+    PRINTER_BAR_AUTO: 'false',
+    PRINTER_BAR_COPIES: '1',
+    PRINTER_CONNECTION: 'usb',
+    PRINTER_DEVICE_IP: '',
+    PRINTER_DEVICE_PORT: '9100',
+    PRINTER_CHARSET: 'CP437',
+    PRINTER_DENSITY: 'normal',
+    PRINTER_AUTO_CUT: 'true',
+    PRINTER_CASH_DRAWER: 'true',
+    PRINTER_BUZZER: 'false',
+    PRINTER_FEED_LINES: '3',
+
+    NOTIFY_NEW_ORDER: 'true',
+    NOTIFY_ORDER_READY: 'true',
+    NOTIFY_BILL_VOID: 'true',
+    NOTIFY_LOW_STOCK: 'true',
+    NOTIFY_LOW_STOCK_THRESHOLD: '5',
+    NOTIFY_DAY_CLOSE: 'true',
+    NOTIFY_CHANNEL_INAPP: 'true',
+    NOTIFY_CHANNEL_DESKTOP: 'false',
+    NOTIFY_CHANNEL_EMAIL: 'false',
+    NOTIFY_EMAIL_RECIPIENTS: '',
+    NOTIFY_CHANNEL_SMS: 'false',
+    NOTIFY_SMS_RECIPIENTS: '',
+    NOTIFY_SOUND: 'true',
+    NOTIFY_SOUND_TONE: 'chime',
+    NOTIFY_QUIET_START: '',
+    NOTIFY_QUIET_END: '',
+    NOTIFY_DAILY_SUMMARY: 'false',
+    NOTIFY_DAILY_SUMMARY_TIME: '23:30',
+
+    INVOICE_PREFIX: 'INV-',
+    INVOICE_NEXT_NUMBER: '1',
+    INVOICE_PAD_LENGTH: '4',
+    INVOICE_RESET_CYCLE: 'yearly',
+    INVOICE_TITLE: 'TAX INVOICE',
+    INVOICE_PAPER_SIZE: 'A4',
+    INVOICE_DATE_FORMAT: 'dd/MM/yyyy',
+    INVOICE_DECIMALS: '2',
+    INVOICE_CURRENCY_POSITION: 'prefix',
+    INVOICE_SHOW_LOGO: 'true',
+    INVOICE_SHOW_TAX_BREAKDOWN: 'true',
+    INVOICE_SHOW_QR: 'false',
+    INVOICE_UPI_ID: '',
+    INVOICE_SHOW_SIGNATURE: 'true',
+    INVOICE_SIGNATORY: 'Authorised Signatory',
+    INVOICE_DUE_DAYS: '0',
+    INVOICE_TERMS: 'Goods once sold will not be taken back or exchanged.',
+    INVOICE_FOOTER_NOTE: 'Thank you for your business.',
+  };
+
+  /** The three print stations, each a row in the Printer Settings grid. */
+  public readonly printerStations: {
+    title: string;
+    subtitle: string;
+    icon: string;
+    enabledKey: string;
+    nameKey: string;
+    widthKey: string;
+    autoKey: string;
+    autoLabel: string;
+    copiesKey: string;
+  }[] = [
+    {
+      title: 'Cashier Receipt Station',
+      subtitle: 'The customer bill printed at the till',
+      icon: 'receipt_long',
+      enabledKey: 'PRINTER_RECEIPT_ENABLED',
+      nameKey: 'PRINTER_RECEIPT_NAME',
+      widthKey: 'PRINTER_RECEIPT_WIDTH',
+      autoKey: 'PRINTER_RECEIPT_AUTO',
+      autoLabel: 'Print On Checkout',
+      copiesKey: 'PRINTER_RECEIPT_COPIES',
+    },
+    {
+      title: 'Kitchen (KOT) Station',
+      subtitle: 'The order ticket the chef line works from',
+      icon: 'soup_kitchen',
+      enabledKey: 'PRINTER_KITCHEN_ENABLED',
+      nameKey: 'PRINTER_KITCHEN_NAME',
+      widthKey: 'PRINTER_KITCHEN_WIDTH',
+      autoKey: 'PRINTER_KITCHEN_AUTO',
+      autoLabel: 'Print On Order Placed',
+      copiesKey: 'PRINTER_KITCHEN_COPIES',
+    },
+    {
+      title: 'Bar / Beverage Station',
+      subtitle: 'Drinks split onto their own ticket',
+      icon: 'local_bar',
+      enabledKey: 'PRINTER_BAR_ENABLED',
+      nameKey: 'PRINTER_BAR_NAME',
+      widthKey: 'PRINTER_BAR_WIDTH',
+      autoKey: 'PRINTER_BAR_AUTO',
+      autoLabel: 'Print On Order Placed',
+      copiesKey: 'PRINTER_BAR_COPIES',
+    },
+  ];
+
+  /** The floor events the Notification Settings tab can switch on and off. */
+  public readonly notificationTriggers: { key: string; title: string; subtitle: string }[] = [
+    { key: 'NOTIFY_NEW_ORDER', title: 'New Order Placed', subtitle: 'Announces every order the moment it is sent to the kitchen' },
+    { key: 'NOTIFY_ORDER_READY', title: 'Order Ready To Serve', subtitle: 'Tells the floor when the kitchen marks a ticket done' },
+    { key: 'NOTIFY_BILL_VOID', title: 'Bill Voided Or Refunded', subtitle: 'Flags reversals so they are never silent' },
+    { key: 'NOTIFY_LOW_STOCK', title: 'Stock Running Low', subtitle: 'Warns before an item runs out mid-service' },
+    { key: 'NOTIFY_DAY_CLOSE', title: 'Day Close Reminder', subtitle: 'Prompts the cashier to settle the till at shift end' },
+  ];
+
+  /** The optional blocks an invoice can carry besides its line items. */
+  public readonly invoiceBlocks: { key: string; title: string; subtitle: string }[] = [
+    { key: 'INVOICE_SHOW_LOGO', title: 'Business Logo', subtitle: 'Prints the brand crest in the invoice header' },
+    { key: 'INVOICE_SHOW_TAX_BREAKDOWN', title: 'Tax Breakdown Table', subtitle: 'Itemises each tax slab instead of one total' },
+    { key: 'INVOICE_SHOW_QR', title: 'Payment QR Code', subtitle: 'Lets the guest settle by scanning the invoice' },
+    { key: 'INVOICE_SHOW_SIGNATURE', title: 'Signature Line', subtitle: 'Leaves room for an authorised signature' },
+  ];
+
+  public readonly enabledDisabledOptions: DropdownOption[] = [
+    { value: 'true', label: 'Enabled', icon: 'check_circle', description: 'Active on every terminal' },
+    { value: 'false', label: 'Disabled', icon: 'block', description: 'Switched off entirely' },
+  ];
+
+  public readonly shownHiddenOptions: DropdownOption[] = [
+    { value: 'true', label: 'Printed', icon: 'visibility', description: 'Included on the invoice' },
+    { value: 'false', label: 'Omitted', icon: 'visibility_off', description: 'Left off the invoice' },
+  ];
+
+  public readonly stationStatusOptions: DropdownOption[] = [
+    { value: 'true', label: 'Station Online', icon: 'print', description: 'Jobs are routed to this printer' },
+    { value: 'false', label: 'Station Offline', icon: 'print_disabled', description: 'Skipped by the print queue' },
+  ];
+
+  public readonly autoPrintOptions: DropdownOption[] = [
+    { value: 'true', label: 'Print Automatically', icon: 'bolt', description: 'No dialog — the job goes straight to paper' },
+    { value: 'false', label: 'Ask First', icon: 'touch_app', description: 'Staff confirm before anything prints' },
+  ];
+
+  public readonly printerConnectionOptions: DropdownOption[] = [
+    { value: 'usb', label: 'USB / Local Cable', icon: 'usb', description: 'Printer wired directly into this terminal' },
+    { value: 'network', label: 'Network (LAN / Wi-Fi)', icon: 'lan', description: 'Reached over IP, shared by every till' },
+    { value: 'bluetooth', label: 'Bluetooth', icon: 'bluetooth', description: 'Paired wireless mobile printer' },
+    { value: 'serial', label: 'Serial / COM Port', icon: 'settings_input_component', description: 'Legacy RS-232 thermal unit' },
+    { value: 'browser', label: 'System Print Dialog', icon: 'open_in_browser', description: 'Falls back to the operating system dialog' },
+  ];
+
+  public readonly printerCharsetOptions: DropdownOption[] = [
+    { value: 'CP437', label: 'CP437 (US / Default)', icon: 'abc', description: 'Standard ESC/POS code page' },
+    { value: 'CP850', label: 'CP850 (Western Europe)', icon: 'abc', description: 'Accented Latin characters' },
+    { value: 'CP858', label: 'CP858 (Euro Symbol)', icon: 'euro', description: 'CP850 with the euro glyph' },
+    { value: 'CP720', label: 'CP720 (Arabic)', icon: 'translate', description: 'Arabic script receipts' },
+    { value: 'UTF-8', label: 'UTF-8 (Unicode)', icon: 'language', description: 'Only for printers that declare Unicode support' },
+  ];
+
+  public readonly printerDensityOptions: DropdownOption[] = [
+    { value: 'light', label: 'Light', icon: 'exposure_neg_1', description: 'Saves the print head, fainter text' },
+    { value: 'normal', label: 'Normal', icon: 'exposure_zero', description: 'Balanced contrast on standard rolls' },
+    { value: 'dark', label: 'Dark', icon: 'exposure_plus_1', description: 'Heavier burn for older thermal paper' },
+  ];
+
+  public readonly notifyToneOptions: DropdownOption[] = [
+    { value: 'chime', label: 'Soft Chime', icon: 'notifications', description: 'Gentle two-note confirmation' },
+    { value: 'bell', label: 'Counter Bell', icon: 'doorbell', description: 'Sharp single ring, carries across a room' },
+    { value: 'ping', label: 'Short Ping', icon: 'graphic_eq', description: 'Minimal blip for busy terminals' },
+    { value: 'alert', label: 'Urgent Alert', icon: 'e911_emergency', description: 'Reserved for reversals and failures' },
+  ];
+
+  public readonly invoicePadOptions: DropdownOption[] = [
+    { value: '3', label: '3 Digits (001)', icon: 'pin', description: 'Up to 999 invoices per cycle' },
+    { value: '4', label: '4 Digits (0001)', icon: 'pin', description: 'Up to 9,999 invoices per cycle' },
+    { value: '5', label: '5 Digits (00001)', icon: 'pin', description: 'Up to 99,999 invoices per cycle' },
+    { value: '6', label: '6 Digits (000001)', icon: 'pin', description: 'High-volume multi-outlet numbering' },
+  ];
+
+  public readonly invoiceResetOptions: DropdownOption[] = [
+    { value: 'never', label: 'Never Reset', icon: 'all_inclusive', description: 'One continuous series forever' },
+    { value: 'daily', label: 'Reset Daily', icon: 'today', description: 'Numbering restarts each trading day' },
+    { value: 'monthly', label: 'Reset Monthly', icon: 'calendar_month', description: 'Numbering restarts on the 1st' },
+    { value: 'yearly', label: 'Reset Yearly', icon: 'event_repeat', description: 'Numbering restarts each financial year' },
+  ];
+
+  public readonly invoicePaperOptions: DropdownOption[] = [
+    { value: 'A4', label: 'A4 (210 x 297mm)', icon: 'description', description: 'Standard office invoice sheet' },
+    { value: 'A5', label: 'A5 (148 x 210mm)', icon: 'article', description: 'Half sheet, saves paper' },
+    { value: '80mm', label: '80mm Thermal Roll', icon: 'receipt_long', description: 'Invoice printed on the till roll' },
+  ];
+
+  public readonly invoiceDateFormatOptions: DropdownOption[] = [
+    { value: 'dd/MM/yyyy', label: 'dd/MM/yyyy', icon: 'calendar_today', description: '19/09/2026' },
+    { value: 'MM/dd/yyyy', label: 'MM/dd/yyyy', icon: 'calendar_today', description: '09/19/2026' },
+    { value: 'yyyy-MM-dd', label: 'yyyy-MM-dd', icon: 'calendar_today', description: '2026-09-19 (ISO)' },
+    { value: 'dd MMM yyyy', label: 'dd MMM yyyy', icon: 'calendar_today', description: '19 Sep 2026' },
+  ];
+
+  public readonly invoiceDecimalOptions: DropdownOption[] = [
+    { value: '0', label: 'Whole Numbers', icon: 'looks_one', description: 'Rounded amounts, no paise' },
+    { value: '2', label: 'Two Decimals', icon: 'looks_two', description: 'Standard money precision' },
+    { value: '3', label: 'Three Decimals', icon: 'looks_3', description: 'For currencies with a 1000 sub-unit' },
+  ];
+
+  public readonly invoiceCurrencyPositionOptions: DropdownOption[] = [
+    { value: 'prefix', label: 'Before The Amount', icon: 'format_align_left', description: 'Rendered as the symbol, then the figure' },
+    { value: 'suffix', label: 'After The Amount', icon: 'format_align_right', description: 'Rendered as the figure, then the symbol' },
+  ];
+
+  /** The reference the next invoice will carry, rebuilt as the fields are edited. */
+  get invoiceNumberPreview(): string {
+    const prefix = this.settingsMap['INVOICE_PREFIX'] ?? this.extendedModuleDefaults['INVOICE_PREFIX'];
+    const pad = Math.min(Math.max(Number(this.settingsMap['INVOICE_PAD_LENGTH']) || 4, 1), 10);
+    const next = Math.max(Number(this.settingsMap['INVOICE_NEXT_NUMBER']) || 1, 0);
+    const cycle = this.settingsMap['INVOICE_RESET_CYCLE'] || 'yearly';
+
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+
+    let cycleToken = '';
+    if (cycle === 'yearly') cycleToken = yyyy + '-';
+    else if (cycle === 'monthly') cycleToken = yyyy + mm + '-';
+    else if (cycle === 'daily') cycleToken = yyyy + mm + dd + '-';
+
+    return prefix + cycleToken + String(next).padStart(pad, '0');
+  }
+
+  /** Plain-language echo of the reset cycle, shown beside the number preview. */
+  get invoiceResetLabel(): string {
+    const cycle = this.settingsMap['INVOICE_RESET_CYCLE'] || 'yearly';
+    const match = this.invoiceResetOptions.find((o) => o.value === cycle);
+    return match ? match.label : 'Never Reset';
+  }
+
+  /**
+   * Fills in the Printer / Notification / Invoice defaults and hands the print
+   * stations to PrinterService, which is what the receipt and KOT print paths
+   * actually read. Runs on every refresh of the settings map.
+   */
+  private hydrateExtendedModules(flat: Record<string, string>): Record<string, string> {
+    for (const [key, value] of Object.entries(this.extendedModuleDefaults)) {
+      const current = flat[key];
+      if (current === undefined || current === 'undefined' || current === 'null') {
+        flat[key] = value;
+      }
+    }
+    this.applyPrinterStations(flat);
+    return flat;
+  }
+
+  /** Copies the three stations out of the settings map into PrinterService. */
+  private applyPrinterStations(map: Record<string, string>): void {
+    const width = (value: string): '80mm' | '58mm' => (value === '58mm' ? '58mm' : '80mm');
+    try {
+      this.printer.saveConfig({
+        receiptPrinter: {
+          enabled: map['PRINTER_RECEIPT_ENABLED'] === 'true',
+          name: map['PRINTER_RECEIPT_NAME'] || this.extendedModuleDefaults['PRINTER_RECEIPT_NAME'],
+          paperWidth: width(map['PRINTER_RECEIPT_WIDTH']),
+          autoPrintOnCheckout: map['PRINTER_RECEIPT_AUTO'] === 'true',
+        },
+        kitchenPrinter: {
+          enabled: map['PRINTER_KITCHEN_ENABLED'] === 'true',
+          name: map['PRINTER_KITCHEN_NAME'] || this.extendedModuleDefaults['PRINTER_KITCHEN_NAME'],
+          paperWidth: width(map['PRINTER_KITCHEN_WIDTH']),
+          autoPrintKot: map['PRINTER_KITCHEN_AUTO'] === 'true',
+        },
+        barPrinter: {
+          enabled: map['PRINTER_BAR_ENABLED'] === 'true',
+          name: map['PRINTER_BAR_NAME'] || this.extendedModuleDefaults['PRINTER_BAR_NAME'],
+          paperWidth: width(map['PRINTER_BAR_WIDTH']),
+          autoPrintKot: map['PRINTER_BAR_AUTO'] === 'true',
+        },
+      });
+    } catch (_) {}
+  }
+
+  /** Edits on the Printer tab reach the print paths without waiting for a save. */
+  public onPrinterConfigChanged(): void {
+    this.applyPrinterStations(this.settingsMap);
+  }
+
+  /** Reads one module's flat keys back into the JSON shape that is stored. */
+  private packExtendedModule(fields: Record<string, string>): Record<string, string> {
+    const packed: Record<string, string> = {};
+    for (const [jsonKey, flatKey] of Object.entries(fields)) {
+      const value = this.settingsMap[flatKey];
+      packed[jsonKey] =
+        value === undefined || value === null
+          ? this.extendedModuleDefaults[flatKey] ?? ''
+          : String(value);
+    }
+    return packed;
+  }
+
+  /** Spreads one stored JSON row back out over its flat keys. */
+  private unpackExtendedModule(
+    flat: Record<string, string>,
+    raw: string | undefined,
+    fields: Record<string, string>,
+  ): void {
+    if (!raw) return;
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (!parsed || typeof parsed !== 'object') return;
+      for (const [jsonKey, flatKey] of Object.entries(fields)) {
+        if (parsed[jsonKey] !== undefined && parsed[jsonKey] !== null) {
+          flat[flatKey] = String(parsed[jsonKey]);
+        }
+      }
+    } catch (_) {}
+  }
+
+  /**
+   * Pushes a sample page through the configured stations so the wiring can be
+   * checked without ringing up a real order.
+   */
+  public sendTestPrint(kind: 'receipt' | 'kot'): void {
+    this.applyPrinterStations(this.settingsMap);
+    try {
+      if (kind === 'receipt') {
+        this.printer.printThermalReceipt(
+          {
+            bill_number: 'TEST-0001',
+            order_type: 'WALK_IN',
+            created_at: new Date().toISOString(),
+            cashier_name: 'Test Print',
+            items: [
+              { product_name: 'Chicken Mandi', quantity: 1, unit_price: 320, subtotal: 320 },
+              { product_name: 'Mint Lemonade', quantity: 2, unit_price: 60, subtotal: 120 },
+            ],
+            subtotal: 440,
+            tax_amount: 22,
+            total_amount: 462,
+            payment_method: 'CASH',
+          },
+          {
+            businessName: this.settingsMap['BUSINESS_NAME'] || 'Test Print',
+            address: this.settingsMap['BUSINESS_ADDRESS'] || '',
+            phone: this.settingsMap['BUSINESS_PHONE'] || '',
+            gstin: this.settingsMap['BUSINESS_GSTIN'] || '',
+            footer: 'This is a test page — no sale was recorded.',
+          },
+        );
+      } else {
+        this.printer.printKot({
+          kotNumber: 'KOT-TEST',
+          orderType: 'DINE_IN',
+          tableNumber: 'T-01',
+          orderTime: new Date().toISOString(),
+          cashierName: 'Test Print',
+          notes: 'Test ticket — no kitchen action needed',
+          items: [{ productName: 'Chicken Mandi', quantity: 1 }],
+        });
+      }
+      this.notify.info('Test page sent to the print dialog.');
+    } catch (_) {
+      this.notify.error('Could not open the print dialog. Check the browser popup blocker.');
+    }
+  }
+
   /**
    * The two uploadable branding images. `settingKey` is where the stored URL
    * lands in `settingsMap`, and the limits mirror what the API accepts so a
@@ -7132,6 +8361,9 @@ export class SettingsComponent implements OnInit {
       'customerdesign',
       'staffdesign',
       'sidebardesign',
+      'printer',
+      'notification',
+      'invoice',
     ].includes(tab);
   }
 
@@ -7257,7 +8489,12 @@ export class SettingsComponent implements OnInit {
       } catch (_) {}
     }
 
-    return flat;
+    // Unpack the Printer / Notification / Invoice JSON rows
+    this.unpackExtendedModule(flat, flat['system_printer'] || flat['SYSTEM_PRINTER'], this.printerFieldMap);
+    this.unpackExtendedModule(flat, flat['system_notification'] || flat['SYSTEM_NOTIFICATION'], this.notificationFieldMap);
+    this.unpackExtendedModule(flat, flat['system_invoice'] || flat['SYSTEM_INVOICE'], this.invoiceFieldMap);
+
+    return this.hydrateExtendedModules(flat);
   }
 
   loadSettings(): void {
@@ -7371,6 +8608,9 @@ export class SettingsComponent implements OnInit {
       case 'customerdesign': return 'Customer Customize';
       case 'staffdesign': return 'Staff & Roles Customize';
       case 'sidebardesign': return 'Sidebar Template';
+      case 'printer': return 'Printer Settings';
+      case 'notification': return 'Notification Settings';
+      case 'invoice': return 'Invoice Settings';
       default: return 'Settings';
     }
   }
@@ -7486,6 +8726,12 @@ export class SettingsComponent implements OnInit {
         posSoundEffects: this.settingsMap['POS_SOUND_EFFECTS'] === 'false' ? 'false' : 'true',
       };
       payload['system_hardware'] = JSON.stringify(hardwarePayload);
+    } else if (tab === 'printer') {
+      payload['system_printer'] = JSON.stringify(this.packExtendedModule(this.printerFieldMap));
+    } else if (tab === 'notification') {
+      payload['system_notification'] = JSON.stringify(this.packExtendedModule(this.notificationFieldMap));
+    } else if (tab === 'invoice') {
+      payload['system_invoice'] = JSON.stringify(this.packExtendedModule(this.invoiceFieldMap));
     }
 
     return payload;

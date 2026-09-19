@@ -40,4 +40,20 @@ export class BillService {
   public getPrintData(id: number): Observable<ApiResponse<any>> {
     return this.http.get<ApiResponse<any>>(`${this.API_URL}/${id}/print`);
   }
+
+  public getKotPrintData(id: number): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.API_URL}/${id}/kot`);
+  }
+
+  public voidBill(id: number, reason: string): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/${id}/void`, { reason });
+  }
+
+  public reopenBill(id: number): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/${id}/reopen`, {});
+  }
+
+  public getDuplicate(id: number): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.API_URL}/${id}/duplicate`);
+  }
 }

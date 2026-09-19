@@ -51,4 +51,65 @@ export class ProductService {
   public deleteProduct(id: number): Observable<ApiResponse<any>> {
     return this.http.delete<ApiResponse<any>>(`${this.API_URL}/${id}`);
   }
+
+  // -------------------------------------------------------------
+  // Add-ons
+  // -------------------------------------------------------------
+  public getAddons(): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/addons`);
+  }
+
+  public createAddon(data: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/addons`, data);
+  }
+
+  public updateAddon(id: number, data: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.API_URL}/addons/${id}`, data);
+  }
+
+  public deleteAddon(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/addons/${id}`);
+  }
+
+  public linkProductAddons(productId: number, addonIds: number[]): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/${productId}/addons`, { addonIds });
+  }
+
+  // -------------------------------------------------------------
+  // Combo Meals
+  // -------------------------------------------------------------
+  public getCombos(): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/combos`);
+  }
+
+  public createCombo(data: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/combos`, data);
+  }
+
+  public updateCombo(id: number, data: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.API_URL}/combos/${id}`, data);
+  }
+
+  public deleteCombo(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/combos/${id}`);
+  }
+
+  // -------------------------------------------------------------
+  // Meal Deals
+  // -------------------------------------------------------------
+  public getDeals(): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/deals`);
+  }
+
+  public createDeal(data: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/deals`, data);
+  }
+
+  public updateDeal(id: number, data: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.API_URL}/deals/${id}`, data);
+  }
+
+  public deleteDeal(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/deals/${id}`);
+  }
 }

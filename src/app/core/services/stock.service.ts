@@ -49,6 +49,10 @@ export class StockService {
     stockCode?: string;
     unitType?: string;
     minStockAlert?: number;
+    reorderLevel?: number;
+    reorderQuantity?: number;
+    maxStockThreshold?: number;
+    shelfLifeDays?: number;
     productId?: number | null;
     initialQuantity?: number;
     multiplier?: number;
@@ -67,6 +71,10 @@ export class StockService {
       name?: string;
       unitType?: string;
       minStockAlert?: number;
+      reorderLevel?: number;
+      reorderQuantity?: number;
+      maxStockThreshold?: number;
+      shelfLifeDays?: number;
       status?: 'active' | 'inactive';
     }
   ): Observable<ApiResponse<StockItem>> {
@@ -107,6 +115,8 @@ export class StockService {
     unitPrice?: number;
     supplier?: string;
     invoiceNumber?: string;
+    batchNumber?: string;
+    expiryDate?: string;
     notes?: string;
     entryDate?: string;
   }): Observable<ApiResponse<any>> {
@@ -153,7 +163,16 @@ export class StockService {
   }
 
   /**
-   * 9. Low Stock Alerts
+   * 9. Comprehensive Stock Alerts Suite
+   */
+  public getStockAlerts(type?: string): Observable<ApiResponse<{ alerts: any[]; summary: any }>> {
+    let params = new HttpParams();
+    if (type && type !== 'all') params = params.set('type', type);
+    return this.http.get<ApiResponse<{ alerts: any[]; summary: any }>>(`${this.API_URL}/alerts`, { params });
+  }
+
+  /**
+   * 10. Low Stock Alerts
    */
   public getLowStockAlerts(): Observable<ApiResponse<StockItem[]>> {
     return this.http.get<ApiResponse<StockItem[]>>(`${this.API_URL}/low-stock`);

@@ -368,6 +368,12 @@ export class SidebarComponent {
           permission: 'stock.view',
         },
         {
+          id: 'vendors',
+          label: 'Vendor Management',
+          route: '/vendors',
+          iconName: 'local_shipping',
+        },
+        {
           id: 'customers',
           label: 'Customers',
           route: '/customers',

@@ -707,6 +707,45 @@ export const DINING_LAYOUT_CSS = `
     color: #0F172A;
   }
 
+  /* Status Badges & Extensions */
+  .cardlist-badge.is-reserved, .chk-status-badge.is-reserved, .badge-indigo {
+    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25) !important;
+  }
+  .cardlist-badge.is-cleaning, .chk-status-badge.is-cleaning, .badge-teal {
+    background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%) !important;
+    box-shadow: 0 4px 10px rgba(6, 182, 212, 0.25) !important;
+  }
+  .pill-reserved {
+    background: #EEF2FF;
+    color: #4F46E5;
+  }
+  .pill-cleaning {
+    background: #ECFEFF;
+    color: #0891B2;
+  }
+  .pill-waitlist {
+    background: #FAF5FF;
+    color: #7E22CE;
+    border: 1px solid #E9D5FF;
+  }
+  .timer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 9999px;
+  }
+  .timer-safe { background: #ECFDF5; color: #059669; }
+  .timer-warn { background: #FFFBEB; color: #D97706; }
+  .timer-over { background: #FEF2F2; color: #DC2626; animation: timer-pulse 1.5s infinite; }
+  @keyframes timer-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
   /* Responsive Adjustments */
   @media (max-width: 768px) {
     .chk-table-banquet { width: 100%; max-width: 260px; }
@@ -721,3 +760,4 @@ export const DINING_LAYOUT_CSS = `
     }
   }
 `;
+

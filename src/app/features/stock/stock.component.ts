@@ -151,16 +151,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <span class="tab-count-badge">{{ stockMovements.length }}</span>
         </button>
 
-        <!-- Tab 4: Low Stock Alerts -->
+        <!-- Tab 4: Comprehensive Stock Alerts -->
         <button
           type="button"
-          (click)="activeTab = 'LOW_STOCK'; currentPage = 1; loadLowStockAlerts()"
+          (click)="activeTab = 'LOW_STOCK'; currentPage = 1; loadStockAlerts()"
           class="module-tab-btn"
           [class.is-active]="activeTab === 'LOW_STOCK'"
         >
-          <span class="material-symbols-outlined">warning</span>
-          <span>Low Stock Alerts</span>
-          <span class="tab-count-badge" [class.text-[#DC2626]]="lowStockList.length > 0">{{ lowStockList.length }}</span>
+          <span class="material-symbols-outlined">notifications_active</span>
+          <span>4. Inventory Alerts Center</span>
+          <span class="tab-count-badge" [class.text-[#DC2626]]="alertSummary.totalAlerts > 0">{{ alertSummary.totalAlerts }}</span>
         </button>
       </div>
 
@@ -847,87 +847,227 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
       </div>
 
-      <!-- ── TAB 4: LOW STOCK ALERTS ─────────────────────────────────── -->
+      <!-- ── TAB 4: INVENTORY ALERTS CENTER ──────────────────────────── -->
       <div class="table-container-card" *ngIf="activeTab === 'LOW_STOCK'">
+        <!-- Alert Category Pills Bar -->
+        <div class="flex items-center gap-2 p-3 bg-[#FAF5FF] border-b border-[#E9D5FF] overflow-x-auto">
+          <button
+            type="button"
+            (click)="setAlertFilter('all')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'all' ? 'bg-[#7E22CE] text-white shadow-sm' : 'bg-white text-[#4B5563] border border-[#E5E7EB] hover:bg-gray-50'"
+          >
+            <span class="material-symbols-outlined text-sm">notifications_active</span>
+            <span>All Alerts</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'">
+              {{ alertSummary.totalAlerts }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setAlertFilter('out_of_stock')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'out_of_stock' ? 'bg-[#DC2626] text-white shadow-sm' : 'bg-white text-[#DC2626] border border-[#FECACA] hover:bg-red-50'"
+          >
+            <span class="material-symbols-outlined text-sm">production_quantity_limits</span>
+            <span>Out of Stock</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'out_of_stock' ? 'bg-white/20 text-white' : 'bg-red-100 text-red-800'">
+              {{ alertSummary.outOfStock }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setAlertFilter('low_stock')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'low_stock' ? 'bg-[#EA580C] text-white shadow-sm' : 'bg-white text-[#EA580C] border border-[#FED7AA] hover:bg-orange-50'"
+          >
+            <span class="material-symbols-outlined text-sm">warning</span>
+            <span>Low Stock</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'low_stock' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'">
+              {{ alertSummary.lowStock }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setAlertFilter('minimum_stock')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'minimum_stock' ? 'bg-[#B91C1C] text-white shadow-sm' : 'bg-white text-[#B91C1C] border border-[#FECACA] hover:bg-red-50'"
+          >
+            <span class="material-symbols-outlined text-sm">shield</span>
+            <span>Safety Deficit</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'minimum_stock' ? 'bg-white/20 text-white' : 'bg-red-100 text-red-800'">
+              {{ alertSummary.minStock }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setAlertFilter('reorder_level')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'reorder_level' ? 'bg-[#D97706] text-white shadow-sm' : 'bg-white text-[#D97706] border border-[#FDE68A] hover:bg-amber-50'"
+          >
+            <span class="material-symbols-outlined text-sm">reorder</span>
+            <span>Reorder Level</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'reorder_level' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'">
+              {{ alertSummary.reorderLevel }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setAlertFilter('expiry')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'expiry' ? 'bg-[#7C3AED] text-white shadow-sm' : 'bg-white text-[#7C3AED] border border-[#DDD6FE] hover:bg-purple-50'"
+          >
+            <span class="material-symbols-outlined text-sm">event_busy</span>
+            <span>Expiry Warnings</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'expiry' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-800'">
+              {{ alertSummary.expired + alertSummary.expiringSoon }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setAlertFilter('overstock')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            [ngClass]="selectedAlertFilter === 'overstock' ? 'bg-[#0284C7] text-white shadow-sm' : 'bg-white text-[#0284C7] border border-[#BAE6FD] hover:bg-sky-50'"
+          >
+            <span class="material-symbols-outlined text-sm">inventory</span>
+            <span>Overstock</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'overstock' ? 'bg-white/20 text-white' : 'bg-sky-100 text-sky-800'">
+              {{ alertSummary.overstock }}
+            </span>
+          </button>
+        </div>
+
         <div class="table-responsive-wrapper">
           <table class="saas-data-table">
             <thead>
               <tr>
-                <th style="width: 14%;">Stock Code</th>
-                <th style="width: 26%;">Stock Item</th>
-                <th style="width: 14%;">Unit Type</th>
-                <th style="width: 20%;">Stock Level vs Min Threshold</th>
-                <th style="width: 16%;">Current Valuation</th>
-                <th style="width: 10%; text-align: center;">Action</th>
+                <th style="width: 14%;">Alert Status</th>
+                <th style="width: 22%;">Stock Item</th>
+                <th style="width: 22%;">Stock vs Safety Thresholds</th>
+                <th style="width: 16%;">Batch & Expiry</th>
+                <th style="width: 14%;">Recommended Reorder</th>
+                <th style="width: 12%; text-align: center;">Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                *ngFor="let item of paginatedLowStockList"
-                class="clickable-row"
-                (click)="viewItemHistory(item)"
-                title="Open stock ledger view"
-              >
+              <tr *ngFor="let item of paginatedStockAlerts" class="clickable-row" (click)="viewItemHistory(item)">
+                <!-- Alert Status Badge -->
                 <td>
-                  <span class="font-mono text-xs font-bold text-[#DC2626] bg-[#FEE2E2] px-2.5 py-1 rounded-md border border-[#FECACA]">
-                    {{ item.stock_code }}
-                  </span>
-                </td>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-9 h-9 rounded-xl bg-[#FEE2E2] border border-[#FECACA] flex items-center justify-center font-bold text-xs text-[#DC2626] shrink-0 shadow-xs"
+                  <div class="flex items-center gap-1.5">
+                    <span
+                      class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1"
+                      [ngClass]="{
+                        'bg-red-100 text-red-700 border border-red-300': item.severity === 'critical',
+                        'bg-amber-100 text-amber-800 border border-amber-300': item.severity === 'warning',
+                        'bg-sky-100 text-sky-800 border border-sky-300': item.severity === 'info'
+                      }"
                     >
-                      <span class="material-symbols-outlined" style="font-size: 20px;">warning</span>
+                      <span class="material-symbols-outlined text-[13px]">
+                        {{ item.alert_category === 'OUT_OF_STOCK' ? 'cancel' : item.alert_category === 'EXPIRED' ? 'event_busy' : item.alert_category === 'OVERSTOCK' ? 'upgrade' : 'warning' }}
+                      </span>
+                      {{ item.alert_category ? item.alert_category.replace('_', ' ') : 'ALERT' }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Stock Item Name & Code -->
+                <td>
+                  <div class="font-bold text-xs text-[var(--text-main)]">{{ item.name }}</div>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="font-mono text-[10px] text-purple-700 font-bold bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">{{ item.stock_code }}</span>
+                    <span class="text-[10px] text-gray-500 font-medium">{{ item.category_name || item.unit_type }}</span>
+                  </div>
+                </td>
+
+                <!-- Stock vs Safety Thresholds -->
+                <td>
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between font-mono text-xs">
+                      <span class="font-bold" [ngClass]="item.current_quantity <= 0 ? 'text-red-600' : item.current_quantity <= item.min_stock_alert ? 'text-amber-600' : 'text-gray-800'">
+                        {{ item.current_quantity | number:'1.0-3' }} {{ item.unit_type }}
+                      </span>
+                      <span class="text-[10px] text-gray-500">
+                        Min: {{ item.min_stock_alert }} | Reorder: {{ item.reorder_level || 10 }}
+                      </span>
                     </div>
-                    <div class="min-w-0">
-                      <div class="font-bold text-[var(--text-main)] text-xs truncate">
-                        {{ item.name }}
-                      </div>
-                      <div class="text-[10px] text-[#DC2626] font-semibold">Critical Restock Needed</div>
+                    <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        class="h-full transition-all"
+                        [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                        [ngClass]="{
+                          'bg-red-500': item.current_quantity <= 0,
+                          'bg-amber-500': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
+                          'bg-emerald-500': item.current_quantity > item.min_stock_alert
+                        }"
+                      ></div>
                     </div>
                   </div>
                 </td>
+
+                <!-- Batch & Expiry -->
                 <td>
-                  <span class="badge badge-primary uppercase font-mono text-[10px]">{{ item.unit_type }}</span>
+                  <div *ngIf="item.nearest_expiry_date; else noExpiry">
+                    <div class="font-mono text-xs font-bold" [ngClass]="item.days_until_expiry < 0 ? 'text-red-600' : item.days_until_expiry <= 7 ? 'text-amber-600' : 'text-gray-700'">
+                      Exp: {{ item.nearest_expiry_date | date:'dd/MM/yyyy' }}
+                    </div>
+                    <div class="text-[10px] text-gray-500 font-mono">
+                      {{ item.days_until_expiry < 0 ? ('Expired ' + (-item.days_until_expiry) + 'd ago') : (item.days_until_expiry + ' days left') }}
+                      <span *ngIf="item.latest_batch"> • Batch #{{ item.latest_batch }}</span>
+                    </div>
+                  </div>
+                  <ng-template #noExpiry>
+                    <span class="text-gray-400 text-xs">—</span>
+                  </ng-template>
                 </td>
+
+                <!-- Recommended Reorder -->
                 <td>
-                  <span class="font-mono font-black text-xs text-[#DC2626]">
-                    {{ item.current_quantity | number:'1.0-3' }} / Min {{ item.min_stock_alert }} {{ item.unit_type }}s
-                  </span>
+                  <div *ngIf="item.suggested_reorder_quantity > 0; else noReorder">
+                    <span class="font-mono font-black text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                      +{{ item.suggested_reorder_quantity | number:'1.0-2' }} {{ item.unit_type }}
+                    </span>
+                  </div>
+                  <ng-template #noReorder>
+                    <span class="text-xs text-gray-400">Stock sufficient</span>
+                  </ng-template>
                 </td>
-                <td>
-                  <span class="font-mono font-bold text-xs text-purple-900">
-                    {{ item.current_value | appCurrency:'1.0-2' }}
-                  </span>
-                </td>
+
+                <!-- Action -->
                 <td style="text-align: center;" class="row-actions-cell" (click)="$event.stopPropagation()">
                   <div class="flex items-center justify-center gap-1.5">
                     <button
                       type="button"
-                      (click)="quickPurchaseEntry(item)"
-                      class="action-btn btn-gradient-purple !py-1 !px-2.5 !text-xs"
+                      (click)="reorderNow(item)"
+                      class="action-btn btn-gradient-purple !py-1 !px-2.5 !text-xs whitespace-nowrap"
+                      title="1-Click Reorder"
                     >
-                      Restock
+                      <span class="material-symbols-outlined !text-sm">shopping_cart</span>
+                      <span>Reorder Now</span>
                     </button>
                     <button
                       type="button"
                       (click)="viewItemHistory(item)"
                       class="action-btn btn-outline-purple !py-1 !px-2 !text-xs"
-                      title="View Details & Ledger"
+                      title="View Ledger"
                     >
-                      <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+                      <span class="material-symbols-outlined !text-sm">visibility</span>
                     </button>
                   </div>
                 </td>
               </tr>
 
-              <tr *ngIf="lowStockList.length === 0">
+              <tr *ngIf="filteredStockAlerts.length === 0">
                 <td colspan="6" class="empty-state-cell">
                   <div class="empty-state-box">
                     <span class="material-symbols-outlined empty-icon !text-[#16A34A]">verified</span>
-                    <div class="empty-title text-[#16A34A]">All Stock Levels Healthy</div>
-                    <p class="empty-desc">All tracked items are currently stocked above their minimum threshold alert level.</p>
+                    <div class="empty-title text-[#16A34A]">No Active Alerts</div>
+                    <p class="empty-desc">No stock items are currently in alert state for this filter criteria.</p>
                   </div>
                 </td>
               </tr>
@@ -1152,6 +1292,31 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   [(ngModel)]="purchaseForm.invoiceNumber"
                   name="invoiceNumber"
                   placeholder="e.g. INV-9042"
+                  class="form-control font-mono text-sm w-full"
+                />
+              </div>
+            </div>
+
+            <!-- Batch Number & Expiry Date -->
+            <div class="grid grid-cols-2 gap-4 items-start pt-1">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Batch / Lot # (Optional)</label>
+                <input
+                  title="Batch / Lot #"
+                  type="text"
+                  [(ngModel)]="purchaseForm.batchNumber"
+                  name="batchNumber"
+                  placeholder="e.g. B-2026-X01"
+                  class="form-control font-mono text-sm w-full"
+                />
+              </div>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Expiry Date (Optional)</label>
+                <input
+                  title="Expiry Date"
+                  type="date"
+                  [(ngModel)]="purchaseForm.expiryDate"
+                  name="expiryDate"
                   class="form-control font-mono text-sm w-full"
                 />
               </div>
@@ -1474,6 +1639,74 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               />
             </div>
 
+            <!-- Reorder Level & Quantity Grid -->
+            <div class="grid grid-cols-2 gap-4 items-start pt-1">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Reorder Level
+                </label>
+                <input
+                  title="Reorder Level"
+                  type="number"
+                  min="0"
+                  step="any"
+                  [(ngModel)]="masterForm.reorderLevel"
+                  name="reorderLevel"
+                  class="form-control font-mono text-sm w-full"
+                  placeholder="10"
+                />
+              </div>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Standard Reorder Qty
+                </label>
+                <input
+                  title="Standard Reorder Qty"
+                  type="number"
+                  min="0"
+                  step="any"
+                  [(ngModel)]="masterForm.reorderQuantity"
+                  name="reorderQuantity"
+                  class="form-control font-mono text-sm w-full"
+                  placeholder="20"
+                />
+              </div>
+            </div>
+
+            <!-- Max Stock Threshold & Shelf Life Days -->
+            <div class="grid grid-cols-2 gap-4 items-start pt-1">
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Max Stock Threshold (Overstock)
+                </label>
+                <input
+                  title="Max Stock Threshold"
+                  type="number"
+                  min="0"
+                  step="any"
+                  [(ngModel)]="masterForm.maxStockThreshold"
+                  name="maxStockThreshold"
+                  class="form-control font-mono text-sm w-full"
+                  placeholder="100"
+                />
+              </div>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Shelf Life (Days)
+                </label>
+                <input
+                  title="Shelf Life (Days)"
+                  type="number"
+                  min="0"
+                  step="1"
+                  [(ngModel)]="masterForm.shelfLifeDays"
+                  name="shelfLifeDays"
+                  class="form-control font-mono text-sm w-full"
+                  placeholder="e.g. 30"
+                />
+              </div>
+            </div>
+
             <!-- Row 4: Opening Balance Section Header & Divider -->
             <div class="pt-3.5 border-t border-[#E9D5FF] space-y-3">
               <div class="flex items-center justify-between pb-1.5">
@@ -1745,6 +1978,20 @@ export class StockComponent implements OnInit {
   public lowStockList: StockItem[] = [];
   public allProducts: Product[] = [];
 
+  // Inventory Alerts Center Suite
+  public stockAlerts: any[] = [];
+  public alertSummary: any = {
+    totalAlerts: 0,
+    outOfStock: 0,
+    lowStock: 0,
+    minStock: 0,
+    reorderLevel: 0,
+    overstock: 0,
+    expired: 0,
+    expiringSoon: 0,
+  };
+  public selectedAlertFilter = 'all';
+
   // Filters & Pagination
   public searchQuery = '';
   public selectedUnitType = '';
@@ -1817,6 +2064,8 @@ export class StockComponent implements OnInit {
     totalPrice: 2000,
     supplier: '',
     invoiceNumber: '',
+    batchNumber: '',
+    expiryDate: '',
     notes: '',
     entryDate: '',
   };
@@ -1867,6 +2116,10 @@ export class StockComponent implements OnInit {
     stockCode: '',
     unitType: 'piece',
     minStockAlert: 10,
+    reorderLevel: 10,
+    reorderQuantity: 20,
+    maxStockThreshold: 100,
+    shelfLifeDays: null,
     initialQuantity: 0,
     multiplier: 1,
     initialTotalPrice: 0,
@@ -1908,6 +2161,7 @@ export class StockComponent implements OnInit {
     this.loadStockEntries();
     this.loadStockMovements();
     this.loadLowStockAlerts();
+    this.loadStockAlerts();
     this.loadAllProducts();
   }
 
@@ -1915,7 +2169,7 @@ export class StockComponent implements OnInit {
     if (this.activeTab === 'MASTER') this.loadStockMaster();
     else if (this.activeTab === 'ENTRIES') this.loadStockEntries();
     else if (this.activeTab === 'MOVEMENTS') this.loadStockMovements();
-    else this.loadLowStockAlerts();
+    else this.loadStockAlerts();
   }
 
   // ── 1. Load Stock Master (stock_items) ──────────────────────────────
@@ -1976,10 +2230,37 @@ export class StockComponent implements OnInit {
           this.lowStockList = res.data;
         }
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
       error: () => {},
     });
+  }
+
+  // ── 4b. Load Comprehensive Inventory Alerts Suite ────────────────────
+  loadStockAlerts(filter = this.selectedAlertFilter): void {
+    this.stockService.getStockAlerts(filter).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.stockAlerts = res.data.alerts || [];
+          this.alertSummary = res.data.summary || this.alertSummary;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  setAlertFilter(filter: string): void {
+    this.selectedAlertFilter = filter;
+    this.currentPage = 1;
+    this.loadStockAlerts(filter);
+  }
+
+  reorderNow(item: any): void {
+    this.purchaseForm.stockItemId = item.id;
+    const recQty = Number(item.suggested_reorder_quantity) || Number(item.reorder_quantity) || 10;
+    this.purchaseForm.quantity = recQty;
+    this.purchaseForm.multiplier = 1;
+    const unitPrice = Number(item.average_unit_price) || 0;
+    this.purchaseForm.totalPrice = Math.round((recQty * unitPrice) * 100) / 100;
+    this.showPurchaseModal = true;
   }
 
   loadAllProducts(): void {
@@ -2095,11 +2376,29 @@ export class StockComponent implements OnInit {
     return this.lowStockList.slice(start, start + this.pageSize);
   }
 
+  get filteredStockAlerts(): any[] {
+    if (!this.searchQuery) return this.stockAlerts;
+    const q = this.searchQuery.toLowerCase();
+    return this.stockAlerts.filter(
+      (a) =>
+        a.name?.toLowerCase().includes(q) ||
+        a.stock_code?.toLowerCase().includes(q) ||
+        a.alert_category?.toLowerCase().includes(q) ||
+        a.latest_batch?.toLowerCase().includes(q)
+    );
+  }
+
+  get paginatedStockAlerts(): any[] {
+    const list = this.filteredStockAlerts;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
+  }
+
   getCurrentTotal(): number {
     if (this.activeTab === 'MASTER') return this.filteredMasterItems.length;
     if (this.activeTab === 'ENTRIES') return this.filteredStockEntries.length;
     if (this.activeTab === 'MOVEMENTS') return this.filteredStockMovements.length;
-    return this.lowStockList.length;
+    return this.filteredStockAlerts.length;
   }
 
   getTotalPages(totalItems: number): number {
@@ -2127,7 +2426,7 @@ export class StockComponent implements OnInit {
     if (this.activeTab === 'MASTER') return 'Search master items by name or code (e.g. Chicken, STK-0001)...';
     if (this.activeTab === 'ENTRIES') return 'Search purchase entries by entry #, item, supplier, invoice...';
     if (this.activeTab === 'MOVEMENTS') return 'Search movement audit trail by reference, item, notes...';
-    return 'Search low stock alerts...';
+    return 'Search inventory alerts (out of stock, expiry, reorder)...';
   }
 
   // ── Modals Trigger Actions ──────────────────────────────────────────
@@ -2170,6 +2469,10 @@ export class StockComponent implements OnInit {
       stockCode: '',
       unitType: 'piece',
       minStockAlert: 10,
+      reorderLevel: 10,
+      reorderQuantity: 20,
+      maxStockThreshold: 100,
+      shelfLifeDays: null,
       initialQuantity: 0,
       multiplier: 1,
       initialTotalPrice: 0,
@@ -2203,9 +2506,8 @@ export class StockComponent implements OnInit {
         this.loadStockEntries();
         this.loadStockMovements();
         this.loadLowStockAlerts();
+        this.loadStockAlerts();
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
       error: () => {},
     });
   }
@@ -2230,9 +2532,6 @@ export class StockComponent implements OnInit {
       notes: this.adjustForm.notes,
     };
 
-    // Only send a cost when one was actually entered. Sending 0 would value an
-    // INCREASE at zero and drag the item's weighted average down with it; the
-    // backend falls back to the current average when no cost is supplied.
     const totalPrice = Number(this.adjustForm.totalPrice);
     if (Number.isFinite(totalPrice) && totalPrice > 0) {
       payload.totalPrice = totalPrice;
@@ -2246,9 +2545,8 @@ export class StockComponent implements OnInit {
         this.loadStockMaster();
         this.loadStockMovements();
         this.loadLowStockAlerts();
+        this.loadStockAlerts();
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
       error: () => {},
     });
   }
@@ -2272,9 +2570,8 @@ export class StockComponent implements OnInit {
         this.notify.success(`Created master item: ${res.data.name} (${res.data.stock_code})`);
         this.showCreateMasterModal = false;
         this.loadStockMaster();
+        this.loadStockAlerts();
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
       error: () => {},
     });
   }

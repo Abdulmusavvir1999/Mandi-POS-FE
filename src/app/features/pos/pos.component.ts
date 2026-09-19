@@ -24,7 +24,27 @@ import { BillService } from '../../core/services/bill.service';
 import { OrderService } from '../../core/services/order.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { Product, ProductVariant, Category, Customer, CartItem, DiningTable, DraftBill, Order, OrderType, PaymentMethod } from '../../core/models';
+import { OfflinePosService } from '../../core/services/offline-pos.service';
+import { PrinterService } from '../../core/services/printer.service';
+import { PosClosingService } from '../../core/services/pos-closing.service';
+import {
+  Product,
+  ProductVariant,
+  ProductAddon,
+  ComboMeal,
+  MealDeal,
+  Category,
+  Customer,
+  CartItem,
+  DiningTable,
+  DraftBill,
+  Order,
+  OrderType,
+  PaymentMethod,
+  Bill,
+  PosDayClosing,
+  PrinterConfig,
+} from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
@@ -76,6 +96,22 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Top Toolbar Shortcuts -->
           <div class="pos-quick-tools">
+            <!-- Online / Offline & Sync Indicator -->
+            <button
+              type="button"
+              (click)="offlinePos.pendingOrders().length > 0 ? offlinePos.syncPendingOrders() : null"
+              class="tool-btn"
+              [ngClass]="offlinePos.isOnline() ? 'btn-status-online' : 'btn-status-offline'"
+              [title]="offlinePos.isOnline() ? 'System is Online' : 'Offline Mode: Click to sync pending bills'"
+            >
+              <span class="status-dot-pulse" [class.is-offline]="!offlinePos.isOnline()"></span>
+              <span class="font-bold text-xs">{{ offlinePos.isOnline() ? 'ONLINE' : 'OFFLINE' }}</span>
+              <span *ngIf="offlinePos.pendingOrders().length > 0" class="draft-badge !bg-amber-500 !text-white">
+                {{ offlinePos.pendingOrders().length }} sync
+              </span>
+            </button>
+
+            <!-- Held Drafts -->
             <button
               (click)="openDraftsModal()"
               class="tool-btn btn-drafts"
@@ -84,6 +120,39 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <span class="material-symbols-outlined text-[18px]">drafts</span>
               <span>Drafts</span>
               <span *ngIf="draftCount > 0" class="draft-badge">{{ draftCount }}</span>
+            </button>
+
+            <!-- POS History / Ledger -->
+            <button
+              type="button"
+              (click)="openHistoryModal()"
+              class="tool-btn"
+              title="Transaction History & Ledger"
+            >
+              <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+              <span>Ledger</span>
+            </button>
+
+            <!-- End-of-Day Shift Closing (Z-Report) -->
+            <button
+              type="button"
+              (click)="openDayClosingModal()"
+              class="tool-btn"
+              title="End-of-Day Shift Closing & Z-Report"
+            >
+              <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+              <span>Z-Report</span>
+            </button>
+
+            <!-- Printer Routing Settings -->
+            <button
+              type="button"
+              (click)="openPrintersModal()"
+              class="tool-btn"
+              title="Printer Routing & ESC/POS Settings"
+            >
+              <span class="material-symbols-outlined text-[18px]">print</span>
+              <span>Printers</span>
             </button>
 
             <button
@@ -107,8 +176,46 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- 2. CATEGORIES HORIZONTAL CAROUSEL / CIRCLES -->
-        <div class="pos-section-block">
+        <!-- 2. CATALOG TYPE SELECTOR (MENU / COMBOS / DEALS) -->
+        <div class="pos-section-block pb-1">
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="selectedCatalogTab = 'ALL'"
+              class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+              [ngClass]="selectedCatalogTab === 'ALL' ? 'bg-[#ff6b00] text-white shadow-md shadow-orange-500/20' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+            >
+              <span>🍽️</span>
+              <span>Menu Dishes</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedCatalogTab === 'ALL' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'">{{ products.length }}</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="selectedCatalogTab = 'COMBOS'"
+              class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+              [ngClass]="selectedCatalogTab === 'COMBOS' ? 'bg-[#ff6b00] text-white shadow-md shadow-orange-500/20' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+            >
+              <span>🍱</span>
+              <span>Combo Meals</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedCatalogTab === 'COMBOS' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'">{{ combosList.length }}</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="selectedCatalogTab = 'DEALS'"
+              class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+              [ngClass]="selectedCatalogTab === 'DEALS' ? 'bg-[#ff6b00] text-white shadow-md shadow-orange-500/20' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+            >
+              <span>🏷️</span>
+              <span>Meal Deals</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedCatalogTab === 'DEALS' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'">{{ dealsList.length }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CATEGORIES HORIZONTAL CAROUSEL / CIRCLES -->
+        <div class="pos-section-block" *ngIf="selectedCatalogTab === 'ALL'">
           <div class="section-title-row">
             <div>
               <h2 class="section-heading">Categories</h2>
@@ -202,7 +309,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- 3. POPULAR DISHES (TEAL HERO CARDS AS IN SCREENSHOT) -->
-        <div class="pos-section-block">
+        <div class="pos-section-block" *ngIf="selectedCatalogTab === 'ALL'">
           <div class="section-title-row">
             <div>
               <h2 class="section-heading">
@@ -348,6 +455,134 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   <span>ADD TO CART</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3B. COMBO MEALS SECTION -->
+        <div class="pos-section-block" *ngIf="selectedCatalogTab === 'COMBOS'">
+          <div class="section-title-row">
+            <div>
+              <h2 class="section-heading">Combo Meals</h2>
+              <p class="section-subtext">
+                <span class="accent-orange font-bold">{{ combosList.length }}</span> Value combos with bundled dishes and special savings
+              </p>
+            </div>
+          </div>
+
+          <div *ngIf="combosList.length === 0" class="empty-dishes-box">
+            <span class="material-symbols-outlined text-5xl text-slate-300">lunch_dining</span>
+            <p class="text-sm font-semibold text-slate-500 mt-2">No combo meals currently available.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" *ngIf="combosList.length > 0">
+            <div
+              *ngFor="let combo of combosList"
+              class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                      🍱 Combo Deal
+                    </span>
+                    <h3 class="text-base font-bold text-slate-900 mt-1">{{ combo.name }}</h3>
+                  </div>
+                  <div class="text-right font-mono">
+                    <div class="text-lg font-black text-[#ff6b00]">{{ combo.combo_price | appCurrency:'1.0-0' }}</div>
+                    <div *ngIf="combo.original_price && combo.original_price > combo.combo_price" class="text-xs text-slate-400 line-through">
+                      {{ combo.original_price | appCurrency:'1.0-0' }}
+                    </div>
+                  </div>
+                </div>
+
+                <p class="text-xs text-slate-500 mb-3">{{ combo.description || 'Special multi-dish combo meal bundle' }}</p>
+
+                <!-- Combo Items Pill List -->
+                <div *ngIf="combo.items && combo.items.length > 0" class="bg-slate-50 rounded-xl p-2.5 mb-4 space-y-1">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Includes:</div>
+                  <div *ngFor="let item of combo.items" class="text-xs text-slate-700 flex items-center justify-between">
+                    <span>• {{ item.product_name || 'Dish' }}</span>
+                    <span class="font-bold text-slate-500 font-mono text-[11px]">&times;{{ item.quantity }}</span>
+                  </div>
+                </div>
+
+                <div *ngIf="combo.savings_amount && combo.savings_amount > 0" class="mb-3">
+                  <span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                    🎉 Save {{ combo.savings_amount | appCurrency:'1.0-0' }}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="addComboToCart(combo)"
+                class="w-full py-2.5 px-3 rounded-xl bg-[#ff6b00] hover:bg-[#e05e00] text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
+                <span>Add Combo to Order</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3C. MEAL DEALS SECTION -->
+        <div class="pos-section-block" *ngIf="selectedCatalogTab === 'DEALS'">
+          <div class="section-title-row">
+            <div>
+              <h2 class="section-heading">Meal Deals & Promotions</h2>
+              <p class="section-subtext">
+                <span class="accent-orange font-bold">{{ dealsList.length }}</span> Special promotional offers and time-limited deals
+              </p>
+            </div>
+          </div>
+
+          <div *ngIf="dealsList.length === 0" class="empty-dishes-box">
+            <span class="material-symbols-outlined text-5xl text-slate-300">local_offer</span>
+            <p class="text-sm font-semibold text-slate-500 mt-2">No active meal deals currently configured.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" *ngIf="dealsList.length > 0">
+            <div
+              *ngFor="let deal of dealsList"
+              class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold uppercase tracking-wider">
+                      🏷️ {{ deal.discount_percentage ? deal.discount_percentage + '% OFF' : 'Special Offer' }}
+                    </span>
+                    <h3 class="text-base font-bold text-slate-900 mt-1">{{ deal.title }}</h3>
+                  </div>
+                  <div class="text-right font-mono">
+                    <div class="text-lg font-black text-purple-700">{{ deal.deal_price | appCurrency:'1.0-0' }}</div>
+                  </div>
+                </div>
+
+                <p class="text-xs text-slate-500 mb-3">{{ deal.description || 'Special limited-time promotional deal' }}</p>
+
+                <!-- Deal Timing / Validity -->
+                <div *ngIf="deal.start_date || deal.days_of_week" class="bg-purple-50/60 rounded-xl p-2.5 mb-4 text-xs text-purple-900 space-y-0.5">
+                  <div *ngIf="deal.days_of_week" class="flex items-center gap-1 text-[11px]">
+                    <span class="material-symbols-outlined text-xs">calendar_month</span>
+                    <span>{{ deal.days_of_week }}</span>
+                  </div>
+                  <div *ngIf="deal.start_time && deal.end_time" class="flex items-center gap-1 text-[11px]">
+                    <span class="material-symbols-outlined text-xs">schedule</span>
+                    <span>{{ deal.start_time }} - {{ deal.end_time }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="addDealToCart(deal)"
+                class="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span class="material-symbols-outlined text-sm">local_offer</span>
+                <span>Apply Deal to Order</span>
+              </button>
             </div>
           </div>
         </div>
@@ -507,31 +742,47 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- ORDER TYPE SEGMENTED SWITCHER (Delivery / Dine in / Takeaway) -->
-        <div class="order-type-segmented-bar">
-          <button
-            type="button"
-            (click)="setOrderType('WALK_IN')"
-            class="seg-pill-btn"
-            [class.is-active-seg]="cartService.orderType() === 'WALK_IN'"
-          >
-            Delivery
-          </button>
+        <!-- ORDER TYPE SEGMENTED SWITCHER (5 Order Types) -->
+        <div class="order-type-segmented-bar !overflow-x-auto no-scrollbar flex items-center gap-1">
           <button
             type="button"
             (click)="openTableSelector()"
-            class="seg-pill-btn"
+            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
             [class.is-active-seg]="cartService.orderType() === 'DINING'"
           >
-            Dine in
+            Dine In
           </button>
           <button
             type="button"
             (click)="setOrderType('TAKEAWAY')"
-            class="seg-pill-btn"
+            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
             [class.is-active-seg]="cartService.orderType() === 'TAKEAWAY'"
           >
             Takeaway
+          </button>
+          <button
+            type="button"
+            (click)="setOrderType('WALK_IN')"
+            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
+            [class.is-active-seg]="cartService.orderType() === 'WALK_IN'"
+          >
+            Walk-in
+          </button>
+          <button
+            type="button"
+            (click)="setOrderType('PICKUP')"
+            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
+            [class.is-active-seg]="cartService.orderType() === 'PICKUP'"
+          >
+            Pickup
+          </button>
+          <button
+            type="button"
+            (click)="setOrderType('COUNTER')"
+            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
+            [class.is-active-seg]="cartService.orderType() === 'COUNTER'"
+          >
+            Counter
           </button>
         </div>
 
@@ -547,43 +798,91 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div
             *ngFor="let item of cartService.items()"
             class="cart-item-row"
+            [class.is-complimentary-row]="item.isComplimentary"
           >
             <div class="cart-item-avatar">
               <span class="item-emoji">{{ getProductEmoji(item.product.name, item.product.category_id) }}</span>
             </div>
 
             <div class="cart-item-details">
-              <h4 class="item-name">
-                {{ item.product.name }}
-                <span *ngIf="item.variant" class="cart-variant-chip">{{ item.variant.name }}</span>
-              </h4>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h4 class="item-name">
+                  {{ item.product.name }}
+                  <span *ngIf="item.variant" class="cart-variant-chip">{{ item.variant.name }}</span>
+                </h4>
+                <span *ngIf="item.itemType === 'COMBO'" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">🍱 COMBO</span>
+                <span *ngIf="item.itemType === 'DEAL'" class="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">🏷️ DEAL</span>
+                <span *ngIf="item.isComplimentary" class="complimentary-badge">
+                  ★ FREE (COMP)
+                </span>
+              </div>
+
+              <!-- Selected Add-ons Display -->
+              <div *ngIf="item.selectedAddons && item.selectedAddons.length > 0" class="flex flex-wrap gap-1 mt-1 mb-0.5">
+                <span *ngFor="let a of item.selectedAddons" class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                  + {{ a.name }} ({{ a.price | appCurrency:'1.0-0' }})
+                </span>
+              </div>
+
               <p class="item-sub-desc">
                 <ng-container *ngIf="item.variant">
                   Uses {{ item.variant.stock_consumption }} per unit
-                  <ng-container *ngIf="item.notes"> · {{ item.notes }}</ng-container>
+                  <ng-container *ngIf="item.notes"> · <i>{{ item.notes }}</i></ng-container>
                 </ng-container>
                 <ng-container *ngIf="!item.variant">
-                  {{ item.notes || (item.product.category_id === 1 ? 'Thin Crust' : 'Special Portion') }}
+                  {{ item.notes ? item.notes : (item.product.category_id === 1 ? 'Thin Crust' : 'Special Portion') }}
                 </ng-container>
               </p>
 
-              <!-- Stepper Control -->
-              <div class="item-stepper-row">
-                <button
-                  type="button"
-                  (click)="cartService.decrement(item.lineId)"
-                  class="stepper-circle-btn"
-                >
-                  <span class="material-symbols-outlined">remove</span>
-                </button>
-                <span class="stepper-qty-text font-mono font-bold">{{ item.quantity }}</span>
-                <button
-                  type="button"
-                  (click)="cartService.increment(item.lineId)"
-                  class="stepper-circle-btn"
-                >
-                  <span class="material-symbols-outlined">add</span>
-                </button>
+              <div *ngIf="item.isComplimentary && item.complimentaryReason" class="text-[10px] text-emerald-300 font-semibold italic mt-0.5">
+                Note: {{ item.complimentaryReason }}
+              </div>
+
+              <!-- Stepper Control & Quick Item Actions -->
+              <div class="item-stepper-row flex items-center justify-between mt-1">
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    (click)="cartService.decrement(item.lineId)"
+                    class="stepper-circle-btn"
+                  >
+                    <span class="material-symbols-outlined">remove</span>
+                  </button>
+                  <span class="stepper-qty-text font-mono font-bold">{{ item.quantity }}</span>
+                  <button
+                    type="button"
+                    (click)="cartService.increment(item.lineId)"
+                    class="stepper-circle-btn"
+                  >
+                    <span class="material-symbols-outlined">add</span>
+                  </button>
+                </div>
+
+                <span class="font-mono text-xs font-bold text-white/90">
+                  {{ (item.isComplimentary ? 0 : item.unitPrice * item.quantity) | appCurrency:'1.2-2' }}
+                </span>
+
+                <!-- Complimentary & Item Note Buttons -->
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="openItemNoteModal(item)"
+                    class="item-action-icon-btn"
+                    [class.is-active]="!!item.notes"
+                    title="Add or Edit Kitchen Note"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">edit_note</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="item.isComplimentary ? removeComplimentary(item) : openComplimentaryModal(item)"
+                    class="item-action-icon-btn"
+                    [class.is-active]="item.isComplimentary"
+                    [title]="item.isComplimentary ? 'Revoke Complimentary' : 'Mark Complimentary (Free)'"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">{{ item.isComplimentary ? 'star' : 'redeem' }}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -604,7 +903,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             title="Promotion Code"
             type="text"
             [(ngModel)]="promoCode"
-            placeholder="Promotion Code"
+            placeholder="Coupon (e.g. SAVE50, WELCOME10)"
             class="promo-input"
           />
           <button
@@ -612,8 +911,40 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             (click)="applyPromoCode()"
             class="promo-apply-btn"
           >
-            {{ isPromoApplied ? 'APPLIED' : 'TRYNEW' }}
+            {{ isPromoApplied ? 'APPLIED ✓' : 'APPLY' }}
           </button>
+        </div>
+
+        <!-- SERVICE CHARGE & SURCHARGE CONTROLS -->
+        <div class="cart-billing-addons font-mono">
+          <div class="billing-addon-row">
+            <span class="text-[11px] text-white/70">Service Charge:</span>
+            <div class="flex items-center gap-1">
+              <button
+                *ngFor="let rate of [0, 5, 10]"
+                type="button"
+                (click)="cartService.setServiceChargeRate(rate)"
+                class="billing-chip-btn"
+                [class.is-selected]="cartService.serviceChargeRate() === rate"
+              >
+                {{ rate }}%
+              </button>
+            </div>
+          </div>
+          <div class="billing-addon-row mt-1">
+            <span class="text-[11px] text-white/70">Packaging / Surcharge:</span>
+            <div class="flex items-center gap-1">
+              <button
+                *ngFor="let sur of [0, 20, 50]"
+                type="button"
+                (click)="cartService.setSurcharge(sur)"
+                class="billing-chip-btn"
+                [class.is-selected]="cartService.surchargeAmount() === sur"
+              >
+                {{ sur === 0 ? '₹0' : '₹' + sur }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- TOTALS BREAKDOWN -->
@@ -624,12 +955,24 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <div class="totals-row" *ngIf="cartService.discountAmount() > 0">
-            <span class="totals-label text-amber-200">Discount</span>
+            <span class="totals-label text-amber-200">
+              Discount <span *ngIf="cartService.couponCode()">({{ cartService.couponCode() }})</span>
+            </span>
             <span class="totals-value text-amber-200">- {{ cartService.discountAmount() | appCurrency:'1.2-2' }}</span>
           </div>
 
+          <div class="totals-row" *ngIf="cartService.serviceChargeAmount() > 0">
+            <span class="totals-label text-purple-200">Service Charge ({{ cartService.serviceChargeRate() }}%)</span>
+            <span class="totals-value text-purple-200">+ {{ cartService.serviceChargeAmount() | appCurrency:'1.2-2' }}</span>
+          </div>
+
+          <div class="totals-row" *ngIf="cartService.surchargeAmount() > 0">
+            <span class="totals-label text-teal-200">Surcharge / Packaging</span>
+            <span class="totals-value text-teal-200">+ {{ cartService.surchargeAmount() | appCurrency:'1.2-2' }}</span>
+          </div>
+
           <div class="totals-row">
-            <span class="totals-label">Delivery Charge / Tax</span>
+            <span class="totals-label">Tax (GST)</span>
             <span class="totals-value">{{ cartService.taxAmount() | appCurrency:'1.2-2' }}</span>
           </div>
 
@@ -639,15 +982,27 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- CONFIRM ORDER ACTION BUTTON -->
-        <div class="cart-actions-bottom">
+        <!-- ORDER ACTIONS BOTTOM (Hold Bill + Confirm Order) -->
+        <div class="cart-actions-bottom flex items-center gap-2">
+          <button
+            type="button"
+            (click)="holdCurrentBill()"
+            [disabled]="cartService.items().length === 0"
+            class="py-3 px-3.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
+            title="Hold Current Order as Draft (F4)"
+          >
+            <span class="material-symbols-outlined text-[18px]">pause_circle</span>
+            <span>Hold</span>
+          </button>
+
           <button
             type="button"
             (click)="openPaymentModal()"
             [disabled]="cartService.items().length === 0"
-            class="confirm-order-btn"
+            class="confirm-order-btn flex-1"
           >
-            <span>Confirm Order</span>
+            <span class="material-symbols-outlined text-[20px]">point_of_sale</span>
+            <span>Confirm & Pay (F8)</span>
           </button>
         </div>
       </div>
@@ -684,13 +1039,15 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Payment Methods Selector -->
           <div>
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Payment Mode</label>
-            <div class="grid grid-cols-4 gap-2">
+          <!-- Payment Methods Selector (5 Methods) -->
+          <div>
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Payment Mode</label>
+            <div class="grid grid-cols-5 gap-2">
               <button
                 type="button"
-                *ngFor="let method of ['CASH', 'UPI', 'CARD', 'OTHER']"
+                *ngFor="let method of ['CASH', 'UPI', 'CARD', 'ONLINE', 'OTHER']"
                 (click)="selectedPaymentMethod = method"
-                class="py-2.5 px-3 rounded-xl font-bold transition-all text-xs border"
+                class="py-2.5 px-2 rounded-xl font-bold transition-all text-xs border text-center"
                 [ngClass]="selectedPaymentMethod === method ? 'bg-[#7E22CE] text-white border-transparent shadow-sm' : 'bg-[#FAF5FF] text-[#2E1065] border-[#E9D5FF] hover:bg-[#F3E8FF]'"
               >
                 {{ method }}
@@ -698,26 +1055,26 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
           </div>
 
-          <!-- Cash Tendered & Quick Notes -->
+          <!-- Cash Tendered & Quick Change Counter -->
           <div *ngIf="selectedPaymentMethod === 'CASH'" class="space-y-3 p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF]">
             <div>
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Amount Tendered</label>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Cash Tendered (₹)</label>
               <input
                 title="Amount Tendered"
                 type="number"
                 [(ngModel)]="tenderedAmount"
                 (ngModelChange)="calcChange()"
-                class="form-control text-lg font-mono font-bold text-emerald-700 w-full"
+                class="form-control text-xl font-mono font-bold text-emerald-700 w-full"
               />
             </div>
 
             <!-- Quick Cash Denominations -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
-                *ngFor="let amt of [cartService.grandTotal(), 500, 1000, 2000]"
+                *ngFor="let amt of [cartService.grandTotal(), 100, 200, 500, 2000]"
                 (click)="setTendered(amt)"
-                class="flex-1 py-1.5 text-xs font-mono font-bold rounded-lg bg-white border border-[#DDD6FE] text-[#6B21A8] hover:bg-[#F3E8FF]"
+                class="flex-1 min-w-[55px] py-1.5 text-xs font-mono font-bold rounded-lg bg-white border border-[#DDD6FE] text-[#6B21A8] hover:bg-[#F3E8FF] text-center"
               >
                 {{ amt | appCurrency:'1.0-0' }}
               </button>
@@ -725,23 +1082,95 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
             <!-- Change Return -->
             <div class="flex items-center justify-between pt-2 border-t border-[#E9D5FF]">
-              <span class="text-xs font-bold text-[#6B7280]">Change Due:</span>
-              <span class="text-base font-black font-mono text-emerald-700">
+              <span class="text-xs font-bold text-[#6B7280]">Change to Return:</span>
+              <span class="text-lg font-black font-mono text-emerald-700">
                 {{ changeDue | appCurrency:'1.2-2' }}
               </span>
             </div>
           </div>
 
-          <!-- Reference Number (for UPI / Card) -->
-          <div *ngIf="selectedPaymentMethod !== 'CASH'" class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Transaction Reference # (Optional)</label>
+          <!-- UPI QR Code & Reference -->
+          <div *ngIf="selectedPaymentMethod === 'UPI'" class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-purple-900">UPI Digital Payment</span>
+                <p class="text-[11px] text-gray-500 font-mono mt-0.5">VPA: {{ upiVpa }}</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-purple-100 text-purple-800">
+                Dynamic QR
+              </span>
+            </div>
+            <div>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">UPI UTR / Ref Number (Optional)</label>
+              <input
+                title="UPI Reference"
+                type="text"
+                [(ngModel)]="paymentReference"
+                placeholder="12-digit UPI UTR / RRN"
+                class="form-control text-sm w-full font-mono"
+              />
+            </div>
+          </div>
+
+          <!-- Online Channel Selection (Swiggy, Zomato, Direct) -->
+          <div *ngIf="selectedPaymentMethod === 'ONLINE'" class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
+            <div>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Online Delivery / Aggregator Channel</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  *ngFor="let prov of ['Swiggy', 'Zomato', 'Direct Website', 'PhonePe', 'GPay', 'Other']"
+                  (click)="onlineProvider = prov"
+                  class="py-1.5 px-2 text-xs font-bold rounded-lg border text-center transition-all"
+                  [ngClass]="onlineProvider === prov ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
+                >
+                  {{ prov }}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Online Order / Transaction ID</label>
+              <input
+                title="Online Order ID"
+                type="text"
+                [(ngModel)]="paymentReference"
+                [placeholder]="'Order ID from ' + onlineProvider"
+                class="form-control text-sm w-full font-mono"
+              />
+            </div>
+          </div>
+
+          <!-- Card / Other Reference -->
+          <div *ngIf="selectedPaymentMethod === 'CARD' || selectedPaymentMethod === 'OTHER'" class="form-group mb-0">
+            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
+              {{ selectedPaymentMethod === 'CARD' ? 'Card Last 4 Digits / Auth Approval Code' : 'Transaction Reference # (Optional)' }}
+            </label>
             <input
-              title="Transaction Reference # (Optional)"
+              title="Transaction Reference"
               type="text"
               [(ngModel)]="paymentReference"
-              placeholder="e.g. UPI Ref / Auth Code"
+              placeholder="e.g. Card Auth 4892"
               class="form-control text-sm w-full font-mono"
             />
+          </div>
+
+          <!-- Print Routing Checkboxes & Offline Mode Notice -->
+          <div class="pt-2 border-t border-[#E9D5FF] flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-4 text-xs font-bold text-[#4B5563]">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="autoPrintReceipt" class="accent-[#7E22CE] rounded" />
+                <span>Print Receipt (Thermal)</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="autoPrintKot" class="accent-[#7E22CE] rounded" />
+                <span>Print Kitchen KOT</span>
+              </label>
+            </div>
+
+            <div *ngIf="!offlinePos.isOnline()" class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">cloud_off</span>
+              <span>Offline Mode Active</span>
+            </div>
           </div>
         </div>
 
@@ -754,9 +1183,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             [disabled]="isCheckingOut"
             class="action-btn btn-gradient-purple"
           >
-            <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+            <span class="material-symbols-outlined text-[18px]">
+              {{ offlinePos.isOnline() ? 'receipt_long' : 'save_alt' }}
+            </span>
             <span *ngIf="isCheckingOut">Processing Payment...</span>
-            <span *ngIf="!isCheckingOut">Complete & Print Bill ✓</span>
+            <span *ngIf="!isCheckingOut">
+              {{ offlinePos.isOnline() ? 'Complete & Print Bill ✓' : 'Save Offline & Print Bill ⚡' }}
+            </span>
           </button>
         </div>
       </div>
@@ -937,25 +1370,23 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- 5. DISH VARIANT (PORTION) CHOOSER                               -->
-    <!-- Nothing reaches the cart until a portion is chosen: the portion -->
-    <!-- decides both the price and how much stock the sale consumes.    -->
+    <!-- 5. DISH CUSTOMIZATION & PORTION MODAL                           -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <div class="modal-backdrop" *ngIf="variantPickerProduct">
-      <div class="modal-content p-6 max-w-md">
-        <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+    <div class="modal-backdrop" *ngIf="customizationProduct">
+      <div class="modal-content p-6 max-w-lg w-full">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
           <div class="flex items-center gap-3">
-            <span class="modal-icon-badge">
-              <span class="material-symbols-outlined">restaurant_menu</span>
-            </span>
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white text-2xl shadow-sm">
+              {{ getProductEmoji(customizationProduct.name, customizationProduct.category_id) }}
+            </div>
             <div>
-              <h3 class="text-lg font-black text-[#2E1065] leading-tight">Choose Portion</h3>
-              <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ variantPickerProduct?.name }}</p>
+              <h3 class="text-lg font-black text-slate-900 leading-tight">{{ customizationProduct.name }}</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Customize portion, extras & kitchen instructions</p>
             </div>
           </div>
           <button
             type="button"
-            (click)="closeVariantPicker()"
+            (click)="closeCustomizationModal()"
             class="modal-close-btn"
             title="Close"
             aria-label="Close"
@@ -964,40 +1395,105 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </button>
         </div>
 
-        <div class="variant-available-strip">
-          <span class="flex items-center gap-1.5">
-            <span class="material-symbols-outlined" style="font-size: 17px;">inventory_2</span>
-            <span>Available Stock</span>
-          </span>
-          <strong class="font-mono">
-            {{ availableStock(variantPickerProduct) | number:'1.0-3' }}
-            {{ variantPickerProduct?.linked_unit_type || 'units' }}
-          </strong>
+        <div class="max-h-[60vh] overflow-y-auto pr-1 space-y-4">
+          <!-- Portions / Variants (if any) -->
+          <div *ngIf="customizationVariants.length > 0">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">straighten</span>
+              <span>Select Portion / Variant</span>
+            </h4>
+            <div class="grid grid-cols-2 gap-2">
+              <div
+                *ngFor="let v of customizationVariants"
+                (click)="selectedCustomizationVariant = v"
+                class="p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between"
+                [ngClass]="selectedCustomizationVariant?.id === v.id ? 'border-[#ff6b00] bg-orange-50/60 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-sm text-slate-800">{{ v.name }}</span>
+                  <span class="w-4 h-4 rounded-full border flex items-center justify-center"
+                    [ngClass]="selectedCustomizationVariant?.id === v.id ? 'border-[#ff6b00] bg-[#ff6b00]' : 'border-slate-300'">
+                    <span *ngIf="selectedCustomizationVariant?.id === v.id" class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                  </span>
+                </div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <span class="text-xs text-slate-400 font-mono">Stock: {{ stockAfter(customizationProduct, v) | number:'1.0-0' }}</span>
+                  <span class="font-bold font-mono text-sm text-slate-900">{{ v.selling_price | appCurrency:'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add-ons & Toppings Selection (if any) -->
+          <div *ngIf="getApplicableAddons(customizationProduct).length > 0">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">add_circle</span>
+              <span>Add-ons & Extras</span>
+            </h4>
+            <div class="space-y-2">
+              <div
+                *ngFor="let addon of getApplicableAddons(customizationProduct)"
+                (click)="toggleAddonSelection(addon)"
+                class="p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between"
+                [ngClass]="isAddonSelected(addon.id) ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'"
+              >
+                <div class="flex items-center gap-2.5">
+                  <span class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+                    [ngClass]="isAddonSelected(addon.id) ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'">
+                    <span *ngIf="isAddonSelected(addon.id)" class="material-symbols-outlined text-xs">check</span>
+                  </span>
+                  <div>
+                    <div class="text-sm font-bold text-slate-800">{{ addon.name }}</div>
+                    <div *ngIf="addon.description" class="text-xs text-slate-400">{{ addon.description }}</div>
+                  </div>
+                </div>
+                <span class="text-xs font-bold font-mono text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded">
+                  + {{ addon.price | appCurrency:'1.0-0' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Special Kitchen Instructions -->
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">edit_note</span>
+              <span>Kitchen Notes (Optional)</span>
+            </h4>
+            <input
+              type="text"
+              [(ngModel)]="customizationNotes"
+              placeholder="e.g. Less spicy, crispy, no onions..."
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#ff6b00]"
+            />
+          </div>
         </div>
 
-        <div class="variant-option-list">
-          <button
-            *ngFor="let v of variantPickerOptions"
-            type="button"
-            class="variant-option"
-            [disabled]="stockAfter(variantPickerProduct, v) < 0"
-            (click)="chooseVariant(v)"
-          >
-            <div class="variant-option-left">
-              <span class="variant-option-name">{{ v.name }}</span>
-              <span class="variant-option-meta">
-                Uses {{ v.stock_consumption }} · leaves
-                <strong>{{ stockAfter(variantPickerProduct, v) | number:'1.0-3' }}</strong>
-              </span>
+        <!-- Footer with live calculation & confirm -->
+        <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400">Total Price</div>
+            <div class="text-2xl font-black font-mono text-slate-900">
+              {{ getCustomizationTotalPrice() | appCurrency:'1.2-2' }}
             </div>
-            <div class="variant-option-right">
-              <span class="variant-option-price font-mono">{{ v.selling_price | appCurrency:'1.0-0' }}</span>
-              <span
-                class="variant-option-flag"
-                *ngIf="stockAfter(variantPickerProduct, v) < 0"
-              >Not enough stock</span>
-            </div>
-          </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="closeCustomizationModal()"
+              class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              (click)="confirmCustomization()"
+              class="px-5 py-2.5 rounded-xl bg-[#ff6b00] hover:bg-[#e05e00] text-white font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
+              <span>Add to Order</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1008,6 +1504,681 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       [printData]="lastReceiptData"
       (close)="showReceiptModal = false"
     ></app-receipt-modal>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 7. TRANSACTION HISTORY & AUDIT LEDGER MODAL                     -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showHistoryModal">
+      <div class="modal-content p-6 md:p-8 w-full max-w-5xl shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF] flex-shrink-0">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge is-teal">
+              <span class="material-symbols-outlined text-2xl">receipt_long</span>
+            </span>
+            <div>
+              <h3 class="text-xl font-black text-[#2E1065] leading-tight">POS Transaction History & Ledger</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Lookup settled bills, reprint thermal receipts & KOTs, void or duplicate orders</p>
+            </div>
+          </div>
+          <button (click)="showHistoryModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Filter / Search Toolbar -->
+        <div class="flex items-center gap-3 mb-4 flex-shrink-0 flex-wrap">
+          <div class="relative flex-1 min-w-[200px]">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
+            <input
+              type="text"
+              [(ngModel)]="historySearch"
+              placeholder="Search by Bill # or Customer Name..."
+              class="form-control pl-9 text-xs w-full"
+            />
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button
+              *ngFor="let st of ['ALL', 'PAID', 'VOIDED', 'REOPENED']"
+              type="button"
+              (click)="historyStatusFilter = st"
+              class="py-1.5 px-3 rounded-lg text-xs font-bold border transition-colors"
+              [ngClass]="historyStatusFilter === st ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
+            >
+              {{ st }}
+            </button>
+          </div>
+          <button (click)="loadHistoryBills()" class="action-btn btn-outline-purple !py-1.5 !px-3 text-xs flex items-center gap-1" title="Refresh list">
+            <span class="material-symbols-outlined text-[15px]">refresh</span>
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        <!-- Bills Ledger Table -->
+        <div class="flex-1 overflow-y-auto border border-[#E9D5FF] rounded-xl">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-[#FAF5FF] border-b border-[#E9D5FF] text-[#2E1065] uppercase text-[10px] font-black sticky top-0 z-10">
+              <tr>
+                <th class="p-3">Bill #</th>
+                <th class="p-3">Date / Time</th>
+                <th class="p-3">Type</th>
+                <th class="p-3">Payment</th>
+                <th class="p-3 text-right">Total (₹)</th>
+                <th class="p-3 text-center">Status</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#E9D5FF] font-medium">
+              <tr *ngIf="filterHistoryBills().length === 0">
+                <td colspan="7" class="p-8 text-center text-gray-400">
+                  <span class="material-symbols-outlined text-3xl block mb-1">receipt</span>
+                  No transactions found matching criteria.
+                </td>
+              </tr>
+              <tr *ngFor="let bill of filterHistoryBills()" class="hover:bg-purple-50/40 transition-colors">
+                <td class="p-3 font-mono font-bold text-[#6B21A8]">
+                  #{{ bill.bill_number }}
+                  <div *ngIf="bill.offline_sync_id" class="text-[9px] font-mono text-amber-600">
+                    ⚡ Offline Sync
+                  </div>
+                </td>
+                <td class="p-3 text-gray-600">
+                  {{ bill.created_at | date:'shortTime' }}
+                  <span class="text-[10px] text-gray-400 block">{{ bill.created_at | date:'dd MMM yyyy' }}</span>
+                </td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-[#6B21A8]">
+                    {{ bill.order_type || 'WALK_IN' }}
+                  </span>
+                </td>
+                <td class="p-3">
+                  <span class="font-bold text-gray-700">{{ bill.payment_method }}</span>
+                  <div *ngIf="bill.payment_reference" class="text-[10px] font-mono text-gray-400 truncate max-w-[100px]">
+                    {{ bill.payment_reference }}
+                  </div>
+                </td>
+                <td class="p-3 text-right font-mono font-extrabold text-[#2E1065]">
+                  {{ bill.total_amount | appCurrency:'1.2-2' }}
+                </td>
+                <td class="p-3 text-center">
+                  <span
+                    *ngIf="bill.is_voided"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700"
+                    [title]="'Voided: ' + (bill.void_reason || 'N/A')"
+                  >
+                    VOIDED
+                  </span>
+                  <span
+                    *ngIf="!bill.is_voided && bill.is_reopened"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700"
+                  >
+                    REOPENED
+                  </span>
+                  <span
+                    *ngIf="!bill.is_voided && !bill.is_reopened"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700"
+                  >
+                    PAID
+                  </span>
+                </td>
+                <td class="p-3 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <!-- Print Thermal Receipt -->
+                    <button
+                      type="button"
+                      (click)="printReceiptFromHistory(bill)"
+                      class="p-1 rounded hover:bg-purple-100 text-purple-700"
+                      title="Print 80mm Thermal Receipt"
+                    >
+                      <span class="material-symbols-outlined text-[16px]">receipt</span>
+                    </button>
+                    <!-- Print Kitchen KOT -->
+                    <button
+                      type="button"
+                      (click)="printKotFromHistory(bill)"
+                      class="p-1 rounded hover:bg-teal-100 text-teal-700"
+                      title="Print Kitchen Order Ticket (KOT)"
+                    >
+                      <span class="material-symbols-outlined text-[16px]">soup_kitchen</span>
+                    </button>
+                    <!-- Duplicate Order to Cart -->
+                    <button
+                      type="button"
+                      (click)="duplicateBill(bill)"
+                      class="p-1 rounded hover:bg-blue-100 text-blue-700"
+                      title="Duplicate Items to Current Cart"
+                    >
+                      <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                    </button>
+                    <!-- Reopen Bill -->
+                    <button
+                      *ngIf="!bill.is_voided"
+                      type="button"
+                      (click)="reopenBill(bill)"
+                      class="p-1 rounded hover:bg-amber-100 text-amber-700"
+                      title="Reopen Order for Edits"
+                    >
+                      <span class="material-symbols-outlined text-[16px]">lock_open</span>
+                    </button>
+                    <!-- Void Bill -->
+                    <button
+                      *ngIf="!bill.is_voided"
+                      type="button"
+                      (click)="promptVoidBill(bill)"
+                      class="p-1 rounded hover:bg-rose-100 text-rose-700"
+                      title="Void Bill (Restock & Audit)"
+                    >
+                      <span class="material-symbols-outlined text-[16px]">cancel</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 8. VOID BILL CONFIRMATION MODAL                                 -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showVoidModal && selectedBillForVoid">
+      <div class="modal-content p-6 max-w-md w-full shadow-2xl">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-rose-200">
+          <div class="flex items-center gap-3">
+            <span class="modal-icon-badge !bg-rose-100 !text-rose-700">
+              <span class="material-symbols-outlined text-2xl">warning</span>
+            </span>
+            <div>
+              <h3 class="text-lg font-black text-rose-900 leading-tight">Void Bill #{{ selectedBillForVoid.bill_number }}</h3>
+              <p class="text-xs text-rose-600 mt-0.5">Amount: {{ selectedBillForVoid.total_amount | appCurrency:'1.2-2' }}</p>
+            </div>
+          </div>
+          <button (click)="showVoidModal = false" class="modal-close-btn" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl mb-4 text-xs text-rose-800 leading-relaxed">
+          <strong>Restock & Audit Notice:</strong> Voiding will cancel this order, immediately return all consumed dish stock to the inventory ledger, and record an audit entry with your cashier credentials.
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Mandatory Void Reason</label>
+            <select [(ngModel)]="voidReason" class="form-control text-xs w-full">
+              <option value="Customer cancelled order">Customer cancelled order</option>
+              <option value="Wrong punch / cashier error">Wrong punch / cashier error</option>
+              <option value="Food quality issue / return">Food quality issue / return</option>
+              <option value="Payment failed / unconfirmed">Payment failed / unconfirmed</option>
+              <option value="Duplicate bill punch">Duplicate bill punch</option>
+              <option value="Other">Other reason (explain below)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Additional Notes (Optional)</label>
+            <textarea
+              [(ngModel)]="voidNotes"
+              rows="2"
+              placeholder="Provide context for the store manager..."
+              class="form-control text-xs w-full"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-4 mt-4 border-t border-gray-200">
+          <button (click)="showVoidModal = false" class="action-btn btn-outline-purple">
+            Dismiss
+          </button>
+          <button
+            (click)="submitVoid()"
+            [disabled]="isVoiding"
+            class="py-2.5 px-4 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+          >
+            <span class="material-symbols-outlined text-[16px]">cancel</span>
+            <span>{{ isVoiding ? 'Voiding & Restocking...' : 'Confirm Void Order' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 9. END-OF-DAY SHIFT CLOSING (Z-REPORT) MODAL                    -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showClosingModal">
+      <div class="modal-content p-6 md:p-8 w-full max-w-3xl shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF] flex-shrink-0">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge">
+              <span class="material-symbols-outlined text-2xl">account_balance_wallet</span>
+            </span>
+            <div>
+              <h3 class="text-xl font-black text-[#2E1065] leading-tight">End-of-Day Shift Closing (Z-Report)</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Shift reconciliation, payment breakdown, and cash drawer balance verification</p>
+            </div>
+          </div>
+          <button (click)="showClosingModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Shift View Tabs -->
+        <div class="flex items-center gap-2 mb-4 flex-shrink-0">
+          <button
+            type="button"
+            (click)="closingTab = 'current'"
+            class="py-1.5 px-4 rounded-xl font-bold text-xs border transition-colors"
+            [ngClass]="closingTab === 'current' ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
+          >
+            Current Shift Reconciliation
+          </button>
+          <button
+            type="button"
+            (click)="closingTab = 'history'; loadPastClosings()"
+            class="py-1.5 px-4 rounded-xl font-bold text-xs border transition-colors"
+            [ngClass]="closingTab === 'history' ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
+          >
+            Past Z-Report Records
+          </button>
+        </div>
+
+        <!-- Tab 1: Current Shift Reconciliation -->
+        <div *ngIf="closingTab === 'current'" class="flex-1 overflow-y-auto space-y-4 pr-1">
+          <!-- Live Shift Stats Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="p-3 rounded-xl bg-purple-50 border border-purple-200">
+              <span class="text-[10px] uppercase font-bold text-purple-700">Total Orders</span>
+              <div class="text-xl font-black text-purple-900 font-mono mt-0.5">
+                {{ shiftSummary?.totalOrders || 0 }}
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-teal-50 border border-teal-200">
+              <span class="text-[10px] uppercase font-bold text-teal-700">Net Sales</span>
+              <div class="text-xl font-black text-teal-900 font-mono mt-0.5">
+                {{ shiftSummary?.netSales || 0 | appCurrency:'1.0-0' }}
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-blue-50 border border-blue-200">
+              <span class="text-[10px] uppercase font-bold text-blue-700">Discounts</span>
+              <div class="text-xl font-black text-blue-900 font-mono mt-0.5">
+                {{ shiftSummary?.totalDiscount || 0 | appCurrency:'1.0-0' }}
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+              <span class="text-[10px] uppercase font-bold text-emerald-700">GST / Tax</span>
+              <div class="text-xl font-black text-emerald-900 font-mono mt-0.5">
+                {{ shiftSummary?.totalTax || 0 | appCurrency:'1.0-0' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Breakdown -->
+          <div class="p-4 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF]">
+            <h4 class="text-xs font-black uppercase text-[#2E1065] tracking-wider mb-2.5">Payment Method Breakdown</h4>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+              <div class="p-2 rounded-lg bg-white border border-[#DDD6FE]">
+                <span class="text-gray-500 text-[10px] block">CASH SALES</span>
+                <strong class="text-emerald-700 text-sm font-bold">{{ shiftSummary?.cashSales || 0 | appCurrency:'1.2-2' }}</strong>
+              </div>
+              <div class="p-2 rounded-lg bg-white border border-[#DDD6FE]">
+                <span class="text-gray-500 text-[10px] block">UPI SALES</span>
+                <strong class="text-purple-700 text-sm font-bold">{{ shiftSummary?.upiSales || 0 | appCurrency:'1.2-2' }}</strong>
+              </div>
+              <div class="p-2 rounded-lg bg-white border border-[#DDD6FE]">
+                <span class="text-gray-500 text-[10px] block">CARD SALES</span>
+                <strong class="text-blue-700 text-sm font-bold">{{ shiftSummary?.cardSales || 0 | appCurrency:'1.2-2' }}</strong>
+              </div>
+              <div class="p-2 rounded-lg bg-white border border-[#DDD6FE]">
+                <span class="text-gray-500 text-[10px] block">ONLINE / OTHER</span>
+                <strong class="text-amber-700 text-sm font-bold">{{ (shiftSummary?.onlineSales || 0) + (shiftSummary?.otherSales || 0) | appCurrency:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cash Drawer Reconciliation -->
+          <div class="p-4 rounded-xl bg-white border-2 border-[#E9D5FF] space-y-3">
+            <h4 class="text-xs font-black uppercase text-[#2E1065] tracking-wider">Cash Drawer Reconciliation</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Opening Float Cash (₹)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="openingCash"
+                  class="form-control text-sm font-mono font-bold w-full"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Expected Drawer Cash (₹)</label>
+                <div class="form-control text-sm font-mono font-black bg-gray-50 text-gray-800 flex items-center">
+                  {{ calcExpectedCash() | appCurrency:'1.2-2' }}
+                </div>
+              </div>
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Actual Counted Cash (₹)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="actualCash"
+                  class="form-control text-sm font-mono font-black text-emerald-700 w-full"
+                  placeholder="Counted cash"
+                />
+              </div>
+            </div>
+
+            <!-- Cash Variance Alert -->
+            <div class="pt-2 flex items-center justify-between border-t border-gray-100">
+              <span class="text-xs font-bold text-gray-600">Drawer Cash Variance:</span>
+              <span
+                class="text-sm font-mono font-black px-2.5 py-1 rounded-lg"
+                [ngClass]="calcCashVariance() >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+              >
+                {{ calcCashVariance() >= 0 ? '+ ' : '' }}{{ calcCashVariance() | appCurrency:'1.2-2' }}
+                ({{ calcCashVariance() === 0 ? 'Exact Match' : (calcCashVariance() > 0 ? 'Surplus' : 'Shortage') }})
+              </span>
+            </div>
+          </div>
+
+          <!-- Closing Notes -->
+          <div>
+            <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Shift Closing Remarks / Handover Notes</label>
+            <textarea
+              [(ngModel)]="closingNotes"
+              rows="2"
+              placeholder="e.g. Handed over to night cashier, ₹2000 kept as float for tomorrow..."
+              class="form-control text-xs w-full"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Tab 2: Past Z-Reports -->
+        <div *ngIf="closingTab === 'history'" class="flex-1 overflow-y-auto border border-[#E9D5FF] rounded-xl">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-[#FAF5FF] border-b border-[#E9D5FF] text-[#2E1065] uppercase text-[10px] font-black sticky top-0">
+              <tr>
+                <th class="p-3">Shift Date / ID</th>
+                <th class="p-3">Orders</th>
+                <th class="p-3 text-right">Net Sales</th>
+                <th class="p-3 text-right">Expected Cash</th>
+                <th class="p-3 text-right">Actual Cash</th>
+                <th class="p-3 text-center">Variance</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#E9D5FF] font-medium">
+              <tr *ngIf="pastClosings.length === 0">
+                <td colspan="7" class="p-8 text-center text-gray-400">No past shift closings found.</td>
+              </tr>
+              <tr *ngFor="let row of pastClosings" class="hover:bg-purple-50/40">
+                <td class="p-3">
+                  <span class="font-bold text-[#6B21A8]">#SHIFT-{{ row.id }}</span>
+                  <div class="text-[10px] text-gray-400">{{ row.closing_date | date:'dd MMM yyyy HH:mm' }}</div>
+                </td>
+                <td class="p-3 font-mono font-bold">{{ row.total_orders }}</td>
+                <td class="p-3 text-right font-mono font-bold">{{ row.net_sales | appCurrency:'1.2-2' }}</td>
+                <td class="p-3 text-right font-mono text-gray-600">{{ row.expected_cash | appCurrency:'1.2-2' }}</td>
+                <td class="p-3 text-right font-mono font-bold text-emerald-700">{{ row.actual_cash | appCurrency:'1.2-2' }}</td>
+                <td class="p-3 text-center">
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono"
+                    [ngClass]="row.cash_difference >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+                  >
+                    {{ row.cash_difference | appCurrency:'1.2-2' }}
+                  </span>
+                </td>
+                <td class="p-3 text-right">
+                  <button
+                    type="button"
+                    (click)="printPastClosing(row)"
+                    class="action-btn btn-outline-purple !py-1 !px-2.5 text-xs flex items-center gap-1"
+                    title="Reprint Z-Report"
+                  >
+                    <span class="material-symbols-outlined text-[14px]">print</span>
+                    <span>Print</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="flex items-center justify-end gap-3 pt-4 mt-3 border-t border-[#E9D5FF] flex-shrink-0">
+          <button (click)="showClosingModal = false" class="action-btn btn-outline-purple">
+            Close
+          </button>
+          <button
+            *ngIf="closingTab === 'current'"
+            (click)="submitDayClosing()"
+            [disabled]="isSavingClosing"
+            class="action-btn btn-gradient-purple flex items-center gap-1.5"
+          >
+            <span class="material-symbols-outlined text-[18px]">receipt</span>
+            <span>{{ isSavingClosing ? 'Saving Shift...' : 'Close Shift & Print Z-Report ✓' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 10. PRINTER ROUTING CONFIGURATION MODAL                         -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showPrintersModal">
+      <div class="modal-content p-6 md:p-8 w-full max-w-xl shadow-2xl">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-3.5">
+            <span class="modal-icon-badge is-teal">
+              <span class="material-symbols-outlined text-2xl">print</span>
+            </span>
+            <div>
+              <h3 class="text-xl font-black text-[#2E1065] leading-tight">Printer Routing & Hardware</h3>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Configure 80mm/58mm thermal cashier receipt & Kitchen KOT printers</p>
+            </div>
+          </div>
+          <button (click)="showPrintersModal = false" class="modal-close-btn" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Cashier Receipt Printer -->
+          <div class="p-4 rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[#7E22CE]">receipt_long</span>
+                <span class="text-sm font-bold text-[#2E1065]">Cashier Receipt Printer</span>
+              </div>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-purple-900">
+                <input type="checkbox" [(ngModel)]="printerSettings.receiptPrinter.enabled" class="accent-[#7E22CE]" />
+                <span>Enabled</span>
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <div>
+                <label class="text-[10px] font-bold uppercase text-gray-500 mb-1 block">Paper Width</label>
+                <select [(ngModel)]="printerSettings.receiptPrinter.paperWidth" class="form-control text-xs w-full">
+                  <option value="80mm">80mm Standard Thermal</option>
+                  <option value="58mm">58mm Compact Thermal</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] font-bold uppercase text-gray-500 mb-1 block">Auto-Print</label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 mt-2">
+                  <input type="checkbox" [(ngModel)]="printerSettings.receiptPrinter.autoPrintOnCheckout" class="accent-[#7E22CE]" />
+                  <span>On checkout complete</span>
+                </label>
+              </div>
+            </div>
+            <div class="pt-2 flex justify-end">
+              <button (click)="testPrintReceipt()" class="action-btn btn-outline-purple !py-1 !px-2.5 text-xs flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">print</span>
+                <span>Test Print Receipt</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Kitchen KOT Printer -->
+          <div class="p-4 rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-teal-700">soup_kitchen</span>
+                <span class="text-sm font-bold text-[#2E1065]">Kitchen Order Ticket (KOT) Printer</span>
+              </div>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-teal-900">
+                <input type="checkbox" [(ngModel)]="printerSettings.kitchenPrinter.enabled" class="accent-teal-700" />
+                <span>Enabled</span>
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <div>
+                <label class="text-[10px] font-bold uppercase text-gray-500 mb-1 block">Paper Width</label>
+                <select [(ngModel)]="printerSettings.kitchenPrinter.paperWidth" class="form-control text-xs w-full">
+                  <option value="80mm">80mm Standard Thermal</option>
+                  <option value="58mm">58mm Compact Thermal</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] font-bold uppercase text-gray-500 mb-1 block">Auto-Print KOT</label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 mt-2">
+                  <input type="checkbox" [(ngModel)]="printerSettings.kitchenPrinter.autoPrintKot" class="accent-teal-700" />
+                  <span>On order confirm</span>
+                </label>
+              </div>
+            </div>
+            <div class="pt-2 flex justify-end">
+              <button (click)="testPrintKot()" class="action-btn btn-outline-purple !py-1 !px-2.5 text-xs flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">print</span>
+                <span>Test Print KOT</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bar Beverage Printer -->
+          <div class="p-4 rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-700">local_bar</span>
+                <span class="text-sm font-bold text-[#2E1065]">Bar & Beverage Printer</span>
+              </div>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-amber-900">
+                <input type="checkbox" [(ngModel)]="printerSettings.barPrinter.enabled" class="accent-amber-700" />
+                <span>Enabled</span>
+              </label>
+            </div>
+            <p class="text-[11px] text-gray-500">Route drinks and beverage items to the bar terminal printer automatically.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 mt-4 border-t border-[#E9D5FF]">
+          <button (click)="showPrintersModal = false" class="action-btn btn-outline-purple">
+            Close
+          </button>
+          <button (click)="savePrinterSettings()" class="action-btn btn-gradient-purple">
+            Save Preferences ✓
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 11. COMPLIMENTARY ITEM MODAL                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showComplimentaryModal && activeEditingItem">
+      <div class="modal-content p-6 max-w-sm w-full shadow-2xl">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-2.5">
+            <span class="modal-icon-badge !bg-amber-100 !text-amber-800">
+              <span class="material-symbols-outlined">redeem</span>
+            </span>
+            <div>
+              <h3 class="text-base font-black text-[#2E1065]">Mark Complimentary</h3>
+              <p class="text-[11px] text-gray-500">{{ activeEditingItem.product.name }}</p>
+            </div>
+          </div>
+          <button (click)="showComplimentaryModal = false" class="modal-close-btn" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 font-medium">
+            This item's billing price will be reduced to ₹0.00 (100% Free) with an audit reason.
+          </div>
+          <div>
+            <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Authorization Reason</label>
+            <select [(ngModel)]="complimentaryReasonInput" class="form-control text-xs w-full">
+              <option value="Staff Authorized Courtesy">Staff Authorized Courtesy</option>
+              <option value="Manager / VIP Guest">Manager / VIP Guest</option>
+              <option value="Food Quality Issue Replacement">Food Quality Issue Replacement</option>
+              <option value="Chef Tasting Special">Chef Tasting Special</option>
+              <option value="Delayed Order Apology">Delayed Order Apology</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-4 mt-3 border-t border-gray-100">
+          <button (click)="showComplimentaryModal = false" class="action-btn btn-outline-purple">
+            Cancel
+          </button>
+          <button (click)="saveComplimentary()" class="action-btn btn-gradient-purple">
+            Apply 100% Free ✓
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 12. ITEM COOKING NOTES MODAL                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showItemNoteModal && activeEditingItem">
+      <div class="modal-content p-6 max-w-sm w-full shadow-2xl">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#E9D5FF]">
+          <div class="flex items-center gap-2.5">
+            <span class="modal-icon-badge">
+              <span class="material-symbols-outlined">edit_note</span>
+            </span>
+            <div>
+              <h3 class="text-base font-black text-[#2E1065]">Kitchen Cooking Note</h3>
+              <p class="text-[11px] text-gray-500">{{ activeEditingItem.product.name }}</p>
+            </div>
+          </div>
+          <button (click)="showItemNoteModal = false" class="modal-close-btn" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Quick Preset Chips -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button
+              *ngFor="let chip of ['Less Spicy', 'Extra Crispy', 'No Onion/Garlic', 'Less Oil', 'Pack Separately', 'Serve Hot']"
+              type="button"
+              (click)="itemNoteInput = itemNoteInput ? itemNoteInput + ', ' + chip : chip"
+              class="px-2 py-1 rounded-md text-[10px] font-bold bg-[#FAF5FF] border border-[#DDD6FE] text-[#6B21A8] hover:bg-[#F3E8FF]"
+            >
+              + {{ chip }}
+            </button>
+          </div>
+
+          <div>
+            <label class="form-label text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 block">Custom Instructions</label>
+            <textarea
+              [(ngModel)]="itemNoteInput"
+              rows="2"
+              placeholder="e.g. Mild spice, extra mayonnaise..."
+              class="form-control text-xs w-full"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-4 mt-3 border-t border-gray-100">
+          <button (click)="showItemNoteModal = false" class="action-btn btn-outline-purple">
+            Cancel
+          </button>
+          <button (click)="saveItemNote()" class="action-btn btn-gradient-purple">
+            Save Note ✓
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     /* ─── Dish variant (portion) chooser ─── */
@@ -2591,9 +3762,104 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       .dish-hero-card { text-shadow: none; }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      .dish-hero-card::after { transition: none; }
-      .dish-hero-card:hover::after { left: -60%; }
+    /* ─── Online / Offline & Advanced POS UI Controls ─── */
+    .btn-status-online {
+      background: #ECFDF5 !important;
+      border-color: #A7F3D0 !important;
+      color: #065F46 !important;
+    }
+    .btn-status-offline {
+      background: #FFFBEB !important;
+      border-color: #FDE68A !important;
+      color: #92400E !important;
+    }
+    .status-dot-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #10B981;
+      display: inline-block;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+    .status-dot-pulse.is-offline {
+      background: #F59E0B;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+      animation: statusPulse 1.5s infinite;
+    }
+    @keyframes statusPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.6; }
+    }
+
+    /* Complimentary badge on cart item */
+    .complimentary-badge {
+      font-size: 0.625rem;
+      font-weight: 800;
+      color: #047857;
+      background: #D1FAE5;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      border: 1px solid #6EE7B7;
+    }
+    .is-complimentary-row {
+      border-left: 3px solid #10B981 !important;
+    }
+
+    /* Cart item action mini buttons (notes, comp) */
+    .item-action-icon-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.85);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .item-action-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      color: #FFFFFF;
+    }
+    .item-action-icon-btn.is-active {
+      background: #F59E0B;
+      border-color: #FBBF24;
+      color: #78350F;
+    }
+
+    /* Service charge & Surcharge billing addons bar */
+    .cart-billing-addons {
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .billing-addon-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .billing-chip-btn {
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .billing-chip-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .billing-chip-btn.is-selected {
+      background: #FBBF24;
+      border-color: #F59E0B;
+      color: #1F2937;
     }
   `, POS_DESIGN_CSS],
 })
@@ -2610,6 +3876,9 @@ export class PosComponent implements OnInit, AfterViewInit {
   private orderService = inject(OrderService);
   private notify = inject(NotificationService);
   public settingsService = inject(SettingsService);
+  public offlinePos = inject(OfflinePosService);
+  public printerService = inject(PrinterService);
+  public posClosingService = inject(PosClosingService);
 
   /** Horizontal rail for the category circles; see scrollCategories(). */
   @ViewChild('catTrack') private catTrackRef?: ElementRef<HTMLElement>;
@@ -2676,6 +3945,18 @@ export class PosComponent implements OnInit, AfterViewInit {
   public selectedCategoryId: number | null = null;
   public searchQuery = '';
 
+  // Combos, Deals & Addons state
+  public addonsList: ProductAddon[] = [];
+  public combosList: ComboMeal[] = [];
+  public dealsList: MealDeal[] = [];
+  public selectedCatalogTab: 'ALL' | 'COMBOS' | 'DEALS' = 'ALL';
+
+  // Dish Customization & Portion state
+  public customizationProduct: Product | null = null;
+  public selectedCustomizationVariant: ProductVariant | null = null;
+  public selectedCustomizationAddons: ProductAddon[] = [];
+  public customizationNotes = '';
+
   public diningTables: DiningTable[] = [];
   public draftBills: DraftBill[] = [];
   public draftCount = 0;
@@ -2695,13 +3976,23 @@ export class PosComponent implements OnInit, AfterViewInit {
   public showCustomerModal = false;
   public showDraftsModal = false;
   public showReceiptModal = false;
+  public showHistoryModal = false;
+  public showVoidModal = false;
+  public showClosingModal = false;
+  public showPrintersModal = false;
+  public showComplimentaryModal = false;
+  public showItemNoteModal = false;
 
-  // Payment inputs
+  // Payment inputs & digital channels
   public selectedPaymentMethod: any = 'CASH';
   public tenderedAmount = 0;
   public changeDue = 0;
   public paymentReference = '';
   public isCheckingOut = false;
+  public onlineProvider = 'Swiggy';
+  public upiVpa = 'mandi.pos@okaxis';
+  public autoPrintReceipt = true;
+  public autoPrintKot = true;
 
   // Customer inputs
   public customerPhone = '';
@@ -2710,6 +4001,33 @@ export class PosComponent implements OnInit, AfterViewInit {
 
   // Receipt data
   public lastReceiptData: any = null;
+
+  // Item Editing state
+  public activeEditingItem: CartItem | null = null;
+  public complimentaryReasonInput = 'Staff Authorized Courtesy';
+  public itemNoteInput = '';
+
+  // Transaction History & Audit Ledger state
+  public historyBills: Bill[] = [];
+  public historySearch = '';
+  public historyStatusFilter = 'ALL';
+  public isLoadingHistory = false;
+  public selectedBillForVoid: Bill | null = null;
+  public voidReason = 'Customer cancelled order';
+  public voidNotes = '';
+  public isVoiding = false;
+
+  // End-of-Day Shift Closing state
+  public closingTab: 'current' | 'history' = 'current';
+  public shiftSummary: any = null;
+  public openingCash = 0;
+  public actualCash = 0;
+  public closingNotes = '';
+  public isSavingClosing = false;
+  public pastClosings: PosDayClosing[] = [];
+
+  // Printer Configuration state
+  public printerSettings: PrinterConfig = this.printerService.loadConfig();
 
   ngOnInit(): void {
     // Read before the dishes land, so the first grid already honours it.
@@ -2737,6 +4055,9 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.loadProducts();
     this.loadDraftCount();
     this.loadRecentOrders();
+    this.loadCombos();
+    this.loadDeals();
+    this.loadAddons();
   }
 
   /**
@@ -2783,6 +4104,13 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.showCustomerModal = false;
     this.showDraftsModal = false;
     this.showReceiptModal = false;
+    this.showHistoryModal = false;
+    this.showVoidModal = false;
+    this.showClosingModal = false;
+    this.showPrintersModal = false;
+    this.showComplimentaryModal = false;
+    this.showItemNoteModal = false;
+    this.closeCustomizationModal();
   }
 
   toggleBrowserFullscreen(): void {
@@ -2800,13 +4128,23 @@ export class PosComponent implements OnInit, AfterViewInit {
   loadCategories(): void {
     this.categoryService.getCategories().subscribe({
       next: (res) => {
-        if (res.success) this.categories = res.data;
+        if (res.success) {
+          this.categories = res.data;
+          this.offlinePos.cacheCatalog(this.products, this.categories);
+        }
         this.settleCriticalLoad();
-        // The circles have not been laid out yet in this tick, so the rail's
-        // scrollWidth is still stale; measure once the DOM has caught up.
         setTimeout(() => this.updateCatScrollState());
       },
-      error: (err) => this.settleCriticalLoad(err),
+      error: (err) => {
+        // Offline fallback
+        const cached = this.offlinePos.getCachedCatalog();
+        if (cached && cached.categories?.length > 0) {
+          this.categories = cached.categories;
+          this.settleCriticalLoad();
+        } else {
+          this.settleCriticalLoad(err);
+        }
+      },
     });
   }
 
@@ -2816,10 +4154,21 @@ export class PosComponent implements OnInit, AfterViewInit {
         if (res.success) {
           this.products = res.data;
           this.filterProducts();
+          this.offlinePos.cacheCatalog(this.products, this.categories);
         }
         this.settleCriticalLoad();
       },
-      error: (err) => this.settleCriticalLoad(err),
+      error: (err) => {
+        // Offline fallback
+        const cached = this.offlinePos.getCachedCatalog();
+        if (cached && cached.products?.length > 0) {
+          this.products = cached.products;
+          this.filterProducts();
+          this.settleCriticalLoad();
+        } else {
+          this.settleCriticalLoad(err);
+        }
+      },
     });
   }
 
@@ -3050,16 +4399,192 @@ export class PosComponent implements OnInit, AfterViewInit {
     return this.availableStock(product) <= 0;
   }
 
-  /** Dish awaiting a portion choice; null when the chooser is closed. */
-  public variantPickerProduct: Product | null = null;
+  /** Dish awaiting customization; null when modal is closed. */
+  public get customizationVariants(): ProductVariant[] {
+    return (this.customizationProduct?.variants || []).filter((v) => v.status !== 'INACTIVE');
+  }
 
+  // Backward compatibility alias for variant picker if referenced
+  public get variantPickerProduct(): Product | null {
+    return this.customizationProduct;
+  }
+  public set variantPickerProduct(val: Product | null) {
+    this.customizationProduct = val;
+  }
   public get variantPickerOptions(): ProductVariant[] {
-    return (this.variantPickerProduct?.variants || []).filter((v) => v.status !== 'INACTIVE');
+    return this.customizationVariants;
+  }
+
+  public getApplicableAddons(product: Product | null): ProductAddon[] {
+    if (!product) return [];
+    return this.addonsList.filter(
+      (a) => (a.is_available === true || a.is_available === 1) && (!a.product_id || a.product_id === product.id)
+    );
+  }
+
+  openCustomizationModal(product: Product): void {
+    this.customizationProduct = product;
+    const variants = (product.variants || []).filter((v) => v.status !== 'INACTIVE');
+    this.selectedCustomizationVariant = variants.length > 0 ? variants[0] : null;
+    this.selectedCustomizationAddons = [];
+    this.customizationNotes = '';
+  }
+
+  closeCustomizationModal(): void {
+    this.customizationProduct = null;
+    this.selectedCustomizationVariant = null;
+    this.selectedCustomizationAddons = [];
+    this.customizationNotes = '';
+  }
+
+  toggleAddonSelection(addon: ProductAddon): void {
+    const index = this.selectedCustomizationAddons.findIndex((a) => a.id === addon.id);
+    if (index >= 0) {
+      this.selectedCustomizationAddons.splice(index, 1);
+    } else {
+      this.selectedCustomizationAddons.push(addon);
+    }
+  }
+
+  isAddonSelected(addonId: number): boolean {
+    return this.selectedCustomizationAddons.some((a) => a.id === addonId);
+  }
+
+  getCustomizationTotalPrice(): number {
+    if (!this.customizationProduct) return 0;
+    const base = this.selectedCustomizationVariant
+      ? Number(this.selectedCustomizationVariant.selling_price)
+      : Number(this.customizationProduct.selling_price);
+    const addons = this.selectedCustomizationAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
+    return base + addons;
+  }
+
+  confirmCustomization(): void {
+    if (!this.customizationProduct) return;
+    const prod = this.customizationProduct;
+    const variant = this.selectedCustomizationVariant;
+    const addons = [...this.selectedCustomizationAddons];
+    const notes = this.customizationNotes?.trim() || undefined;
+
+    const success = this.cartService.addItemWithCustomization(
+      prod,
+      variant,
+      1,
+      notes,
+      addons,
+      'PRODUCT'
+    );
+
+    const label = variant ? `${prod.name} (${variant.name})` : prod.name;
+    if (!success) {
+      this.notify.error(`Cannot add "${label}" (Out of Stock / Inactive)`);
+    } else {
+      const addonsSummary = addons.length > 0 ? ` with ${addons.length} add-on(s)` : '';
+      this.notify.info(`Added "${label}"${addonsSummary} to cart`);
+    }
+    this.closeCustomizationModal();
+  }
+
+  addComboToCart(combo: ComboMeal): void {
+    const dummyProduct: Product = {
+      id: 90000 + combo.id,
+      name: combo.name,
+      selling_price: combo.combo_price,
+      cost_price: 0,
+      category_id: 0,
+      category_name: 'Combo Meals',
+      status: 'ACTIVE',
+      sku: combo.code || `COMBO-${combo.id}`,
+      tax_rate: 0,
+      stock_quantity: 999,
+      current_stock: 999,
+      image_url: combo.image_url,
+      description: combo.description || 'Special combo meal package',
+    } as Product;
+    const notes = combo.items && combo.items.length > 0
+      ? combo.items.map((i) => `${i.quantity}x ${i.product_name || 'Dish'}`).join(', ')
+      : undefined;
+
+    this.cartService.addItemWithCustomization(
+      dummyProduct,
+      null,
+      1,
+      notes,
+      [],
+      'COMBO',
+      combo.id
+    );
+    this.notify.success(`Added Combo: "${combo.name}" to cart!`);
+  }
+
+  addDealToCart(deal: MealDeal): void {
+    const dummyProduct: Product = {
+      id: 80000 + deal.id,
+      name: deal.title,
+      selling_price: deal.deal_price,
+      cost_price: 0,
+      category_id: 0,
+      category_name: 'Meal Deals',
+      status: 'ACTIVE',
+      sku: deal.code || `DEAL-${deal.id}`,
+      tax_rate: 0,
+      stock_quantity: 999,
+      current_stock: 999,
+      image_url: deal.image_url,
+      description: deal.description || 'Exclusive deal offer',
+    } as Product;
+    const notes = deal.items && deal.items.length > 0
+      ? deal.items.map((i) => `${i.quantity}x ${i.product_name || 'Dish'}`).join(', ')
+      : undefined;
+
+    this.cartService.addItemWithCustomization(
+      dummyProduct,
+      null,
+      1,
+      notes,
+      [],
+      'DEAL',
+      deal.id
+    );
+    this.notify.success(`Added Deal: "${deal.title}" to cart!`);
+  }
+
+  loadCombos(): void {
+    this.productService.getCombos().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.combosList = res.data;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  loadDeals(): void {
+    this.productService.getDeals().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.dealsList = res.data;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  loadAddons(): void {
+    this.productService.getAddons().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.addonsList = res.data.filter((a: any) => a.is_available === true || a.is_available === 1);
+        }
+      },
+      error: () => {},
+    });
   }
 
   /**
-   * A dish that defines portions cannot be added without one — the server
-   * rejects it too, because the consumption is what leaves the ledger.
+   * Adds a product to cart or opens customization modal if portion variants
+   * or add-ons are available.
    */
   addToCart(product: Product): void {
     if (this.isOutOfStock(product)) {
@@ -3067,22 +4592,23 @@ export class PosComponent implements OnInit, AfterViewInit {
       return;
     }
     const variants = (product.variants || []).filter((v) => v.status !== 'INACTIVE');
-    if (variants.length > 0) {
-      this.variantPickerProduct = product;
+    const addons = this.getApplicableAddons(product);
+    if (variants.length > 0 || addons.length > 0) {
+      this.openCustomizationModal(product);
       return;
     }
     this.commitToCart(product, null);
   }
 
   chooseVariant(variant: ProductVariant): void {
-    const product = this.variantPickerProduct;
+    const product = this.customizationProduct;
     if (!product) return;
-    this.variantPickerProduct = null;
-    this.commitToCart(product, variant);
+    this.selectedCustomizationVariant = variant;
+    this.confirmCustomization();
   }
 
   closeVariantPicker(): void {
-    this.variantPickerProduct = null;
+    this.closeCustomizationModal();
   }
 
   /** Stock the dish's linked ledger item still holds. */
@@ -3203,26 +4729,290 @@ export class PosComponent implements OnInit, AfterViewInit {
   applyPromoCode(): void {
     const code = (this.promoCode || '').trim().toUpperCase();
     if (!code) {
-      this.cartService.discountType.set('FIXED');
-      this.cartService.discountValue.set(0);
+      this.cartService.applyCoupon('');
       this.isPromoApplied = false;
       return;
     }
 
-    // Promotion codes previously resolved against a hardcoded list in this file,
-    // and any unrecognised code silently applied a flat discount. There is no
-    // promotions table or API behind this, so no discount can be validated.
-    // Use the manual discount control instead until a promotions endpoint exists.
-    this.isPromoApplied = false;
-    this.notify.error('Promotion codes are not configured. Use the discount field to apply a discount.');
+    const applied = this.cartService.applyCoupon(code);
+    if (applied) {
+      this.isPromoApplied = true;
+      this.notify.success(`Coupon code ${code} applied successfully!`);
+    } else {
+      this.isPromoApplied = false;
+      this.notify.error(`Invalid coupon code "${code}". Try SAVE50, WELCOME10, FLAT100, or FESTIVE20.`);
+    }
   }
 
+  // ── Complimentary & Item Notes ──
+  openComplimentaryModal(item: CartItem): void {
+    this.activeEditingItem = item;
+    this.complimentaryReasonInput = item.complimentaryReason || 'Staff Authorized Courtesy';
+    this.showComplimentaryModal = true;
+  }
+
+  saveComplimentary(): void {
+    if (this.activeEditingItem) {
+      this.cartService.setComplimentary(this.activeEditingItem.lineId, true, this.complimentaryReasonInput);
+      this.showComplimentaryModal = false;
+      this.notify.success(`Marked "${this.activeEditingItem.product.name}" as 100% complimentary.`);
+    }
+  }
+
+  removeComplimentary(item: CartItem): void {
+    this.cartService.setComplimentary(item.lineId, false);
+    this.notify.info(`Removed complimentary status from "${item.product.name}".`);
+  }
+
+  openItemNoteModal(item: CartItem): void {
+    this.activeEditingItem = item;
+    this.itemNoteInput = item.notes || '';
+    this.showItemNoteModal = true;
+  }
+
+  saveItemNote(): void {
+    if (this.activeEditingItem) {
+      this.cartService.setItemNotes(this.activeEditingItem.lineId, this.itemNoteInput);
+      this.showItemNoteModal = false;
+      this.notify.success('Kitchen cooking note saved.');
+    }
+  }
+
+  // ── POS Transaction History & Ledger ──
+  openHistoryModal(): void {
+    this.loadHistoryBills();
+    this.showHistoryModal = true;
+  }
+
+  loadHistoryBills(): void {
+    this.isLoadingHistory = true;
+    this.billService.getBills(1, 100).subscribe({
+      next: (res) => {
+        this.isLoadingHistory = false;
+        if (res.success) {
+          this.historyBills = res.data;
+        }
+      },
+      error: () => {
+        this.isLoadingHistory = false;
+      },
+    });
+  }
+
+  filterHistoryBills(): Bill[] {
+    let list = this.historyBills || [];
+    if (this.historyStatusFilter === 'PAID') {
+      list = list.filter((b) => !b.is_voided && !b.is_reopened);
+    } else if (this.historyStatusFilter === 'VOIDED') {
+      list = list.filter((b) => b.is_voided);
+    } else if (this.historyStatusFilter === 'REOPENED') {
+      list = list.filter((b) => b.is_reopened);
+    }
+
+    if (this.historySearch && this.historySearch.trim()) {
+      const q = this.historySearch.toLowerCase().trim();
+      list = list.filter((b) =>
+        b.bill_number?.toLowerCase().includes(q) ||
+        b.customer_name?.toLowerCase().includes(q) ||
+        b.payment_reference?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  promptVoidBill(bill: Bill): void {
+    this.selectedBillForVoid = bill;
+    this.voidReason = 'Customer cancelled order';
+    this.voidNotes = '';
+    this.showVoidModal = true;
+  }
+
+  submitVoid(): void {
+    if (!this.selectedBillForVoid) return;
+    const fullReason = this.voidNotes ? `${this.voidReason} - ${this.voidNotes}` : this.voidReason;
+    this.isVoiding = true;
+    this.billService.voidBill(this.selectedBillForVoid.id, fullReason).subscribe({
+      next: (res) => {
+        this.isVoiding = false;
+        this.showVoidModal = false;
+        this.notify.success(`Bill #${this.selectedBillForVoid?.bill_number} has been voided and inventory restored.`);
+        this.selectedBillForVoid = null;
+        this.loadHistoryBills();
+        this.loadProducts(); // refresh restored stock
+      },
+      error: () => {
+        this.isVoiding = false;
+      },
+    });
+  }
+
+  reopenBill(bill: Bill): void {
+    this.notify.confirm({
+      title: 'Reopen Bill',
+      message: `Reopen Bill #${bill.bill_number}? Items will be loaded into the cart for editing.`,
+      confirmText: 'Reopen Order',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        this.billService.reopenBill(bill.id).subscribe({
+          next: (res) => {
+            this.notify.success(`Bill #${bill.bill_number} reopened.`);
+            if (res.data && res.data.bill) {
+              this.cartService.loadFromBill(res.data.bill, this.products);
+            }
+            this.showHistoryModal = false;
+            this.loadHistoryBills();
+          },
+        });
+      },
+    });
+  }
+
+  duplicateBill(bill: Bill): void {
+    this.billService.getDuplicate(bill.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.cartService.loadFromBill(res.data, this.products);
+          this.showHistoryModal = false;
+          this.notify.success(`Loaded items from Bill #${bill.bill_number} into current cart.`);
+        }
+      },
+    });
+  }
+
+  printReceiptFromHistory(bill: Bill): void {
+    this.billService.getPrintData(bill.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.printerService.printThermalReceipt(res.data);
+        }
+      },
+    });
+  }
+
+  printKotFromHistory(bill: Bill): void {
+    this.billService.getKotPrintData(bill.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.printerService.printKot(res.data);
+        }
+      },
+    });
+  }
+
+  // ── End-of-Day Shift Closing (Z-Report) ──
+  openDayClosingModal(): void {
+    this.closingTab = 'current';
+    this.loadCurrentShiftSummary();
+    this.showClosingModal = true;
+  }
+
+  loadCurrentShiftSummary(): void {
+    this.posClosingService.getCurrentShift().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.shiftSummary = res.data;
+          this.actualCash = this.calcExpectedCash();
+        }
+      },
+    });
+  }
+
+  loadPastClosings(): void {
+    this.posClosingService.getHistory(1, 20).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.pastClosings = res.data;
+        }
+      },
+    });
+  }
+
+  calcExpectedCash(): number {
+    const cashSales = Number(this.shiftSummary?.cashSales) || 0;
+    const opening = Number(this.openingCash) || 0;
+    return opening + cashSales;
+  }
+
+  calcCashVariance(): number {
+    const actual = Number(this.actualCash) || 0;
+    return actual - this.calcExpectedCash();
+  }
+
+  submitDayClosing(): void {
+    this.isSavingClosing = true;
+    const payload = {
+      openingCash: Number(this.openingCash) || 0,
+      actualCash: Number(this.actualCash) || 0,
+      notes: this.closingNotes,
+    };
+
+    this.posClosingService.createDayClosing(payload).subscribe({
+      next: (res) => {
+        this.isSavingClosing = false;
+        if (res.success) {
+          this.notify.success('Shift closed successfully!');
+          this.printerService.printDayClosingZReport(res.data);
+          this.showClosingModal = false;
+        }
+      },
+      error: () => {
+        this.isSavingClosing = false;
+      },
+    });
+  }
+
+  printPastClosing(closing: PosDayClosing): void {
+    this.printerService.printDayClosingZReport(closing);
+  }
+
+  // ── Printer Routing Configuration ──
+  openPrintersModal(): void {
+    this.printerSettings = this.printerService.loadConfig();
+    this.showPrintersModal = true;
+  }
+
+  savePrinterSettings(): void {
+    this.printerService.saveConfig(this.printerSettings);
+    this.showPrintersModal = false;
+    this.notify.success('Printer configuration saved.');
+  }
+
+  testPrintReceipt(): void {
+    const dummyBill = {
+      billNumber: 'TEST-001',
+      orderType: 'WALK_IN',
+      paymentMethod: 'CASH',
+      items: [{ name: 'Thermal Printer Test Item', quantity: 1, unitPrice: 100, totalPrice: 100 }],
+      subtotal: 100,
+      taxAmount: 5,
+      totalAmount: 105,
+      cashierName: 'POS System Test',
+    };
+    this.printerService.printThermalReceipt(dummyBill);
+  }
+
+  testPrintKot(): void {
+    const dummyKot = {
+      kotNumber: 'KOT-TEST',
+      orderType: 'DINING',
+      tableName: 'T-01',
+      items: [{ name: 'Kitchen Test Dish', quantity: 2, notes: 'Extra crispy' }],
+      cashierName: 'Kitchen Tester',
+    };
+    this.printerService.printKot(dummyKot);
+  }
+
+  // ── Draft Orders & Holding ──
   holdCurrentBill(): void {
     const items = this.cartService.items().map((i) => ({
       productId: i.product.id,
       variantId: i.variant?.id ?? null,
       quantity: i.quantity,
       notes: i.notes,
+      itemType: i.itemType,
+      comboId: i.comboId,
+      dealId: i.dealId,
+      selectedAddons: i.selectedAddons,
     }));
 
     const payload = {
@@ -3240,8 +5030,6 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.cartService.clearCart();
         this.loadDraftCount();
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
       error: () => {},
     });
   }
@@ -3261,8 +5049,6 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.notify.success(`Draft ${res.data.draft_number} resumed into POS`);
         }
       },
-      // Reported by the global error interceptor; present so a failure
-      // cannot escape as an unhandled rejection.
       error: () => {},
     });
   }
@@ -3297,8 +5083,6 @@ export class PosComponent implements OnInit, AfterViewInit {
             this.loadDraftCount();
             this.notify.info('Draft deleted');
           },
-          // Reported by the global error interceptor; present so a failure
-          // cannot escape as an unhandled rejection.
           error: () => {},
         });
       },
@@ -3320,23 +5104,131 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.changeDue = Math.max(0, this.tenderedAmount - this.cartService.grandTotal());
   }
 
+  // ── Checkout Execution (Online + Offline POS) ──
   executeCheckout(): void {
     this.isCheckingOut = true;
 
+    const items = this.cartService.items().map((i) => ({
+      productId: i.product.id,
+      productName: i.product.name,
+      variantId: i.variant?.id ?? null,
+      variantName: i.variant?.name,
+      quantity: i.quantity,
+      unitPrice: i.isComplimentary ? 0 : i.unitPrice,
+      subtotal: i.isComplimentary ? 0 : i.quantity * i.unitPrice,
+      isComplimentary: i.isComplimentary,
+      complimentaryReason: i.complimentaryReason,
+      notes: i.notes,
+      itemType: i.itemType,
+      comboId: i.comboId,
+      dealId: i.dealId,
+      selectedAddons: i.selectedAddons,
+    }));
+
+    // ── OFFLINE CHECKOUT ROUTE ──
+    // ── OFFLINE CHECKOUT ROUTE ──
+    if (!this.offlinePos.isOnline()) {
+      const syncId = `OFFLINE-ORD-${Date.now()}`;
+      const offlineOrder = this.offlinePos.enqueueOfflineOrder({
+        offlineSyncId: syncId,
+        orderNumber: String(this.activeOrderId),
+        billNumber: `OFF-${this.activeOrderId}`,
+        timestamp: new Date().toISOString(),
+        orderType: this.cartService.orderType(),
+        paymentMethod: this.selectedPaymentMethod,
+        paymentReference: this.paymentReference,
+        customerId: this.cartService.selectedCustomer()?.id,
+        customerName: this.cartService.selectedCustomer()?.name,
+        diningTableId: this.cartService.selectedTable()?.id,
+        tableNumber: this.cartService.selectedTable()?.table_number,
+        items: this.cartService.items(),
+        subtotal: this.cartService.subtotal(),
+        discountAmount: this.cartService.discountAmount(),
+        taxAmount: this.cartService.taxAmount(),
+        serviceChargeAmount: this.cartService.serviceChargeAmount(),
+        surchargeAmount: this.cartService.surchargeAmount(),
+        couponCode: this.cartService.couponCode(),
+        couponDiscount: this.cartService.couponDiscount(),
+        grandTotal: this.cartService.grandTotal(),
+        cashTendered: this.tenderedAmount,
+        changeReturned: this.changeDue,
+        isSynced: false,
+      });
+
+      // Decrement stock in local memory
+      items.forEach((item) => {
+        const p = this.products.find((prod) => prod.id === item.productId);
+        if (p && p.current_stock !== undefined) {
+          p.current_stock = Math.max(0, Number(p.current_stock) - item.quantity);
+        }
+      });
+      this.filterProducts();
+
+      // Offline print thermal receipt
+      if (this.autoPrintReceipt && this.printerSettings.receiptPrinter.enabled) {
+        this.printerService.printThermalReceipt({
+          billNumber: offlineOrder.offlineSyncId,
+          orderType: offlineOrder.orderType,
+          paymentMethod: offlineOrder.paymentMethod,
+          paymentReference: offlineOrder.paymentReference,
+          subtotal: offlineOrder.subtotal,
+          discountAmount: offlineOrder.discountAmount,
+          serviceChargeAmount: offlineOrder.serviceChargeAmount,
+          surchargeAmount: offlineOrder.surchargeAmount,
+          taxAmount: offlineOrder.taxAmount,
+          totalAmount: offlineOrder.grandTotal,
+          cashTendered: offlineOrder.cashTendered,
+          changeReturned: offlineOrder.changeReturned,
+          items: offlineOrder.items,
+          customerName: offlineOrder.customerName,
+          offlineNotice: true,
+        });
+      }
+
+      // Offline print kitchen KOT
+      if (this.autoPrintKot && this.printerSettings.kitchenPrinter.enabled) {
+        this.printerService.printKot({
+          kotNumber: 'KOT-' + this.activeOrderId,
+          orderType: offlineOrder.orderType,
+          tableName: this.cartService.selectedTable() ? `Table ${this.cartService.selectedTable()?.table_number}` : undefined,
+          items: offlineOrder.items.map((i: any) => ({ name: i.product?.name || i.name, quantity: i.quantity, notes: i.notes })),
+        });
+      }
+
+      this.isCheckingOut = false;
+      this.showPaymentModal = false;
+      this.cartService.clearCart();
+      this.activeOrderId = Math.floor(1000 + Math.random() * 9000);
+      this.notify.warning(`Saved Offline! Order #${offlineOrder.offlineSyncId} stored locally and queued for auto-sync.`);
+      return;
+    }
+
+    // ── ONLINE CHECKOUT ROUTE ──
     const payload = {
       customerId: this.cartService.selectedCustomer()?.id,
       diningTableId: this.cartService.selectedTable()?.id,
       orderType: this.cartService.orderType(),
       discountType: this.cartService.discountType(),
       discountValue: this.cartService.discountValue(),
+      serviceChargeAmount: this.cartService.serviceChargeAmount(),
+      surchargeAmount: this.cartService.surchargeAmount(),
+      couponCode: this.cartService.couponCode(),
       paymentMethod: this.selectedPaymentMethod,
       paymentAmount: this.tenderedAmount || this.cartService.grandTotal(),
       paymentReference: this.paymentReference,
+      cashTendered: this.selectedPaymentMethod === 'CASH' ? this.tenderedAmount : undefined,
+      changeReturned: this.selectedPaymentMethod === 'CASH' ? this.changeDue : undefined,
       items: this.cartService.items().map((i) => ({
         productId: i.product.id,
         variantId: i.variant?.id ?? null,
         quantity: i.quantity,
+        isComplimentary: i.isComplimentary,
+        complimentaryReason: i.complimentaryReason,
         notes: i.notes,
+        itemType: i.itemType,
+        comboId: i.comboId,
+        dealId: i.dealId,
+        selectedAddons: i.selectedAddons,
       })),
     };
 
@@ -3346,16 +5238,30 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.showPaymentModal = false;
         this.notify.success(`Bill #${res.data.bill_number} Settled Successfully!`);
 
-        // Fetch print format & open receipt modal
+        // Trigger KOT print
+        if (this.autoPrintKot && this.printerSettings.kitchenPrinter.enabled) {
+          this.billService.getKotPrintData(res.data.id).subscribe({
+            next: (kotRes) => {
+              if (kotRes.success && kotRes.data) {
+                this.printerService.printKot(kotRes.data);
+              }
+            },
+            error: () => {},
+          });
+        }
+
+        // Trigger thermal receipt
         this.billService.getPrintData(res.data.id).subscribe({
           next: (printRes) => {
             if (printRes.success) {
               this.lastReceiptData = printRes.data;
-              this.showReceiptModal = true;
+              if (this.autoPrintReceipt && this.printerSettings.receiptPrinter.enabled) {
+                this.printerService.printThermalReceipt(printRes.data);
+              } else {
+                this.showReceiptModal = true;
+              }
             }
           },
-          // Reported by the global error interceptor; present so a failure
-          // cannot escape as an unhandled rejection.
           error: () => {},
         });
 

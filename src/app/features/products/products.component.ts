@@ -1,11 +1,11 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Product, Category } from '../../core/models';
+import { Product, Category, ProductAddon, ComboMeal, MealDeal } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
@@ -89,6 +89,37 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </button>
 
           <button
+            *ngIf="activeNavTab === 'addons'"
+            type="button"
+            (click)="openAddonModal()"
+            class="action-btn btn-gradient-purple"
+          >
+            <span class="material-symbols-outlined">add_circle</span>
+            <span>New Add-on</span>
+          </button>
+
+          <button
+            *ngIf="activeNavTab === 'combos'"
+            type="button"
+            (click)="openComboModal()"
+            class="action-btn btn-gradient-purple"
+          >
+            <span class="material-symbols-outlined">add_circle</span>
+            <span>New Combo Meal</span>
+          </button>
+
+          <button
+            *ngIf="activeNavTab === 'deals'"
+            type="button"
+            (click)="openDealModal()"
+            class="action-btn btn-gradient-purple"
+          >
+            <span class="material-symbols-outlined">add_circle</span>
+            <span>New Meal Deal</span>
+          </button>
+
+          <button
+            *ngIf="!['addons', 'combos', 'deals'].includes(activeNavTab)"
             type="button"
             (click)="goToAdd()"
             class="action-btn btn-gradient-purple"
@@ -145,6 +176,39 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <span class="material-symbols-outlined">category</span>
           <span>Categories</span>
           <span class="tab-count-badge">{{ categories.length }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="activeNavTab = 'addons'; currentPage = 1"
+          class="module-tab-btn"
+          [class.is-active]="activeNavTab === 'addons'"
+        >
+          <span class="material-symbols-outlined">extension</span>
+          <span>Add-ons</span>
+          <span class="tab-count-badge">{{ addonsList.length }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="activeNavTab = 'combos'; currentPage = 1"
+          class="module-tab-btn"
+          [class.is-active]="activeNavTab === 'combos'"
+        >
+          <span class="material-symbols-outlined">lunch_dining</span>
+          <span>Combo Meals</span>
+          <span class="tab-count-badge">{{ combosList.length }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="activeNavTab = 'deals'; currentPage = 1"
+          class="module-tab-btn"
+          [class.is-active]="activeNavTab === 'deals'"
+        >
+          <span class="material-symbols-outlined">local_offer</span>
+          <span>Meal Deals</span>
+          <span class="tab-count-badge">{{ dealsList.length }}</span>
         </button>
       </div>
 
@@ -319,13 +383,210 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 5. PRODUCTS DATA TABLE                                          -->
+      <!-- 5. PRODUCTS DATA TABLE / ADD-ONS / COMBOS / DEALS               -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="table-container-card">
-        <!-- The chosen catalog design owns this block. Its class and its
-             palette go on one wrapper so every rule below is a plain
-             descendant selector. -->
-        <div [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.pageCssVars()">
+
+        <!-- ─── TAB: ADD-ONS ─── -->
+        <div *ngIf="activeNavTab === 'addons'" class="p-4">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-black text-[#2E1065]">Dish Add-ons & Modifiers</h3>
+              <p class="text-xs text-gray-500">Extra sauces, toppings, portions and customizations selectable at POS order taking</p>
+            </div>
+            <button type="button" (click)="openAddonModal()" class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs">
+              <span class="material-symbols-outlined !text-sm">add</span>
+              <span>Create Add-on</span>
+            </button>
+          </div>
+
+          <div class="table-responsive-wrapper">
+            <table class="saas-data-table">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Add-on Name</th>
+                  <th style="width: 20%;">Category</th>
+                  <th style="width: 20%;">Price (₹ / SAR)</th>
+                  <th style="width: 20%;">Availability</th>
+                  <th style="width: 15%; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let a of addonsList">
+                  <td class="font-bold text-xs text-[var(--text-main)]">{{ a.name }}</td>
+                  <td>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                      {{ a.category || 'General' }}
+                    </span>
+                  </td>
+                  <td class="font-mono font-bold text-xs text-purple-900">+{{ a.price | appCurrency:'1.0-2' }}</td>
+                  <td>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="a.is_available ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'">
+                      {{ a.is_available ? '● Available' : '○ Unavailable' }}
+                    </span>
+                  </td>
+                  <td style="text-align: center;">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <button type="button" (click)="openAddonModal(a)" class="action-btn btn-outline-purple !p-1" title="Edit">
+                        <span class="material-symbols-outlined !text-sm">edit</span>
+                      </button>
+                      <button type="button" (click)="deleteAddon(a.id)" class="action-btn btn-outline-purple !p-1 text-red-600 hover:bg-red-50" title="Delete">
+                        <span class="material-symbols-outlined !text-sm">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="addonsList.length === 0">
+                  <td colspan="5" class="empty-state-cell">
+                    <div class="empty-state-box">
+                      <span class="material-symbols-outlined empty-icon">extension</span>
+                      <div class="empty-title">No Add-ons Created</div>
+                      <p class="empty-desc">Click "Create Add-on" to configure extra toppings, sauces, or sides.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ─── TAB: COMBO MEALS ─── -->
+        <div *ngIf="activeNavTab === 'combos'" class="p-4">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-black text-[#2E1065]">Combo Meals & Value Bundles</h3>
+              <p class="text-xs text-gray-500">Bundled dishes with promotional pricing and clear customer savings</p>
+            </div>
+            <button type="button" (click)="openComboModal()" class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs">
+              <span class="material-symbols-outlined !text-sm">add</span>
+              <span>Create Combo Meal</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div *ngFor="let c of combosList" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="font-mono text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ c.code || 'COMBO' }}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="c.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
+                    {{ c.is_available ? '● Live' : '○ Inactive' }}
+                  </span>
+                </div>
+                <h4 class="text-sm font-black text-[#2E1065] mb-1">{{ c.name }}</h4>
+                <p class="text-xs text-gray-600 mb-3">{{ c.description || 'Special combo bundle' }}</p>
+
+                <!-- Included items list -->
+                <div class="p-2.5 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl text-xs mb-3 space-y-1">
+                  <div class="font-bold text-[10px] uppercase text-purple-800 tracking-wider mb-1">Includes:</div>
+                  <div *ngFor="let item of c.items" class="flex items-center justify-between text-gray-700">
+                    <span>{{ item.quantity }}x {{ item.product_name || 'Dish' }}</span>
+                  </div>
+                  <div *ngIf="!c.items?.length" class="text-gray-400 italic">No items linked</div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between pt-2 border-t border-gray-100 mb-3">
+                  <div>
+                    <span class="text-base font-black text-emerald-600 font-mono">{{ c.combo_price | appCurrency:'1.0-2' }}</span>
+                    <span *ngIf="c.original_price && c.original_price > c.combo_price" class="text-xs text-gray-400 line-through ml-1.5 font-mono">{{ c.original_price | appCurrency:'1.0-2' }}</span>
+                  </div>
+                  <span *ngIf="c.savings_amount && c.savings_amount > 0" class="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                    Save {{ c.savings_amount | appCurrency:'1.0-0' }}
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                  <button type="button" (click)="openComboModal(c)" class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs">
+                    <span class="material-symbols-outlined !text-sm">edit</span>
+                    <span>Edit</span>
+                  </button>
+                  <button type="button" (click)="deleteCombo(c.id)" class="action-btn btn-outline-purple !py-1 !px-2 !text-xs text-red-600 hover:bg-red-50">
+                    <span class="material-symbols-outlined !text-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="combosList.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
+            <span class="material-symbols-outlined text-4xl text-purple-400 mb-2">lunch_dining</span>
+            <h4 class="text-sm font-bold text-gray-700">No Combo Meals Created</h4>
+            <p class="text-xs text-gray-500">Create delicious bundles like "Duo Mandi Combo" or "Family Pack".</p>
+          </div>
+        </div>
+
+        <!-- ─── TAB: MEAL DEALS ─── -->
+        <div *ngIf="activeNavTab === 'deals'" class="p-4">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-black text-[#2E1065]">Promotional Meal Deals & Limited Offers</h3>
+              <p class="text-xs text-gray-500">Scheduled promotions (Friday Feast, Lunch Special, Happy Hour) with discounts</p>
+            </div>
+            <button type="button" (click)="openDealModal()" class="action-btn btn-gradient-purple !py-1.5 !px-3 !text-xs">
+              <span class="material-symbols-outlined !text-sm">add</span>
+              <span>Create Meal Deal</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div *ngFor="let d of dealsList" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="font-mono text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ d.code || 'DEAL' }}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="d.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
+                    {{ d.is_active ? '● Active' : '○ Inactive' }}
+                  </span>
+                </div>
+                <h4 class="text-sm font-black text-[#2E1065] mb-1">{{ d.title }}</h4>
+                <p class="text-xs text-gray-600 mb-2">{{ d.description || 'Limited time meal deal' }}</p>
+
+                <!-- Schedule Pill -->
+                <div class="flex items-center gap-1.5 text-[11px] text-purple-900 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 mb-3 font-semibold">
+                  <span class="material-symbols-outlined text-sm">schedule</span>
+                  <span>Days: {{ d.days_of_week || 'ALL' }} | {{ d.start_time || '00:00' }} - {{ d.end_time || '23:59' }}</span>
+                </div>
+
+                <!-- Included items -->
+                <div class="p-2.5 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl text-xs mb-3 space-y-1">
+                  <div class="font-bold text-[10px] uppercase text-purple-800 tracking-wider mb-1">Items Included:</div>
+                  <div *ngFor="let item of d.items" class="flex items-center justify-between text-gray-700">
+                    <span>{{ item.quantity }}x {{ item.product_name || 'Dish' }}</span>
+                  </div>
+                  <div *ngIf="!d.items?.length" class="text-gray-400 italic">No dishes attached</div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between pt-2 border-t border-gray-100 mb-3">
+                  <div>
+                    <span class="text-base font-black text-purple-900 font-mono">{{ d.deal_price | appCurrency:'1.0-2' }}</span>
+                  </div>
+                  <span *ngIf="d.discount_percentage && d.discount_percentage > 0" class="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    {{ d.discount_percentage }}% OFF
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                  <button type="button" (click)="openDealModal(d)" class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs">
+                    <span class="material-symbols-outlined !text-sm">edit</span>
+                    <span>Edit</span>
+                  </button>
+                  <button type="button" (click)="deleteDeal(d.id)" class="action-btn btn-outline-purple !py-1 !px-2 !text-xs text-red-600 hover:bg-red-50">
+                    <span class="material-symbols-outlined !text-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="dealsList.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
+            <span class="material-symbols-outlined text-4xl text-purple-400 mb-2">local_offer</span>
+            <h4 class="text-sm font-bold text-gray-700">No Meal Deals Created</h4>
+            <p class="text-xs text-gray-500">Create time-sensitive specials like "Friday Feast" or "Lunch Special 20% Off".</p>
+          </div>
+        </div>
+
+        <!-- ─── STANDARD DISH CATALOG ─── -->
+        <div *ngIf="!['addons', 'combos', 'deals'].includes(activeNavTab)" [ngClass]="dishLayout.rootClass()" [ngStyle]="dishLayout.pageCssVars()">
 
         <!-- ─── Card designs: Bento, Glass, Brutalist, Editorial ───────── -->
         <div class="catalog-stage" *ngIf="showCatalogCards">
@@ -651,9 +912,162 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </button>
           </div>
         </div>
+        </div>
       </div>
 
-    </div>
+      <!-- Add-on Modal -->
+      <div class="modal-backdrop" *ngIf="showAddonModal">
+        <div class="modal-content shadow-2xl max-w-md">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-purple-200">
+            <h3 class="text-lg font-black text-[#2E1065]">{{ editingAddon ? 'Edit Add-on' : 'Create New Add-on' }}</h3>
+            <button type="button" (click)="showAddonModal = false" class="modal-close-btn"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <form (ngSubmit)="saveAddon()" class="space-y-3">
+            <div>
+              <label class="form-label text-xs font-bold text-gray-700 uppercase">Add-on Name</label>
+              <input type="text" [(ngModel)]="addonForm.name" name="addonName" class="form-control text-sm" placeholder="e.g. Extra Tahini Sauce" required />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Category</label>
+                <input type="text" [(ngModel)]="addonForm.category" name="addonCat" class="form-control text-sm" placeholder="e.g. Sauces, Sides" />
+              </div>
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Price (₹ / SAR)</label>
+                <input type="number" step="any" min="0" [(ngModel)]="addonForm.price" name="addonPrice" class="form-control text-sm font-mono font-bold" required />
+              </div>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+              <input type="checkbox" id="addonAvail" [(ngModel)]="addonForm.is_available" name="addonAvail" class="rounded border-gray-300 text-purple-600" />
+              <label for="addonAvail" class="text-xs font-semibold text-gray-700">Available for ordering on POS</label>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-purple-100">
+              <button type="button" (click)="showAddonModal = false" class="action-btn btn-outline-purple">Cancel</button>
+              <button type="submit" class="action-btn btn-gradient-purple">Save Add-on ✓</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Combo Meal Modal -->
+      <div class="modal-backdrop" *ngIf="showComboModal">
+        <div class="modal-content shadow-2xl max-w-lg">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-purple-200">
+            <h3 class="text-lg font-black text-[#2E1065]">{{ editingCombo ? 'Edit Combo Meal' : 'Create Combo Meal' }}</h3>
+            <button type="button" (click)="showComboModal = false" class="modal-close-btn"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <form (ngSubmit)="saveCombo()" class="space-y-3">
+            <div>
+              <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Meal Name</label>
+              <input type="text" [(ngModel)]="comboForm.name" name="comboName" class="form-control text-sm" placeholder="e.g. Duo Mandi Combo" required />
+            </div>
+            <div>
+              <label class="form-label text-xs font-bold text-gray-700 uppercase">Description</label>
+              <input type="text" [(ngModel)]="comboForm.description" name="comboDesc" class="form-control text-sm" placeholder="e.g. 2 Mandi + 2 Drinks + Salad" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Price (₹)</label>
+                <input type="number" step="any" min="0" [(ngModel)]="comboForm.combo_price" name="comboPrice" class="form-control text-sm font-mono font-bold text-emerald-700" required />
+              </div>
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Original Price (₹)</label>
+                <input type="number" step="any" min="0" [(ngModel)]="comboForm.original_price" name="comboOrigPrice" class="form-control text-sm font-mono" placeholder="Sum of dishes" />
+              </div>
+            </div>
+            <!-- Included Items Section -->
+            <div class="pt-2 border-t border-purple-100">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-purple-900 uppercase">Included Dishes</span>
+                <button type="button" (click)="addComboItem()" class="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">add_circle</span> Add Dish
+                </button>
+              </div>
+              <div *ngFor="let item of comboForm.items; let idx = index" class="flex items-center gap-2 mb-2">
+                <select [(ngModel)]="item.product_id" name="comboItemProd_{{idx}}" class="form-control text-xs flex-1">
+                  <option *ngFor="let p of products" [value]="p.id">{{ p.name }} (₹{{ p.selling_price }})</option>
+                </select>
+                <input type="number" min="1" [(ngModel)]="item.quantity" name="comboItemQty_{{idx}}" class="form-control text-xs w-16 text-center" placeholder="Qty" />
+                <button type="button" (click)="removeComboItem(idx)" class="text-red-500 hover:text-red-700 p-1">
+                  <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-purple-100">
+              <button type="button" (click)="showComboModal = false" class="action-btn btn-outline-purple">Cancel</button>
+              <button type="submit" class="action-btn btn-gradient-purple">Save Combo Meal ✓</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Meal Deal Modal -->
+      <div class="modal-backdrop" *ngIf="showDealModal">
+        <div class="modal-content shadow-2xl max-w-lg">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-purple-200">
+            <h3 class="text-lg font-black text-[#2E1065]">{{ editingDeal ? 'Edit Meal Deal' : 'Create Meal Deal' }}</h3>
+            <button type="button" (click)="showDealModal = false" class="modal-close-btn"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <form (ngSubmit)="saveDeal()" class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Deal Title</label>
+                <input type="text" [(ngModel)]="dealForm.title" name="dealTitle" class="form-control text-sm" placeholder="e.g. Friday Family Feast" required />
+              </div>
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Promo Code</label>
+                <input type="text" [(ngModel)]="dealForm.code" name="dealCode" class="form-control font-mono text-sm" placeholder="e.g. FRIDAY50" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Deal Price (₹)</label>
+                <input type="number" step="any" min="0" [(ngModel)]="dealForm.deal_price" name="dealPrice" class="form-control text-sm font-mono font-bold text-purple-900" required />
+              </div>
+              <div>
+                <label class="form-label text-xs font-bold text-gray-700 uppercase">Discount (%)</label>
+                <input type="number" min="0" max="100" [(ngModel)]="dealForm.discount_percentage" name="dealDiscount" class="form-control text-sm font-mono" placeholder="e.g. 20" />
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="form-label text-[10px] font-bold text-gray-700 uppercase">Days of Week</label>
+                <input type="text" [(ngModel)]="dealForm.days_of_week" name="dealDays" class="form-control text-xs" placeholder="ALL or FRI,SAT" />
+              </div>
+              <div>
+                <label class="form-label text-[10px] font-bold text-gray-700 uppercase">Start Time</label>
+                <input type="time" [(ngModel)]="dealForm.start_time" name="dealStart" class="form-control text-xs" />
+              </div>
+              <div>
+                <label class="form-label text-[10px] font-bold text-gray-700 uppercase">End Time</label>
+                <input type="time" [(ngModel)]="dealForm.end_time" name="dealEnd" class="form-control text-xs" />
+              </div>
+            </div>
+            <!-- Included Items Section -->
+            <div class="pt-2 border-t border-purple-100">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-purple-900 uppercase">Included Dishes</span>
+                <button type="button" (click)="addDealItem()" class="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">add_circle</span> Add Dish
+                </button>
+              </div>
+              <div *ngFor="let item of dealForm.items; let idx = index" class="flex items-center gap-2 mb-2">
+                <select [(ngModel)]="item.product_id" name="dealItemProd_{{idx}}" class="form-control text-xs flex-1">
+                  <option *ngFor="let p of products" [value]="p.id">{{ p.name }} (₹{{ p.selling_price }})</option>
+                </select>
+                <input type="number" min="1" [(ngModel)]="item.quantity" name="dealItemQty_{{idx}}" class="form-control text-xs w-16 text-center" placeholder="Qty" />
+                <button type="button" (click)="removeDealItem(idx)" class="text-red-500 hover:text-red-700 p-1">
+                  <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-purple-100">
+              <button type="button" (click)="showDealModal = false" class="action-btn btn-outline-purple">Cancel</button>
+              <button type="submit" class="action-btn btn-gradient-purple">Save Meal Deal ✓</button>
+            </div>
+          </form>
+        </div>
+      </div>
   `,
   styles: [
     `
@@ -778,6 +1192,22 @@ export class ProductsComponent implements OnInit {
   public products: (Product & { selected?: boolean })[] = [];
   public categories: Category[] = [];
 
+  public addonsList: ProductAddon[] = [];
+  public combosList: ComboMeal[] = [];
+  public dealsList: MealDeal[] = [];
+
+  public showAddonModal = false;
+  public showComboModal = false;
+  public showDealModal = false;
+
+  public editingAddon: ProductAddon | null = null;
+  public editingCombo: ComboMeal | null = null;
+  public editingDeal: MealDeal | null = null;
+
+  public addonForm: any = { name: '', price: 20, is_available: true, category: 'Sides' };
+  public comboForm: any = { name: '', code: '', description: '', combo_price: 299, original_price: 350, items: [] };
+  public dealForm: any = { title: '', code: '', description: '', deal_price: 499, discount_percentage: 20, days_of_week: 'ALL', start_time: '11:00', end_time: '23:00', items: [] };
+
   public activeNavTab = 'overview';
   public selectAll = false;
 
@@ -836,6 +1266,9 @@ export class ProductsComponent implements OnInit {
   ngOnInit(): void {
     this.loadCategories();
     this.loadProducts();
+    this.loadAddons();
+    this.loadCombos();
+    this.loadDeals();
   }
 
   loadCategories(): void {
@@ -870,6 +1303,228 @@ export class ProductsComponent implements OnInit {
           this.loadError = err?.error?.message || 'Unable to load data from the server.';
         },
       });
+  }
+
+  loadAddons(): void {
+    this.productService.getAddons().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.addonsList = res.data;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  loadCombos(): void {
+    this.productService.getCombos().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.combosList = res.data;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  loadDeals(): void {
+    this.productService.getDeals().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.dealsList = res.data;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  openAddonModal(addon?: ProductAddon): void {
+    this.editingAddon = addon || null;
+    this.addonForm = addon
+      ? { name: addon.name, price: addon.price, is_available: !!addon.is_available, category: addon.category || 'Sides' }
+      : { name: '', price: 20, is_available: true, category: 'Sides' };
+    this.showAddonModal = true;
+  }
+
+  saveAddon(): void {
+    if (!this.addonForm.name) {
+      this.notify.error('Please enter add-on name');
+      return;
+    }
+    const obs = this.editingAddon
+      ? this.productService.updateAddon(this.editingAddon.id, this.addonForm)
+      : this.productService.createAddon(this.addonForm);
+
+    obs.subscribe({
+      next: () => {
+        this.notify.success(`Add-on ${this.editingAddon ? 'updated' : 'created'} successfully`);
+        this.showAddonModal = false;
+        this.loadAddons();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'Failed to save add-on'),
+    });
+  }
+
+  deleteAddon(id: number): void {
+    this.notify.confirm({
+      title: 'Delete Add-on',
+      message: 'Are you sure you want to delete this add-on?',
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: () => {
+        this.productService.deleteAddon(id).subscribe({
+          next: () => {
+            this.notify.info('Add-on deleted');
+            this.loadAddons();
+          },
+          error: (err) => this.notify.error(err?.error?.message || 'Failed to delete add-on'),
+        });
+      },
+    });
+  }
+
+  openComboModal(combo?: ComboMeal): void {
+    this.editingCombo = combo || null;
+    this.comboForm = combo
+      ? {
+          name: combo.name,
+          code: combo.code || '',
+          description: combo.description || '',
+          combo_price: combo.combo_price,
+          original_price: combo.original_price || combo.combo_price,
+          items: combo.items ? [...combo.items] : [],
+        }
+      : {
+          name: '',
+          code: '',
+          description: '',
+          combo_price: 299,
+          original_price: 350,
+          items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
+        };
+    this.showComboModal = true;
+  }
+
+  addComboItem(): void {
+    if (this.products.length > 0) {
+      this.comboForm.items.push({ product_id: this.products[0].id, quantity: 1 });
+    }
+  }
+
+  removeComboItem(index: number): void {
+    this.comboForm.items.splice(index, 1);
+  }
+
+  saveCombo(): void {
+    if (!this.comboForm.name) {
+      this.notify.error('Please enter combo meal name');
+      return;
+    }
+    const obs = this.editingCombo
+      ? this.productService.updateCombo(this.editingCombo.id, this.comboForm)
+      : this.productService.createCombo(this.comboForm);
+
+    obs.subscribe({
+      next: () => {
+        this.notify.success(`Combo meal ${this.editingCombo ? 'updated' : 'created'} successfully`);
+        this.showComboModal = false;
+        this.loadCombos();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'Failed to save combo meal'),
+    });
+  }
+
+  deleteCombo(id: number): void {
+    this.notify.confirm({
+      title: 'Delete Combo Meal',
+      message: 'Are you sure you want to delete this combo meal?',
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: () => {
+        this.productService.deleteCombo(id).subscribe({
+          next: () => {
+            this.notify.info('Combo meal deleted');
+            this.loadCombos();
+          },
+          error: (err) => this.notify.error(err?.error?.message || 'Failed to delete combo meal'),
+        });
+      },
+    });
+  }
+
+  openDealModal(deal?: MealDeal): void {
+    this.editingDeal = deal || null;
+    this.dealForm = deal
+      ? {
+          title: deal.title,
+          code: deal.code || '',
+          description: deal.description || '',
+          deal_price: deal.deal_price,
+          discount_percentage: deal.discount_percentage || 0,
+          days_of_week: deal.days_of_week || 'ALL',
+          start_time: deal.start_time || '11:00',
+          end_time: deal.end_time || '23:00',
+          items: deal.items ? [...deal.items] : [],
+        }
+      : {
+          title: '',
+          code: '',
+          description: '',
+          deal_price: 499,
+          discount_percentage: 20,
+          days_of_week: 'ALL',
+          start_time: '11:00',
+          end_time: '23:00',
+          items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
+        };
+    this.showDealModal = true;
+  }
+
+  addDealItem(): void {
+    if (this.products.length > 0) {
+      this.dealForm.items.push({ product_id: this.products[0].id, quantity: 1 });
+    }
+  }
+
+  removeDealItem(index: number): void {
+    this.dealForm.items.splice(index, 1);
+  }
+
+  saveDeal(): void {
+    if (!this.dealForm.title) {
+      this.notify.error('Please enter meal deal title');
+      return;
+    }
+    const obs = this.editingDeal
+      ? this.productService.updateDeal(this.editingDeal.id, this.dealForm)
+      : this.productService.createDeal(this.dealForm);
+
+    obs.subscribe({
+      next: () => {
+        this.notify.success(`Meal deal ${this.editingDeal ? 'updated' : 'created'} successfully`);
+        this.showDealModal = false;
+        this.loadDeals();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'Failed to save meal deal'),
+    });
+  }
+
+  deleteDeal(id: number): void {
+    this.notify.confirm({
+      title: 'Delete Meal Deal',
+      message: 'Are you sure you want to delete this meal deal?',
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: () => {
+        this.productService.deleteDeal(id).subscribe({
+          next: () => {
+            this.notify.info('Meal deal deleted');
+            this.loadDeals();
+          },
+          error: (err) => this.notify.error(err?.error?.message || 'Failed to delete meal deal'),
+        });
+      },
+    });
   }
 
   /**

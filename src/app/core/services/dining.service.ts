@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DiningTable, ApiResponse, TableStatus } from '../models';
+import { DiningTable, ApiResponse, TableStatus, TableReservation, TableWaitlist, TableHistoryItem } from '../models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -14,8 +14,8 @@ export class DiningService {
 
   public getTables(section?: string, status?: string): Observable<ApiResponse<DiningTable[]>> {
     let params = new HttpParams();
-    if (section) params = params.set('section', section);
-    if (status) params = params.set('status', status);
+    if (section && section !== 'ALL') params = params.set('section', section);
+    if (status && status !== 'ALL') params = params.set('status', status);
     return this.http.get<ApiResponse<DiningTable[]>>(this.API_URL, { params });
   }
 
@@ -35,11 +35,64 @@ export class DiningService {
     return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/${id}`, data);
   }
 
-  public setStatus(id: number, status: TableStatus, orderId?: number | null): Observable<ApiResponse<DiningTable>> {
-    return this.http.patch<ApiResponse<DiningTable>>(`${this.API_URL}/${id}/status`, { status, orderId });
+  public setStatus(id: number, status: TableStatus, orderId?: number | null, guestCount?: number): Observable<ApiResponse<DiningTable>> {
+    return this.http.patch<ApiResponse<DiningTable>>(`${this.API_URL}/${id}/status`, { status, orderId, guestCount });
+  }
+
+  public seatGuests(id: number, guestCount: number, orderId?: number | null): Observable<ApiResponse<DiningTable>> {
+    return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/${id}/seat`, { guestCount, orderId });
+  }
+
+  public cleanTable(id: number): Observable<ApiResponse<DiningTable>> {
+    return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/${id}/clean`, {});
+  }
+
+  public finishCleaning(id: number): Observable<ApiResponse<DiningTable>> {
+    return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/${id}/ready`, {});
+  }
+
+  public getTableHistory(id: number): Observable<ApiResponse<TableHistoryItem[]>> {
+    return this.http.get<ApiResponse<TableHistoryItem[]>>(`${this.API_URL}/${id}/history`);
   }
 
   public deleteTable(id: number): Observable<ApiResponse<any>> {
     return this.http.delete<ApiResponse<any>>(`${this.API_URL}/${id}`);
+  }
+
+  // Table Reservations
+  public getReservations(date?: string, status?: string): Observable<ApiResponse<TableReservation[]>> {
+    let params = new HttpParams();
+    if (date) params = params.set('date', date);
+    if (status && status !== 'ALL') params = params.set('status', status);
+    return this.http.get<ApiResponse<TableReservation[]>>(`${this.API_URL}/reservations`, { params });
+  }
+
+  public createReservation(data: Partial<TableReservation>): Observable<ApiResponse<TableReservation>> {
+    return this.http.post<ApiResponse<TableReservation>>(`${this.API_URL}/reservations`, data);
+  }
+
+  public seatReservation(reservationId: number, tableId: number): Observable<ApiResponse<DiningTable>> {
+    return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/reservations/${reservationId}/seat`, { tableId });
+  }
+
+  public cancelReservation(reservationId: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/reservations/${reservationId}`);
+  }
+
+  // Waiting List & Queue Tokens
+  public getWaitlist(): Observable<ApiResponse<TableWaitlist[]>> {
+    return this.http.get<ApiResponse<TableWaitlist[]>>(`${this.API_URL}/waitlist`);
+  }
+
+  public addToWaitlist(data: Partial<TableWaitlist>): Observable<ApiResponse<TableWaitlist>> {
+    return this.http.post<ApiResponse<TableWaitlist>>(`${this.API_URL}/waitlist`, data);
+  }
+
+  public seatWaitlistParty(waitlistId: number, tableId: number): Observable<ApiResponse<DiningTable>> {
+    return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/waitlist/${waitlistId}/seat`, { tableId });
+  }
+
+  public updateWaitlistStatus(waitlistId: number, status: 'WAITING' | 'NOTIFIED' | 'CANCELLED'): Observable<ApiResponse<any>> {
+    return this.http.patch<ApiResponse<any>>(`${this.API_URL}/waitlist/${waitlistId}/status`, { status });
   }
 }

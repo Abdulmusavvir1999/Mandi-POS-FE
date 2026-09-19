@@ -1,12 +1,14 @@
 export type RoleName = string;
 
-export type OrderType = 'WALK_IN' | 'TAKEAWAY' | 'DINING';
+export type OrderType = 'WALK_IN' | 'TAKEAWAY' | 'DINING' | 'PICKUP' | 'COUNTER';
 
 export type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
-export type TableStatus = 'AVAILABLE' | 'SELECTED' | 'OCCUPIED' | 'UNAVAILABLE';
+export type TableStatus = 'AVAILABLE' | 'SELECTED' | 'OCCUPIED' | 'RESERVED' | 'CLEANING' | 'UNAVAILABLE';
 
-export type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'OTHER';
+export type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'OTHER';
+
+export type PaymentStatus = 'PAID' | 'PENDING' | 'FAILED' | 'REFUNDED' | 'VOIDED';
 
 export interface Permission {
   id: number;
@@ -105,22 +107,91 @@ export interface Product {
   linked_stock_status?: string;
   /** Held against open orders; available = current_stock - reserved_stock. */
   reserved_stock?: number;
+  addons?: ProductAddon[];
   created_at?: string;
   updated_at?: string;
 }
 
 export interface Customer {
   id: number;
+  customer_code?: string;
   name: string;
   phone: string;
   email?: string;
   address?: string;
   image_url?: string;
   notes?: string;
+  tier?: string;
+  loyalty_points?: number;
   status: 'ACTIVE' | 'INACTIVE';
   total_visits: number;
   total_spent: number;
+  last_visit_at?: string;
+  days_since_last_visit?: number;
+  avg_order_value?: number;
+  activity_status?: 'ACTIVE' | 'FREQUENT' | 'AT_RISK' | 'DORMANT' | 'NEW';
   created_at?: string;
+  updated_at?: string;
+}
+
+export interface CustomerNote {
+  id: number;
+  customer_id: number;
+  user_id?: number | null;
+  author_name?: string;
+  user_full_name?: string;
+  note_type: 'GENERAL' | 'PREFERENCE' | 'DIETARY' | 'ALLERGY' | 'VIP_REQUEST';
+  note_text: string;
+  created_at: string;
+}
+
+export interface CustomerAnalytics {
+  customer: Customer;
+  summary: {
+    total_orders: number;
+    total_spent: number;
+    avg_order_value: number;
+    first_visit_at: string | null;
+    last_visit_at: string | null;
+    days_since_last_visit: number;
+    frequency_category: 'FIRST_TIME' | 'REGULAR' | 'FREQUENT' | 'VERY_FREQUENT';
+    activity_status: string;
+  };
+  favorite_items: Array<{
+    product_name: string;
+    product_id: number;
+    total_qty: number;
+    total_spent: number;
+    last_ordered_at: string;
+  }>;
+  monthly_spending: Array<{
+    month_key: string;
+    order_count: number;
+    total_spent: number;
+  }>;
+  order_type_breakdown: Array<{
+    order_type: string;
+    count: number;
+    total_amount: number;
+  }>;
+  recent_orders: Array<{
+    id: number;
+    bill_number: string;
+    order_type: string;
+    payment_method: string;
+    payment_status: string;
+    total_amount: number;
+    created_at: string;
+  }>;
+}
+
+export interface CustomerSummaryKpis {
+  total_customers: number;
+  active_customers: number;
+  vip_customers: number;
+  at_risk_customers: number;
+  store_avg_order_value: number;
+  repeat_rate_percent: number;
 }
 
 export interface DiningTable {
@@ -129,14 +200,79 @@ export interface DiningTable {
   name: string;
   section: string;
   capacity: number;
+  active_guest_count?: number;
   status: TableStatus;
   current_order_id?: number | null;
   order_number?: string;
   customer_name?: string;
   customer_phone?: string;
   order_start_time?: string;
+  seated_at?: string | null;
+  cleaning_started_at?: string | null;
+  reservation_id?: number | null;
+  reservation_customer?: string | null;
+  reservation_time?: string | null;
+  reservation_guests?: number | null;
+  elapsed_minutes?: number;
+  cleaning_minutes?: number;
   order_current_total?: number;
   display_order: number;
+}
+
+export interface TableReservation {
+  id: number;
+  uuid: string;
+  reservation_code: string;
+  table_id?: number | null;
+  table_number?: string;
+  table_name?: string;
+  table_section?: string;
+  table_capacity?: number;
+  customer_name: string;
+  customer_phone: string;
+  guest_count: number;
+  reservation_time: string;
+  preferred_section?: string;
+  special_requests?: string;
+  status: 'CONFIRMED' | 'SEATED' | 'CANCELLED' | 'NO_SHOW';
+  created_at?: string;
+}
+
+export interface TableWaitlist {
+  id: number;
+  uuid: string;
+  token_number: string;
+  customer_name: string;
+  customer_phone?: string;
+  guest_count: number;
+  preferred_section?: string;
+  estimated_wait_minutes: number;
+  elapsed_wait_minutes?: number;
+  status: 'WAITING' | 'NOTIFIED' | 'SEATED' | 'CANCELLED';
+  assigned_table_id?: number | null;
+  table_number?: string;
+  table_name?: string;
+  seated_at?: string;
+  created_at?: string;
+}
+
+export interface TableHistoryItem {
+  order_id: number;
+  order_number: string;
+  order_type: string;
+  order_status: string;
+  total_amount: number;
+  order_start_time: string;
+  order_date?: string;
+  order_end_time?: string;
+  duration_minutes?: number;
+  bill_number?: string;
+  payment_method?: string;
+  staff_name?: string;
+  waiter_name?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  guest_count?: number;
 }
 
 export interface CartItem {
@@ -151,6 +287,90 @@ export interface CartItem {
   notes?: string;
   unitPrice: number;
   subtotal: number;
+  isComplimentary?: boolean;
+  complimentaryReason?: string;
+  itemType?: 'PRODUCT' | 'COMBO' | 'DEAL';
+  comboId?: number;
+  dealId?: number;
+  selectedAddons?: ProductAddon[];
+}
+
+export interface PosDayClosing {
+  id: number;
+  closing_number: string;
+  user_id: number;
+  cashier_name?: string;
+  opening_time: string;
+  closing_time: string;
+  opening_cash: number;
+  total_cash_sales: number;
+  total_card_sales: number;
+  total_upi_sales: number;
+  total_online_sales: number;
+  gross_sales: number;
+  total_discounts: number;
+  total_tax: number;
+  total_service_charges: number;
+  total_bills_count: number;
+  void_bills_count: number;
+  expected_cash: number;
+  actual_cash: number;
+  cash_variance: number;
+  cash_difference?: number;
+  total_orders?: number;
+  net_sales?: number;
+  closing_date?: string;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface PrinterConfig {
+  receiptPrinter: {
+    enabled: boolean;
+    name: string;
+    paperWidth: '80mm' | '58mm';
+    autoPrintOnCheckout: boolean;
+  };
+  kitchenPrinter: {
+    enabled: boolean;
+    name: string;
+    paperWidth: '80mm' | '58mm';
+    autoPrintKot: boolean;
+  };
+  barPrinter: {
+    enabled: boolean;
+    name: string;
+    paperWidth: '80mm' | '58mm';
+    autoPrintKot: boolean;
+  };
+}
+
+export interface OfflineOrder {
+  offlineSyncId: string;
+  orderNumber: string;
+  billNumber: string;
+  timestamp: string;
+  orderType: OrderType;
+  paymentMethod: PaymentMethod;
+  customerId?: number | null;
+  customerName?: string;
+  diningTableId?: number | null;
+  tableNumber?: string;
+  items: CartItem[];
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  serviceChargeAmount: number;
+  surchargeAmount: number;
+  couponCode?: string;
+  couponDiscount: number;
+  grandTotal: number;
+  cashTendered?: number;
+  changeReturned?: number;
+  paymentReference?: string;
+  notes?: string;
+  isSynced: boolean;
+  syncedAt?: string;
 }
 
 export interface Order {
@@ -246,6 +466,21 @@ export interface Bill {
   total_amount: number;
   payment_status: string;
   payment_method: PaymentMethod;
+  payment_reference?: string;
+  service_charge_amount?: number;
+  surcharge_amount?: number;
+  coupon_code?: string;
+  coupon_discount?: number;
+  cash_tendered?: number;
+  change_returned?: number;
+  is_voided?: boolean | number;
+  void_reason?: string;
+  void_by?: number;
+  void_at?: string;
+  is_reopened?: boolean | number;
+  reopened_from_bill_id?: number;
+  reopened_at?: string;
+  offline_sync_id?: string;
   notes?: string;
   printed_count: number;
   items?: BillItem[];
@@ -296,6 +531,10 @@ export interface StockItem {
   average_unit_price: number;
   status: 'active' | 'inactive';
   min_stock_alert: number;
+  reorder_level?: number;
+  reorder_quantity?: number;
+  max_stock_threshold?: number;
+  shelf_life_days?: number;
   product_id?: number | null;
   product_name?: string;
   sku?: string;
@@ -325,6 +564,8 @@ export interface StockEntry {
   status: StockEntryStatus;
   supplier?: string | null;
   invoice_number?: string | null;
+  batch_number?: string | null;
+  expiry_date?: string | null;
   notes?: string | null;
   created_by?: number | null;
   created_by_name?: string;
@@ -383,3 +624,219 @@ export interface ApiResponse<T = any> {
     details?: any;
   };
 }
+
+export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+export type PaymentTermsType = 'COD' | 'ADVANCE' | 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'NET_60';
+export type PreferredPaymentMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'UPI' | 'CASH';
+export type PurchasePaymentStatus = 'PAID' | 'PARTIAL' | 'UNPAID' | 'OVERDUE';
+export type PurchaseDeliveryStatus = 'RECEIVED' | 'PENDING' | 'CANCELLED';
+
+export interface Vendor {
+  id: number;
+  uuid: string;
+  vendor_code: string;
+  name: string;
+  category: string;
+  status: VendorStatus;
+  image_url?: string | null;
+  notes?: string | null;
+
+  // Contact Information
+  contact_person?: string | null;
+  phone: string;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  website?: string | null;
+
+  // Tax Details
+  tax_id?: string | null;
+  pan_number?: string | null;
+  tax_category?: string;
+  msme_number?: string | null;
+
+  // Payment Terms & Banking
+  payment_terms: PaymentTermsType | string;
+  preferred_payment_method: PreferredPaymentMethod | string;
+  bank_name?: string | null;
+  account_number?: string | null;
+  ifsc_code?: string | null;
+  branch_name?: string | null;
+  upi_id?: string | null;
+
+  // Credit Limit & Balances
+  credit_limit: number;
+  credit_period_days: number;
+  outstanding_balance: number;
+  total_purchases_amount: number;
+  total_purchases_count: number;
+  last_purchase_date?: string | null;
+  last_payment_date?: string | null;
+
+  // Vendor Rating & Performance
+  rating: number;
+  delivery_speed_rating: number;
+  quality_rating: number;
+  pricing_rating: number;
+  on_time_delivery_rate: number;
+  quality_score: number;
+  fulfillment_rate: number;
+  performance_notes?: string | null;
+
+  created_by?: number | null;
+  created_at?: string;
+  updated_at?: string;
+
+  purchases?: VendorPurchase[];
+  payments?: VendorPayment[];
+}
+
+export interface VendorPurchase {
+  id: number;
+  uuid: string;
+  vendor_id: number;
+  invoice_number: string;
+  order_date: string;
+  due_date?: string | null;
+  total_amount: number;
+  paid_amount: number;
+  balance_amount: number;
+  payment_status: PurchasePaymentStatus;
+  delivery_status: PurchaseDeliveryStatus;
+  items_summary?: string | null;
+  notes?: string | null;
+  created_at?: string;
+}
+
+export interface VendorPayment {
+  id: number;
+  uuid: string;
+  vendor_id: number;
+  purchase_id?: number | null;
+  invoice_number?: string | null;
+  payment_number: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  reference_number?: string | null;
+  notes?: string | null;
+  created_at?: string;
+}
+
+export interface VendorStats {
+  totalVendors: number;
+  activeVendors: number;
+  totalOutstanding: number;
+  totalPurchases: number;
+  avgRating: string;
+  avgOnTime: string;
+  avgQuality: string;
+  avgFulfillment: string;
+  overdueCount: number;
+  overdueAmount: number;
+  categories: { name: string; count: number }[];
+}
+
+// -------------------------------------------------------------
+// Product Add-ons, Combo Meals & Meal Deals
+// -------------------------------------------------------------
+export interface ProductAddon {
+  id: number;
+  name: string;
+  price: number;
+  cost_price?: number;
+  is_available: boolean | number;
+  is_active?: boolean | number;
+  product_id?: number | null;
+  category?: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  selected?: boolean;
+}
+
+export interface ComboMealItem {
+  id?: number;
+  combo_id?: number;
+  product_id: number;
+  product_name?: string;
+  sku?: string;
+  selling_price?: number;
+  variant_id?: number | null;
+  quantity: number;
+  display_order?: number;
+}
+
+export interface ComboMeal {
+  id: number;
+  name: string;
+  code?: string;
+  description?: string;
+  image_url?: string;
+  combo_price: number;
+  original_price?: number;
+  savings_amount?: number;
+  is_available: boolean | number;
+  status: 'ACTIVE' | 'INACTIVE';
+  items?: ComboMealItem[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MealDealItem {
+  id?: number;
+  deal_id?: number;
+  product_id: number;
+  product_name?: string;
+  sku?: string;
+  selling_price?: number;
+  variant_id?: number | null;
+  quantity: number;
+  display_order?: number;
+}
+
+export interface MealDeal {
+  id: number;
+  title: string;
+  code?: string;
+  description?: string;
+  image_url?: string;
+  deal_price: number;
+  discount_percentage?: number;
+  start_date?: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  days_of_week?: string;
+  is_active: boolean | number;
+  items?: MealDealItem[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+// -------------------------------------------------------------
+// Inventory Alerts Suite
+// -------------------------------------------------------------
+export interface StockAlertSummary {
+  totalAlerts: number;
+  outOfStock: number;
+  lowStock: number;
+  minStock: number;
+  reorderLevel: number;
+  overstock: number;
+  expired: number;
+  expiringSoon: number;
+}
+
+export interface StockAlertItem extends StockItem {
+  alert_category: 'OUT_OF_STOCK' | 'LOW_STOCK' | 'REORDER_LEVEL' | 'OVERSTOCK' | 'EXPIRED' | 'EXPIRING_SOON' | 'NORMAL';
+  severity: 'critical' | 'warning' | 'info' | 'normal';
+  latest_batch?: string | null;
+  nearest_expiry_date?: string | null;
+  days_until_expiry?: number | null;
+  suggested_reorder_quantity: number;
+}
+
+

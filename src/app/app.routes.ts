@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/auth/guards/auth.guard';
+import { backOfficeGuard } from './features/back-office/back-office.guard';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { MainLayoutComponent } from './layouts/main-layout/main-layout.component';
 
@@ -15,6 +16,20 @@ export const routes: Routes = [
           import('./features/auth/login.component').then((m) => m.LoginComponent),
       },
     ],
+  },
+
+  // Standalone Back-Office.
+  //
+  // Declared at the top level rather than inside the shell so it renders
+  // without the sidebar and header — and, deliberately, so nothing in the
+  // panel navigation links to it. `/admin/back-office` typed into the address
+  // bar is the only way in, and the backOfficeGuard plus the admin-only
+  // Back-Office API decide who gets through.
+  {
+    path: 'admin/back-office',
+    canActivate: [backOfficeGuard],
+    loadComponent: () =>
+      import('./features/back-office/back-office.component').then((m) => m.BackOfficeComponent),
   },
 
   // Main Dashboard / POS Shell Layout Routes (Protected)
@@ -127,6 +142,11 @@ export const routes: Routes = [
           import('./features/customers/customers.component').then((m) => m.CustomersComponent),
         canActivate: [roleGuard],
         data: { permission: 'customer.manage' },
+      },
+      {
+        path: 'vendors',
+        loadComponent: () =>
+          import('./features/vendors/vendors.component').then((m) => m.VendorsComponent),
       },
       {
         path: 'reports',

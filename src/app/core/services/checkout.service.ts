@@ -15,4 +15,8 @@ export class CheckoutService {
   public checkout(payload: any): Observable<ApiResponse<Bill>> {
     return this.http.post<ApiResponse<Bill>>(this.API_URL, payload);
   }
+
+  public syncOffline(orders: any[]): Observable<ApiResponse<{ syncedCount: number; results: any[] }>> {
+    return this.http.post<ApiResponse<{ syncedCount: number; results: any[] }>>(`${this.API_URL}/sync-offline`, { orders });
+  }
 }
