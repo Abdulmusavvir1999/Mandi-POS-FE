@@ -11,6 +11,15 @@
   --primary-light: rgba(126, 34, 206, 0.1);
   --primary-glow: rgba(126, 34, 206, 0.35);
 
+  /* Raw channels, for places needing an arbitrary alpha:
+     rgba(var(--primary-rgb), 0.58). Kept in step by ThemeService. */
+  --primary-rgb: 126, 34, 206;
+  --primary-variant-rgb: 107, 33, 168;
+  --text-main-rgb: 46, 16, 101;
+  --success-rgb: 22, 163, 74;
+  --danger-rgb: 220, 38, 38;
+  --warning-rgb: 234, 88, 12;
+
   --secondary: #9333EA;         /* Vibrant Accent */
   --secondary-variant: #7E22CE;
   --secondary-hover: #A855F7;
@@ -149,6 +158,16 @@ svg {
 .h-screen { height: 100vh !important; }
 .min-h-screen { min-height: 100vh !important; }
 
+/* Height caps for scroll panes. These were already being written on the
+   panes as utility classes, but this stylesheet never defined them — so a
+   pane had an overflow rule and no height to overflow, and it grew instead
+   of scrolling, pushing its content onto whatever box sat outside it. */
+.max-h-72 { max-height: 18rem !important; }
+.max-h-\[60vh\] { max-height: 60vh !important; }
+.max-h-\[70vh\] { max-height: 70vh !important; }
+.max-h-\[85vh\] { max-height: 85vh !important; }
+.max-h-\[90vh\] { max-height: 90vh !important; }
+
 .max-w-xs { max-width: 20rem !important; }
 .max-w-sm { max-width: 24rem !important; }
 .max-w-md { max-width: 28rem !important; }
@@ -167,6 +186,9 @@ svg {
 .flex-wrap { flex-wrap: wrap !important; }
 .flex-1 { flex: 1 1 0% !important; }
 .shrink-0 { flex-shrink: 0 !important; }
+/* The spelling used on the headers and toolbars of the flex-column
+   dialogs, which have to hold their height while the body scrolls. */
+.flex-shrink-0 { flex-shrink: 0 !important; }
 .grow { flex-grow: 1 !important; }
 
 .items-center { align-items: center !important; }
@@ -240,10 +262,19 @@ svg {
 .relative { position: relative !important; }
 .absolute { position: absolute !important; }
 .fixed { position: fixed !important; }
+/* Written on the table heads of the dining history, the POS ledger and the
+   POS Z-report — all three inside panes that scroll — but never defined, so
+   the heads scrolled away with their rows. */
+.sticky { position: sticky !important; }
+.top-0 { top: 0; }
 .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
 .overflow-hidden { overflow: hidden !important; }
 .overflow-y-auto { overflow-y: auto !important; }
 .overflow-x-hidden { overflow-x: hidden !important; }
+/* Written on the POS order-type rail and the stock alert pills, which are
+   meant to scroll sideways once their buttons stop fitting. */
+.overflow-x-auto { overflow-x: auto !important; }
+.\!overflow-x-auto { overflow-x: auto !important; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .select-none { user-select: none; }
 .pointer-events-none { pointer-events: none; }
@@ -393,7 +424,7 @@ svg {
 
 .card:hover {
   border-color: var(--primary-hover, #D8B4FE) !important;
-  box-shadow: 0 8px 24px -4px var(--primary-light, rgba(126, 34, 206, 0.1)), 0 4px 8px -2px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 8px 24px -4px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1)), 0 4px 8px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
 .glass-panel {
@@ -428,7 +459,7 @@ svg {
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  color: var(--card-border, #E9D5FF);
+  color: var(--text-dim, #E9D5FF);
 }
 
 /* Custom Scrollbar */
@@ -472,19 +503,19 @@ svg {
 .btn-primary {
   background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
   color: #ffffff;
-  box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.35));
+  box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
   border-color: var(--primary, #7E22CE);
 }
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--primary-hover, #9333EA) 0%, var(--primary, #7E22CE) 100%);
-  box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.45));
+  box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
   transform: translateY(-1px);
 }
 
 .btn-success {
   background: linear-gradient(135deg, var(--success, #16A34A) 0%, var(--success, #15803D) 100%);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--success-rgb, 22, 163, 74), 0.3);
 }
 .btn-success:hover {
   filter: brightness(1.1);
@@ -494,16 +525,16 @@ svg {
 .btn-danger {
   --btn-bloom-from: #EF4444;
   --btn-bloom-to: #DC2626;
-  --btn-bloom-glow: rgba(220, 38, 38, 0.45);
+  --btn-bloom-glow: rgba(var(--danger-rgb, 220, 38, 38), 0.45);
   background: linear-gradient(135deg, var(--danger, #EF4444) 0%, var(--danger, #DC2626) 100%);
   color: #ffffff !important;
   border-color: var(--danger, #DC2626);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  box-shadow: 0 4px 12px rgba(var(--danger-rgb, 220, 38, 38), 0.35);
 }
 .btn-danger:hover {
-  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+  background: linear-gradient(135deg, var(--danger, #DC2626) 0%, var(--danger, #B91C1C) 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.5);
+  box-shadow: 0 6px 18px rgba(var(--danger-rgb, 220, 38, 38), 0.5);
   transform: translateY(-1px);
 }
 
@@ -518,7 +549,7 @@ svg {
   border-color: var(--primary, #7E22CE);
   color: var(--primary, #7E22CE);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 .btn-ghost {
@@ -526,7 +557,7 @@ svg {
   color: var(--text-muted, #6B7280);
 }
 .btn-ghost:hover {
-  background: var(--primary-light, rgba(126, 34, 206, 0.08));
+  background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.08));
   color: var(--primary, #7E22CE);
 }
 
@@ -604,7 +635,7 @@ label {
 
 .form-control:focus {
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
 }
 
 .form-control::placeholder {
@@ -636,7 +667,7 @@ select.form-control option,
 select option {
   padding: 0.6rem 0.85rem;
   background-color: #ffffff;
-  color: #2E1065;
+  color: var(--text-main, #2E1065);
   font-size: 0.875rem;
 }
 
@@ -655,12 +686,12 @@ select option {
   line-height: 1.35;
 }
 
-.badge-primary { background: var(--primary-light, rgba(126, 34, 206, 0.1)); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, rgba(126, 34, 206, 0.25)); }
-.badge-secondary { background: var(--primary-light, rgba(147, 51, 234, 0.12)); color: var(--primary-hover, #9333EA); border: 1px solid var(--card-border, rgba(147, 51, 234, 0.25)); }
-.badge-success { background: rgba(22, 163, 74, 0.12); color: var(--success, #16A34A); border: 1px solid rgba(22, 163, 74, 0.25); }
-.badge-warning { background: rgba(234, 88, 12, 0.12); color: var(--warning, #EA580C); border: 1px solid rgba(234, 88, 12, 0.25); }
-.badge-danger { background: rgba(220, 38, 38, 0.12); color: var(--danger, #DC2626); border: 1px solid rgba(220, 38, 38, 0.25); }
-.badge-info { background: var(--primary-light, rgba(126, 34, 206, 0.1)); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, rgba(126, 34, 206, 0.25)); }
+.badge-primary { background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1)); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, rgba(var(--primary-rgb, 126, 34, 206), 0.25)); }
+.badge-secondary { background: var(--primary-light, rgba(var(--primary-rgb, 147, 51, 234), 0.12)); color: var(--primary-hover, #9333EA); border: 1px solid var(--card-border, rgba(var(--primary-rgb, 147, 51, 234), 0.25)); }
+.badge-success { background: rgba(var(--success-rgb, 22, 163, 74), 0.12); color: var(--success, #16A34A); border: 1px solid rgba(var(--success-rgb, 22, 163, 74), 0.25); }
+.badge-warning { background: rgba(var(--warning-rgb, 234, 88, 12), 0.12); color: var(--warning, #EA580C); border: 1px solid rgba(var(--warning-rgb, 234, 88, 12), 0.25); }
+.badge-danger { background: rgba(var(--danger-rgb, 220, 38, 38), 0.12); color: var(--danger, #DC2626); border: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.25); }
+.badge-info { background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1)); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, rgba(var(--primary-rgb, 126, 34, 206), 0.25)); }
 
 /* Category Pill Badge - Luxury SaaS */
 .category-pill-badge {
@@ -741,7 +772,7 @@ select option {
 
 .toolbar-date-input:focus {
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.12));
+  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
 }
 
 .toolbar-date-label {
@@ -766,7 +797,7 @@ select option {
 .kpi-mini-card:hover {
   border-color: var(--primary-hover, #C084FC);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px var(--primary-light, rgba(126, 34, 206, 0.08));
+  box-shadow: 0 6px 18px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.08));
 }
 
 .kpi-header {
@@ -811,13 +842,13 @@ select option {
 }
 
 .trend-up {
-  background-color: #DCFCE7;
-  color: #16A34A;
+  background-color: var(--success-light, #DCFCE7);
+  color: var(--success, #16A34A);
 }
 
 .trend-down {
-  background-color: #FEE2E2;
-  color: #DC2626;
+  background-color: var(--danger-light, #FEE2E2);
+  color: var(--danger, #DC2626);
 }
 
 /* Status Dot Pills */
@@ -833,23 +864,23 @@ select option {
 }
 
 .status-dot-pill.is-active {
-  background-color: #DCFCE7;
-  color: #16A34A;
+  background-color: var(--success-light, #DCFCE7);
+  color: var(--success, #16A34A);
 }
 
 .status-dot-pill.is-inactive {
   background-color: #F3F4F6;
-  color: #4B5563;
+  color: var(--text-muted, #4B5563);
 }
 
 .status-dot-pill.is-warning {
   background-color: #FFEDD5;
-  color: #EA580C;
+  color: var(--warning, #EA580C);
 }
 
 .status-dot-pill.is-danger {
-  background-color: #FEE2E2;
-  color: #DC2626;
+  background-color: var(--danger-light, #FEE2E2);
+  color: var(--danger, #DC2626);
 }
 
 .status-dot {
@@ -933,14 +964,14 @@ select option {
   border-color: var(--primary-hover, #C084FC);
   color: var(--primary, #7E22CE);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 .nav-tab-pill.is-active {
   background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%) !important;
   color: #ffffff !important;
   border-color: var(--primary, #7E22CE) !important;
-  box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.3)) !important;
+  box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3)) !important;
   transform: translateY(-1px);
 }
 
@@ -994,7 +1025,7 @@ select option {
   color: #FFFFFF;
   border-color: var(--primary, #7E22CE);
   font-weight: 700;
-  box-shadow: 0 2px 6px var(--primary-glow, rgba(126, 34, 206, 0.3));
+  box-shadow: 0 2px 6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
 }
 
 .page-pill-btn:disabled {
@@ -1022,7 +1053,7 @@ select option {
   background: var(--card-bg, #ffffff);
   border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(46, 16, 101, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(var(--text-main-rgb, 46, 16, 101), 0.35);
   color: var(--text-main, #2E1065);
   width: min(92vw, 680px);
   max-width: 680px;
@@ -1064,7 +1095,7 @@ select option {
   background: var(--card-bg, #ffffff);
   border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(46, 16, 101, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(var(--text-main-rgb, 46, 16, 101), 0.35);
   color: var(--text-main, #2E1065);
   width: min(92vw, 680px);
   max-height: calc(100vh - 3rem);
@@ -1201,7 +1232,7 @@ select option {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px var(--primary-light, rgba(126, 34, 206, 0.12));
+  box-shadow: 0 2px 8px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
 }
 
 .header-icon-box .material-symbols-outlined {
@@ -1294,18 +1325,18 @@ select option {
   background: var(--bg-app, #FAF5FF);
   border-color: var(--primary, #C084FC);
   color: var(--primary, #7E22CE);
-  box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 .btn-gradient-purple {
   background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
   color: #ffffff;
-  box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.3));
+  box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
   border: none;
 }
 
 .btn-gradient-purple:hover:not(:disabled) {
-  box-shadow: 0 6px 20px var(--primary-glow, rgba(126, 34, 206, 0.4));
+  box-shadow: 0 6px 20px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.4));
   background: linear-gradient(135deg, var(--primary-hover, #9333EA) 0%, var(--primary, #7E22CE) 100%);
 }
 
@@ -1315,8 +1346,8 @@ select option {
   gap: 0.4rem;
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
-  background: #DCFCE7;
-  color: #15803D;
+  background: var(--success-light, #DCFCE7);
+  color: var(--success, #15803D);
   border: 1px solid #86EFAC;
   font-size: 0.6875rem;
   font-weight: 800;
@@ -1394,16 +1425,16 @@ select option {
 }
 
 .action-badge-warning {
-  background: #FFFBEB;
+  background: var(--warning-light, #FFFBEB);
   color: #92400E;
-  border: 1px solid #FDE68A;
+  border: 1px solid var(--warning-light, #FDE68A);
 }
 .action-badge-warning .action-badge-dot {
   background: #F59E0B;
   box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
 }
 .action-badge-warning .action-badge-icon {
-  color: #D97706;
+  color: var(--warning, #D97706);
 }
 
 .action-badge-purple {
@@ -1413,7 +1444,7 @@ select option {
 }
 .action-badge-purple .action-badge-dot {
   background: var(--primary, #7E22CE);
-  box-shadow: 0 0 6px var(--primary-glow, rgba(126, 34, 206, 0.5));
+  box-shadow: 0 0 6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.5));
 }
 .action-badge-purple .action-badge-icon {
   color: var(--primary, #7E22CE);
@@ -1477,14 +1508,14 @@ select option {
   border-color: var(--primary, #C084FC);
   color: var(--primary, #7E22CE);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 .module-tab-btn.is-active {
   background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
   color: #ffffff;
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.3));
+  box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
   transform: translateY(-1px);
 }
 
@@ -1572,7 +1603,7 @@ select option {
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px var(--primary-light, rgba(126, 34, 206, 0.08));
+  box-shadow: 0 6px 18px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.08));
 }
 
 .card-accent-purple { border-left: 4px solid var(--primary, #7E22CE) !important; }
@@ -1618,8 +1649,8 @@ select option {
 }
 
 .bg-purple-tint { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); }
-.bg-green-tint  { background: #DCFCE7; color: #16A34A; }
-.bg-amber-tint  { background: #FFEDD5; color: #EA580C; }
+.bg-green-tint  { background: var(--success-light, #DCFCE7); color: var(--success, #16A34A); }
+.bg-amber-tint  { background: #FFEDD5; color: var(--warning, #EA580C); }
 .bg-blue-tint   { background: #DBEAFE; color: #2563EB; }
 .bg-teal-tint   { background: #CCFBF1; color: #0D9488; }
 .bg-rose-tint   { background: #FFE4E6; color: #E11D48; }
@@ -1658,8 +1689,8 @@ select option {
   max-width: 100%;
 }
 
-.pill-live { background: #DCFCE7; color: #16A34A; border: 1px solid #86EFAC; }
-.pill-success { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+.pill-live { background: var(--success-light, #DCFCE7); color: var(--success, #16A34A); border: 1px solid #86EFAC; }
+.pill-success { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); border: 1px solid #86EFAC; }
 .pill-purple { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, #D8B4FE); }
 .pill-amber { background: #FFEDD5; color: #C2410C; border: 1px solid #FED7AA; }
 .pill-blue { background: #DBEAFE; color: #1D4ED8; border: 1px solid #BFDBFE; }
@@ -1672,7 +1703,7 @@ select option {
   border: 1.5px solid var(--card-border, #E9D5FF);
   border-radius: 16px;
   padding: 0.875rem 1.15rem;
-  box-shadow: 0 2px 8px rgba(46, 16, 101, 0.04);
+  box-shadow: 0 2px 8px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1728,7 +1759,7 @@ select option {
 
 .toolbar-search-input:focus {
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
 }
 
 .search-clear-btn {
@@ -1785,7 +1816,7 @@ select option {
 
 .toolbar-select:focus {
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
 }
 
 .toolbar-meta-count,
@@ -1973,7 +2004,7 @@ app-custom-dropdown.w-full {
   background: var(--primary, #7E22CE);
   color: #ffffff;
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 2px 6px var(--primary-glow, rgba(126, 34, 206, 0.3));
+  box-shadow: 0 2px 6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
 }
 
 /* Empty State */
@@ -2042,8 +2073,8 @@ app-custom-dropdown.w-full {
 /* Role Badges */
 .role-badge-admin   { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, #D8B4FE); }
 .role-badge-manager { background: #FFEDD5; color: var(--warning, #EA580C); border: 1px solid #FED7AA; }
-.role-badge-cashier { background: #DCFCE7; color: var(--success, #16A34A); border: 1px solid #86EFAC; }
-.role-badge-staff   { background: #F1F5F9; color: var(--text-muted, #475569); border: 1px solid var(--card-border, #CBD5E1); }
+.role-badge-cashier { background: var(--success-light, #DCFCE7); color: var(--success, #16A34A); border: 1px solid #86EFAC; }
+.role-badge-staff   { background: var(--card-hover, #F1F5F9); color: var(--text-muted, #475569); border: 1px solid var(--card-border, #CBD5E1); }
 
 /* Table Action Buttons */
 .btn-action-icon {
@@ -2070,7 +2101,7 @@ app-custom-dropdown.w-full {
 .btn-action-icon.is-danger:hover {
   border-color: var(--danger, #DC2626);
   color: var(--danger, #DC2626);
-  background: #FEE2E2;
+  background: var(--danger-light, #FEE2E2);
 }
 
 /* Modals */
@@ -2093,13 +2124,13 @@ app-custom-dropdown.w-full {
   justify-content: center;
   border: 1px solid var(--card-border, #E9D5FF);
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(46, 16, 101, 0.04);
+  box-shadow: 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
 }
 
 .modal-icon-badge.is-success {
-  background: #DCFCE7;
-  color: #16A34A;
-  border-color: #BBF7D0;
+  background: var(--success-light, #DCFCE7);
+  color: var(--success, #16A34A);
+  border-color: var(--success-light, #BBF7D0);
 }
 
 .modal-close-btn {
@@ -2168,7 +2199,7 @@ app-custom-dropdown.w-full {
 
 .modal-input:focus, .modal-select:focus {
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
 }
 
 .modal-footer-bar {
@@ -2307,15 +2338,15 @@ app-custom-dropdown.w-full {
 }
 
 .diff-line.text-addition {
-  background: rgba(22, 163, 74, 0.1);
+  background: rgba(var(--success-rgb, 22, 163, 74), 0.1);
   color: var(--success, #16A34A);
-  border: 1px solid rgba(22, 163, 74, 0.25);
+  border: 1px solid rgba(var(--success-rgb, 22, 163, 74), 0.25);
 }
 
 .diff-line.text-deletion {
-  background: rgba(220, 38, 38, 0.08);
+  background: rgba(var(--danger-rgb, 220, 38, 38), 0.08);
   color: var(--danger, #DC2626);
-  border: 1px solid rgba(220, 38, 38, 0.25);
+  border: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.25);
 }
 
 .no-diff-text {
@@ -2376,18 +2407,18 @@ app-custom-dropdown.w-full {
 
 /* Status palette used by icons and badges across the order pipeline */
 .text-red-400    { color: #F87171 !important; }
-.text-red-500    { color: #EF4444 !important; }
-.text-red-600    { color: #DC2626 !important; }
+.text-red-500    { color: var(--danger, #EF4444) !important; }
+.text-red-600    { color: var(--danger, #DC2626) !important; }
 .text-amber-500  { color: #F59E0B !important; }
-.text-amber-600  { color: #D97706 !important; }
-.text-amber-700  { color: #B45309 !important; }
+.text-amber-600  { color: var(--warning, #D97706) !important; }
+.text-amber-700  { color: var(--warning, #B45309) !important; }
 .text-amber-800  { color: #92400E !important; }
 .text-amber-900  { color: #78350F !important; }
 .text-green-500  { color: #22C55E !important; }
-.text-green-600  { color: #16A34A !important; }
-.text-green-700  { color: #15803D !important; }
+.text-green-600  { color: var(--success, #16A34A) !important; }
+.text-green-700  { color: var(--success, #15803D) !important; }
 .text-blue-500   { color: #3B82F6 !important; }
-.text-purple-500 { color: #A855F7 !important; }
+.text-purple-500 { color: var(--primary-hover, #A855F7) !important; }
 
 /* Spacing / sizing fillers */
 .gap-1\.5  { gap: 0.375rem !important; }
@@ -2436,7 +2467,7 @@ button,
 
 /* Selection highlight tuned to the royal purple theme */
 ::selection {
-  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+  background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
   color: var(--text-main, #2E1065);
 }
 
@@ -2468,7 +2499,7 @@ button,
   -webkit-user-select: none;
   user-select: none;
   box-shadow:
-    0 1px 2px rgba(46, 16, 101, 0.06),
+    0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition:
     color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2504,8 +2535,8 @@ button,
   border-color: transparent;
   transform: translateY(-1.5px);
   box-shadow:
-    0 8px 18px -5px var(--primary-glow, rgba(126, 34, 206, 0.35)),
-    0 3px 8px -2px rgba(46, 16, 101, 0.14);
+    0 8px 18px -5px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)),
+    0 3px 8px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.14);
 }
 
 .modal-close-btn:hover::before {
@@ -2519,15 +2550,15 @@ button,
 
 .modal-close-btn:active {
   transform: translateY(0) scale(0.93);
-  box-shadow: 0 2px 6px -2px var(--primary-glow, rgba(126, 34, 206, 0.35));
+  box-shadow: 0 2px 6px -2px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
   transition-duration: 0.09s;
 }
 
 .modal-close-btn:focus-visible {
   border-color: var(--primary, #7E22CE);
   box-shadow:
-    0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1)),
-    0 6px 16px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+    0 0 0 3.5px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1)),
+    0 6px 16px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
 }
 
 /* Variant for close buttons sitting on a dark header bar */
@@ -2578,7 +2609,7 @@ button,
   --badge-size: 2.5rem;
   --badge-from: var(--primary, #7E22CE);
   --badge-to: var(--primary-hover, #9333EA);
-  --badge-glow: var(--primary-glow, rgba(126, 34, 206, 0.35));
+  --badge-glow: var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -2592,7 +2623,7 @@ button,
   overflow: hidden;
   box-shadow:
     0 6px 16px -6px var(--badge-glow),
-    0 2px 5px -1px rgba(46, 16, 101, 0.18),
+    0 2px 5px -1px rgba(var(--text-main-rgb, 46, 16, 101), 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
   transition:
     transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2622,7 +2653,7 @@ button,
   transform: translateY(-1.5px);
   box-shadow:
     0 10px 22px -7px var(--badge-glow),
-    0 3px 8px -2px rgba(46, 16, 101, 0.22),
+    0 3px 8px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
@@ -2645,7 +2676,7 @@ button,
 .modal-icon-badge.is-success {
   --badge-from: #16A34A;
   --badge-to: #22C55E;
-  --badge-glow: rgba(22, 163, 74, 0.38);
+  --badge-glow: rgba(var(--success-rgb, 22, 163, 74), 0.38);
 }
 
 .modal-icon-badge.is-teal {
@@ -2657,13 +2688,13 @@ button,
 .modal-icon-badge.is-danger {
   --badge-from: #DC2626;
   --badge-to: #EF4444;
-  --badge-glow: rgba(220, 38, 38, 0.38);
+  --badge-glow: rgba(var(--danger-rgb, 220, 38, 38), 0.38);
 }
 
 .modal-icon-badge.is-warning {
   --badge-from: #EA580C;
   --badge-to: #F97316;
-  --badge-glow: rgba(234, 88, 12, 0.38);
+  --badge-glow: rgba(var(--warning-rgb, 234, 88, 12), 0.38);
 }
 
 /* For header bars that are already dark */
@@ -2723,7 +2754,7 @@ button,
   -webkit-user-select: none;
   user-select: none;
   box-shadow:
-    0 1px 2px rgba(46, 16, 101, 0.06),
+    0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition:
     color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2758,8 +2789,8 @@ button,
   border-color: transparent;
   transform: translateY(-1.5px);
   box-shadow:
-    0 8px 18px -5px var(--primary-glow, rgba(126, 34, 206, 0.35)),
-    0 3px 8px -2px rgba(46, 16, 101, 0.14);
+    0 8px 18px -5px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)),
+    0 3px 8px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.14);
 }
 
 .back-btn:hover::before {
@@ -2774,15 +2805,15 @@ button,
 
 .back-btn:active {
   transform: translateY(0) scale(0.93);
-  box-shadow: 0 2px 6px -2px var(--primary-glow, rgba(126, 34, 206, 0.35));
+  box-shadow: 0 2px 6px -2px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
   transition-duration: 0.09s;
 }
 
 .back-btn:focus-visible {
   border-color: var(--primary, #7E22CE);
   box-shadow:
-    0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1)),
-    0 6px 16px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+    0 0 0 3.5px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1)),
+    0 6px 16px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2830,8 +2861,8 @@ button,
   flex-wrap: wrap;
   row-gap: 0.2rem;
   box-shadow:
-    0 2px 10px -4px rgba(46, 16, 101, 0.16),
-    0 1px 2px rgba(46, 16, 101, 0.05),
+    0 2px 10px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16),
+    0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
   transition:
     box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2844,8 +2875,8 @@ button,
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--primary, #7E22CE) 30%, var(--card-border, #E9D5FF));
   box-shadow:
-    0 8px 22px -8px var(--primary-glow, rgba(126, 34, 206, 0.35)),
-    0 2px 6px -1px rgba(46, 16, 101, 0.1),
+    0 8px 22px -8px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)),
+    0 2px 6px -1px rgba(var(--text-main-rgb, 46, 16, 101), 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
@@ -2910,7 +2941,7 @@ button,
 .breadcrumbs-row a:hover,
 .breadcrumb-link:hover {
   color: var(--primary, #7E22CE);
-  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+  background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 .breadcrumbs-row a:hover::after,
@@ -2922,7 +2953,7 @@ button,
 .breadcrumb-link:focus-visible {
   outline: none;
   color: var(--primary, #7E22CE);
-  box-shadow: 0 0 0 2.5px var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: 0 0 0 2.5px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 /* "You are here" — the only crumb that carries a solid chip */
@@ -2934,7 +2965,7 @@ button,
   font-weight: 800;
   letter-spacing: 0.01em;
   box-shadow:
-    0 3px 10px -4px var(--primary-glow, rgba(126, 34, 206, 0.35)),
+    0 3px 10px -4px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
@@ -3006,7 +3037,7 @@ button:not(:disabled):active {
 
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1));
+  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
 }
 
 /* ── B. Action buttons ── */
@@ -3088,8 +3119,8 @@ button:focus-visible {
   border-color: transparent;
   transform: translateY(-2px);
   box-shadow:
-    0 8px 18px -5px var(--btn-bloom-glow, var(--primary-glow, rgba(126, 34, 206, 0.35))),
-    0 3px 8px -2px rgba(46, 16, 101, 0.14);
+    0 8px 18px -5px var(--btn-bloom-glow, var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35))),
+    0 3px 8px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.14);
 }
 
 .btn:hover:not(:disabled) .material-symbols-outlined,
@@ -3124,8 +3155,8 @@ button:focus-visible {
   outline: none;
   border-color: var(--primary, #7E22CE);
   box-shadow:
-    0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.1)),
-    0 6px 16px -6px var(--btn-bloom-glow, var(--primary-glow, rgba(126, 34, 206, 0.35)));
+    0 0 0 3.5px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1)),
+    0 6px 16px -6px var(--btn-bloom-glow, var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)));
 }
 
 /* The filled variant blooms one step brighter than it already is */
@@ -3138,21 +3169,21 @@ button:focus-visible {
 .btn.btn-danger {
   --btn-bloom-from: #EF4444 !important;
   --btn-bloom-to: #DC2626 !important;
-  --btn-bloom-glow: rgba(220, 38, 38, 0.5) !important;
+  --btn-bloom-glow: rgba(var(--danger-rgb, 220, 38, 38), 0.5) !important;
 }
 
 .btn-danger::before,
 .btn.btn-danger::before {
-  background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+  background: linear-gradient(135deg, var(--danger, #EF4444), var(--danger, #DC2626)) !important;
 }
 
 .btn-danger:hover:not(:disabled),
 .btn.btn-danger:hover:not(:disabled) {
   color: #FFFFFF !important;
   border-color: transparent !important;
-  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+  background: linear-gradient(135deg, var(--danger, #DC2626) 0%, var(--danger, #B91C1C) 100%) !important;
   box-shadow:
-    0 8px 20px -4px rgba(220, 38, 38, 0.55),
+    0 8px 20px -4px rgba(var(--danger-rgb, 220, 38, 38), 0.55),
     0 3px 8px -2px rgba(185, 28, 28, 0.35) !important;
 }
 
@@ -3165,31 +3196,31 @@ button:focus-visible {
 .btn-danger:focus-visible,
 .btn.btn-danger:focus-visible {
   outline: none;
-  border-color: #DC2626 !important;
+  border-color: var(--danger, #DC2626) !important;
   box-shadow:
-    0 0 0 3.5px rgba(220, 38, 38, 0.25),
-    0 6px 16px -6px rgba(220, 38, 38, 0.5) !important;
+    0 0 0 3.5px rgba(var(--danger-rgb, 220, 38, 38), 0.25),
+    0 6px 16px -6px rgba(var(--danger-rgb, 220, 38, 38), 0.5) !important;
 }
 
 .btn-success,
 .btn.btn-success {
   --btn-bloom-from: #22C55E !important;
   --btn-bloom-to: #16A34A !important;
-  --btn-bloom-glow: rgba(22, 163, 74, 0.45) !important;
+  --btn-bloom-glow: rgba(var(--success-rgb, 22, 163, 74), 0.45) !important;
 }
 
 .btn-success::before,
 .btn.btn-success::before {
-  background: linear-gradient(135deg, #22C55E, #16A34A) !important;
+  background: linear-gradient(135deg, #22C55E, var(--success, #16A34A)) !important;
 }
 
 .btn-success:hover:not(:disabled),
 .btn.btn-success:hover:not(:disabled) {
   color: #FFFFFF !important;
   border-color: transparent !important;
-  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%) !important;
+  background: linear-gradient(135deg, var(--success, #16A34A) 0%, var(--success, #15803D) 100%) !important;
   box-shadow:
-    0 8px 20px -4px rgba(22, 163, 74, 0.45),
+    0 8px 20px -4px rgba(var(--success-rgb, 22, 163, 74), 0.45),
     0 3px 8px -2px rgba(21, 128, 61, 0.25) !important;
 }
 
@@ -3215,14 +3246,14 @@ button:focus-visible {
   color: var(--danger, #DC2626);
   --btn-bloom-from: #DC2626;
   --btn-bloom-to: #EF4444;
-  --btn-bloom-glow: rgba(220, 38, 38, 0.38);
+  --btn-bloom-glow: rgba(var(--danger-rgb, 220, 38, 38), 0.38);
 }
 
 .action-icon-btn.is-success {
   color: var(--success, #16A34A);
   --btn-bloom-from: #16A34A;
   --btn-bloom-to: #22C55E;
-  --btn-bloom-glow: rgba(22, 163, 74, 0.38);
+  --btn-bloom-glow: rgba(var(--success-rgb, 22, 163, 74), 0.38);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3287,7 +3318,7 @@ button:focus-visible {
 /* Press feedback — the only feedback a touchscreen ever gets */
 .saas-data-table tbody tr.clickable-row:active,
 .saas-table tbody tr.clickable-row:active {
-  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+  background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--primary, #7E22CE) 30%, transparent);
 }
 
@@ -3347,14 +3378,14 @@ button:focus-visible {
 
 .role-origin-badge.is-default {
   background: rgba(107, 114, 128, 0.1);
-  color: #4B5563;
+  color: var(--text-muted, #4B5563);
   border: 1px solid rgba(107, 114, 128, 0.25);
 }
 
 .role-origin-badge.is-manual {
-  background: var(--primary-light, rgba(126, 34, 206, 0.1));
+  background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
   color: var(--primary, #7E22CE);
-  border: 1px solid var(--card-border, rgba(126, 34, 206, 0.25));
+  border: 1px solid var(--card-border, rgba(var(--primary-rgb, 126, 34, 206), 0.25));
 }
 
 .roles-grid {
@@ -3372,7 +3403,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 4px 16px rgba(46, 16, 101, 0.03);
+  box-shadow: 0 4px 16px rgba(var(--text-main-rgb, 46, 16, 101), 0.03);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
@@ -3381,7 +3412,7 @@ button:focus-visible {
 .role-manage-card:hover {
   transform: translateY(-2px);
   border-color: var(--primary, #7E22CE);
-  box-shadow: 0 8px 24px rgba(126, 34, 206, 0.08);
+  box-shadow: 0 8px 24px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
 }
 
 .role-manage-card::before {
@@ -3443,9 +3474,9 @@ button:focus-visible {
   gap: 0.5rem;
   margin: 1rem 0 1.25rem 0;
   padding: 0.75rem;
-  background: #FAF5FF;
+  background: var(--bg-app, #FAF5FF);
   border-radius: 10px;
-  border: 1px solid #F3E8FF;
+  border: 1px solid var(--card-border, #F3E8FF);
 }
 
 .role-stat-pill {
@@ -3462,7 +3493,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  border-top: 1px solid #F3E8FF;
+  border-top: 1px solid var(--card-border, #F3E8FF);
   padding-top: 1rem;
 }
 
@@ -3497,7 +3528,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  background: linear-gradient(180deg, #FAF5FF 0%, #F5EBFF 100%);
+  background: linear-gradient(180deg, var(--bg-app, #FAF5FF) 0%, #F5EBFF 100%);
   border-bottom: 1px solid var(--card-border, #E9D5FF);
 }
 
@@ -3530,7 +3561,7 @@ button:focus-visible {
   gap: 0.65rem;
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
-  border: 1px solid #F3E8FF;
+  border: 1px solid var(--card-border, #F3E8FF);
   background: #FAF8FD;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -3542,7 +3573,7 @@ button:focus-visible {
 }
 
 .perm-checkbox-tile.is-selected {
-  background: #FAF5FF;
+  background: var(--bg-app, #FAF5FF);
   border-color: var(--primary, #7E22CE);
   box-shadow: 0 0 0 1px var(--primary, #7E22CE);
 }
@@ -3563,7 +3594,7 @@ button:focus-visible {
 
 .perm-desc-text {
   font-size: 0.775rem;
-  color: #4B5563;
+  color: var(--text-muted, #4B5563);
   line-height: 1.3;
 }
 
@@ -3639,13 +3670,13 @@ button:focus-visible {
 }
 
 .perm-link-btn.is-muted {
-  color: #6B7280;
+  color: var(--text-muted, #6B7280);
 }
 
 .perm-link-btn.is-muted:hover {
   color: var(--danger, #DC2626);
-  background: rgba(220, 38, 38, 0.06);
-  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(var(--danger-rgb, 220, 38, 38), 0.06);
+  border-color: rgba(var(--danger-rgb, 220, 38, 38), 0.22);
 }
 
 /* Checkbox inside a permission tile. */
@@ -4080,7 +4111,7 @@ html, body {
   border: 1.5px solid var(--card-border, #E9D5FF);
   color: var(--primary, #7E22CE);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(46, 16, 101, 0.05);
+  box-shadow: 0 2px 6px rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
   flex-shrink: 0;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 0;
@@ -4100,7 +4131,7 @@ html, body {
   border-color: var(--primary, #7E22CE);
   color: var(--primary, #7E22CE);
   transform: scale(1.08);
-  box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.15));
+  box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
 }
 
 .tab-scroll-arrow-btn:active {
@@ -4150,16 +4181,118 @@ html, body {
   color: #ffffff;
   border-color: var(--primary, #7E22CE);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--primary-glow, rgba(126, 34, 206, 0.3));
+  box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
 }
 
 .scroll-to-view-btn .material-symbols-outlined {
   font-size: 16px;
 }
 
-/* Smooth HTML scroll */
-html {
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 105B. GLOBAL SCROLLING                                              */
+/*                                                                     */
+/* The shell is fixed — html and body are overflow:hidden — so the     */
+/* document itself never scrolls. Every scroll in this app happens     */
+/* inside a pane instead: the routed <main>, a modal body, a drawer,   */
+/* the sidebar rail, a table's sideways strip. scroll-behavior is not  */
+/* inherited, so each of those panes has to be told separately, and    */
+/* the universal selector is the only one that reaches all of them —   */
+/* including the panes added after this was written.                   */
+/*                                                                     */
+/* What this eases is programmatic scrolling: scrollIntoView, the      */
+/* scrollBy behind the tab arrows, the reset on navigation. Wheel,     */
+/* trackpad, scrollbar and touch keep the compositor's own scrolling,  */
+/* which is already smooth and which nothing here intercepts. Driving  */
+/* those from script instead is what makes a page feel laggy and what  */
+/* breaks trackpads, so it is deliberately not done.                   */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+* {
   scroll-behavior: smooth;
+  /* Momentum for the touch panes on a tablet till. */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* A drag rail is positioned by assigning scrollLeft on every pointermove
+   (DragScrollDirective, and the POS category rail). Easing each of those
+   assignments turns a 1:1 drag into rubber, so the easing stays off for
+   as long as the gesture runs — both drag implementations already put
+   .is-dragging on the rail for exactly this. */
+.is-dragging {
+  scroll-behavior: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+  }
+}
+
+/* Nothing outside the shell should move: no pull-to-refresh, no rubber
+   band on the viewport behind a dialog. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
+/* An overlay, or a pane docked beside the page, is the end of its scroll
+   chain. Without this, a wheel that reaches the bottom of a modal body
+   carries straight on into the page behind it — which is what reads as
+   two things scrolling at once. */
+.modal-backdrop,
+.modal-backdrop-layer,
+.modal-content,
+.custom-modal-box,
+.drawer-body,
+.drawer-body-content,
+.sidebar-nav-scroll,
+.toast-master-container,
+.pos-main-content,
+.cart-items-scroll-pane {
+  overscroll-behavior: contain;
+}
+
+/* A pane that scrolls inside a flex column has to be allowed to shrink
+   below its own content. A flex item's default min-height of auto floors
+   it at its content's height, so a flex-1 pane with overflow-y auto grows
+   rather than scrolling, and the overflow surfaces on the box outside it.
+   The named panes carry the same floor in their own stylesheets. */
+.flex-1.overflow-y-auto,
+.flex-1.overflow-x-auto,
+.flex-1.overflow-hidden {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* A dialog that lays its own body out as a flex column scrolls in that
+   body, not in the box. Leaving the box scrollable too puts a second
+   scrollbar on one dialog and lets the header slide away from the rows it
+   labels — and a sticky table head inside the body only sticks once the
+   body is the element doing the scrolling. */
+.modal-content.flex.flex-col {
+  overflow: hidden;
+}
+
+/* .module-tabs-bar already hides its scrollbar in both engines; these two
+   hid it in Firefox only, so the same rail sat bare on one page and had a
+   grey strip under it on the next. */
+.nav-tabs-bar::-webkit-scrollbar,
+.tab-nav-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* A head that holds still has to be opaque, or the rows travel visibly
+   underneath it. These three tables — the dining history, the POS ledger
+   and the POS Z-report — are plain <table>s rather than .saas-table, so
+   they never picked up the head background the styled tables carry: it was
+   written on them as bg-purple-50/70 and bg-[#FAF5FF], neither of which
+   this stylesheet defines. The th is made sticky alongside the thead
+   because border-collapse tables are the case engines disagree on. */
+thead.sticky th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-app, #FAF5FF);
 }
 
 
@@ -4227,4 +4360,287 @@ html {
   object-fit: cover;
   display: block;
   border-radius: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 109. TOUCH INPUT LAYER — single source of truth                     */
+/*                                                                     */
+/* Section 107 above makes the app *fit* a small viewport. This one    */
+/* makes it usable with a finger, which is a separate axis: a 1024px   */
+/* till and a 1024px desktop monitor need the same layout but not the  */
+/* same hit targets.                                                   */
+/*                                                                     */
+/* Everything here keys off `any-pointer: coarse` rather than          */
+/* `pointer: coarse`. A POS terminal is a hybrid device — touchscreen  */
+/* plus an attached mouse — and on a hybrid the *primary* pointer      */
+/* resolves to `fine`, so `pointer: coarse` would silently skip every  */
+/* rule on the exact hardware this app ships to. `any-pointer: coarse` */
+/* asks "can anything here touch?", which is the question that matters.*/
+/*                                                                     */
+/* One consequence, chosen deliberately: a desktop with a touchscreen  */
+/* gets the larger targets too. For a till that is correct — the same  */
+/* screen is driven both ways, and a 44px target is never wrong for a  */
+/* mouse, only slightly generous.                                      */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 109.1 Responsive utilities the layer at line 381 was missing ──── */
+/* These class names are already written across the templates; with no  */
+/* definition they were inert, so the markup's responsive intent never  */
+/* took effect. Values mirror the scale used elsewhere in this file.    */
+
+@media (min-width: 640px) {
+  .sm\:inline-block { display: inline-block !important; }
+  .sm\:p-4 { padding: 1rem !important; }
+  .sm\:gap-3 { gap: 0.75rem !important; }
+  .sm\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .sm\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .sm\:col-span-1 { grid-column: span 1 / span 1 !important; }
+  .sm\:col-span-3 { grid-column: span 3 / span 3 !important; }
+}
+
+@media (min-width: 768px) {
+  .md\:p-7 { padding: 1.75rem !important; }
+  .md\:p-8 { padding: 2rem !important; }
+}
+
+@media (min-width: 1024px) {
+  .lg\:inline-block { display: inline-block !important; }
+}
+
+/* ── 109.2 Global input behaviour ──────────────────────────────────── */
+
+/* touch-action: manipulation drops the ~300ms click delay browsers hold */
+/* in case a tap turns into a double-tap zoom. On a till that delay is   */
+/* the difference between a responsive button and a dead-feeling one.    */
+/* Applied to controls only, so content keeps pinch-zoom for a11y.       */
+button,
+[role="button"],
+a,
+label,
+summary,
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="submit"],
+input[type="button"],
+.btn,
+.action-btn,
+.audit-btn,
+.nav-tab-pill,
+.cat-pill,
+.tab-btn {
+  touch-action: manipulation;
+}
+
+/* Grey flash Android paints over a tapped control. The app draws its    */
+/* own :active feedback, so the default only muddies it.                 */
+button,
+[role="button"],
+a,
+.btn,
+.action-btn,
+.audit-btn,
+.nav-tab-pill,
+.cat-pill,
+.tab-btn,
+.saas-data-table tbody tr,
+.clickable-row {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Stops iOS/iPadOS re-flowing type when the device is rotated. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ── 109.3 Touch target floor ──────────────────────────────────────── */
+/* 44px is the WCAG 2.2 AA / Apple HIG / Material floor. Height and      */
+/* width are minimums, so a wide text button keeps its width and a       */
+/* square icon button grows to a square 44.                              */
+
+@media (any-pointer: coarse) {
+  button,
+  [role="button"],
+  .btn,
+  .action-btn,
+  .audit-btn,
+  .nav-tab-pill,
+  .cat-pill,
+  .tab-btn,
+  .page-nav-btn,
+  .page-num-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Small variants keep their compact type but not their compact box. */
+  .btn-sm,
+  .action-btn.btn-sm,
+  .audit-btn.btn-sm {
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* Section 107 shrinks toolbar buttons to 38px under 768px, which is  */
+  /* the wrong direction for a finger. Restored here.                   */
+  .filter-actions-group .action-btn,
+  .toolbar-actions-group .action-btn,
+  .filter-actions-group button,
+  .toolbar-actions-group button {
+    height: auto !important;
+    min-height: 44px !important;
+  }
+
+  /* Text fields. 16px is the threshold below which iOS Safari zooms the */
+  /* viewport on focus — a jarring jump that leaves the page scrolled    */
+  /* sideways. Keeping the computed size at 16px avoids it entirely.     */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: max(16px, 1em);
+  }
+
+  textarea {
+    min-height: 88px;
+  }
+
+  /* Checkboxes and radios are the smallest real targets in the app.     */
+  /* 22px keeps them square against the surrounding type while roughly   */
+  /* doubling the area of the default control.                           */
+  input[type="checkbox"],
+  input[type="radio"],
+  .custom-checkbox {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+  }
+
+  /* Dropdown and date-picker menu rows — the densest lists in the app.
+     The day cells also need the panel around them widened to fit, which
+     is done in date-picker.component.ts where the panel width lives. */
+  .option-item,
+  .cal-day,
+  .cal-chip {
+    min-height: 44px;
+  }
+
+  /* Table row action clusters. The buttons are sized by the rule at the */
+  /* top of this block; this gives the cluster room so two adjacent      */
+  /* icons cannot be caught by one fingertip.                            */
+  .row-actions-flex,
+  .row-actions-cell,
+  .custom-row-actions {
+    gap: 0.5rem;
+  }
+
+  /* Rows get more vertical room so a tap lands on the intended row. */
+  .saas-data-table tbody td,
+  .saas-table tbody td,
+  .audit-data-table tbody td {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+}
+
+/* ── 109.4 Spacing between adjacent targets ────────────────────────── */
+/* Adjacent targets need a gutter, or the touching edges of two 44px     */
+/* buttons still produce mis-taps. Applied where buttons sit shoulder    */
+/* to shoulder.                                                          */
+
+@media (any-pointer: coarse) {
+  .header-action-buttons,
+  .filter-actions-group,
+  .toolbar-actions-group,
+  .form-actions-bar,
+  .btn-group {
+    gap: 0.625rem;
+  }
+
+  .tabs-scroll-container,
+  .tab-nav-bar,
+  .subtab-nav-bar {
+    gap: 0.5rem;
+  }
+}
+
+/* ── 109.5 Hover is not an input method ────────────────────────────── */
+/* Anything revealed by :hover is unreachable on a touchscreen. The dish */
+/* catalogue cards hid their Edit/Delete buttons this way, so on a till  */
+/* those actions did not exist at all. Where a device can touch, the     */
+/* controls are simply always visible.                                   */
+
+@media (any-pointer: coarse) {
+  .catalog-card-actions {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* Transform-based hover lifts are pointless on touch and, worse, they   */
+/* stick after a tap on iOS — the element stays raised until something   */
+/* else is tapped. Suppressed where there is no real hover.              */
+@media (any-hover: none) {
+  .action-btn:hover:not(:disabled),
+  .audit-btn:hover:not(:disabled),
+  .btn:hover:not(:disabled),
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-success:hover,
+  .btn-danger:hover {
+    transform: none;
+  }
+}
+
+/* ── 109.6 Scrolling ───────────────────────────────────────────────── */
+/* Momentum scrolling on every pane that scrolls, and overscroll-        */
+/* behavior: contain so flinging a table or modal body to its end does   */
+/* not start dragging the page behind it.                                */
+
+.table-responsive-wrapper,
+.saas-table-card,
+.table-container-card,
+.audit-table-wrapper,
+.card-table-wrap,
+.modal-body,
+.drawer-body,
+.tabs-scroll-container,
+.dropdown-menu-panel,
+.options-list-scroll,
+.calendar-panel,
+.scroll-pane {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Horizontal rails — category pills, tab bars, the POS order-type rail  */
+/* — scroll by drag on touch. touch-action: pan-x keeps that gesture     */
+/* horizontal so a sloppy swipe scrolls the rail instead of the page.    */
+.tabs-scroll-container,
+.tab-nav-bar,
+.subtab-nav-bar,
+.categories-circles-track,
+.category-pills-row,
+.sb-mini-rail {
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+/* A 6px scrollbar is a mouse affordance. Under a finger it is invisible */
+/* and un-grabbable, so the panes that scroll get a thicker one.         */
+@media (any-pointer: coarse) {
+  .table-responsive-wrapper::-webkit-scrollbar,
+  .modal-body::-webkit-scrollbar,
+  .drawer-body::-webkit-scrollbar,
+  .dropdown-menu-panel::-webkit-scrollbar,
+  .options-list-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
 }

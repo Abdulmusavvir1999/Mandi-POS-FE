@@ -224,7 +224,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <div class="filter-toolbar-card">
         <div class="filter-controls-group">
           <!-- Date From -->
-          <div class="toolbar-date-wrapper">
+          <div class="toolbar-date-wrapper" *ngIf="isSalesFilterable">
             <span class="toolbar-date-label">From:</span>
             <app-date-picker
               [(ngModel)]="dateFrom"
@@ -237,7 +237,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           </div>
 
           <!-- Date To -->
-          <div class="toolbar-date-wrapper">
+          <div class="toolbar-date-wrapper" *ngIf="isSalesFilterable">
             <span class="toolbar-date-label">To:</span>
             <app-date-picker
               [(ngModel)]="dateTo"
@@ -251,6 +251,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <!-- Payment Channel Filter -->
           <app-custom-dropdown
+            *ngIf="isSalesFilterable"
             [options]="paymentOptions"
             [(ngModel)]="selectedPayment"
             (valueChange)="loadActiveReport()"
@@ -260,6 +261,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
           <!-- Order Type Filter -->
           <app-custom-dropdown
+            *ngIf="isSalesFilterable"
             [options]="orderTypeOptions"
             [(ngModel)]="selectedOrderType"
             (valueChange)="loadActiveReport()"
@@ -557,6 +559,16 @@ export class ReportsComponent implements OnInit {
   public isLoading = false;
   public loadError: string | null = null;
 
+  /**
+   * Whether the toolbar's filters mean anything on the current tab.
+   *
+   * The stock report reads current shelf levels rather than sales history,
+   * so no date range or payment channel applies to it.
+   */
+  get isSalesFilterable(): boolean {
+    return this.activeTab !== 'STOCK';
+  }
+
   ngOnInit(): void {
     this.loadActiveReport();
   }
@@ -589,7 +601,15 @@ export class ReportsComponent implements OnInit {
           error: onError,
         });
     } else if (this.activeTab === 'PRODUCTS') {
-      this.reportService.getProductSalesReport(this.dateFrom || undefined, this.dateTo || undefined).subscribe({
+      this.reportService
+        .getProductSalesReport(
+          this.dateFrom || undefined,
+          this.dateTo || undefined,
+          undefined,
+          this.selectedPayment || undefined,
+          this.selectedOrderType || undefined
+        )
+        .subscribe({
         next: (res) => {
           this.isLoading = false;
           if (res.success) this.productData = res.data;
@@ -597,7 +617,14 @@ export class ReportsComponent implements OnInit {
         error: onError,
       });
     } else if (this.activeTab === 'CATEGORIES') {
-      this.reportService.getCategorySalesReport(this.dateFrom || undefined, this.dateTo || undefined).subscribe({
+      this.reportService
+        .getCategorySalesReport(
+          this.dateFrom || undefined,
+          this.dateTo || undefined,
+          this.selectedPayment || undefined,
+          this.selectedOrderType || undefined
+        )
+        .subscribe({
         next: (res) => {
           this.isLoading = false;
           if (res.success) this.categoryData = res.data;

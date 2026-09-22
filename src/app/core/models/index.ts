@@ -289,9 +289,8 @@ export interface CartItem {
   subtotal: number;
   isComplimentary?: boolean;
   complimentaryReason?: string;
-  itemType?: 'PRODUCT' | 'COMBO' | 'DEAL';
+  itemType?: 'PRODUCT' | 'COMBO';
   comboId?: number;
-  dealId?: number;
   selectedAddons?: ProductAddon[];
 }
 
@@ -543,6 +542,12 @@ export interface StockItem {
   cost_price?: number;
   current_stock?: number;
   is_low_stock?: boolean | number;
+  /** Supplier this item is normally ordered from. Null on rows created
+   *  before stock_item_default_vendor.sql, which the UI reads as "not set". */
+  default_vendor_id?: number | null;
+  default_vendor_name?: string | null;
+  default_vendor_code?: string | null;
+  default_vendor_status?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -745,13 +750,14 @@ export interface VendorStats {
 }
 
 // -------------------------------------------------------------
-// Product Add-ons, Combo Meals & Meal Deals
+// Product Add-ons & Combo Deals
 // -------------------------------------------------------------
 export interface ProductAddon {
   id: number;
   name: string;
   price: number;
   cost_price?: number;
+  image_url?: string | null;
   is_available: boolean | number;
   is_active?: boolean | number;
   product_id?: number | null;
@@ -762,7 +768,7 @@ export interface ProductAddon {
   selected?: boolean;
 }
 
-export interface ComboMealItem {
+export interface ComboDealItem {
   id?: number;
   combo_id?: number;
   product_id: number;
@@ -774,7 +780,7 @@ export interface ComboMealItem {
   display_order?: number;
 }
 
-export interface ComboMeal {
+export interface ComboDeal {
   id: number;
   name: string;
   code?: string;
@@ -785,38 +791,7 @@ export interface ComboMeal {
   savings_amount?: number;
   is_available: boolean | number;
   status: 'ACTIVE' | 'INACTIVE';
-  items?: ComboMealItem[];
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface MealDealItem {
-  id?: number;
-  deal_id?: number;
-  product_id: number;
-  product_name?: string;
-  sku?: string;
-  selling_price?: number;
-  variant_id?: number | null;
-  quantity: number;
-  display_order?: number;
-}
-
-export interface MealDeal {
-  id: number;
-  title: string;
-  code?: string;
-  description?: string;
-  image_url?: string;
-  deal_price: number;
-  discount_percentage?: number;
-  start_date?: string;
-  end_date?: string;
-  start_time?: string;
-  end_time?: string;
-  days_of_week?: string;
-  is_active: boolean | number;
-  items?: MealDealItem[];
+  items?: ComboDealItem[];
   created_at?: string;
   updated_at?: string;
 }

@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { CustomizationService } from './customization.service';
+import { ThemeService, applyThemeBrand } from './theme.service';
 
 export type DiningDesignKey = 'checkered' | 'neumorphic' | 'illustrated' | 'list' | 'cardlist';
 
@@ -248,6 +249,16 @@ export const DINING_DESIGNS: DiningDesignOption[] = [
 export const DEFAULT_DINING_DESIGN: DiningDesignKey = 'checkered';
 
 /**
+ * Tokens that carry the app's brand color, so they follow the theme.
+ *
+ * `accentColor` is in the list but only moves on the designs that shipped it
+ * as the brand purple — Card List View, the baseline, and List View. The
+ * checkered floor's red runner and the illustrated floor's terracotta are
+ * those designs' own hues and stay put.
+ */
+const DINING_BRAND_SLOTS: readonly DiningTokenKey[] = ['accentColor', 'buttonBg'];
+
+/**
  * The design the floor falls back to while its customization switch is off:
  * Card List View, this page's own built-in card listing — it has no plain
  * "Card View" of its own. It renders with its own stock palette, never the
@@ -265,6 +276,7 @@ interface StoredDiningLayout {
 export class DiningLayoutService {
   private settingsService = inject(SettingsService);
   private customization = inject(CustomizationService);
+  private theme = inject(ThemeService);
 
   private readonly layoutKeySignal = signal<DiningDesignKey>(DEFAULT_DINING_DESIGN);
   private readonly overridesSignal = signal<StoredDiningLayout['overrides']>({});
@@ -323,11 +335,33 @@ export class DiningLayoutService {
   }
 
   public tokensFor(key: DiningDesignKey): DiningTokens {
-    return { ...this.designFor(key).defaults, ...(this.overridesSignal()[key] || {}) };
+    const saved = this.overridesSignal()[key] || {};
+    return this.withThemeBrand(key, { ...this.designFor(key).defaults, ...saved }, saved);
   }
 
   public defaultsFor(key: DiningDesignKey): DiningTokens {
-    return { ...this.designFor(key).defaults };
+    return this.withThemeBrand(key, { ...this.designFor(key).defaults }, {});
+  }
+
+  /**
+   * The floor's brand color follows the system theme.
+   *
+   * The filled row action — "Seat Guests" on a free table — takes its fill
+   * from `--dining-accent-color`, which Card List View ships as the brand
+   * purple, so it stayed purple under an Ocean Blue theme.
+   */
+  private withThemeBrand(
+    key: DiningDesignKey,
+    tokens: DiningTokens,
+    saved: Partial<DiningTokens>
+  ): DiningTokens {
+    return applyThemeBrand(
+      tokens,
+      this.designFor(key).defaults,
+      saved,
+      DINING_BRAND_SLOTS,
+      this.theme.currentPalette().primary
+    );
   }
 
   public cssVars(key?: DiningDesignKey): Record<string, string> {

@@ -31,8 +31,7 @@ import {
   Product,
   ProductVariant,
   ProductAddon,
-  ComboMeal,
-  MealDeal,
+  ComboDeal,
   Category,
   Customer,
   CartItem,
@@ -176,40 +175,42 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- 2. CATALOG TYPE SELECTOR (MENU / COMBOS / DEALS) -->
+        <!-- 2. CATALOG TYPE SELECTOR (MENU / COMBO DEALS / ADD-ONS) -->
         <div class="pos-section-block pb-1">
           <div class="flex items-center gap-2">
             <button
               type="button"
               (click)="selectedCatalogTab = 'ALL'"
-              class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-              [ngClass]="selectedCatalogTab === 'ALL' ? 'bg-[#ff6b00] text-white shadow-md shadow-orange-500/20' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+              class="pos-catalog-tab"
+              [class.is-active]="selectedCatalogTab === 'ALL'"
             >
               <span>🍽️</span>
               <span>Menu Dishes</span>
-              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedCatalogTab === 'ALL' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'">{{ products.length }}</span>
+              <span class="pos-catalog-tab-count">{{ products.length }}</span>
             </button>
 
             <button
               type="button"
               (click)="selectedCatalogTab = 'COMBOS'"
-              class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-              [ngClass]="selectedCatalogTab === 'COMBOS' ? 'bg-[#ff6b00] text-white shadow-md shadow-orange-500/20' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+              class="pos-catalog-tab"
+              [class.is-active]="selectedCatalogTab === 'COMBOS'"
             >
               <span>🍱</span>
-              <span>Combo Meals</span>
-              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedCatalogTab === 'COMBOS' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'">{{ combosList.length }}</span>
+              <span>Combo Deals</span>
+              <span class="pos-catalog-tab-count">{{ combosList.length }}</span>
             </button>
 
+            <!-- Add-ons are their own catalogue: they belong to no dish, so
+                 the till reaches them here rather than inside a dish. -->
             <button
               type="button"
-              (click)="selectedCatalogTab = 'DEALS'"
-              class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-              [ngClass]="selectedCatalogTab === 'DEALS' ? 'bg-[#ff6b00] text-white shadow-md shadow-orange-500/20' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+              (click)="selectedCatalogTab = 'ADDONS'"
+              class="pos-catalog-tab"
+              [class.is-active]="selectedCatalogTab === 'ADDONS'"
             >
-              <span>🏷️</span>
-              <span>Meal Deals</span>
-              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedCatalogTab === 'DEALS' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'">{{ dealsList.length }}</span>
+              <span>🧂</span>
+              <span>Add-ons</span>
+              <span class="pos-catalog-tab-count">{{ addonsList.length }}</span>
             </button>
           </div>
         </div>
@@ -398,6 +399,20 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                    Diagonal Split, which is why it carries no text there. -->
               <span class="dish-flag" aria-hidden="true">New</span>
 
+              <!-- Portion count. Only a dish with a real choice gets one: no
+                   portions and one portion both add straight to the bill, so
+                   a "0" or a "1" would advertise a picker that never opens.
+                   Hidden while out of stock, where the corner belongs to the
+                   OUT OF STOCK badge and the card cannot be tapped anyway. -->
+              <span
+                *ngIf="hasVariantChoice(p) && !isOutOfStock(p)"
+                class="dish-variant-badge"
+                [title]="variantCount(p) + ' portions to choose from'"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+                <span>{{ variantCount(p) }}</span>
+              </span>
+
               <!-- Dish photo, falling back to the name-matched emoji -->
               <div class="dish-floating-avatar">
                 <img
@@ -437,7 +452,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   </div>
                   <div class="spec-row">
                     <span class="spec-label">Portions</span>
-                    <span class="spec-value">{{ p.variants?.length || 'Single' }}</span>
+                    <span class="spec-value">{{ variantCount(p) || 'Single' }}</span>
                   </div>
                 </div>
 
@@ -459,11 +474,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- 3B. COMBO MEALS SECTION -->
+        <!-- 3B. COMBO DEALS SECTION -->
         <div class="pos-section-block" *ngIf="selectedCatalogTab === 'COMBOS'">
           <div class="section-title-row">
             <div>
-              <h2 class="section-heading">Combo Meals</h2>
+              <h2 class="section-heading">Combo Deals</h2>
               <p class="section-subtext">
                 <span class="accent-orange font-bold">{{ combosList.length }}</span> Value combos with bundled dishes and special savings
               </p>
@@ -475,114 +490,166 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <p class="text-sm font-semibold text-slate-500 mt-2">No combo meals currently available.</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" *ngIf="combosList.length > 0">
+          <!-- Combo cards carry the dish card's markup contract part for part
+               — grid, decos, flag, photo band, body, specs, footer, cta — so
+               the active POS design styles this tab exactly as it styles Menu
+               Dishes. A combo-only class here would be a card no design knows
+               about, which is how this tab ended up unstyled before. -->
+          <div class="dishes-cards-grid" *ngIf="combosList.length > 0">
             <div
               *ngFor="let combo of combosList"
-              class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              (click)="addComboToCart(combo)"
+              class="dish-hero-card"
+              [title]="'Add ' + combo.name + ' to the order'"
             >
-              <div>
-                <div class="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
-                      🍱 Combo Deal
-                    </span>
-                    <h3 class="text-base font-bold text-slate-900 mt-1">{{ combo.name }}</h3>
-                  </div>
-                  <div class="text-right font-mono">
-                    <div class="text-lg font-black text-[#ff6b00]">{{ combo.combo_price | appCurrency:'1.0-0' }}</div>
-                    <div *ngIf="combo.original_price && combo.original_price > combo.combo_price" class="text-xs text-slate-400 line-through">
-                      {{ combo.original_price | appCurrency:'1.0-0' }}
-                    </div>
-                  </div>
-                </div>
+              <span class="dish-deco dish-deco-a" aria-hidden="true"></span>
+              <span class="dish-deco dish-deco-b" aria-hidden="true"></span>
 
-                <p class="text-xs text-slate-500 mb-3">{{ combo.description || 'Special multi-dish combo meal bundle' }}</p>
+              <!-- The dish card's NEW ribbon slot, saying what this card is. -->
+              <span class="dish-flag" aria-hidden="true">Combo</span>
 
-                <!-- Combo Items Pill List -->
-                <div *ngIf="combo.items && combo.items.length > 0" class="bg-slate-50 rounded-xl p-2.5 mb-4 space-y-1">
-                  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Includes:</div>
-                  <div *ngFor="let item of combo.items" class="text-xs text-slate-700 flex items-center justify-between">
-                    <span>• {{ item.product_name || 'Dish' }}</span>
-                    <span class="font-bold text-slate-500 font-mono text-[11px]">&times;{{ item.quantity }}</span>
-                  </div>
-                </div>
-
-                <div *ngIf="combo.savings_amount && combo.savings_amount > 0" class="mb-3">
-                  <span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
-                    🎉 Save {{ combo.savings_amount | appCurrency:'1.0-0' }}
-                  </span>
-                </div>
+              <div class="dish-floating-avatar">
+                <img
+                  *ngIf="hasComboImage(combo)"
+                  class="dish-photo"
+                  [src]="settingsService.assetUrl(combo.image_url!)"
+                  [alt]="combo.name"
+                  loading="lazy"
+                  draggable="false"
+                  (error)="onComboImageError(combo)"
+                />
+                <span *ngIf="!hasComboImage(combo)" class="food-emoji">🍱</span>
               </div>
 
-              <button
-                type="button"
-                (click)="addComboToCart(combo)"
-                class="w-full py-2.5 px-3 rounded-xl bg-[#ff6b00] hover:bg-[#e05e00] text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
-                <span>Add Combo to Order</span>
-              </button>
+              <div class="dish-body">
+                <h3 class="dish-title">{{ combo.name }}</h3>
+
+                <!-- Price stays the dish card's price part, unchanged: three
+                     of the four designs pull it out into a small pill over the
+                     photo, where a struck original and a saving chip would not
+                     fit. Those go on their own row below instead. -->
+                <div class="dish-price-tag font-mono">
+                  {{ combo.combo_price | appCurrency:'1.0-0' }}
+                </div>
+
+                <p class="dish-desc">{{ combo.description || 'Special multi-dish combo meal bundle' }}</p>
+
+                <!-- Sits with the description rather than in the spec panel or
+                     the footer, both of which every design hides — a combo's
+                     saving is the reason the counter reaches for it. -->
+                <div class="combo-meta" *ngIf="comboHasDiscount(combo) || combo.savings_amount">
+                  <span class="combo-was font-mono" *ngIf="comboHasDiscount(combo)">
+                    {{ combo.original_price | appCurrency:'1.0-0' }}
+                  </span>
+                  <span class="combo-save" *ngIf="combo.savings_amount && combo.savings_amount > 0">
+                    Save {{ combo.savings_amount | appCurrency:'1.0-0' }}
+                  </span>
+                </div>
+
+                <!-- The bundled dishes, in the spec-panel slot the dish card
+                     uses for category / stock / portions. -->
+                <div class="dish-specs">
+                  <div class="spec-row" *ngFor="let item of combo.items || []">
+                    <span class="spec-label">{{ item.product_name || 'Dish' }}</span>
+                    <span class="spec-value">&times;{{ item.quantity }}</span>
+                  </div>
+                  <div class="spec-row" *ngIf="!combo.items || combo.items.length === 0">
+                    <span class="spec-label">Bundle</span>
+                    <span class="spec-value">{{ combo.code || 'Combo' }}</span>
+                  </div>
+                </div>
+
+                <div class="dish-card-footer">
+                  <div class="star-rating">
+                    <span class="star-icon">🍱</span>
+                    <span class="rating-value">{{ comboItemCount(combo) }}</span>
+                  </div>
+                  <div class="sales-count-badge">
+                    {{ comboHasDiscount(combo) ? 'Bundle price' : 'Value combo' }}
+                  </div>
+                </div>
+
+                <div class="dish-cta" aria-hidden="true">
+                  <span>ADD COMBO TO ORDER</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 3C. MEAL DEALS SECTION -->
-        <div class="pos-section-block" *ngIf="selectedCatalogTab === 'DEALS'">
+        <!-- 3C. ADD-ONS SECTION -->
+        <div class="pos-section-block" *ngIf="selectedCatalogTab === 'ADDONS'">
           <div class="section-title-row">
             <div>
-              <h2 class="section-heading">Meal Deals & Promotions</h2>
+              <h2 class="section-heading">Add-ons</h2>
               <p class="section-subtext">
-                <span class="accent-orange font-bold">{{ dealsList.length }}</span> Special promotional offers and time-limited deals
+                <span class="accent-orange font-bold">{{ addonsList.length }}</span> Extras and sides, sold on their own rather than attached to a dish
               </p>
             </div>
           </div>
 
-          <div *ngIf="dealsList.length === 0" class="empty-dishes-box">
-            <span class="material-symbols-outlined text-5xl text-slate-300">local_offer</span>
-            <p class="text-sm font-semibold text-slate-500 mt-2">No active meal deals currently configured.</p>
+          <div *ngIf="addonsList.length === 0" class="empty-dishes-box">
+            <span class="material-symbols-outlined text-5xl text-slate-300">add_circle</span>
+            <p class="text-sm font-semibold text-slate-500 mt-2">No add-ons are currently available.</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" *ngIf="dealsList.length > 0">
+          <!-- Same markup contract as the dish card - grid, decos, flag,
+               photo band, body, specs, footer, cta - so whichever POS design
+               is on styles this tab exactly as it styles Menu Dishes. An
+               add-on-only class here would be a card no design knows about. -->
+          <div class="dishes-cards-grid" *ngIf="addonsList.length > 0">
             <div
-              *ngFor="let deal of dealsList"
-              class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              *ngFor="let addon of addonsList"
+              (click)="addAddonToCart(addon)"
+              class="dish-hero-card"
+              [title]="'Add ' + addon.name + ' to the order'"
             >
-              <div>
-                <div class="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold uppercase tracking-wider">
-                      🏷️ {{ deal.discount_percentage ? deal.discount_percentage + '% OFF' : 'Special Offer' }}
-                    </span>
-                    <h3 class="text-base font-bold text-slate-900 mt-1">{{ deal.title }}</h3>
-                  </div>
-                  <div class="text-right font-mono">
-                    <div class="text-lg font-black text-purple-700">{{ deal.deal_price | appCurrency:'1.0-0' }}</div>
-                  </div>
-                </div>
+              <span class="dish-deco dish-deco-a" aria-hidden="true"></span>
+              <span class="dish-deco dish-deco-b" aria-hidden="true"></span>
 
-                <p class="text-xs text-slate-500 mb-3">{{ deal.description || 'Special limited-time promotional deal' }}</p>
+              <span class="dish-flag" aria-hidden="true">Add-on</span>
 
-                <!-- Deal Timing / Validity -->
-                <div *ngIf="deal.start_date || deal.days_of_week" class="bg-purple-50/60 rounded-xl p-2.5 mb-4 text-xs text-purple-900 space-y-0.5">
-                  <div *ngIf="deal.days_of_week" class="flex items-center gap-1 text-[11px]">
-                    <span class="material-symbols-outlined text-xs">calendar_month</span>
-                    <span>{{ deal.days_of_week }}</span>
-                  </div>
-                  <div *ngIf="deal.start_time && deal.end_time" class="flex items-center gap-1 text-[11px]">
-                    <span class="material-symbols-outlined text-xs">schedule</span>
-                    <span>{{ deal.start_time }} - {{ deal.end_time }}</span>
-                  </div>
-                </div>
+              <div class="dish-floating-avatar">
+                <img
+                  *ngIf="hasAddonImage(addon)"
+                  class="dish-photo"
+                  [src]="settingsService.assetUrl(addon.image_url!)"
+                  [alt]="addon.name"
+                  loading="lazy"
+                  draggable="false"
+                  (error)="onAddonImageError(addon)"
+                />
+                <span *ngIf="!hasAddonImage(addon)" class="food-emoji">🧂</span>
               </div>
 
-              <button
-                type="button"
-                (click)="addDealToCart(deal)"
-                class="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span class="material-symbols-outlined text-sm">local_offer</span>
-                <span>Apply Deal to Order</span>
-              </button>
+              <div class="dish-body">
+                <h3 class="dish-title">{{ addon.name }}</h3>
+
+                <div class="dish-price-tag font-mono">
+                  {{ addon.price | appCurrency:'1.0-0' }}
+                </div>
+
+                <p class="dish-desc">{{ addon.description || 'Served as an extra alongside the order' }}</p>
+
+                <div class="dish-specs">
+                  <div class="spec-row">
+                    <span class="spec-label">Group</span>
+                    <span class="spec-value">{{ addon.category || 'General' }}</span>
+                  </div>
+                </div>
+
+                <div class="dish-card-footer">
+                  <div class="star-rating">
+                    <span class="star-icon">🧂</span>
+                    <span class="rating-value">Extra</span>
+                  </div>
+                  <div class="sales-count-badge">Sold separately</div>
+                </div>
+
+                <div class="dish-cta" aria-hidden="true">
+                  <span>ADD TO ORDER</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -811,7 +878,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   <span *ngIf="item.variant" class="cart-variant-chip">{{ item.variant.name }}</span>
                 </h4>
                 <span *ngIf="item.itemType === 'COMBO'" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">🍱 COMBO</span>
-                <span *ngIf="item.itemType === 'DEAL'" class="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">🏷️ DEAL</span>
                 <span *ngIf="item.isComplimentary" class="complimentary-badge">
                   ★ FREE (COMP)
                 </span>
@@ -1037,8 +1103,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </span>
           </div>
 
-          <!-- Payment Methods Selector -->
-          <div>
           <!-- Payment Methods Selector (5 Methods) -->
           <div>
             <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Payment Mode</label>
@@ -1381,7 +1445,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
             <div>
               <h3 class="text-lg font-black text-slate-900 leading-tight">{{ customizationProduct.name }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Customize portion, extras & kitchen instructions</p>
+              <p class="text-xs text-slate-500 mt-0.5">Pick one or more portions - each goes on the bill as its own line</p>
             </div>
           </div>
           <button
@@ -1396,59 +1460,60 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <div class="max-h-[60vh] overflow-y-auto pr-1 space-y-4">
-          <!-- Portions / Variants (if any) -->
+          <!-- Portions. Every active portion the dish is sold in is listed
+               and any number of them can be ticked - tick three and three
+               lines go on the bill. The tile is the hit target so a till
+               screen needs no precision; the stepper inside it stops the tap
+               from bubbling back out as an untick. -->
           <div *ngIf="customizationVariants.length > 0">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+            <h4 class="customization-section-title">
               <span class="material-symbols-outlined text-sm">straighten</span>
-              <span>Select Portion / Variant</span>
+              <span>Select Portions / Variants</span>
+              <span class="portion-multi-hint">Tick as many as you need</span>
             </h4>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="portion-grid" role="group" aria-label="Portions">
               <div
                 *ngFor="let v of customizationVariants"
-                (click)="selectedCustomizationVariant = v"
-                class="p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between"
-                [ngClass]="selectedCustomizationVariant?.id === v.id ? 'border-[#ff6b00] bg-orange-50/60 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'"
+                class="portion-option"
+                role="checkbox"
+                tabindex="0"
+                [class.is-selected]="isVariantSelected(v)"
+                [attr.aria-checked]="isVariantSelected(v)"
+                [attr.aria-label]="v.name"
+                (click)="toggleCustomizationVariant(v)"
+                (keydown.enter)="toggleCustomizationVariant(v)"
+                (keydown.space)="$event.preventDefault(); toggleCustomizationVariant(v)"
               >
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-sm text-slate-800">{{ v.name }}</span>
-                  <span class="w-4 h-4 rounded-full border flex items-center justify-center"
-                    [ngClass]="selectedCustomizationVariant?.id === v.id ? 'border-[#ff6b00] bg-[#ff6b00]' : 'border-slate-300'">
-                    <span *ngIf="selectedCustomizationVariant?.id === v.id" class="w-1.5 h-1.5 bg-white rounded-full"></span>
-                  </span>
-                </div>
-                <div class="mt-2 flex items-baseline justify-between">
-                  <span class="text-xs text-slate-400 font-mono">Stock: {{ stockAfter(customizationProduct, v) | number:'1.0-0' }}</span>
-                  <span class="font-bold font-mono text-sm text-slate-900">{{ v.selling_price | appCurrency:'1.0-0' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+                <span class="portion-head">
+                  <span class="portion-name">{{ v.name }}</span>
+                  <span class="portion-radio" aria-hidden="true"></span>
+                </span>
+                <span class="portion-foot">
+                  <span class="portion-stock font-mono">Stock: {{ stockAfter(customizationProduct, v) | number:'1.0-0' }}</span>
+                  <span class="portion-price font-mono">{{ v.selling_price | appCurrency:'1.0-0' }}</span>
+                </span>
 
-          <!-- Add-ons & Toppings Selection (if any) -->
-          <div *ngIf="getApplicableAddons(customizationProduct).length > 0">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">add_circle</span>
-              <span>Add-ons & Extras</span>
-            </h4>
-            <div class="space-y-2">
-              <div
-                *ngFor="let addon of getApplicableAddons(customizationProduct)"
-                (click)="toggleAddonSelection(addon)"
-                class="p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between"
-                [ngClass]="isAddonSelected(addon.id) ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'"
-              >
-                <div class="flex items-center gap-2.5">
-                  <span class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
-                    [ngClass]="isAddonSelected(addon.id) ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'">
-                    <span *ngIf="isAddonSelected(addon.id)" class="material-symbols-outlined text-xs">check</span>
-                  </span>
-                  <div>
-                    <div class="text-sm font-bold text-slate-800">{{ addon.name }}</div>
-                    <div *ngIf="addon.description" class="text-xs text-slate-400">{{ addon.description }}</div>
-                  </div>
-                </div>
-                <span class="text-xs font-bold font-mono text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded">
-                  + {{ addon.price | appCurrency:'1.0-0' }}
+                <!-- Count belongs to the portion, not the dish: two Full and
+                     one Half is a normal order. -->
+                <span class="portion-qty" *ngIf="isVariantSelected(v)">
+                  <button
+                    type="button"
+                    class="portion-qty-btn"
+                    (click)="$event.stopPropagation(); changeVariantQty(v, -1)"
+                    [disabled]="getVariantQty(v) <= 1"
+                    [attr.aria-label]="'Fewer ' + v.name"
+                  >
+                    <span class="material-symbols-outlined">remove</span>
+                  </button>
+                  <span class="portion-qty-value font-mono">{{ getVariantQty(v) }}</span>
+                  <button
+                    type="button"
+                    class="portion-qty-btn"
+                    (click)="$event.stopPropagation(); changeVariantQty(v, 1)"
+                    [attr.aria-label]="'More ' + v.name"
+                  >
+                    <span class="material-symbols-outlined">add</span>
+                  </button>
                 </span>
               </div>
             </div>
@@ -1456,7 +1521,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Special Kitchen Instructions -->
           <div>
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+            <h4 class="customization-section-title">
               <span class="material-symbols-outlined text-sm">edit_note</span>
               <span>Kitchen Notes (Optional)</span>
             </h4>
@@ -1464,7 +1529,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               type="text"
               [(ngModel)]="customizationNotes"
               placeholder="e.g. Less spicy, crispy, no onions..."
-              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#ff6b00]"
+              class="form-control text-sm w-full"
             />
           </div>
         </div>
@@ -1476,22 +1541,28 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <div class="text-2xl font-black font-mono text-slate-900">
               {{ getCustomizationTotalPrice() | appCurrency:'1.2-2' }}
             </div>
+            <div class="portion-selection-summary" *ngIf="customizationVariants.length > 0">
+              {{ selectedVariantCount }} of {{ customizationVariants.length }} portions ticked
+              <span *ngIf="selectedVariantUnits > selectedVariantCount">&bull; {{ selectedVariantUnits }} units</span>
+            </div>
           </div>
           <div class="flex items-center gap-2">
             <button
               type="button"
               (click)="closeCustomizationModal()"
-              class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+              class="action-btn btn-outline-purple"
             >
               Cancel
             </button>
             <button
               type="button"
               (click)="confirmCustomization()"
-              class="px-5 py-2.5 rounded-xl bg-[#ff6b00] hover:bg-[#e05e00] text-white font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
+              class="action-btn btn-gradient-purple portion-add-btn"
+              [disabled]="customizationVariants.length > 0 && selectedVariantCount === 0"
             >
-              <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
-              <span>Add to Order</span>
+              <span class="material-symbols-outlined text-[18px]">add_shopping_cart</span>
+              <span *ngIf="selectedVariantCount > 1">Add {{ selectedVariantCount }} Items</span>
+              <span *ngIf="selectedVariantCount <= 1">Add to Order</span>
             </button>
           </div>
         </div>
@@ -2229,7 +2300,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .variant-option:hover:not(:disabled) {
       border-color: var(--primary, #7E22CE);
       transform: translateY(-2px);
-      box-shadow: 0 8px 18px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      box-shadow: 0 8px 18px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
     }
 
     .variant-option:active:not(:disabled) {
@@ -2306,6 +2377,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     /* LEFT MAIN CONTENT AREA */
     .pos-main-content {
       flex: 1;
+      /* A flex item is floored at its content height unless told otherwise,
+         which would make this pane grow instead of scroll. */
+      min-height: 0;
       height: 100%;
       overflow-y: auto;
       padding: 1.25rem 1.75rem;
@@ -2338,7 +2412,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
     .pos-search-pill:focus-within {
       border-color: var(--primary, #7E22CE);
-      box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.25));
+      box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.25));
     }
 
     .search-input-field {
@@ -2352,7 +2426,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       padding-right: 2rem;
     }
     .search-input-field::placeholder {
-      color: #94A3B8;
+      color: var(--text-dim, #94A3B8);
     }
 
     .search-icon-tag {
@@ -2366,7 +2440,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .clear-search-btn {
       position: absolute;
       right: 2.75rem;
-      color: #94A3B8;
+      color: var(--text-dim, #94A3B8);
       background: none;
       border: none;
       cursor: pointer;
@@ -2505,13 +2579,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
       border: 3px solid transparent;
       transition: all 0.2s ease;
     }
     .cat-circle-card.is-selected .cat-avatar-bubble {
       border-color: var(--accent, #EA580C);
-      box-shadow: 0 0 0 3px var(--accent-light, rgba(234, 88, 12, 0.35));
+      box-shadow: 0 0 0 3px var(--accent-light, rgba(var(--warning-rgb, 234, 88, 12), 0.35));
       transform: scale(1.05);
     }
 
@@ -2556,7 +2630,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       border: 1.5px solid var(--card-border, #E9D5FF);
       color: var(--primary, #7E22CE);
       cursor: pointer;
-      box-shadow: 0 2px 6px rgba(46, 16, 101, 0.06);
+      box-shadow: 0 2px 6px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       user-select: none;
       outline: none;
@@ -2564,9 +2638,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
     .cat-scroll-arrow:hover:not(:disabled) {
       border-color: var(--primary, #7E22CE);
-      background: var(--primary-light, rgba(126, 34, 206, 0.08));
+      background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.08));
       transform: scale(1.08);
-      box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.18));
+      box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.18));
     }
 
     .cat-scroll-arrow:active:not(:disabled) {
@@ -2656,7 +2730,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-size: 0.75rem;
       font-weight: 700;
       border-radius: 9999px;
-      box-shadow: 0 2px 6px rgba(126, 34, 206, 0.08);
+      box-shadow: 0 2px 6px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
     }
     .popular-dish-side-tag.is-all {
       color: var(--text-dark, #2E1065);
@@ -2673,7 +2747,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       background: rgba(255, 255, 255, 0.85);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 9999px;
-      box-shadow: 0 2px 6px rgba(126, 34, 206, 0.08);
+      box-shadow: 0 2px 6px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
       cursor: pointer;
       user-select: none;
     }
@@ -2717,7 +2791,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .oos-switch input:checked + .oos-track .oos-knob { left: 1.08rem; }
 
     .oos-switch input:focus-visible + .oos-track {
-      box-shadow: 0 0 0 3px var(--primary-glow, rgba(126, 34, 206, 0.28));
+      box-shadow: 0 0 0 3px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.28));
     }
 
     .oos-text {
@@ -2763,7 +2837,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       width: 16px;
       height: 16px;
       border-radius: 9999px;
-      background: rgba(126, 34, 206, 0.12);
+      background: rgba(var(--primary-rgb, 126, 34, 206), 0.12);
       border: none;
       color: var(--primary, #7E22CE);
       cursor: pointer;
@@ -2771,7 +2845,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       transition: background 0.15s ease;
     }
     .tag-clear-btn:hover {
-      background: rgba(126, 34, 206, 0.25);
+      background: rgba(var(--primary-rgb, 126, 34, 206), 0.25);
     }
 
     /* 3. POPULAR DISHES (HERO CARDS) */
@@ -2798,7 +2872,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       color: #FFFFFF;
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.3));
+      box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -2806,7 +2880,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
     .dish-hero-card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 10px 25px var(--primary-glow, rgba(126, 34, 206, 0.45));
+      box-shadow: 0 10px 25px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
     }
     .dish-hero-card.is-out-of-stock {
       opacity: 0.55;
@@ -2818,14 +2892,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       position: absolute;
       top: 0.5rem;
       right: 0.5rem;
-      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      background: linear-gradient(135deg, var(--danger, #EF4444) 0%, var(--danger, #DC2626) 100%);
       color: #FFFFFF;
       font-size: 0.58rem;
       font-weight: 800;
       padding: 0.2rem 0.5rem;
       border-radius: 9999px;
       letter-spacing: 0.05em;
-      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.45);
+      box-shadow: 0 2px 8px rgba(var(--danger-rgb, 220, 38, 38), 0.45);
       z-index: 2;
       border: 1px solid rgba(255, 255, 255, 0.4);
       text-shadow: none;
@@ -2852,6 +2926,38 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       text-shadow: none;
       -webkit-backdrop-filter: blur(6px);
       backdrop-filter: blur(6px);
+    }
+
+    /* Portion-count badge. It sits opposite the NEW ribbon, on the corner
+       the out-of-stock badge uses - the two never show together, because a
+       dish that cannot be sold has no portion to choose. */
+    .dish-variant-badge {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.12rem;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding: 0 0.4rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      color: var(--primary, #7E22CE);
+      font-size: 0.6875rem;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: none;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.3);
+      pointer-events: none;
+    }
+
+    .dish-variant-badge .material-symbols-outlined {
+      font-size: 0.8125rem;
+      line-height: 1;
     }
 
     /* Photo band.
@@ -2930,6 +3036,36 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-weight: 900;
       color: #FFFFFF;
       margin: 0.2rem 0;
+    }
+
+    /* Combo savings row. It is not one of the dish card's parts, so it carries
+       no design-specific rules; instead it reads the same tokens the
+       description does and falls back to the glass defaults when no design is
+       active. Its "order" is set with the other card parts in POS_DESIGN_CSS,
+       so it stays in DOM position on the baseline card, where nothing else in
+       the body is ordered and an order here would push it past the button. */
+    .combo-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      color: var(--pos-body-color, rgba(255, 255, 255, 0.85));
+    }
+    .combo-was {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .combo-save {
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      font-size: 0.625rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .dish-card-footer {
@@ -3186,6 +3322,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     /* CART ITEMS SCROLL PANE */
     .cart-items-scroll-pane {
       flex: 1;
+      /* A flex item is floored at its content height unless told otherwise,
+         which would make this pane grow instead of scroll. */
+      min-height: 0;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -3258,6 +3397,210 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       align-items: center;
       gap: 0.5rem;
       margin-top: 0.25rem;
+    }
+
+    /* Dish dialog: portion picker.
+       The options were styled with Tailwind utilities this project does not
+       ship - border-2, border-slate-200, border-[#ff6b00], bg-orange-50/60 -
+       so every option rendered flat and borderless and the chosen one looked
+       exactly like the rest. Real rules, mixed off the active primary so the
+       highlight follows whatever theme is on. */
+    .customization-section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .portion-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    @media (max-width: 520px) {
+      .portion-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .portion-option {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      width: 100%;
+      padding: 0.7rem 0.8rem;
+      text-align: left;
+      cursor: pointer;
+      /* The tile is a div, so it keeps none of a button's defaults: a finger
+         needs a target it cannot miss, and a stray double-tap must not select
+         the label text underneath. */
+      min-height: 4.25rem;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      border: 2px solid var(--card-border, #E9D5FF);
+      border-radius: 14px;
+      background: var(--card-bg, #FFFFFF);
+      transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+    }
+
+    .portion-option:hover {
+      border-color: color-mix(in srgb, var(--primary, #7E22CE) 45%, #FFFFFF);
+    }
+
+    .portion-option.is-selected {
+      border-color: var(--primary, #7E22CE);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 7%, #FFFFFF);
+      box-shadow: 0 8px 18px -12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
+    }
+
+    .portion-option:focus-visible {
+      outline: 2px solid var(--primary, #7E22CE);
+      outline-offset: 2px;
+    }
+
+    .portion-head,
+    .portion-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .portion-head { align-items: center; }
+    .portion-foot { align-items: baseline; }
+
+    .portion-name {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: var(--text-main, #2E1065);
+    }
+
+    /* The tick that says a portion is going on the bill. Square with a
+       checkmark rather than a radio dot, because several can be on at once. */
+    .portion-radio {
+      position: relative;
+      flex: 0 0 auto;
+      width: 1.15rem;
+      height: 1.15rem;
+      border: 2px solid var(--card-border, #E9D5FF);
+      border-radius: 6px;
+      background: #FFFFFF;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .portion-option.is-selected .portion-radio {
+      border-color: var(--primary, #7E22CE);
+      background: var(--primary, #7E22CE);
+    }
+
+    .portion-option.is-selected .portion-radio::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 46%;
+      width: 0.28rem;
+      height: 0.55rem;
+      border: solid #FFFFFF;
+      border-width: 0 2px 2px 0;
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    /* Says the list takes more than one answer, before anyone has to guess. */
+    .portion-multi-hint {
+      margin-left: auto;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--primary, #7E22CE);
+    }
+
+    /* Per-portion count. Buttons are 2rem so a finger on a till screen hits
+       them rather than the tile, which would untick the portion. */
+    .portion-qty {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-top: 0.1rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed var(--card-border, #E9D5FF);
+    }
+
+    .portion-qty-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      flex: 0 0 auto;
+      border-radius: 9px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: #FFFFFF;
+      color: var(--primary, #7E22CE);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .portion-qty-btn:hover:not(:disabled) {
+      border-color: var(--primary, #7E22CE);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 10%, #FFFFFF);
+    }
+
+    .portion-qty-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .portion-qty-btn .material-symbols-outlined {
+      font-size: 1rem;
+    }
+
+    .portion-qty-value {
+      flex: 1 1 auto;
+      text-align: center;
+      font-size: 0.9375rem;
+      font-weight: 900;
+      color: var(--text-main, #2E1065);
+    }
+
+    /* The shared button styles draw a disabled button exactly like a live
+       one, which on a till reads as a button that stopped working rather than
+       as a rule. It only ever disables with nothing ticked. */
+    .portion-add-btn:disabled {
+      opacity: 0.45;
+      box-shadow: none;
+      filter: grayscale(0.3);
+    }
+
+    .portion-selection-summary {
+      margin-top: 0.2rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .portion-stock {
+      font-size: 0.6875rem;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .portion-price {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: var(--text-main, #2E1065);
+    }
+
+    .portion-option.is-selected .portion-price {
+      color: var(--primary, #7E22CE);
     }
 
     .stepper-circle-btn {
@@ -3511,7 +3854,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 8px 24px var(--primary-glow, rgba(126, 34, 206, 0.45));
+        box-shadow: 0 8px 24px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
         z-index: 900;
         cursor: pointer;
         animation: slideUpFloating 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3599,18 +3942,74 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
        becomes the containing block for position: fixed descendants, which
        would break the mobile cart drawer and its backdrop.
        ═══════════════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════════════
+       Catalog tabs — Menu Dishes / Combo Deals.
+
+       These were styled by utility classes written straight into the
+       template: bg-[#ff6b00] for the active pill, bg-white and
+       border-slate-200 for the rest. Two problems. The project has no
+       Tailwind, so the arbitrary-value class matched no rule at all and the
+       selected tab rendered with no background — which is why the row looked
+       unfinished. And the colours that did apply were fixed white and slate,
+       so the row stayed grey while the rest of the POS followed the palette.
+       ═══════════════════════════════════════════════════════════════════ */
+    .pos-catalog-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      border: 1px solid var(--card-border, #E9D5FF);
+      background: var(--card-bg, #FFFFFF);
+      color: var(--text-muted, #64748B);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .pos-catalog-tab:hover:not(.is-active) {
+      background: var(--card-hover, #F1F5F9);
+      color: var(--text-main, #2E1065);
+      border-color: var(--primary, #7E22CE);
+    }
+
+    .pos-catalog-tab.is-active {
+      background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
+      border-color: transparent;
+      color: #ffffff;
+      box-shadow: 0 6px 16px -6px var(--primary-glow, rgba(126, 34, 206, 0.45));
+    }
+
+    /* The count bubble rides the pill: tinted on rest, knocked out when active. */
+    .pos-catalog-tab-count {
+      padding: 0.125rem 0.375rem;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.4;
+      background: var(--primary-light, rgba(126, 34, 206, 0.1));
+      color: var(--primary, #7E22CE);
+    }
+
+    .pos-catalog-tab.is-active .pos-catalog-tab-count {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+    }
+
     .pos-fullscreen-container {
       position: relative;
       isolation: isolate;
 
       --g-blur: blur(26px) saturate(200%) brightness(1.06);
       --g-blur-sm: blur(14px) saturate(170%);
-      --g-dish: linear-gradient(145deg, rgba(126, 34, 206, 0.58) 0%, rgba(107, 33, 168, 0.42) 100%);
-      --g-cat: linear-gradient(135deg, rgba(126, 34, 206, 0.62) 0%, rgba(107, 33, 168, 0.42) 100%);
+      --g-dish: linear-gradient(145deg, rgba(var(--primary-rgb, 126, 34, 206), 0.58) 0%, rgba(var(--primary-variant-rgb, 107, 33, 168), 0.42) 100%);
+      --g-cat: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.62) 0%, rgba(var(--primary-variant-rgb, 107, 33, 168), 0.42) 100%);
       --g-pill: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.42) 100%);
       --g-avatar: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.62) 100%);
       --g-edge: 1px solid rgba(255, 255, 255, 0.4);
-      --g-scrim: linear-gradient(180deg, rgba(23, 8, 51, 0.04) 0%, rgba(23, 8, 51, 0.16) 45%, rgba(23, 8, 51, 0.34) 100%);
+      --g-scrim: linear-gradient(180deg, rgba(var(--text-main-rgb, 23, 8, 51), 0.04) 0%, rgba(var(--text-main-rgb, 23, 8, 51), 0.16) 45%, rgba(var(--text-main-rgb, 23, 8, 51), 0.34) 100%);
       --g-wash: 1;
     }
 
@@ -3623,11 +4022,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       pointer-events: none;
       opacity: var(--g-wash);
       background:
-        radial-gradient(30rem 30rem at 6% -6%, rgba(126, 34, 206, 0.55) 0%, transparent 65%),
-        radial-gradient(26rem 26rem at 99% 4%, rgba(234, 88, 12, 0.42) 0%, transparent 65%),
-        radial-gradient(32rem 32rem at 78% 52%, rgba(147, 51, 234, 0.45) 0%, transparent 66%),
-        radial-gradient(28rem 28rem at 18% 88%, rgba(107, 33, 168, 0.42) 0%, transparent 66%),
-        radial-gradient(22rem 22rem at 46% 24%, rgba(234, 88, 12, 0.22) 0%, transparent 70%);
+        radial-gradient(30rem 30rem at 6% -6%, rgba(var(--primary-rgb, 126, 34, 206), 0.55) 0%, transparent 65%),
+        radial-gradient(26rem 26rem at 99% 4%, rgba(var(--warning-rgb, 234, 88, 12), 0.42) 0%, transparent 65%),
+        radial-gradient(32rem 32rem at 78% 52%, rgba(var(--primary-rgb, 147, 51, 234), 0.45) 0%, transparent 66%),
+        radial-gradient(28rem 28rem at 18% 88%, rgba(var(--primary-variant-rgb, 107, 33, 168), 0.42) 0%, transparent 66%),
+        radial-gradient(22rem 22rem at 46% 24%, rgba(var(--warning-rgb, 234, 88, 12), 0.22) 0%, transparent 70%);
     }
 
     /* The scroll area must not paint over the wash. */
@@ -3639,15 +4038,15 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       backdrop-filter: var(--g-blur-sm);
       border: var(--g-edge);
       box-shadow:
-        0 8px 24px -6px rgba(46, 16, 101, 0.18),
+        0 8px 24px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.18),
         inset 1px 1px 0 rgba(255, 255, 255, 0.75);
     }
 
     .pos-search-pill:focus-within {
       border-color: rgba(255, 255, 255, 0.85);
       box-shadow:
-        0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.18)),
-        0 10px 28px -6px rgba(46, 16, 101, 0.24),
+        0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.18)),
+        0 10px 28px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.24),
         inset 1px 1px 0 rgba(255, 255, 255, 0.85);
     }
 
@@ -3657,7 +4056,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       backdrop-filter: var(--g-blur-sm);
       border: var(--g-edge);
       box-shadow:
-        0 8px 20px -6px var(--primary-glow, rgba(126, 34, 206, 0.45)),
+        0 8px 20px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45)),
         inset 1px 1px 0 rgba(255, 255, 255, 0.55),
         inset 0 -6px 14px -6px rgba(0, 0, 0, 0.18);
     }
@@ -3665,8 +4064,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .cat-circle-card.is-selected .cat-avatar-bubble {
       border-color: rgba(255, 255, 255, 0.85);
       box-shadow:
-        0 0 0 3px var(--accent-light, rgba(234, 88, 12, 0.35)),
-        0 10px 24px -6px var(--primary-glow, rgba(126, 34, 206, 0.5)),
+        0 0 0 3px var(--accent-light, rgba(var(--warning-rgb, 234, 88, 12), 0.35)),
+        0 10px 24px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.5)),
         inset 1px 1px 0 rgba(255, 255, 255, 0.7);
     }
 
@@ -3680,10 +4079,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       backdrop-filter: var(--g-blur);
       border: var(--g-edge);
       box-shadow:
-        0 12px 32px -10px rgba(46, 16, 101, 0.42),
+        0 12px 32px -10px rgba(var(--text-main-rgb, 46, 16, 101), 0.42),
         inset 1px 1px 0 rgba(255, 255, 255, 0.45),
         inset 0 -22px 34px -24px rgba(0, 0, 0, 0.55);
-      text-shadow: 0 1px 2px rgba(23, 8, 51, 0.35);
+      text-shadow: 0 1px 2px rgba(var(--text-main-rgb, 23, 8, 51), 0.35);
     }
 
     /* Readability scrim. Where the wash behind a card is pale the glass goes
@@ -3720,7 +4119,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .dish-hero-card:hover {
       border-color: rgba(255, 255, 255, 0.55);
       box-shadow:
-        0 18px 40px -10px rgba(46, 16, 101, 0.5),
+        0 18px 40px -10px rgba(var(--text-main-rgb, 46, 16, 101), 0.5),
         inset 1px 1px 0 rgba(255, 255, 255, 0.6);
     }
 
@@ -3769,8 +4168,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       color: #065F46 !important;
     }
     .btn-status-offline {
-      background: #FFFBEB !important;
-      border-color: #FDE68A !important;
+      background: var(--warning-light, #FFFBEB) !important;
+      border-color: var(--warning-light, #FDE68A) !important;
       color: #92400E !important;
     }
     .status-dot-pulse {
@@ -3859,7 +4258,74 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .billing-chip-btn.is-selected {
       background: #FBBF24;
       border-color: #F59E0B;
-      color: #1F2937;
+      color: var(--text-main, #1F2937);
+    }
+
+    /* ─── Touch tuning for the till ───────────────────────────────────
+       Section 109 of styles.css already raises every button on this page
+       to a 44px hit area on a touch-capable device. What it cannot do is
+       judge the inside of a control: a 44px circle around a 0.85rem glyph
+       reads as a bug, not a button. These rules scale the contents to
+       match the box, and give the dense rows the gutters they need once
+       their controls have grown.
+
+       Keyed off any-pointer: coarse for the same reason as section 109 —
+       a till is a hybrid device and reports a fine primary pointer. */
+    @media (any-pointer: coarse) {
+      /* The most-tapped control in the whole app. Quantity is adjusted
+         far more often than anything else on a POS, so its glyph and
+         count get sized to be read at a glance mid-service. */
+      .stepper-circle-btn .material-symbols-outlined {
+        font-size: 1.25rem;
+      }
+
+      .stepper-qty-text {
+        font-size: 1rem;
+        min-width: 2rem;
+      }
+
+      .item-stepper-row {
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+      }
+
+      /* Complimentary / note icons sit immediately beside the stepper,
+         so they need a gutter of their own to stay separable. */
+      .item-action-icon-btn .material-symbols-outlined {
+        font-size: 1.1rem;
+      }
+
+      .item-action-icon-btn {
+        border-radius: 10px;
+      }
+
+      /* Dish tiles are the primary ordering surface. A taller tile is a
+         larger target and costs nothing but a slightly shorter grid. */
+      .dish-hero-card {
+        min-height: 128px;
+      }
+
+      /* Category circles and order-type pills sit on horizontal rails
+         that are dragged as often as they are tapped. */
+      .cat-circle-card {
+        min-height: 88px;
+      }
+
+      .type-pill,
+      .seg-pill-btn,
+      .table-pill,
+      .billing-chip-btn {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      /* The cart is the one pane that is scrolled continuously during a
+         sale; it gets momentum and is stopped from dragging the page
+         behind it when it is flung past its end. */
+      .pos-cart-sidebar {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
     }
   `, POS_DESIGN_CSS],
 })
@@ -3945,16 +4411,18 @@ export class PosComponent implements OnInit, AfterViewInit {
   public selectedCategoryId: number | null = null;
   public searchQuery = '';
 
-  // Combos, Deals & Addons state
+  // Combo deals & add-ons state
+  public combosList: ComboDeal[] = [];
   public addonsList: ProductAddon[] = [];
-  public combosList: ComboMeal[] = [];
-  public dealsList: MealDeal[] = [];
-  public selectedCatalogTab: 'ALL' | 'COMBOS' | 'DEALS' = 'ALL';
+  public selectedCatalogTab: 'ALL' | 'COMBOS' | 'ADDONS' = 'ALL';
 
-  // Dish Customization & Portion state
+  // Dish Customization & Portion state.
+  // A dish sold in several portions can go onto the bill as several lines in
+  // one visit to the dialog, so what is held here is a count per chosen
+  // portion rather than a single selected portion. A portion is "chosen"
+  // exactly when it has an entry.
   public customizationProduct: Product | null = null;
-  public selectedCustomizationVariant: ProductVariant | null = null;
-  public selectedCustomizationAddons: ProductAddon[] = [];
+  public customizationQuantities = new Map<number, number>();
   public customizationNotes = '';
 
   public diningTables: DiningTable[] = [];
@@ -4056,7 +4524,6 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.loadDraftCount();
     this.loadRecentOrders();
     this.loadCombos();
-    this.loadDeals();
     this.loadAddons();
   }
 
@@ -4149,7 +4616,11 @@ export class PosComponent implements OnInit, AfterViewInit {
   }
 
   loadProducts(): void {
-    this.productService.getProducts(1, 100, undefined, undefined, 'ACTIVE').subscribe({
+    // The till filters this catalogue in the browser, so anything not
+    // fetched here is simply unsellable - a menu of over 100 active dishes
+    // would have had its tail silently unreachable from the search box.
+    // 500 is the server's own ceiling on a page.
+    this.productService.getProducts(1, 500, undefined, undefined, 'ACTIVE').subscribe({
       next: (res) => {
         if (res.success) {
           this.products = res.data;
@@ -4342,6 +4813,39 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.brokenProductImages.add(p.id);
   }
 
+  /** Combo photos that 404'd; they fall back to the bento emoji. */
+  private brokenComboImages = new Set<number>();
+
+  hasComboImage(combo: ComboDeal): boolean {
+    return !!combo.image_url && !this.brokenComboImages.has(combo.id);
+  }
+
+  onComboImageError(combo: ComboDeal): void {
+    this.brokenComboImages.add(combo.id);
+  }
+
+  /** Add-on photos that 404'd; they fall back to the salt-shaker emoji. */
+  private brokenAddonImages = new Set<number>();
+
+  hasAddonImage(addon: ProductAddon): boolean {
+    return !!addon.image_url && !this.brokenAddonImages.has(addon.id);
+  }
+
+  onAddonImageError(addon: ProductAddon): void {
+    this.brokenAddonImages.add(addon.id);
+  }
+
+  /** True only when the original price is really above what the combo charges. */
+  comboHasDiscount(combo: ComboDeal): boolean {
+    return !!combo.original_price && combo.original_price > combo.combo_price;
+  }
+
+  /** Dishes in the bundle, counting quantities — "1 Mandi + 2 Daqoos" is 3. */
+  comboItemCount(combo: ComboDeal): string {
+    const n = (combo.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+    return n === 1 ? '1 dish' : `${n} dishes`;
+  }
+
   /** True when the category has a usable thumbnail that has not failed to load. */
   hasCategoryImage(cat: Category): boolean {
     return !!cat.image_url && !this.brokenCategoryImages.has(cat.id);
@@ -4365,8 +4869,10 @@ export class PosComponent implements OnInit, AfterViewInit {
       list = list.filter((p) => p.category_id === this.selectedCategoryId);
     }
 
-    if (this.searchQuery && this.searchQuery.trim().length > 0) {
-      const q = this.searchQuery.toLowerCase();
+    // Trimmed: a barcode scanner and an on-screen keyboard both tend to
+    // leave a trailing space, which would otherwise match nothing.
+    const q = this.searchQuery.trim().toLowerCase();
+    if (q) {
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
@@ -4404,6 +4910,68 @@ export class PosComponent implements OnInit, AfterViewInit {
     return (this.customizationProduct?.variants || []).filter((v) => v.status !== 'INACTIVE');
   }
 
+  /**
+   * Portions a dish is really sold in.
+   *
+   * Inactive rows are left out because they are left out everywhere else -
+   * a card counting a retired portion would open a picker listing one fewer
+   * option than the badge promised.
+   */
+  public variantCount(product: Product | null): number {
+    return (product?.variants || []).filter((v) => v.status !== 'INACTIVE').length;
+  }
+
+  /** True once a dish offers a real choice, which is what earns the badge. */
+  public hasVariantChoice(product: Product | null): boolean {
+    return this.variantCount(product) > 1;
+  }
+
+  /** The chosen portions, in the order the dialog lists them. */
+  public get selectedCustomizationVariants(): ProductVariant[] {
+    return this.customizationVariants.filter((v) => this.customizationQuantities.has(v.id));
+  }
+
+  /** How many separate lines Add to Order is about to put on the bill. */
+  public get selectedVariantCount(): number {
+    return this.selectedCustomizationVariants.length;
+  }
+
+  /** Units across every chosen portion - three portions can be six plates. */
+  public get selectedVariantUnits(): number {
+    return this.selectedCustomizationVariants.reduce((sum, v) => sum + this.getVariantQty(v), 0);
+  }
+
+  /** First chosen portion, for the callers that only ever deal in one. */
+  public get selectedCustomizationVariant(): ProductVariant | null {
+    return this.selectedCustomizationVariants[0] ?? null;
+  }
+
+  public isVariantSelected(variant: ProductVariant): boolean {
+    return this.customizationQuantities.has(variant.id);
+  }
+
+  public getVariantQty(variant: ProductVariant): number {
+    return this.customizationQuantities.get(variant.id) ?? 1;
+  }
+
+  /**
+   * Ticks or unticks a portion. The whole tile is the target, so a mouse, a
+   * keyboard and a finger on a till screen all arrive here.
+   */
+  public toggleCustomizationVariant(variant: ProductVariant): void {
+    if (this.customizationQuantities.has(variant.id)) {
+      this.customizationQuantities.delete(variant.id);
+    } else {
+      this.customizationQuantities.set(variant.id, 1);
+    }
+  }
+
+  /** Steps one portion's own count, between 1 and 99. */
+  public changeVariantQty(variant: ProductVariant, delta: number): void {
+    const next = Math.min(99, Math.max(1, this.getVariantQty(variant) + delta));
+    this.customizationQuantities.set(variant.id, next);
+  }
+
   // Backward compatibility alias for variant picker if referenced
   public get variantPickerProduct(): Product | null {
     return this.customizationProduct;
@@ -4415,77 +4983,121 @@ export class PosComponent implements OnInit, AfterViewInit {
     return this.customizationVariants;
   }
 
-  public getApplicableAddons(product: Product | null): ProductAddon[] {
-    if (!product) return [];
-    return this.addonsList.filter(
-      (a) => (a.is_available === true || a.is_available === 1) && (!a.product_id || a.product_id === product.id)
-    );
-  }
-
   openCustomizationModal(product: Product): void {
     this.customizationProduct = product;
+    this.customizationQuantities = new Map<number, number>();
     const variants = (product.variants || []).filter((v) => v.status !== 'INACTIVE');
-    this.selectedCustomizationVariant = variants.length > 0 ? variants[0] : null;
-    this.selectedCustomizationAddons = [];
+    // The first portion arrives ticked so the dialog opens on a working Add
+    // to Order; the rest are one tap away, and this one unticks like any other.
+    if (variants.length > 0) {
+      this.customizationQuantities.set(variants[0].id, 1);
+    }
     this.customizationNotes = '';
   }
 
   closeCustomizationModal(): void {
     this.customizationProduct = null;
-    this.selectedCustomizationVariant = null;
-    this.selectedCustomizationAddons = [];
+    this.customizationQuantities = new Map<number, number>();
     this.customizationNotes = '';
   }
 
-  toggleAddonSelection(addon: ProductAddon): void {
-    const index = this.selectedCustomizationAddons.findIndex((a) => a.id === addon.id);
-    if (index >= 0) {
-      this.selectedCustomizationAddons.splice(index, 1);
-    } else {
-      this.selectedCustomizationAddons.push(addon);
-    }
-  }
-
-  isAddonSelected(addonId: number): boolean {
-    return this.selectedCustomizationAddons.some((a) => a.id === addonId);
-  }
-
+  /** What the ticked portions come to, each at its own price and count. */
   getCustomizationTotalPrice(): number {
-    if (!this.customizationProduct) return 0;
-    const base = this.selectedCustomizationVariant
-      ? Number(this.selectedCustomizationVariant.selling_price)
-      : Number(this.customizationProduct.selling_price);
-    const addons = this.selectedCustomizationAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
-    return base + addons;
+    const prod = this.customizationProduct;
+    if (!prod) return 0;
+    const chosen = this.selectedCustomizationVariants;
+    if (chosen.length === 0) {
+      return this.customizationVariants.length > 0 ? 0 : Number(prod.selling_price);
+    }
+    return chosen.reduce(
+      (sum, v) => sum + Number(v.selling_price) * this.getVariantQty(v),
+      0
+    );
   }
 
+  /**
+   * Puts every ticked portion on the bill, one line each.
+   *
+   * Three portions ticked means three rows, each keeping its own portion,
+   * price and count - addItemWithCustomization keys the line on the portion,
+   * so nothing merges except a repeat of the very same portion, which is
+   * what re-opening the dialog for it should do.
+   *
+   * No add-ons are chosen here any more, but the lines still go through
+   * addItemWithCustomization: it is what keeps the portion and the kitchen
+   * note on the line.
+   */
   confirmCustomization(): void {
     if (!this.customizationProduct) return;
     const prod = this.customizationProduct;
-    const variant = this.selectedCustomizationVariant;
-    const addons = [...this.selectedCustomizationAddons];
     const notes = this.customizationNotes?.trim() || undefined;
+    const chosen = this.selectedCustomizationVariants;
 
-    const success = this.cartService.addItemWithCustomization(
-      prod,
-      variant,
-      1,
-      notes,
-      addons,
-      'PRODUCT'
-    );
+    if (this.customizationVariants.length > 0 && chosen.length === 0) {
+      this.notify.warning('Select at least one portion to add');
+      return;
+    }
 
-    const label = variant ? `${prod.name} (${variant.name})` : prod.name;
-    if (!success) {
-      this.notify.error(`Cannot add "${label}" (Out of Stock / Inactive)`);
-    } else {
-      const addonsSummary = addons.length > 0 ? ` with ${addons.length} add-on(s)` : '';
-      this.notify.info(`Added "${label}"${addonsSummary} to cart`);
+    // A dish with no portions at all still adds, as the plain product.
+    const targets: (ProductVariant | null)[] = chosen.length > 0 ? chosen : [null];
+    const added: string[] = [];
+    const failed: string[] = [];
+
+    for (const variant of targets) {
+      const qty = variant ? this.getVariantQty(variant) : 1;
+      const label = variant ? `${prod.name} (${variant.name})` : prod.name;
+      const success = this.cartService.addItemWithCustomization(
+        prod,
+        variant,
+        qty,
+        notes,
+        [],
+        'PRODUCT'
+      );
+      (success ? added : failed).push(qty > 1 ? `${qty} x ${label}` : label);
+    }
+
+    if (failed.length > 0) {
+      this.notify.error(`Cannot add ${failed.join(', ')} (Out of Stock / Inactive)`);
+    }
+    if (added.length === 1) {
+      this.notify.info(`Added "${added[0]}" to cart`);
+    } else if (added.length > 1) {
+      this.notify.success(`Added ${added.length} portions to cart: ${added.join(', ')}`);
     }
     this.closeCustomizationModal();
   }
 
-  addComboToCart(combo: ComboMeal): void {
+  /**
+   * Puts an add-on on the bill as a line of its own.
+   *
+   * An add-on is not a row in `products`, so the cart is given a stand-in
+   * carrying the add-on's name and price - the same shape addComboToCart
+   * uses below. The id is offset well clear of real product ids so the line
+   * can be told apart; 70000 sits below the 90000 block combos use.
+   */
+  addAddonToCart(addon: ProductAddon): void {
+    const standIn: Product = {
+      id: 70000 + addon.id,
+      name: addon.name,
+      selling_price: Number(addon.price) || 0,
+      cost_price: Number(addon.cost_price) || 0,
+      category_id: 0,
+      category_name: addon.category || 'Add-ons',
+      status: 'ACTIVE',
+      sku: `ADDON-${addon.id}`,
+      tax_rate: 0,
+      stock_quantity: 999,
+      current_stock: 999,
+      image_url: addon.image_url,
+      description: addon.description || 'Add-on served alongside the order',
+    } as Product;
+
+    this.cartService.addItemWithCustomization(standIn, null, 1, undefined, [], 'PRODUCT');
+    this.notify.success(`Added Add-on: "${addon.name}" to cart!`);
+  }
+
+  addComboToCart(combo: ComboDeal): void {
     const dummyProduct: Product = {
       id: 90000 + combo.id,
       name: combo.name,
@@ -4517,54 +5129,12 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.notify.success(`Added Combo: "${combo.name}" to cart!`);
   }
 
-  addDealToCart(deal: MealDeal): void {
-    const dummyProduct: Product = {
-      id: 80000 + deal.id,
-      name: deal.title,
-      selling_price: deal.deal_price,
-      cost_price: 0,
-      category_id: 0,
-      category_name: 'Meal Deals',
-      status: 'ACTIVE',
-      sku: deal.code || `DEAL-${deal.id}`,
-      tax_rate: 0,
-      stock_quantity: 999,
-      current_stock: 999,
-      image_url: deal.image_url,
-      description: deal.description || 'Exclusive deal offer',
-    } as Product;
-    const notes = deal.items && deal.items.length > 0
-      ? deal.items.map((i) => `${i.quantity}x ${i.product_name || 'Dish'}`).join(', ')
-      : undefined;
-
-    this.cartService.addItemWithCustomization(
-      dummyProduct,
-      null,
-      1,
-      notes,
-      [],
-      'DEAL',
-      deal.id
-    );
-    this.notify.success(`Added Deal: "${deal.title}" to cart!`);
-  }
 
   loadCombos(): void {
-    this.productService.getCombos().subscribe({
+    this.productService.getComboDeals().subscribe({
       next: (res) => {
         if (res.success) {
           this.combosList = res.data;
-        }
-      },
-      error: () => {},
-    });
-  }
-
-  loadDeals(): void {
-    this.productService.getDeals().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.dealsList = res.data;
         }
       },
       error: () => {},
@@ -4582,9 +5152,15 @@ export class PosComponent implements OnInit, AfterViewInit {
     });
   }
 
+
   /**
-   * Adds a product to cart or opens customization modal if portion variants
-   * or add-ons are available.
+   * Adds a product to the cart, or opens the portion dialog first when the
+   * dish is sold in more than one portion.
+   *
+   * A dish with a single portion is not worth a dialog - there is nothing to
+   * choose, so it goes straight onto the bill carrying that portion's price
+   * and stock draw. Only a real choice, two portions or more, opens the
+   * picker, which is the same rule the card's count badge is drawn on.
    */
   addToCart(product: Product): void {
     if (this.isOutOfStock(product)) {
@@ -4592,18 +5168,17 @@ export class PosComponent implements OnInit, AfterViewInit {
       return;
     }
     const variants = (product.variants || []).filter((v) => v.status !== 'INACTIVE');
-    const addons = this.getApplicableAddons(product);
-    if (variants.length > 0 || addons.length > 0) {
+    if (variants.length > 1) {
       this.openCustomizationModal(product);
       return;
     }
-    this.commitToCart(product, null);
+    this.commitToCart(product, variants[0] ?? null);
   }
 
+  /** Adds one portion straight away, ignoring whatever else was ticked. */
   chooseVariant(variant: ProductVariant): void {
-    const product = this.customizationProduct;
-    if (!product) return;
-    this.selectedCustomizationVariant = variant;
+    if (!this.customizationProduct) return;
+    this.customizationQuantities = new Map<number, number>([[variant.id, 1]]);
     this.confirmCustomization();
   }
 
@@ -5011,7 +5586,6 @@ export class PosComponent implements OnInit, AfterViewInit {
       notes: i.notes,
       itemType: i.itemType,
       comboId: i.comboId,
-      dealId: i.dealId,
       selectedAddons: i.selectedAddons,
     }));
 
@@ -5121,7 +5695,6 @@ export class PosComponent implements OnInit, AfterViewInit {
       notes: i.notes,
       itemType: i.itemType,
       comboId: i.comboId,
-      dealId: i.dealId,
       selectedAddons: i.selectedAddons,
     }));
 
@@ -5227,7 +5800,6 @@ export class PosComponent implements OnInit, AfterViewInit {
         notes: i.notes,
         itemType: i.itemType,
         comboId: i.comboId,
-        dealId: i.dealId,
         selectedAddons: i.selectedAddons,
       })),
     };

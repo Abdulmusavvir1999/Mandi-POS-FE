@@ -251,7 +251,7 @@ export class CategoryLayoutPreviewComponent {
       status: 'ACTIVE',
       product_count: 32,
       icon: 'local_cafe',
-      color: '#7E22CE',
+      color: 'var(--primary, #7E22CE)',
     },
     {
       id: 2,
@@ -261,7 +261,7 @@ export class CategoryLayoutPreviewComponent {
       status: 'ACTIVE',
       product_count: 18,
       icon: 'local_pizza',
-      color: '#D97706',
+      color: 'var(--warning, #D97706)',
     },
     {
       id: 3,
@@ -271,7 +271,7 @@ export class CategoryLayoutPreviewComponent {
       status: 'ACTIVE',
       product_count: 24,
       icon: 'lunch_dining',
-      color: '#DC2626',
+      color: 'var(--danger, #DC2626)',
     },
     {
       id: 4,
@@ -281,7 +281,7 @@ export class CategoryLayoutPreviewComponent {
       status: 'ACTIVE',
       product_count: 12,
       icon: 'nutrition',
-      color: '#16A34A',
+      color: 'var(--success, #16A34A)',
     },
     {
       id: 5,
@@ -301,7 +301,7 @@ export class CategoryLayoutPreviewComponent {
       status: 'INACTIVE',
       product_count: 6,
       icon: 'soup_kitchen',
-      color: '#4B5563',
+      color: 'var(--text-muted, #4B5563)',
     },
   ];
 }

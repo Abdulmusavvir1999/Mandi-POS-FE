@@ -101,7 +101,7 @@ import {
         border-radius: 50%;
         background: radial-gradient(
           circle at 50% 45%,
-          var(--primary-light, rgba(126, 34, 206, 0.12)) 0%,
+          var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12)) 0%,
           transparent 70%
         );
         pointer-events: none;

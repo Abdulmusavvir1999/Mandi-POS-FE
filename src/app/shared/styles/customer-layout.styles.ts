@@ -41,7 +41,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     border: 1.5px solid var(--cust-card-border, #E9D5FF);
     border-radius: var(--cust-card-radius, 20px);
     padding: var(--cust-padding, 20px);
-    box-shadow: 0 10px 25px -5px rgba(126, 34, 206, 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb, 126, 34, 206), 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.02);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -52,7 +52,7 @@ export const CUSTOMER_LAYOUT_CSS = `
   }
   .cust-vip-card:hover {
     transform: scale(calc(var(--cust-card-scale, 1) * 1.02)) translateY(-2px);
-    box-shadow: 0 18px 36px -4px rgba(126, 34, 206, 0.12);
+    box-shadow: 0 18px 36px -4px rgba(var(--primary-rgb, 126, 34, 206), 0.12);
     border-color: var(--cust-accent-color, #7E22CE);
   }
 
@@ -70,7 +70,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     width: 50px;
     height: 50px;
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(126, 34, 206, 0.12), rgba(168, 85, 247, 0.2));
+    background: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.12), rgba(168, 85, 247, 0.2));
     border: 2px solid var(--cust-card-border, #E9D5FF);
     display: flex;
     align-items: center;
@@ -79,7 +79,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     font-size: 16px;
     color: var(--cust-accent-color, #7E22CE);
     overflow: hidden;
-    box-shadow: 0 4px 10px rgba(126, 34, 206, 0.1);
+    box-shadow: 0 4px 10px rgba(var(--primary-rgb, 126, 34, 206), 0.1);
   }
   .cust-vip-avatar img {
     width: 100%;
@@ -93,7 +93,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #16A34A;
+    background: var(--success, #16A34A);
     border: 2px solid #FFFFFF;
   }
 
@@ -144,7 +144,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    background: rgba(126, 34, 206, 0.05);
+    background: rgba(var(--primary-rgb, 126, 34, 206), 0.05);
     border: 1px solid var(--cust-card-border, #E9D5FF);
     border-radius: 8px;
     padding: 3px 8px;
@@ -155,7 +155,7 @@ export const CUSTOMER_LAYOUT_CSS = `
   }
 
   .cust-vip-stats-bar {
-    background: #FAF5FF;
+    background: var(--bg-app, #FAF5FF);
     border: 1px solid var(--cust-card-border, #E9D5FF);
     border-radius: 12px;
     padding: 8px 12px;
@@ -215,7 +215,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     font-size: var(--cust-font-size, 14px);
   }
   .cust-clean-table thead {
-    background: #F8FAFC;
+    background: var(--bg-app, #F8FAFC);
     border-bottom: 1.5px solid var(--cust-card-border, #E5E7EB);
   }
   .cust-clean-table th {
@@ -234,7 +234,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     vertical-align: middle;
   }
   .cust-clean-table tr:hover td {
-    background-color: #F8FAFC;
+    background-color: var(--bg-app, #F8FAFC);
   }
   .cust-clean-name {
     font-weight: 700;
@@ -356,7 +356,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     font-size: var(--cust-font-size, 14px);
   }
   .cust-list-table thead {
-    background: #F8FAFC;
+    background: var(--bg-app, #F8FAFC);
     border-bottom: 2px solid var(--cust-card-border, #E2E8F0);
   }
   .cust-list-table th {
@@ -375,7 +375,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     vertical-align: middle;
   }
   .cust-list-table tr:hover td {
-    background-color: #F8FAFC;
+    background-color: var(--bg-app, #F8FAFC);
   }
 
   /* ═══════════════════════════════════════════════════════════════ */
@@ -402,13 +402,13 @@ export const CUSTOMER_LAYOUT_CSS = `
   }
   .cust-profile-card:hover {
     transform: scale(calc(var(--cust-card-scale, 1) * 1.02)) translateY(-2px);
-    box-shadow: 0 16px 28px -4px rgba(126, 34, 206, 0.1);
+    box-shadow: 0 16px 28px -4px rgba(var(--primary-rgb, 126, 34, 206), 0.1);
     border-color: var(--cust-accent-color, #7E22CE);
   }
 
   .cust-profile-cover {
     height: 48px;
-    background: linear-gradient(135deg, rgba(126, 34, 206, 0.15), rgba(192, 132, 252, 0.25));
+    background: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.15), rgba(192, 132, 252, 0.25));
     position: relative;
   }
   .cust-profile-avatar-pos {
@@ -450,7 +450,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #F8FAFC;
+    background: var(--bg-app, #F8FAFC);
     padding: 8px 12px;
     border-radius: 10px;
     margin-bottom: 12px;
@@ -458,7 +458,7 @@ export const CUSTOMER_LAYOUT_CSS = `
   }
   .cust-profile-card-footer {
     padding: 10px 16px;
-    background: #FAF5FF;
+    background: var(--bg-app, #FAF5FF);
     border-top: 1px solid var(--cust-card-border, #E2E8F0);
     display: flex;
     align-items: center;
@@ -526,7 +526,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     background: #FFFFFF;
     color: var(--cust-text-color, #2E1065);
     border: 1px solid var(--cust-card-border, #E9D5FF);
-    box-shadow: 0 1px 2px rgba(46, 16, 101, 0.08);
+    box-shadow: 0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
   }
   .cust-act.is-vip:hover {
     background: var(--cust-button-bg, #7E22CE);
@@ -537,8 +537,8 @@ export const CUSTOMER_LAYOUT_CSS = `
       color-mix(in srgb, var(--cust-button-bg, #7E22CE) 38%, transparent);
   }
   .cust-act.is-vip.is-delete:hover {
-    background: #DC2626;
-    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+    background: var(--danger, #DC2626);
+    box-shadow: 0 6px 14px rgba(var(--danger-rgb, 220, 38, 38), 0.35);
   }
 
   /* DESIGN 2 — Minimalist Clean: no box at all, just an underline. */
@@ -572,10 +572,10 @@ export const CUSTOMER_LAYOUT_CSS = `
     right: 5px;
   }
   .cust-act.is-clean.is-delete::after {
-    background: #DC2626;
+    background: var(--danger, #DC2626);
   }
   .cust-act.is-clean.is-delete:hover {
-    color: #DC2626;
+    color: var(--danger, #DC2626);
   }
 
   /* DESIGN 3 — Compact CRM: dense tinted tiles that press inward. */
@@ -603,12 +603,12 @@ export const CUSTOMER_LAYOUT_CSS = `
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   .cust-act.is-compact.is-delete {
-    background: rgba(220, 38, 38, 0.1);
-    color: #DC2626;
-    box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.2);
+    background: rgba(var(--danger-rgb, 220, 38, 38), 0.1);
+    color: var(--danger, #DC2626);
+    box-shadow: inset 0 0 0 1px rgba(var(--danger-rgb, 220, 38, 38), 0.2);
   }
   .cust-act.is-compact.is-delete:hover {
-    background: #DC2626;
+    background: var(--danger, #DC2626);
     color: #FFFFFF;
   }
 
@@ -638,8 +638,8 @@ export const CUSTOMER_LAYOUT_CSS = `
     color: var(--cust-button-bg, #7E22CE);
   }
   .cust-act.is-list.is-delete:hover {
-    background: rgba(220, 38, 38, 0.1);
-    color: #DC2626;
+    background: rgba(var(--danger-rgb, 220, 38, 38), 0.1);
+    color: var(--danger, #DC2626);
   }
 
   /* DESIGN 5 — Card View: circles floating above the card footer. */
@@ -667,7 +667,27 @@ export const CUSTOMER_LAYOUT_CSS = `
       color-mix(in srgb, var(--cust-button-bg, #7E22CE) 42%, transparent);
   }
   .cust-act.is-card.is-delete:hover {
-    background: #DC2626;
-    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+    background: var(--danger, #DC2626);
+    box-shadow: 0 6px 16px rgba(var(--danger-rgb, 220, 38, 38), 0.4);
+  }
+
+  /* ── TOUCH SIZING ─────────────────────────────────────────────────────
+     The customer name in each layout is a shortcut into the 360 profile,
+     but it is a heading or a div rather than a button, so the 44px floor
+     in section 109 of styles.css does not reach it.
+
+     The same drawer is always reachable from the labelled button in the
+     row actions, so nothing here is the only route to an action — this
+     just stops the name from being a sliver of a target sitting directly
+     above the row below it. */
+  @media (any-pointer: coarse) {
+    .cust-vip-name,
+    .cust-clean-name,
+    .cust-compact-title,
+    .cust-profile-name {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+    }
   }
 `;

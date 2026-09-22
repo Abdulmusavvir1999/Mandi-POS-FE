@@ -6,12 +6,15 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
 import { apiLoggingInterceptor } from './core/auth/interceptors/api-logging.interceptor';
 import { errorInterceptor } from './core/auth/interceptors/error.interceptor';
+import { backOfficeInterceptor } from './core/auth/interceptors/back-office.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor, apiLoggingInterceptor, errorInterceptor])),
+    provideHttpClient(
+      withInterceptors([authInterceptor, backOfficeInterceptor, apiLoggingInterceptor, errorInterceptor])
+    ),
     provideAnimationsAsync(),
   ],
 };

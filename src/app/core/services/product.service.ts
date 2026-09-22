@@ -76,40 +76,21 @@ export class ProductService {
   }
 
   // -------------------------------------------------------------
-  // Combo Meals
+  // Combo Deals
   // -------------------------------------------------------------
-  public getCombos(): Observable<ApiResponse<any[]>> {
-    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/combos`);
+  public getComboDeals(): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/combo-deals`);
   }
 
-  public createCombo(data: any): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.API_URL}/combos`, data);
+  public createComboDeal(data: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/combo-deals`, data);
   }
 
-  public updateCombo(id: number, data: any): Observable<ApiResponse<any>> {
-    return this.http.put<ApiResponse<any>>(`${this.API_URL}/combos/${id}`, data);
+  public updateComboDeal(id: number, data: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.API_URL}/combo-deals/${id}`, data);
   }
 
-  public deleteCombo(id: number): Observable<ApiResponse<any>> {
-    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/combos/${id}`);
-  }
-
-  // -------------------------------------------------------------
-  // Meal Deals
-  // -------------------------------------------------------------
-  public getDeals(): Observable<ApiResponse<any[]>> {
-    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/deals`);
-  }
-
-  public createDeal(data: any): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.API_URL}/deals`, data);
-  }
-
-  public updateDeal(id: number, data: any): Observable<ApiResponse<any>> {
-    return this.http.put<ApiResponse<any>>(`${this.API_URL}/deals/${id}`, data);
-  }
-
-  public deleteDeal(id: number): Observable<ApiResponse<any>> {
-    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/deals/${id}`);
+  public deleteComboDeal(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.API_URL}/combo-deals/${id}`);
   }
 }

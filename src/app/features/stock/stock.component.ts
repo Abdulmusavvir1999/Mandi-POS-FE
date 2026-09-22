@@ -1635,6 +1635,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               />
             </div>
 
+
             <!-- Row 2: Stock Code & Unit Type Grid -->
             <div class="grid grid-cols-2 gap-4 items-start">
               <div class="form-group mb-0">
@@ -1869,6 +1870,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <button
                 type="submit"
                 class="action-btn btn-gradient-purple"
+                [disabled]="!masterForm.name"
+                [title]="!masterForm.name ? 'Enter a stock item name first' : 'Create stock item'"
               >
                 Create Stock Item ✓
               </button>
@@ -2075,6 +2078,7 @@ export class StockComponent implements OnInit {
       })),
     ];
   }
+
 
   /** Same list as a ledger filter, with an "all" row on top. */
   get vendorFilterOptions(): DropdownOption[] {
@@ -2410,22 +2414,34 @@ export class StockComponent implements OnInit {
 
   // ── Tab Search & Pagination Filter Helpers ──────────────────────────
   get filteredMasterItems(): StockItem[] {
-    if (!this.searchQuery) return this.stockItems;
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.stockItems;
     return this.stockItems.filter(
       (s) => s.name.toLowerCase().includes(q) || s.stock_code.toLowerCase().includes(q) || s.category_name?.toLowerCase().includes(q)
     );
   }
 
+  /**
+   * The current page, never past the end of the list it is paging.
+   *
+   * A narrowing filter, a delete on the final page, or any refresh that
+   * returns fewer rows used to leave `currentPage` pointing past the end and
+   * the table rendering empty. Clamped on read rather than written back, so
+   * it cannot fire a change-after-checked error during rendering.
+   */
+  safePage(totalItems: number): number {
+    return Math.min(Math.max(1, this.currentPage), this.getTotalPages(totalItems));
+  }
+
   get paginatedMasterItems(): StockItem[] {
     const list = this.filteredMasterItems;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage(list.length) - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
   get filteredStockEntries(): StockEntry[] {
-    if (!this.searchQuery) return this.stockEntries;
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.stockEntries;
     return this.stockEntries.filter(
       (e) =>
         e.entry_number.toLowerCase().includes(q) ||
@@ -2440,13 +2456,13 @@ export class StockComponent implements OnInit {
 
   get paginatedStockEntries(): StockEntry[] {
     const list = this.filteredStockEntries;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage(list.length) - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
   get filteredStockMovements(): StockMovement[] {
-    if (!this.searchQuery) return this.stockMovements;
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.stockMovements;
     return this.stockMovements.filter(
       (m) =>
         m.stock_item_name?.toLowerCase().includes(q) ||
@@ -2459,18 +2475,18 @@ export class StockComponent implements OnInit {
 
   get paginatedStockMovements(): StockMovement[] {
     const list = this.filteredStockMovements;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage(list.length) - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
   get paginatedLowStockList(): StockItem[] {
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage(this.lowStockList.length) - 1) * this.pageSize;
     return this.lowStockList.slice(start, start + this.pageSize);
   }
 
   get filteredStockAlerts(): any[] {
-    if (!this.searchQuery) return this.stockAlerts;
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.stockAlerts;
     return this.stockAlerts.filter(
       (a) =>
         a.name?.toLowerCase().includes(q) ||
@@ -2482,7 +2498,7 @@ export class StockComponent implements OnInit {
 
   get paginatedStockAlerts(): any[] {
     const list = this.filteredStockAlerts;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage(list.length) - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
@@ -2502,11 +2518,11 @@ export class StockComponent implements OnInit {
   }
 
   paginationStart(totalItems: number): number {
-    return totalItems === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return totalItems === 0 ? 0 : (this.safePage(totalItems) - 1) * this.pageSize + 1;
   }
 
   paginationEnd(totalItems: number): number {
-    return Math.min(this.currentPage * this.pageSize, totalItems);
+    return Math.min(this.safePage(totalItems) * this.pageSize, totalItems);
   }
 
   calcStockPercent(curr: number, low: number): number {
@@ -2659,6 +2675,7 @@ export class StockComponent implements OnInit {
       this.notify.error('Please enter stock item name');
       return;
     }
+
 
     const payload = {
       ...this.masterForm,

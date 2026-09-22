@@ -437,7 +437,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
         border-radius: 18px;
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
-        box-shadow: 0 2px 10px -4px rgba(46, 16, 101, 0.1);
+        box-shadow: 0 2px 10px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.1);
       }
 
       .form-card-title {
@@ -555,7 +555,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
       .mode-btn.is-active {
         background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
         color: #FFFFFF;
-        box-shadow: 0 3px 10px -4px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 3px 10px -4px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
       }
 
       .variant-rows { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -612,7 +612,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
         border: 1.5px solid var(--card-border, #E9D5FF);
-        box-shadow: 0 -4px 18px -8px rgba(46, 16, 101, 0.18);
+        box-shadow: 0 -4px 18px -8px rgba(var(--text-main-rgb, 46, 16, 101), 0.18);
       }
     `,
   ],

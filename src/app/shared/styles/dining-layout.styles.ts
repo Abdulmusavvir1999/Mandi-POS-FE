@@ -46,7 +46,7 @@ export const DINING_LAYOUT_CSS = `
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: radial-gradient(circle, #4ADE80 20%, #15803D 80%);
+    background: radial-gradient(circle, #4ADE80 20%, var(--success, #15803D) 80%);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.4);
     position: absolute;
     pointer-events: none;
@@ -215,7 +215,7 @@ export const DINING_LAYOUT_CSS = `
   .chk-coaster-code {
     font-size: 11px;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-main, #1E293B);
   }
 
   /* Wooden Chairs around perimeter */
@@ -259,7 +259,7 @@ export const DINING_LAYOUT_CSS = `
   .dining-layout-neumorphic .neu-page-title {
     font-size: 20px;
     font-weight: 800;
-    color: #0F172A;
+    color: var(--text-main, #0F172A);
     letter-spacing: -0.02em;
     margin: 0;
   }
@@ -343,8 +343,8 @@ export const DINING_LAYOUT_CSS = `
     border-radius: 10px;
     font-size: 14px;
     font-weight: 700;
-    color: #475569;
-    background: #F8FAFC;
+    color: var(--text-muted, #475569);
+    background: var(--bg-app, #F8FAFC);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
@@ -354,15 +354,15 @@ export const DINING_LAYOUT_CSS = `
     transition: all 0.2s ease;
   }
   .neu-code-badge.badge-red {
-    background: #FEE2E2;
-    color: #DC2626;
+    background: var(--danger-light, #FEE2E2);
+    color: var(--danger, #DC2626);
   }
   .neu-code-badge.badge-blue {
     background: #EFF6FF;
     color: #2563EB;
   }
   .neu-code-badge.badge-dark {
-    background: #1E293B;
+    background: var(--text-main, #1E293B);
     color: #FFFFFF;
   }
 
@@ -495,24 +495,24 @@ export const DINING_LAYOUT_CSS = `
   }
 
   .list-table-grid thead th {
-    background: #F8FAFC;
+    background: var(--bg-app, #F8FAFC);
     padding: 12px 16px;
     font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #64748B;
-    border-bottom: 1px solid #E2E8F0;
+    color: var(--text-muted, #64748B);
+    border-bottom: 1px solid var(--card-border, #E2E8F0);
     white-space: nowrap;
   }
 
   .list-table-grid tbody tr {
-    border-bottom: 1px solid #F1F5F9;
+    border-bottom: 1px solid var(--card-border, #F1F5F9);
     cursor: pointer;
     transition: background-color 0.15s ease;
   }
   .list-table-grid tbody tr:hover {
-    background-color: #F8FAFC;
+    background-color: var(--bg-app, #F8FAFC);
   }
 
   .list-table-grid td {
@@ -528,8 +528,8 @@ export const DINING_LAYOUT_CSS = `
     font-weight: 800;
     font-family: monospace;
     font-size: 13px;
-    color: #0F172A;
-    background: #F1F5F9;
+    color: var(--text-main, #0F172A);
+    background: var(--card-hover, #F1F5F9);
     padding: 4px 8px;
     border-radius: 6px;
   }
@@ -556,7 +556,7 @@ export const DINING_LAYOUT_CSS = `
     font-weight: 700;
   }
   .list-status-pill.is-free {
-    background: #DCFCE7;
+    background: var(--success-light, #DCFCE7);
     color: var(--dining-color-free, #16A34A);
   }
   .list-status-pill.is-busy {
@@ -564,7 +564,7 @@ export const DINING_LAYOUT_CSS = `
     color: var(--dining-color-occupied, #EA580C);
   }
   .list-status-pill.is-blocked {
-    background: #FEE2E2;
+    background: var(--danger-light, #FEE2E2);
     color: var(--dining-color-blocked, #DC2626);
   }
 
@@ -613,7 +613,7 @@ export const DINING_LAYOUT_CSS = `
   .cardlist-row-card:hover {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
     transform: scale(calc(var(--dining-table-scale, 1) * 1.01)) translateY(-2px);
-    border-color: #CBD5E1;
+    border-color: var(--text-dim, #CBD5E1);
   }
 
   .cardlist-left-col {
@@ -633,15 +633,15 @@ export const DINING_LAYOUT_CSS = `
     font-weight: 800;
     font-family: monospace;
     color: #FFFFFF;
-    background: linear-gradient(135deg, #7E22CE 0%, #9333EA 100%);
-    box-shadow: 0 4px 10px rgba(126, 34, 206, 0.25);
+    background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
+    box-shadow: 0 4px 10px rgba(var(--primary-rgb, 126, 34, 206), 0.25);
   }
   .cardlist-badge.is-free {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
   }
   .cardlist-badge.is-blocked {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    background: linear-gradient(135deg, var(--danger, #EF4444) 0%, var(--danger, #DC2626) 100%);
     box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
   }
 
@@ -667,13 +667,13 @@ export const DINING_LAYOUT_CSS = `
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 6px;
-    background: #F1F5F9;
-    color: #475569;
+    background: var(--card-hover, #F1F5F9);
+    color: var(--text-muted, #475569);
   }
   .cardlist-seats {
     font-size: 11px;
     font-weight: 700;
-    color: #64748B;
+    color: var(--text-muted, #64748B);
   }
 
   /* 6-Tick Dwell Progress Bar */
@@ -687,7 +687,7 @@ export const DINING_LAYOUT_CSS = `
   .cardlist-dwell-bar i {
     flex: 1;
     height: 5px;
-    background: #E2E8F0;
+    background: var(--card-border, #E2E8F0);
     border-radius: 2px;
   }
   .cardlist-dwell-bar i.on {
@@ -704,7 +704,7 @@ export const DINING_LAYOUT_CSS = `
     font-size: 17px;
     font-weight: 900;
     font-family: monospace;
-    color: #0F172A;
+    color: var(--text-main, #0F172A);
   }
 
   /* Status Badges & Extensions */
@@ -725,9 +725,9 @@ export const DINING_LAYOUT_CSS = `
     color: #0891B2;
   }
   .pill-waitlist {
-    background: #FAF5FF;
-    color: #7E22CE;
-    border: 1px solid #E9D5FF;
+    background: var(--bg-app, #FAF5FF);
+    color: var(--primary, #7E22CE);
+    border: 1px solid var(--card-border, #E9D5FF);
   }
   .timer-pill {
     display: inline-flex;
@@ -739,8 +739,8 @@ export const DINING_LAYOUT_CSS = `
     border-radius: 9999px;
   }
   .timer-safe { background: #ECFDF5; color: #059669; }
-  .timer-warn { background: #FFFBEB; color: #D97706; }
-  .timer-over { background: #FEF2F2; color: #DC2626; animation: timer-pulse 1.5s infinite; }
+  .timer-warn { background: #FFFBEB; color: var(--warning, #D97706); }
+  .timer-over { background: #FEF2F2; color: var(--danger, #DC2626); animation: timer-pulse 1.5s infinite; }
   @keyframes timer-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }

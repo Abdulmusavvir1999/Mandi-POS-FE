@@ -132,8 +132,8 @@ export class CartService {
     quantity = 1,
     notes?: string,
     selectedAddons?: ProductAddon[],
-    itemType: 'PRODUCT' | 'COMBO' | 'DEAL' = 'PRODUCT',
-    comboOrDealId?: number
+    itemType: 'PRODUCT' | 'COMBO' = 'PRODUCT',
+    comboDealId?: number
   ): boolean {
     if (product.status !== 'ACTIVE' && itemType === 'PRODUCT') {
       return false;
@@ -144,7 +144,7 @@ export class CartService {
     const unitPrice = basePrice + addonsCost;
 
     const addonIds = (selectedAddons || []).map((a) => a.id).sort((a, b) => a - b);
-    const lineId = `${itemType}:${product.id}:${variant?.id ?? 'base'}:${addonIds.join('-') || 'none'}${comboOrDealId ? ':' + comboOrDealId : ''}`;
+    const lineId = `${itemType}:${product.id}:${variant?.id ?? 'base'}:${addonIds.join('-') || 'none'}${comboDealId ? ':' + comboDealId : ''}`;
 
     const currentItems = [...this.itemsSignal()];
     const index = currentItems.findIndex((i) => i.lineId === lineId);
@@ -169,8 +169,7 @@ export class CartService {
         notes,
         isComplimentary: false,
         itemType,
-        comboId: itemType === 'COMBO' ? comboOrDealId : undefined,
-        dealId: itemType === 'DEAL' ? comboOrDealId : undefined,
+        comboId: itemType === 'COMBO' ? comboDealId : undefined,
         selectedAddons: selectedAddons ? [...selectedAddons] : [],
       });
     }

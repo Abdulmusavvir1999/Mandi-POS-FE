@@ -386,7 +386,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         border-radius: 16px;
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
-        box-shadow: 0 2px 10px -4px rgba(46, 16, 101, 0.1);
+        box-shadow: 0 2px 10px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.1);
       }
 
       .detail-metric.is-warning { border-color: #FCA5A5; background: #FEF2F2; }
@@ -488,15 +488,15 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         min-width: 2.25rem;
         padding: 0.15rem 0.6rem;
         border-radius: 999px;
-        background: #DCFCE7;
+        background: var(--success-light, #DCFCE7);
         border: 1px solid #86EFAC;
-        color: #15803D;
+        color: var(--success, #15803D);
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.75rem;
         font-weight: 800;
       }
 
-      .servings-pill.is-none { background: #FEE2E2; border-color: #FCA5A5; color: #B91C1C; }
+      .servings-pill.is-none { background: var(--danger-light, #FEE2E2); border-color: #FCA5A5; color: var(--danger, #B91C1C); }
 
       .section-note {
         display: flex;

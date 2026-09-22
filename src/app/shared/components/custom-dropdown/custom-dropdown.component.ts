@@ -15,6 +15,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { openFloatingPanel, releaseFloatingPanel } from '../floating-panel-registry';
 
 export interface DropdownOption {
   value: any;
@@ -87,6 +88,7 @@ export interface DropdownOption {
             title="Search options"
             type="text"
             [(ngModel)]="searchQuery"
+            (ngModelChange)="onOptionSearchChange()"
             (click)="$event.stopPropagation()"
             placeholder="Search options..."
             class="dropdown-search-input"
@@ -96,7 +98,7 @@ export interface DropdownOption {
             *ngIf="searchQuery"
             type="button"
             class="search-clear-btn"
-            (click)="searchQuery = ''; $event.stopPropagation()"
+            (click)="searchQuery = ''; onOptionSearchChange(); $event.stopPropagation()"
           >
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -189,18 +191,18 @@ export interface DropdownOption {
         outline: none;
         box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 1px 3px rgba(46, 16, 101, 0.04);
+        box-shadow: 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
       }
 
       .dropdown-trigger:hover:not(:disabled) {
         border-color: var(--primary, #7E22CE);
         background: var(--card-bg, #ffffff);
-        box-shadow: 0 2px 8px rgba(126, 34, 206, 0.08);
+        box-shadow: 0 2px 8px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
       }
 
       .custom-dropdown-container.is-open .dropdown-trigger {
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15)), 0 4px 12px rgba(46, 16, 101, 0.06);
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15)), 0 4px 12px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
       }
 
       .trigger-left {
@@ -268,7 +270,7 @@ export interface DropdownOption {
         border-radius: 14px;
         padding: 0.4rem;
         z-index: 2000;
-        box-shadow: 0 16px 36px -4px rgba(46, 16, 101, 0.16), 0 6px 12px -2px rgba(46, 16, 101, 0.08);
+        box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16), 0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
         /* Hidden for the one frame between being rendered and being measured,
            so it never flashes at the top-left corner. */
         visibility: hidden;
@@ -536,6 +538,15 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   ngOnDestroy(): void {
     window.removeEventListener('resize', this.reposition);
     document.removeEventListener('scroll', this.reposition, true);
+    releaseFloatingPanel(this);
+  }
+
+  /** Closes the panel and forgets any in-panel option search. */
+  public close(): void {
+    this.isOpen = false;
+    this.isPositioned = false;
+    this.searchQuery = '';
+    releaseFloatingPanel(this);
   }
 
   /**
@@ -590,19 +601,18 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
-      this.isOpen = false;
-      this.isPositioned = false;
-      this.searchQuery = '';
+      this.close();
     }
   }
 
   @HostListener('keydown.escape')
   onEscape(): void {
-    if (this.isOpen) {
-      this.isOpen = false;
-      this.isPositioned = false;
-      this.searchQuery = '';
-    }
+    if (this.isOpen) this.close();
+  }
+
+  /** The option list just changed length, so the panel needs re-measuring. */
+  onOptionSearchChange(): void {
+    setTimeout(() => this.positionPanel());
   }
 
   get selectedOption(): DropdownOption | undefined {
@@ -624,14 +634,16 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   toggleOpen(event: MouseEvent): void {
     event.stopPropagation();
     if (this.disabled) return;
-    this.isOpen = !this.isOpen;
     if (this.isOpen) {
-      this.isPositioned = false;
-      // The panel has to exist in the DOM before it can be measured.
-      setTimeout(() => this.positionPanel());
-    } else {
-      this.searchQuery = '';
+      this.close();
+      return;
     }
+    openFloatingPanel(this);
+    this.isOpen = true;
+    this.searchQuery = '';
+    this.isPositioned = false;
+    // The panel has to exist in the DOM before it can be measured.
+    setTimeout(() => this.positionPanel());
   }
 
   selectOption(opt: DropdownOption, event: MouseEvent): void {
@@ -640,9 +652,7 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     this.onChange(this.innerValue);
     this.onTouched();
     this.valueChange.emit(this.innerValue);
-    this.isOpen = false;
-    this.isPositioned = false;
-    this.searchQuery = '';
+    this.close();
   }
 
   // ControlValueAccessor methods

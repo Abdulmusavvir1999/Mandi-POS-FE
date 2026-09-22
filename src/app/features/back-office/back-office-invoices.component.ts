@@ -42,7 +42,7 @@ import { BackOfficeResultComponent } from './back-office-result.component';
             title="Search invoices"
             type="text"
             [(ngModel)]="searchQuery"
-            (ngModelChange)="onFilterChange()"
+            (ngModelChange)="onSearchChanged()"
             placeholder="Search invoice #, order #, customer..."
             class="toolbar-search-input"
           />
@@ -393,7 +393,7 @@ import { BackOfficeResultComponent } from './back-office-result.component';
         border-top: 1px solid var(--card-border, #e9d5ff);
       }
       .bo-discount-on {
-        color: #dc2626;
+        color: var(--danger, #DC2626);
       }
 
       .bo-selection-bar {
@@ -405,8 +405,8 @@ import { BackOfficeResultComponent } from './back-office-result.component';
         margin-bottom: 1rem;
         padding: 0.7rem 1rem;
         border-radius: 0.9rem;
-        background: linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%);
-        box-shadow: 0 8px 22px -6px rgba(126, 34, 206, 0.5);
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
+        box-shadow: 0 8px 22px -6px rgba(var(--primary-rgb, 126, 34, 206), 0.5);
       }
       .bo-selection-count {
         display: flex;
@@ -436,29 +436,29 @@ import { BackOfficeResultComponent } from './back-office-result.component';
         color: #ffffff;
       }
       .bo-selection-bar .bo-btn-danger {
-        background: #dc2626;
-        border-color: #b91c1c;
+        background: var(--danger, #DC2626);
+        border-color: var(--danger, #B91C1C);
       }
       .bo-selection-bar .bo-btn-danger:hover:not(:disabled) {
-        background: #b91c1c;
+        background: var(--danger, #B91C1C);
       }
 
       .bo-checkbox {
         width: 16px;
         height: 16px;
-        accent-color: #7e22ce;
+        accent-color: var(--primary, #7E22CE);
         cursor: pointer;
       }
       .bo-row-selected {
-        background: rgba(126, 34, 206, 0.06) !important;
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.06) !important;
       }
       .bo-row-icon {
         width: 34px;
         height: 34px;
         border-radius: 0.7rem;
-        background: #f3e8ff;
-        border: 1px solid #e9d5ff;
-        color: #7e22ce;
+        background: var(--primary-light, #F3E8FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--primary, #7E22CE);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -476,14 +476,14 @@ import { BackOfficeResultComponent } from './back-office-result.component';
         border: 1px solid transparent;
       }
       .bo-status-pill.is-done {
-        background: #dcfce7;
+        background: var(--success-light, #DCFCE7);
         color: #166534;
-        border-color: #bbf7d0;
+        border-color: var(--success-light, #BBF7D0);
       }
       .bo-status-pill.is-cancelled {
-        background: #fee2e2;
+        background: var(--danger-light, #FEE2E2);
         color: #991b1b;
-        border-color: #fecaca;
+        border-color: var(--danger-light, #FECACA);
       }
       .bo-invoice-link {
         display: inline-flex;
@@ -492,9 +492,9 @@ import { BackOfficeResultComponent } from './back-office-result.component';
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 0.68rem;
         font-weight: 700;
-        color: #7e22ce;
-        background: #faf5ff;
-        border: 1px solid #e9d5ff;
+        color: var(--primary, #7E22CE);
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
         border-radius: 0.4rem;
         padding: 0.12rem 0.4rem;
       }
@@ -507,7 +507,7 @@ import { BackOfficeResultComponent } from './back-office-result.component';
       .bo-detail-cell {
         padding: 0.5rem 0.7rem;
         border-radius: 0.6rem;
-        background: rgba(126, 34, 206, 0.05);
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.05);
         border: 1px solid var(--card-border, #e9d5ff);
       }
       .bo-detail-label {
@@ -554,7 +554,7 @@ import { BackOfficeResultComponent } from './back-office-result.component';
         padding-top: 0.5rem;
       }
       .bo-summary-row.is-total strong {
-        color: #16a34a;
+        color: var(--success, #16A34A);
         font-size: 0.95rem;
       }
     `,
@@ -572,6 +572,11 @@ export class BackOfficeInvoicesComponent implements OnInit {
 
   public pageSize = 20;
   public currentPage = 1;
+
+  /** Debounce for the search box, so typing is not one request per key. */
+  private searchTimer: any = null;
+  /** Identifies the newest request, so a slow earlier one cannot overwrite it. */
+  private loadToken = 0;
 
   public searchQuery = '';
   public selectedPayment: any = '';
@@ -607,9 +612,13 @@ export class BackOfficeInvoicesComponent implements OnInit {
   }
 
   public loadInvoices(page = 1): void {
+    // A filter or page change supersedes a pending debounce, which would
+    // otherwise fire a second, redundant request straight after this one.
+    clearTimeout(this.searchTimer);
     this.isLoading = true;
     this.loadError = null;
     this.currentPage = page;
+    const token = ++this.loadToken;
 
     this.backOffice
       .getInvoices({
@@ -623,6 +632,7 @@ export class BackOfficeInvoicesComponent implements OnInit {
       })
       .subscribe({
         next: (res) => {
+          if (token !== this.loadToken) return;
           this.isLoading = false;
           if (res.success) {
             this.invoices = res.data || [];
@@ -631,6 +641,7 @@ export class BackOfficeInvoicesComponent implements OnInit {
           }
         },
         error: (err) => {
+          if (token !== this.loadToken) return;
           this.isLoading = false;
           this.loadError = err?.error?.message || 'Unable to load invoices from the server.';
         },
@@ -639,6 +650,12 @@ export class BackOfficeInvoicesComponent implements OnInit {
 
   public onFilterChange(): void {
     this.loadInvoices(1);
+  }
+
+  /** Waits for a pause in typing before querying the server. */
+  public onSearchChanged(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.loadInvoices(1), 300);
   }
 
   /** Keeps ids from other pages; only drops them when this is the whole set. */

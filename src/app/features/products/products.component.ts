@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Product, Category, ProductAddon, ComboMeal, MealDeal } from '../../core/models';
+import { Product, Category, ProductAddon, ComboDeal } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
@@ -30,14 +30,58 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Menu Catalog</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Dishes & Products</span>
-        <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">Live Menu</span>
+      <!-- Breadcrumb left, the catalog's other record types right. Add-ons,
+           combo deals are siblings of the dish list rather than views of
+           it, so they live up here instead of among the four dish tabs. -->
+      <div class="breadcrumbs-strip">
+        <div class="breadcrumbs-row">
+          <span>{{ settingsService.businessName() }}</span>
+          <span class="breadcrumb-separator">›</span>
+          <span>Menu Catalog</span>
+          <span class="breadcrumb-separator">›</span>
+          <span>Dishes & Products</span>
+          <span class="breadcrumb-separator">›</span>
+          <span class="breadcrumb-current">Live Menu</span>
+        </div>
+
+        <div class="aux-tabs-bar">
+          <!-- First in the group and the way back from the other three.
+               It stays lit for any of the four dish tabs below, because
+               those are all views OF products, not siblings of it. -->
+          <button
+            type="button"
+            (click)="activeNavTab = 'overview'; currentPage = 1"
+            class="aux-tab-btn"
+            [class.is-active]="isCatalogTab"
+          >
+            <span class="material-symbols-outlined">restaurant_menu</span>
+            <span>Products</span>
+            <span class="tab-count-badge">{{ products.length }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="activeNavTab = 'addons'; currentPage = 1"
+            class="aux-tab-btn"
+            [class.is-active]="activeNavTab === 'addons'"
+          >
+            <span class="material-symbols-outlined">extension</span>
+            <span>Add-ons</span>
+            <span class="tab-count-badge">{{ addonsList.length }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="activeNavTab = 'combos'; currentPage = 1"
+            class="aux-tab-btn"
+            [class.is-active]="activeNavTab === 'combos'"
+          >
+            <span class="material-symbols-outlined">lunch_dining</span>
+            <span>Combo Deals</span>
+            <span class="tab-count-badge">{{ combosList.length }}</span>
+          </button>
+
+        </div>
       </div>
 
       <div class="module-header-card">
@@ -105,17 +149,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined">add_circle</span>
-            <span>New Combo Meal</span>
-          </button>
-
-          <button
-            *ngIf="activeNavTab === 'deals'"
-            type="button"
-            (click)="openDealModal()"
-            class="action-btn btn-gradient-purple"
-          >
-            <span class="material-symbols-outlined">add_circle</span>
-            <span>New Meal Deal</span>
+            <span>New Combo Deal</span>
           </button>
 
           <button
@@ -133,7 +167,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 2. SUB-NAVIGATION TABS                                          -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="module-tabs-bar">
+      <!-- Dish views, dish metrics: both belong to Products, so they leave
+           the page entirely on the add-on and combo deal tabs rather than
+           sitting there describing records that are not on screen. -->
+      <div class="module-tabs-bar" *ngIf="isCatalogTab">
         <button
           type="button"
           (click)="activeNavTab = 'overview'; currentPage = 1"
@@ -178,44 +215,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <span class="tab-count-badge">{{ categories.length }}</span>
         </button>
 
-        <button
-          type="button"
-          (click)="activeNavTab = 'addons'; currentPage = 1"
-          class="module-tab-btn"
-          [class.is-active]="activeNavTab === 'addons'"
-        >
-          <span class="material-symbols-outlined">extension</span>
-          <span>Add-ons</span>
-          <span class="tab-count-badge">{{ addonsList.length }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="activeNavTab = 'combos'; currentPage = 1"
-          class="module-tab-btn"
-          [class.is-active]="activeNavTab === 'combos'"
-        >
-          <span class="material-symbols-outlined">lunch_dining</span>
-          <span>Combo Meals</span>
-          <span class="tab-count-badge">{{ combosList.length }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="activeNavTab = 'deals'; currentPage = 1"
-          class="module-tab-btn"
-          [class.is-active]="activeNavTab === 'deals'"
-        >
-          <span class="material-symbols-outlined">local_offer</span>
-          <span>Meal Deals</span>
-          <span class="tab-count-badge">{{ dealsList.length }}</span>
-        </button>
+        <!-- This row is the four dish views only. Add-ons and Combo Deals
+             moved up to the breadcrumb strip: they share
+             activeNavTab with these, so selecting one here clears them and
+             vice versa. -->
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 3. 6 KPI METRIC MINI CARDS STRIP                                -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="kpi-cards-grid">
+      <div class="kpi-cards-grid" *ngIf="isCatalogTab">
         <!-- KPI 1 -->
         <div class="kpi-card card-accent-purple">
           <div class="kpi-header-row">
@@ -328,7 +337,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <!-- Category / Status / Stock / Sort only describe dishes, so they
-               step aside on the add-on, combo and deal tabs rather than sitting
+               step aside on the add-on and combo deal tabs rather than sitting
                there inert. Search, the count and Export serve every tab. -->
 
           <!-- Category Selector -->
@@ -391,7 +400,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 5. PRODUCTS DATA TABLE / ADD-ONS / COMBOS / DEALS               -->
+      <!-- 5. PRODUCTS DATA TABLE / ADD-ONS / COMBO DEALS                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="table-container-card">
 
@@ -404,34 +413,50 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <table class="saas-data-table">
               <thead>
                 <tr>
-                  <th style="width: 25%;">Add-on Name</th>
-                  <th style="width: 20%;">Category</th>
-                  <th style="width: 20%;">Price (₹ / SAR)</th>
+                  <th style="width: 34%;">Add-on Name</th>
+                  <th style="width: 16%;">Category</th>
+                  <th style="width: 15%;">Price (₹ / SAR)</th>
                   <th style="width: 20%;">Availability</th>
                   <th style="width: 15%; text-align: center;">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let a of filteredAddons">
-                  <td class="font-bold text-xs text-[var(--text-main)]">{{ a.name }}</td>
                   <td>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                      {{ a.category || 'General' }}
-                    </span>
+                    <div class="addon-identity">
+                      <span class="addon-thumb" [class.is-empty]="!hasOfferImage('addon', a.id, a.image_url)">
+                        <img
+                          *ngIf="hasOfferImage('addon', a.id, a.image_url)"
+                          [src]="settingsService.assetUrl(a.image_url!)"
+                          [alt]="a.name"
+                          loading="lazy"
+                          draggable="false"
+                          (error)="onOfferImageError('addon', a.id)"
+                        />
+                        <span
+                          *ngIf="!hasOfferImage('addon', a.id, a.image_url)"
+                          class="material-symbols-outlined"
+                        >extension</span>
+                      </span>
+                      <span class="addon-name">{{ a.name }}</span>
+                    </div>
                   </td>
-                  <td class="font-mono font-bold text-xs text-purple-900">+{{ a.price | appCurrency:'1.0-2' }}</td>
                   <td>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="a.is_available ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'">
-                      {{ a.is_available ? '● Available' : '○ Unavailable' }}
+                    <span class="kpi-pill pill-purple">{{ a.category || 'General' }}</span>
+                  </td>
+                  <td class="addon-price font-mono">+{{ a.price | appCurrency:'1.0-2' }}</td>
+                  <td>
+                    <span class="kpi-pill" [ngClass]="a.is_available ? 'pill-success' : 'pill-rose'">
+                      <i class="addon-state-dot"></i>{{ a.is_available ? 'Available' : 'Unavailable' }}
                     </span>
                   </td>
                   <td style="text-align: center;">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <button type="button" (click)="openAddonModal(a)" class="action-btn btn-outline-purple !p-1" title="Edit">
-                        <span class="material-symbols-outlined !text-sm">edit</span>
+                    <div class="addon-row-actions">
+                      <button type="button" (click)="openAddonModal(a)" class="offer-btn" title="Edit add-on" aria-label="Edit add-on">
+                        <span class="material-symbols-outlined">edit</span>
                       </button>
-                      <button type="button" (click)="deleteAddon(a.id)" class="action-btn btn-outline-purple !p-1 text-red-600 hover:bg-red-50" title="Delete">
-                        <span class="material-symbols-outlined !text-sm">delete</span>
+                      <button type="button" (click)="deleteAddon(a.id)" class="offer-btn is-danger" title="Delete add-on" aria-label="Delete add-on">
+                        <span class="material-symbols-outlined">delete</span>
                       </button>
                     </div>
                   </td>
@@ -450,116 +475,97 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- ─── TAB: COMBO MEALS ─── -->
-        <div *ngIf="activeNavTab === 'combos'" class="p-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div *ngFor="let c of filteredCombos" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <span class="font-mono text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ c.code || 'COMBO' }}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="c.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
-                    {{ c.is_available ? '● Live' : '○ Inactive' }}
+        <!-- ─── TAB: COMBO DEALS ─── -->
+        <div *ngIf="activeNavTab === 'combos'" class="offers-stage">
+          <div class="offers-grid">
+            <article
+              *ngFor="let c of filteredCombos"
+              class="offer-card offer-card--combo"
+              [class.is-dormant]="!c.is_available"
+            >
+              <!-- Photo, code chip and live state share one band: the chips
+                   sit over the picture so the card keeps its six grid rows
+                   whether or not a combo has been given an image. -->
+              <div class="offer-hero" [class.is-empty]="!hasOfferImage('combo', c.id, c.image_url)">
+                <img
+                  *ngIf="hasOfferImage('combo', c.id, c.image_url)"
+                  [src]="settingsService.assetUrl(c.image_url!)"
+                  [alt]="c.name"
+                  loading="lazy"
+                  draggable="false"
+                  (error)="onOfferImageError('combo', c.id)"
+                />
+                <span *ngIf="!hasOfferImage('combo', c.id, c.image_url)" class="material-symbols-outlined offer-hero-icon">lunch_dining</span>
+                <header class="offer-head">
+                  <span class="offer-kind">
+                    <span class="material-symbols-outlined">lunch_dining</span>
+                    <span class="offer-kind-code font-mono">{{ c.code || 'COMBO' }}</span>
                   </span>
-                </div>
-                <h4 class="text-sm font-black text-[#2E1065] mb-1">{{ c.name }}</h4>
-                <p class="text-xs text-gray-600 mb-3">{{ c.description || 'Special combo bundle' }}</p>
-
-                <!-- Included items list -->
-                <div class="p-2.5 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl text-xs mb-3 space-y-1">
-                  <div class="font-bold text-[10px] uppercase text-purple-800 tracking-wider mb-1">Includes:</div>
-                  <div *ngFor="let item of c.items" class="flex items-center justify-between text-gray-700">
-                    <span>{{ item.quantity }}x {{ item.product_name || 'Dish' }}</span>
-                  </div>
-                  <div *ngIf="!c.items?.length" class="text-gray-400 italic">No items linked</div>
-                </div>
+                  <span class="offer-state" [class.is-off]="!c.is_available">
+                    <i class="offer-dot"></i>{{ c.is_available ? 'Live' : 'Inactive' }}
+                  </span>
+                </header>
               </div>
 
-              <div>
-                <div class="flex items-center justify-between pt-2 border-t border-gray-100 mb-3">
-                  <div>
-                    <span class="text-base font-black text-emerald-600 font-mono">{{ c.combo_price | appCurrency:'1.0-2' }}</span>
-                    <span *ngIf="c.original_price && c.original_price > c.combo_price" class="text-xs text-gray-400 line-through ml-1.5 font-mono">{{ c.original_price | appCurrency:'1.0-2' }}</span>
-                  </div>
-                  <span *ngIf="c.savings_amount && c.savings_amount > 0" class="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                    Save {{ c.savings_amount | appCurrency:'1.0-0' }}
-                  </span>
-                </div>
+              <h4 class="offer-title">{{ c.name }}</h4>
+              <p class="offer-blurb">{{ c.description || 'Special combo bundle' }}</p>
 
-                <div class="flex items-center justify-end gap-2">
-                  <button type="button" (click)="openComboModal(c)" class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs">
-                    <span class="material-symbols-outlined !text-sm">edit</span>
-                    <span>Edit</span>
-                  </button>
-                  <button type="button" (click)="deleteCombo(c.id)" class="action-btn btn-outline-purple !py-1 !px-2 !text-xs text-red-600 hover:bg-red-50">
-                    <span class="material-symbols-outlined !text-sm">delete</span>
-                  </button>
+              <!-- Contents. A bundle with nothing attached cannot price or
+                   deduct stock at the till, so the empty case is a warning
+                   rather than the grey italic aside it used to be. -->
+              <div class="offer-contents" [class.is-unlinked]="!c.items?.length">
+                <div class="offer-contents-label">
+                  <span class="material-symbols-outlined">{{ c.items?.length ? 'checklist' : 'warning' }}</span>
+                  <span>{{ c.items?.length ? 'Includes' : 'Nothing linked' }}</span>
+                  <span *ngIf="c.items?.length" class="offer-count">{{ comboUnitCount(c) }}</span>
                 </div>
+                <ul *ngIf="c.items?.length" class="offer-items">
+                  <li *ngFor="let item of c.items">
+                    <span class="offer-qty font-mono">{{ item.quantity }}&times;</span>
+                    <span class="offer-item-name">{{ item.product_name || 'Dish' }}</span>
+                  </li>
+                </ul>
+                <p *ngIf="!c.items?.length" class="offer-warn">
+                  The description names dishes but none are attached — this combo
+                  will not price or deduct stock correctly.
+                </p>
               </div>
-            </div>
+
+              <footer class="offer-foot">
+                <div class="offer-price">
+                  <span class="offer-now font-mono">{{ c.combo_price | appCurrency:'1.0-2' }}</span>
+                  <span
+                    *ngIf="c.original_price && c.original_price > c.combo_price"
+                    class="offer-was font-mono"
+                  >{{ c.original_price | appCurrency:'1.0-2' }}</span>
+                </div>
+                <span *ngIf="c.savings_amount && c.savings_amount > 0" class="offer-save">
+                  Save {{ c.savings_amount | appCurrency:'1.0-0' }}
+                  <em *ngIf="comboSavingsPercent(c) as pct">{{ pct }}%</em>
+                </span>
+              </footer>
+
+              <div class="offer-actions">
+                <button type="button" (click)="openComboModal(c)" class="offer-btn">
+                  <span class="material-symbols-outlined">edit</span><span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="deleteCombo(c.id)"
+                  class="offer-btn is-danger"
+                  title="Delete combo"
+                  aria-label="Delete combo"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </article>
           </div>
-          <div *ngIf="filteredCombos.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
-            <span class="material-symbols-outlined text-4xl text-purple-400 mb-2">lunch_dining</span>
-            <h4 class="text-sm font-bold text-gray-700">No Combo Meals Created</h4>
-            <p class="text-xs text-gray-500">Create delicious bundles like "Duo Mandi Combo" or "Family Pack".</p>
-          </div>
-        </div>
 
-        <!-- ─── TAB: MEAL DEALS ─── -->
-        <div *ngIf="activeNavTab === 'deals'" class="p-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div *ngFor="let d of filteredDeals" class="p-4 rounded-2xl border border-[#E9D5FF] bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <span class="font-mono text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ d.code || 'DEAL' }}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="d.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
-                    {{ d.is_active ? '● Active' : '○ Inactive' }}
-                  </span>
-                </div>
-                <h4 class="text-sm font-black text-[#2E1065] mb-1">{{ d.title }}</h4>
-                <p class="text-xs text-gray-600 mb-2">{{ d.description || 'Limited time meal deal' }}</p>
-
-                <!-- Schedule Pill -->
-                <div class="flex items-center gap-1.5 text-[11px] text-purple-900 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 mb-3 font-semibold">
-                  <span class="material-symbols-outlined text-sm">schedule</span>
-                  <span>Days: {{ d.days_of_week || 'ALL' }} | {{ d.start_time || '00:00' }} - {{ d.end_time || '23:59' }}</span>
-                </div>
-
-                <!-- Included items -->
-                <div class="p-2.5 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl text-xs mb-3 space-y-1">
-                  <div class="font-bold text-[10px] uppercase text-purple-800 tracking-wider mb-1">Items Included:</div>
-                  <div *ngFor="let item of d.items" class="flex items-center justify-between text-gray-700">
-                    <span>{{ item.quantity }}x {{ item.product_name || 'Dish' }}</span>
-                  </div>
-                  <div *ngIf="!d.items?.length" class="text-gray-400 italic">No dishes attached</div>
-                </div>
-              </div>
-
-              <div>
-                <div class="flex items-center justify-between pt-2 border-t border-gray-100 mb-3">
-                  <div>
-                    <span class="text-base font-black text-purple-900 font-mono">{{ d.deal_price | appCurrency:'1.0-2' }}</span>
-                  </div>
-                  <span *ngIf="d.discount_percentage && d.discount_percentage > 0" class="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                    {{ d.discount_percentage }}% OFF
-                  </span>
-                </div>
-
-                <div class="flex items-center justify-end gap-2">
-                  <button type="button" (click)="openDealModal(d)" class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs">
-                    <span class="material-symbols-outlined !text-sm">edit</span>
-                    <span>Edit</span>
-                  </button>
-                  <button type="button" (click)="deleteDeal(d.id)" class="action-btn btn-outline-purple !py-1 !px-2 !text-xs text-red-600 hover:bg-red-50">
-                    <span class="material-symbols-outlined !text-sm">delete</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div *ngIf="filteredDeals.length === 0" class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
-            <span class="material-symbols-outlined text-4xl text-purple-400 mb-2">local_offer</span>
-            <h4 class="text-sm font-bold text-gray-700">No Meal Deals Created</h4>
-            <p class="text-xs text-gray-500">Create time-sensitive specials like "Friday Feast" or "Lunch Special 20% Off".</p>
+          <div *ngIf="filteredCombos.length === 0" class="offers-empty">
+            <span class="material-symbols-outlined">lunch_dining</span>
+            <h4>No Combo Deals Created</h4>
+            <p>Create delicious bundles like "Duo Mandi Combo" or "Family Pack".</p>
           </div>
         </div>
 
@@ -915,6 +921,50 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <input type="number" step="any" min="0" [(ngModel)]="addonForm.price" name="addonPrice" class="form-control text-sm font-mono font-bold" required />
               </div>
             </div>
+            <div>
+              <label class="form-label text-xs font-bold text-gray-700 uppercase">Add-on Photo</label>
+              <div class="image-upload-row">
+                <div class="image-upload-preview" [class.is-empty]="!addonForm.image_url">
+                  <img
+                    *ngIf="addonForm.image_url"
+                    [src]="settingsService.assetUrl(addonForm.image_url)"
+                    alt="Add-on photo preview"
+                  />
+                  <span *ngIf="!addonForm.image_url" class="material-symbols-outlined">add_photo_alternate</span>
+                </div>
+                <div class="image-upload-actions">
+                  <input
+                    type="file"
+                    hidden
+                    #addonPicker
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    (change)="onOfferImageFile($event, addonPicker, addonForm, 'addon')"
+                    title="Choose add-on photo"
+                  />
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      [disabled]="uploadingImageFor === 'addon'"
+                      (click)="addonPicker.click()"
+                    >
+                      <span class="material-symbols-outlined">{{ uploadingImageFor === 'addon' ? 'progress_activity' : 'upload' }}</span>
+                      <span>{{ uploadingImageFor === 'addon' ? 'Uploading…' : (addonForm.image_url ? 'Replace' : 'Choose Image') }}</span>
+                    </button>
+                    <button
+                      *ngIf="addonForm.image_url && uploadingImageFor !== 'addon'"
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      (click)="addonForm.image_url = ''"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
+                </div>
+              </div>
+            </div>
             <div class="flex items-center gap-2 pt-2">
               <input type="checkbox" id="addonAvail" [(ngModel)]="addonForm.is_available" name="addonAvail" class="rounded border-gray-300 text-purple-600" />
               <label for="addonAvail" class="text-xs font-semibold text-gray-700">Available for ordering on POS</label>
@@ -927,16 +977,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
       </div>
 
-      <!-- Combo Meal Modal -->
+      <!-- Combo Deal Modal -->
       <div class="modal-backdrop" *ngIf="showComboModal">
         <div class="modal-content shadow-2xl max-w-lg">
           <div class="flex items-center justify-between pb-3 mb-4 border-b border-purple-200">
-            <h3 class="text-lg font-black text-[#2E1065]">{{ editingCombo ? 'Edit Combo Meal' : 'Create Combo Meal' }}</h3>
+            <h3 class="text-lg font-black text-[#2E1065]">{{ editingCombo ? 'Edit Combo Deal' : 'Create Combo Deal' }}</h3>
             <button type="button" (click)="showComboModal = false" class="modal-close-btn"><span class="material-symbols-outlined">close</span></button>
           </div>
           <form (ngSubmit)="saveCombo()" class="space-y-3">
             <div>
-              <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Meal Name</label>
+              <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Deal Name</label>
               <input type="text" [(ngModel)]="comboForm.name" name="comboName" class="form-control text-sm" placeholder="e.g. Duo Mandi Combo" required />
             </div>
             <div>
@@ -953,102 +1003,179 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <input type="number" step="any" min="0" [(ngModel)]="comboForm.original_price" name="comboOrigPrice" class="form-control text-sm font-mono" placeholder="Sum of dishes" />
               </div>
             </div>
+            <div>
+              <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Photo</label>
+              <div class="image-upload-row">
+                <div class="image-upload-preview" [class.is-empty]="!comboForm.image_url">
+                  <img
+                    *ngIf="comboForm.image_url"
+                    [src]="settingsService.assetUrl(comboForm.image_url)"
+                    alt="Combo deal photo preview"
+                  />
+                  <span *ngIf="!comboForm.image_url" class="material-symbols-outlined">add_photo_alternate</span>
+                </div>
+                <div class="image-upload-actions">
+                  <input
+                    type="file"
+                    hidden
+                    #comboPicker
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    (change)="onOfferImageFile($event, comboPicker, comboForm, 'combo')"
+                    title="Choose combo photo"
+                  />
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      [disabled]="uploadingImageFor === 'combo'"
+                      (click)="comboPicker.click()"
+                    >
+                      <span class="material-symbols-outlined">{{ uploadingImageFor === 'combo' ? 'progress_activity' : 'upload' }}</span>
+                      <span>{{ uploadingImageFor === 'combo' ? 'Uploading…' : (comboForm.image_url ? 'Replace' : 'Choose Image') }}</span>
+                    </button>
+                    <button
+                      *ngIf="comboForm.image_url && uploadingImageFor !== 'combo'"
+                      type="button"
+                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
+                      (click)="comboForm.image_url = ''"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
+                </div>
+              </div>
+            </div>
             <!-- Included Items Section -->
-            <div class="pt-2 border-t border-purple-100">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-bold text-purple-900 uppercase">Included Dishes</span>
-                <button type="button" (click)="addComboItem()" class="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-sm">add_circle</span> Add Dish
+            <div class="offer-items-block">
+              <div class="offer-items-head">
+                <span class="offer-items-label">Included Dishes</span>
+                <button type="button" (click)="addComboItem()" class="add-dish-btn">
+                  <span class="material-symbols-outlined">add_circle</span>
+                  <span>Add Dish</span>
                 </button>
               </div>
-              <div *ngFor="let item of comboForm.items; let idx = index" class="flex items-center gap-2 mb-2">
-                <select [(ngModel)]="item.product_id" name="comboItemProd_{{idx}}" class="form-control text-xs flex-1">
-                  <option *ngFor="let p of products" [value]="p.id">{{ p.name }} (₹{{ p.selling_price }})</option>
-                </select>
-                <input type="number" min="1" [(ngModel)]="item.quantity" name="comboItemQty_{{idx}}" class="form-control text-xs w-16 text-center" placeholder="Qty" />
-                <button type="button" (click)="removeComboItem(idx)" class="text-red-500 hover:text-red-700 p-1">
-                  <span class="material-symbols-outlined text-sm">delete</span>
-                </button>
+
+              <div class="offer-items-rows">
+                <div *ngFor="let item of comboForm.items; let idx = index" class="offer-item-row">
+                  <select
+                    [(ngModel)]="item.product_id"
+                    name="comboItemProd_{{idx}}"
+                    class="form-control offer-item-dish"
+                    aria-label="Dish"
+                  >
+                    <option *ngFor="let p of products" [value]="p.id">{{ p.name }} (₹{{ p.selling_price }})</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    [(ngModel)]="item.quantity"
+                    name="comboItemQty_{{idx}}"
+                    class="form-control offer-item-qty font-mono"
+                    aria-label="Quantity"
+                  />
+                  <button
+                    type="button"
+                    (click)="removeComboItem(idx)"
+                    class="offer-item-remove"
+                    title="Remove dish"
+                    aria-label="Remove dish"
+                  >
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+
+                <p *ngIf="!comboForm.items?.length" class="offer-items-empty">
+                  No dishes yet — use Add Dish to build the bundle.
+                </p>
               </div>
             </div>
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-purple-100">
               <button type="button" (click)="showComboModal = false" class="action-btn btn-outline-purple">Cancel</button>
-              <button type="submit" class="action-btn btn-gradient-purple">Save Combo Meal ✓</button>
+              <button type="submit" class="action-btn btn-gradient-purple">Save Combo Deal ✓</button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Meal Deal Modal -->
-      <div class="modal-backdrop" *ngIf="showDealModal">
-        <div class="modal-content shadow-2xl max-w-lg">
-          <div class="flex items-center justify-between pb-3 mb-4 border-b border-purple-200">
-            <h3 class="text-lg font-black text-[#2E1065]">{{ editingDeal ? 'Edit Meal Deal' : 'Create Meal Deal' }}</h3>
-            <button type="button" (click)="showDealModal = false" class="modal-close-btn"><span class="material-symbols-outlined">close</span></button>
-          </div>
-          <form (ngSubmit)="saveDeal()" class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="form-label text-xs font-bold text-gray-700 uppercase">Deal Title</label>
-                <input type="text" [(ngModel)]="dealForm.title" name="dealTitle" class="form-control text-sm" placeholder="e.g. Friday Family Feast" required />
-              </div>
-              <div>
-                <label class="form-label text-xs font-bold text-gray-700 uppercase">Promo Code</label>
-                <input type="text" [(ngModel)]="dealForm.code" name="dealCode" class="form-control font-mono text-sm" placeholder="e.g. FRIDAY50" />
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="form-label text-xs font-bold text-gray-700 uppercase">Deal Price (₹)</label>
-                <input type="number" step="any" min="0" [(ngModel)]="dealForm.deal_price" name="dealPrice" class="form-control text-sm font-mono font-bold text-purple-900" required />
-              </div>
-              <div>
-                <label class="form-label text-xs font-bold text-gray-700 uppercase">Discount (%)</label>
-                <input type="number" min="0" max="100" [(ngModel)]="dealForm.discount_percentage" name="dealDiscount" class="form-control text-sm font-mono" placeholder="e.g. 20" />
-              </div>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="form-label text-[10px] font-bold text-gray-700 uppercase">Days of Week</label>
-                <input type="text" [(ngModel)]="dealForm.days_of_week" name="dealDays" class="form-control text-xs" placeholder="ALL or FRI,SAT" />
-              </div>
-              <div>
-                <label class="form-label text-[10px] font-bold text-gray-700 uppercase">Start Time</label>
-                <input type="time" [(ngModel)]="dealForm.start_time" name="dealStart" class="form-control text-xs" />
-              </div>
-              <div>
-                <label class="form-label text-[10px] font-bold text-gray-700 uppercase">End Time</label>
-                <input type="time" [(ngModel)]="dealForm.end_time" name="dealEnd" class="form-control text-xs" />
-              </div>
-            </div>
-            <!-- Included Items Section -->
-            <div class="pt-2 border-t border-purple-100">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-bold text-purple-900 uppercase">Included Dishes</span>
-                <button type="button" (click)="addDealItem()" class="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-sm">add_circle</span> Add Dish
-                </button>
-              </div>
-              <div *ngFor="let item of dealForm.items; let idx = index" class="flex items-center gap-2 mb-2">
-                <select [(ngModel)]="item.product_id" name="dealItemProd_{{idx}}" class="form-control text-xs flex-1">
-                  <option *ngFor="let p of products" [value]="p.id">{{ p.name }} (₹{{ p.selling_price }})</option>
-                </select>
-                <input type="number" min="1" [(ngModel)]="item.quantity" name="dealItemQty_{{idx}}" class="form-control text-xs w-16 text-center" placeholder="Qty" />
-                <button type="button" (click)="removeDealItem(idx)" class="text-red-500 hover:text-red-700 p-1">
-                  <span class="material-symbols-outlined text-sm">delete</span>
-                </button>
-              </div>
-            </div>
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-purple-100">
-              <button type="button" (click)="showDealModal = false" class="action-btn btn-outline-purple">Cancel</button>
-              <button type="submit" class="action-btn btn-gradient-purple">Save Meal Deal ✓</button>
-            </div>
-          </form>
-        </div>
-      </div>
   `,
   styles: [
     `
+      /* ─── Breadcrumb row + the catalog's other record types ─── */
+      .breadcrumbs-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      /* .breadcrumbs-row sets align-self: flex-start for when it stands
+         alone; sharing a row with the tabs, it centres instead. */
+      .breadcrumbs-strip > .breadcrumbs-row {
+        align-self: center;
+      }
+
+      .aux-tabs-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      /* Quieter than .module-tab-btn on purpose: the four dish tabs below
+         are the primary navigation, and these must not outrank them. */
+      .aux-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--card-bg, #ffffff) 82%, transparent);
+        color: var(--text-muted, #6B7280);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        user-select: none;
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .aux-tab-btn .material-symbols-outlined {
+        font-size: 17px;
+        color: var(--primary, #7E22CE);
+      }
+
+      .aux-tab-btn:hover {
+        border-color: var(--primary, #C084FC);
+        color: var(--primary, #7E22CE);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px -8px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
+      }
+
+      .aux-tab-btn.is-active {
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
+        border-color: var(--primary, #7E22CE);
+        color: #ffffff;
+        box-shadow: 0 6px 18px -8px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
+      }
+
+      .aux-tab-btn.is-active .material-symbols-outlined { color: #ffffff; }
+
+      .aux-tab-btn.is-active .tab-count-badge {
+        background: rgba(255, 255, 255, 0.22);
+        color: #ffffff;
+      }
+
+      @media (max-width: 720px) {
+        .breadcrumbs-strip { align-items: flex-start; }
+        .aux-tabs-bar { width: 100%; }
+      }
+
       /* ─── Dish image upload ─── */
       .image-upload-row { display: flex; align-items: center; gap: 0.875rem; }
 
@@ -1129,8 +1256,670 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         .dishes-cards-grid { grid-template-columns: minmax(0, 1fr); }
       }
 
+      /* ─── Combo Deal cards ────────────────────────────────────────
+         Written as real rules rather than utilities: the previous markup
+         leaned on bg-purple-50 / text-amber-700 / md:grid-cols-2 and the
+         like, none of which exist in styles.css, so the cards rendered as
+         bare text on white. Everything below is scoped to this component
+         and built from the theme variables, so it also follows dark mode. */
+
+      .offers-stage {
+        padding: 1rem;
+      }
+
+      .offers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      /* Cards are a grid, not a flex column, so the price footer and the
+         action row sit on the same baseline across every card in a row
+         however long the title or the item list runs. */
+      .offer-card {
+        display: grid;
+        grid-template-rows: auto auto auto 1fr auto auto;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid var(--card-border, #E9D5FF);
+        border-radius: var(--radius-lg, 16px);
+        background: var(--card-bg, #ffffff);
+        box-shadow: 0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
+        transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+        position: relative;
+        overflow: hidden;
+        min-width: 0;
+      }
+
+      /* A 3px spine is the only difference between the two card types. It
+         tells them apart at a glance without a second colour scheme. */
+      .offer-card::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: var(--primary, #7E22CE);
+      }
+
+      /* Green spine: a bundle sold at a saving. Stated rather than left to
+         inherit the base, so the intent survives a change to the base. */
+      .offer-card--combo::before {
+        background: var(--success, #16A34A);
+      }
+
+      .offer-card:hover {
+        border-color: var(--primary, #C084FC);
+        box-shadow: 0 8px 22px rgba(var(--primary-rgb, 126, 34, 206), 0.12);
+        transform: translateY(-2px);
+      }
+
+      /* An inactive offer is still editable but must not read as live stock. */
+      .offer-card.is-dormant {
+        background: color-mix(in srgb, var(--card-bg, #ffffff) 92%, var(--text-muted, #6B7280));
+        border-style: dashed;
+      }
+
+      .offer-card.is-dormant .offer-title,
+      .offer-card.is-dormant .offer-now {
+        color: var(--text-muted, #6B7280);
+      }
+
+      .offer-card.is-dormant::before {
+        background: var(--text-dim, #9CA3AF);
+      }
+
+      .offer-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+      }
+
+      .offer-kind {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.5rem 0.2rem 0.35rem;
+        border-radius: var(--radius-full, 999px);
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 8%, transparent);
+        color: var(--primary, #7E22CE);
+        min-width: 0;
+      }
+
+      .offer-kind .material-symbols-outlined {
+        font-size: 15px;
+      }
+
+      .offer-kind-code {
+        font-size: 0.625rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .offer-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: var(--radius-full, 999px);
+        border: 1px solid color-mix(in srgb, var(--success, #16A34A) 35%, transparent);
+        background: color-mix(in srgb, var(--success, #16A34A) 10%, transparent);
+        color: var(--success, #15803D);
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        flex: none;
+      }
+
+      .offer-state.is-off {
+        border-color: var(--card-border, #E5E7EB);
+        background: transparent;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .offer-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex: none;
+      }
+
+      .offer-title {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 800;
+        line-height: 1.3;
+        color: var(--text-main, #2E1065);
+        /* Two lines then ellipsis: a long name must not push the price of one
+           card out of line with its neighbours. */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .offer-blurb {
+        margin: 0;
+        font-size: 0.75rem;
+        line-height: 1.45;
+        color: var(--text-muted, #6B7280);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* ── Contents panel ── */
+      .offer-contents {
+        padding: 0.6rem 0.7rem;
+        border: 1px solid var(--card-border, #E9D5FF);
+        border-radius: var(--radius-md, 12px);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 4%, transparent);
+        min-width: 0;
+      }
+
+      /* An offer with no dishes attached is a live mispricing waiting to
+         happen, so it is called out rather than whispered in grey italic. */
+      .offer-contents.is-unlinked {
+        border-color: color-mix(in srgb, var(--warning, #D97706) 45%, transparent);
+        background: color-mix(in srgb, var(--warning, #D97706) 9%, transparent);
+      }
+
+      .offer-contents-label {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--primary, #7E22CE);
+      }
+
+      .offer-contents.is-unlinked .offer-contents-label {
+        color: var(--warning, #B45309);
+      }
+
+      .offer-contents-label .material-symbols-outlined {
+        font-size: 15px;
+      }
+
+      .offer-count {
+        margin-left: auto;
+        padding: 0.05rem 0.35rem;
+        border-radius: var(--radius-full, 999px);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 14%, transparent);
+        font-size: 0.5625rem;
+        font-weight: 800;
+      }
+
+      .offer-items {
+        list-style: none;
+        margin: 0.4rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .offer-items li {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        color: var(--text-main, #374151);
+        min-width: 0;
+      }
+
+      .offer-qty {
+        font-size: 0.6875rem;
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+        flex: none;
+      }
+
+      .offer-item-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .offer-warn {
+        margin: 0.35rem 0 0;
+        font-size: 0.6875rem;
+        line-height: 1.45;
+        color: var(--warning, #B45309);
+      }
+
+      /* ── Price footer ── */
+      .offer-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding-top: 0.6rem;
+        border-top: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .offer-price {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        min-width: 0;
+      }
+
+      /* The price is the largest thing on the card on purpose: it is what the
+         screen exists to set, and it used to be smaller than the Edit button. */
+      .offer-now {
+        font-size: 1.25rem;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--text-main, #2E1065);
+      }
+
+      .offer-was {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-dim, #9CA3AF);
+        text-decoration: line-through;
+      }
+
+      .offer-save {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.25rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: var(--radius-full, 999px);
+        background: color-mix(in srgb, var(--success, #16A34A) 12%, transparent);
+        color: var(--success, #15803D);
+        font-size: 0.6875rem;
+        font-weight: 800;
+        white-space: nowrap;
+        flex: none;
+      }
+
+      .offer-save em {
+        font-style: normal;
+        opacity: 0.75;
+      }
+
+      .offer-save.is-discount {
+        background: color-mix(in srgb, var(--primary, #7E22CE) 12%, transparent);
+        color: var(--primary, #7E22CE);
+      }
+
+      /* ── Actions ── */
+      .offer-actions {
+        display: flex;
+        gap: 0.4rem;
+      }
+
+      .offer-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        border-radius: var(--radius-md, 10px);
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: transparent;
+        color: var(--text-muted, #4B5563);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.18s ease;
+      }
+
+      .offer-btn .material-symbols-outlined {
+        font-size: 16px;
+      }
+
+      .offer-btn:hover {
+        border-color: var(--primary, #7E22CE);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 8%, transparent);
+        color: var(--primary, #7E22CE);
+      }
+
+      /* Delete stays an icon-only square so it cannot be hit by accident
+         while reaching for Edit, and only shows its intent on hover. */
+      .offer-btn.is-danger {
+        flex: none;
+        width: 2.1rem;
+        padding: 0.4rem 0;
+        color: var(--danger, #DC2626);
+      }
+
+      .offer-btn.is-danger:hover {
+        border-color: var(--danger, #DC2626);
+        background: color-mix(in srgb, var(--danger, #DC2626) 10%, transparent);
+        color: var(--danger, #DC2626);
+      }
+
+      /* ── Empty state ── */
+      .offers-empty {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        padding: 2.5rem 1rem;
+        border: 1px dashed var(--card-border, #E9D5FF);
+        border-radius: var(--radius-lg, 16px);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 3%, transparent);
+        text-align: center;
+      }
+
+      .offers-empty .material-symbols-outlined {
+        font-size: 38px;
+        color: var(--primary, #C084FC);
+      }
+
+      .offers-empty h4 {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: var(--text-main, #374151);
+      }
+
+      .offers-empty p {
+        margin: 0;
+        font-size: 0.75rem;
+        color: var(--text-muted, #6B7280);
+      }
+
+      @media (max-width: 520px) {
+        .offers-grid { grid-template-columns: minmax(0, 1fr); }
+        .offers-stage { padding: 0.75rem; }
+      }
+
       .font-mono { font-family: 'JetBrains Mono', monospace; }
 
+
+      /* ═══════════════════════════════════════════════════════════════
+         Photos on add-ons and combo deals, plus the dish-picker rows
+         inside the combo deal dialog.
+
+         The dialog rows and the add-on table leaned on utility classes
+         this project does not ship - w-16, p-1, py-0.5, bg-purple-100
+         and the like - so the three controls in a row sat at three
+         different heights and the pills rendered as bare text. What
+         follows are real rules built from the theme variables.
+         ═══════════════════════════════════════════════════════════ */
+
+      /* ─── Offer card hero band ─────────────────────────────────── */
+
+      /* Full-bleed: the negative margin cancels the card padding, and the
+         card is already overflow:hidden so the photo takes its radius. */
+      .offer-hero {
+        position: relative;
+        margin: -1rem -1rem 0;
+        height: 8.5rem;
+        overflow: hidden;
+        background: color-mix(in srgb, var(--primary, #7E22CE) 7%, var(--card-bg, #ffffff));
+      }
+
+      .offer-card--combo .offer-hero {
+        background: color-mix(in srgb, var(--success, #16A34A) 8%, var(--card-bg, #ffffff));
+      }
+
+      .offer-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      /* No photo yet: the type icon stands in, faded enough to read as a
+         placeholder rather than as artwork. */
+      .offer-hero-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 44px;
+        color: var(--primary, #7E22CE);
+        opacity: 0.28;
+      }
+
+      .offer-card--combo .offer-hero-icon {
+        color: var(--success, #16A34A);
+      }
+
+      .offer-hero.is-empty {
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .offer-hero .offer-head {
+        position: absolute;
+        inset: 0.6rem 0.6rem auto 0.8rem;
+      }
+
+      /* A translucent chip disappears over a photograph, so on the hero the
+         chips turn frosted white and keep only their text colour to say
+         which state they report. */
+      .offer-hero .offer-kind,
+      .offer-hero .offer-state {
+        background: rgba(255, 255, 255, 0.93);
+        border-color: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 1px 4px rgba(var(--text-main-rgb, 46, 16, 101), 0.22);
+      }
+
+      /* The type spine has to stay legible across the picture. */
+      .offer-card::before {
+        z-index: 2;
+      }
+
+      .offer-card.is-dormant .offer-hero img {
+        filter: grayscale(0.65);
+        opacity: 0.75;
+      }
+
+      /* ─── Included-dishes rows in the combo deal dialog ─────────── */
+
+      .offer-items-block {
+        padding-top: 0.9rem;
+        border-top: 1.5px solid var(--card-border, #E9D5FF);
+      }
+
+      .offer-items-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.7rem;
+      }
+
+      .offer-items-label {
+        font-size: 0.6875rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .add-dish-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.42rem 0.75rem;
+        border-radius: var(--radius-md, 10px);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: var(--primary-light, #F3E8FF);
+        color: var(--primary, #7E22CE);
+        font-family: inherit;
+        font-size: 0.7rem;
+        font-weight: 800;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+      }
+
+      .add-dish-btn:hover {
+        background: var(--primary, #7E22CE);
+        border-color: var(--primary, #7E22CE);
+        color: #ffffff;
+      }
+
+      .add-dish-btn .material-symbols-outlined {
+        font-size: 16px;
+      }
+
+      .offer-items-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      /* One grid per row, so the dish, the quantity and the remove button
+         line up down the column however long a dish name runs. All three
+         take the 42px every other form control on the page stands at. */
+      .offer-item-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 4.75rem 2.625rem;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .offer-item-dish,
+      .offer-item-qty {
+        height: 2.625rem;
+        min-height: 2.625rem;
+        font-size: 0.8125rem;
+        padding: 0.4rem 0.6rem;
+      }
+
+      .offer-item-qty {
+        text-align: center;
+        font-weight: 700;
+      }
+
+      .offer-item-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.625rem;
+        height: 2.625rem;
+        padding: 0;
+        border-radius: var(--radius-md, 10px);
+        border: 1.5px solid color-mix(in srgb, var(--danger, #DC2626) 28%, transparent);
+        background: color-mix(in srgb, var(--danger, #DC2626) 7%, transparent);
+        color: var(--danger, #DC2626);
+        cursor: pointer;
+        transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+      }
+
+      .offer-item-remove:hover {
+        background: var(--danger, #DC2626);
+        border-color: var(--danger, #DC2626);
+        color: #ffffff;
+      }
+
+      .offer-item-remove .material-symbols-outlined {
+        font-size: 18px;
+      }
+
+      .offer-items-empty {
+        margin: 0;
+        padding: 0.85rem;
+        border: 1.5px dashed var(--card-border, #E9D5FF);
+        border-radius: var(--radius-md, 10px);
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--text-muted, #6B7280);
+      }
+
+      /* ─── Add-on table rows ─────────────────────────────────────── */
+
+      .addon-identity {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        min-width: 0;
+      }
+
+      .addon-thumb {
+        width: 2.75rem;
+        height: 2.75rem;
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md, 10px);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: var(--bg-app, #FAF5FF);
+        color: var(--primary, #7E22CE);
+        overflow: hidden;
+      }
+
+      .addon-thumb.is-empty {
+        border-style: dashed;
+      }
+
+      .addon-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .addon-thumb .material-symbols-outlined {
+        font-size: 20px;
+        opacity: 0.5;
+      }
+
+      .addon-name {
+        min-width: 0;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .addon-price {
+        font-size: 0.8125rem;
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+      }
+
+      /* The same dot the offer cards use, so a live record reads the same
+         on the table as it does on a card. */
+      .addon-state-dot {
+        width: 6px;
+        height: 6px;
+        margin-right: 0.3rem;
+        border-radius: 50%;
+        background: currentColor;
+        flex: none;
+      }
+
+      .addon-row-actions {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+      }
+
+      /* On a card these two stretch to share the row; in a table cell they
+         are a pair of fixed squares instead. */
+      .addon-row-actions .offer-btn {
+        flex: none;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+      }
+
+      .addon-row-actions .offer-btn .material-symbols-outlined {
+        font-size: 17px;
+      }
     `,
     /* Must come last: it resets the card markup and then builds each design
        back up. See the note at the top of dish-layout.styles.ts. */
@@ -1171,34 +1960,117 @@ export class ProductsComponent implements OnInit {
   public categories: Category[] = [];
 
   public addonsList: ProductAddon[] = [];
-  public combosList: ComboMeal[] = [];
-  public dealsList: MealDeal[] = [];
+  public combosList: ComboDeal[] = [];
+
+  /** Total dishes in the bundle, not the number of distinct lines: a combo of
+   *  2x Mandi + 2x Ayran reads as 4 items on the plate. */
+  public comboUnitCount(combo: ComboDeal): number {
+    return (combo.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+  }
+
+  /** Saving as a share of the undiscounted price. Returns 0 when there is no
+   *  original to compare against, which the template treats as "do not show":
+   *  a bare currency saving means nothing without the basis.  */
+  public comboSavingsPercent(combo: ComboDeal): number {
+    const original = Number(combo.original_price) || 0;
+    const price = Number(combo.combo_price) || 0;
+    if (original <= 0 || price >= original) return 0;
+    return Math.round(((original - price) / original) * 100);
+  }
 
   public showAddonModal = false;
   public showComboModal = false;
-  public showDealModal = false;
 
   public editingAddon: ProductAddon | null = null;
-  public editingCombo: ComboMeal | null = null;
-  public editingDeal: MealDeal | null = null;
+  public editingCombo: ComboDeal | null = null;
 
-  public addonForm: any = { name: '', price: 20, is_available: true, category: 'Sides' };
-  public comboForm: any = { name: '', code: '', description: '', combo_price: 299, original_price: 350, items: [] };
-  public dealForm: any = { title: '', code: '', description: '', deal_price: 499, discount_percentage: 20, days_of_week: 'ALL', start_time: '11:00', end_time: '23:00', items: [] };
+  public addonForm: any = { name: '', price: 20, is_available: true, category: 'Sides', image_url: '' };
+  public comboForm: any = { name: '', code: '', description: '', combo_price: 299, original_price: 350, items: [], image_url: '' };
+
+  // ─── Photos on add-ons and combo deals ───────────────────────────────
+  // All three ride the dish image endpoint: it takes a data URL and hands
+  // back a stored path, with no notion of what the picture is of. One
+  // handler serves all three forms because the only thing that differs is
+  // which form object receives the returned url.
+
+  private static readonly IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  private static readonly IMAGE_MAX_MB = 2;
+
+  /** Which form is mid-upload, so only that picker shows the busy state. */
+  public uploadingImageFor: 'addon' | 'combo' | null = null;
+
+  public onOfferImageFile(
+    event: Event,
+    picker: HTMLInputElement,
+    form: any,
+    kind: 'addon' | 'combo'
+  ): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    // Cleared straight away so re-picking the same file after a failure
+    // still fires a change event.
+    picker.value = '';
+    if (!file) return;
+
+    if (!ProductsComponent.IMAGE_TYPES.includes(file.type)) {
+      this.notify.error('Image must be a PNG, JPG, WEBP or GIF.');
+      return;
+    }
+    if (file.size > ProductsComponent.IMAGE_MAX_MB * 1024 * 1024) {
+      this.notify.error(
+        `Image is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is ${ProductsComponent.IMAGE_MAX_MB} MB.`
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      this.uploadingImageFor = null;
+      this.notify.error(`Could not read ${file.name}.`);
+    };
+    reader.onload = () => {
+      this.productService.uploadProductImage(String(reader.result)).subscribe({
+        next: (res) => {
+          this.uploadingImageFor = null;
+          if (res?.success && res.data?.url) {
+            form.image_url = res.data.url;
+            this.notify.success('Image uploaded — save to apply it.');
+          } else {
+            this.notify.error(res?.message || 'Image upload failed.');
+          }
+        },
+        error: (err) => {
+          this.uploadingImageFor = null;
+          this.notify.error(err?.error?.message || 'Image upload failed.');
+        },
+      });
+    };
+    this.uploadingImageFor = kind;
+    reader.readAsDataURL(file);
+  }
+
+  /** Offer records whose photo 404s, so the tile falls back to its icon. */
+  private brokenOfferImages = new Set<string>();
+
+  public hasOfferImage(kind: string, id: number, url?: string | null): boolean {
+    return !!url && !this.brokenOfferImages.has(kind + ':' + id);
+  }
+
+  public onOfferImageError(kind: string, id: number): void {
+    this.brokenOfferImages.add(kind + ':' + id);
+  }
 
   public activeNavTab = 'overview';
 
-  /** Add-ons, combos and deals are their own records, not dishes, so the
+  /** Add-ons and combo deals are their own records, not dishes, so the
    *  dish-shaped filters and the dish table only apply outside them. */
   get isCatalogTab(): boolean {
-    return !['addons', 'combos', 'deals'].includes(this.activeNavTab);
+    return !['addons', 'combos'].includes(this.activeNavTab);
   }
 
   get searchPlaceholder(): string {
     switch (this.activeNavTab) {
       case 'addons': return 'Search add-on name or category...';
       case 'combos': return 'Search combo name or code...';
-      case 'deals': return 'Search deal title or code...';
       default: return 'Search dish name, SKU, category...';
     }
   }
@@ -1206,8 +2078,7 @@ export class ProductsComponent implements OnInit {
   get currentCountLabel(): string {
     switch (this.activeNavTab) {
       case 'addons': return `${this.filteredAddons.length} add-ons`;
-      case 'combos': return `${this.filteredCombos.length} combo meals`;
-      case 'deals': return `${this.filteredDeals.length} meal deals`;
+      case 'combos': return `${this.filteredCombos.length} combo deals`;
       default: return `${this.filteredProducts.length} dishes`;
     }
   }
@@ -1220,7 +2091,7 @@ export class ProductsComponent implements OnInit {
     );
   }
 
-  get filteredCombos(): ComboMeal[] {
+  get filteredCombos(): ComboDeal[] {
     const q = this.searchQuery.trim().toLowerCase();
     if (!q) return this.combosList;
     return this.combosList.filter(
@@ -1228,13 +2099,6 @@ export class ProductsComponent implements OnInit {
     );
   }
 
-  get filteredDeals(): MealDeal[] {
-    const q = this.searchQuery.trim().toLowerCase();
-    if (!q) return this.dealsList;
-    return this.dealsList.filter(
-      (d) => d.title?.toLowerCase().includes(q) || d.code?.toLowerCase().includes(q)
-    );
-  }
   public selectAll = false;
 
   public pageSize = 10;
@@ -1289,12 +2153,12 @@ export class ProductsComponent implements OnInit {
     { value: 'INACTIVE', label: 'INACTIVE', icon: 'block', description: 'Item hidden from POS menu' },
   ];
 
+
   ngOnInit(): void {
     this.loadCategories();
     this.loadProducts();
     this.loadAddons();
     this.loadCombos();
-    this.loadDeals();
   }
 
   loadCategories(): void {
@@ -1316,7 +2180,10 @@ export class ProductsComponent implements OnInit {
     this.isLoading = true;
     this.loadError = null;
     this.productService
-      .getProducts(1, 200, this.searchQuery, this.selectedCategory, this.selectedStatus || undefined)
+      // Fetched unfiltered on purpose - the toolbar filters run over this list
+      // client-side, so narrowing it here would strand rows that a later
+      // widening of the filters should bring back.
+      .getProducts(1, 200)
       .subscribe({
         next: (res) => {
           this.isLoading = false;
@@ -1343,7 +2210,7 @@ export class ProductsComponent implements OnInit {
   }
 
   loadCombos(): void {
-    this.productService.getCombos().subscribe({
+    this.productService.getComboDeals().subscribe({
       next: (res) => {
         if (res.success) {
           this.combosList = res.data;
@@ -1353,22 +2220,18 @@ export class ProductsComponent implements OnInit {
     });
   }
 
-  loadDeals(): void {
-    this.productService.getDeals().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.dealsList = res.data;
-        }
-      },
-      error: () => {},
-    });
-  }
 
   openAddonModal(addon?: ProductAddon): void {
     this.editingAddon = addon || null;
     this.addonForm = addon
-      ? { name: addon.name, price: addon.price, is_available: !!addon.is_available, category: addon.category || 'Sides' }
-      : { name: '', price: 20, is_available: true, category: 'Sides' };
+      ? {
+          name: addon.name,
+          price: addon.price,
+          is_available: !!addon.is_available,
+          category: addon.category || 'Sides',
+          image_url: addon.image_url || '',
+        }
+      : { name: '', price: 20, is_available: true, category: 'Sides', image_url: '' };
     this.showAddonModal = true;
   }
 
@@ -1409,7 +2272,7 @@ export class ProductsComponent implements OnInit {
     });
   }
 
-  openComboModal(combo?: ComboMeal): void {
+  openComboModal(combo?: ComboDeal): void {
     this.editingCombo = combo || null;
     this.comboForm = combo
       ? {
@@ -1418,6 +2281,7 @@ export class ProductsComponent implements OnInit {
           description: combo.description || '',
           combo_price: combo.combo_price,
           original_price: combo.original_price || combo.combo_price,
+          image_url: combo.image_url || '',
           items: combo.items ? [...combo.items] : [],
         }
       : {
@@ -1426,6 +2290,7 @@ export class ProductsComponent implements OnInit {
           description: '',
           combo_price: 299,
           original_price: 350,
+          image_url: '',
           items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
         };
     this.showComboModal = true;
@@ -1443,111 +2308,36 @@ export class ProductsComponent implements OnInit {
 
   saveCombo(): void {
     if (!this.comboForm.name) {
-      this.notify.error('Please enter combo meal name');
+      this.notify.error('Please enter combo deal name');
       return;
     }
     const obs = this.editingCombo
-      ? this.productService.updateCombo(this.editingCombo.id, this.comboForm)
-      : this.productService.createCombo(this.comboForm);
+      ? this.productService.updateComboDeal(this.editingCombo.id, this.comboForm)
+      : this.productService.createComboDeal(this.comboForm);
 
     obs.subscribe({
       next: () => {
-        this.notify.success(`Combo meal ${this.editingCombo ? 'updated' : 'created'} successfully`);
+        this.notify.success(`Combo deal ${this.editingCombo ? 'updated' : 'created'} successfully`);
         this.showComboModal = false;
         this.loadCombos();
       },
-      error: (err) => this.notify.error(err?.error?.message || 'Failed to save combo meal'),
+      error: (err) => this.notify.error(err?.error?.message || 'Failed to save combo deal'),
     });
   }
 
   deleteCombo(id: number): void {
     this.notify.confirm({
-      title: 'Delete Combo Meal',
-      message: 'Are you sure you want to delete this combo meal?',
+      title: 'Delete Combo Deal',
+      message: 'Are you sure you want to delete this combo deal?',
       confirmText: 'Delete',
       isDestructive: true,
       onConfirm: () => {
-        this.productService.deleteCombo(id).subscribe({
+        this.productService.deleteComboDeal(id).subscribe({
           next: () => {
-            this.notify.info('Combo meal deleted');
+            this.notify.info('Combo deal deleted');
             this.loadCombos();
           },
-          error: (err) => this.notify.error(err?.error?.message || 'Failed to delete combo meal'),
-        });
-      },
-    });
-  }
-
-  openDealModal(deal?: MealDeal): void {
-    this.editingDeal = deal || null;
-    this.dealForm = deal
-      ? {
-          title: deal.title,
-          code: deal.code || '',
-          description: deal.description || '',
-          deal_price: deal.deal_price,
-          discount_percentage: deal.discount_percentage || 0,
-          days_of_week: deal.days_of_week || 'ALL',
-          start_time: deal.start_time || '11:00',
-          end_time: deal.end_time || '23:00',
-          items: deal.items ? [...deal.items] : [],
-        }
-      : {
-          title: '',
-          code: '',
-          description: '',
-          deal_price: 499,
-          discount_percentage: 20,
-          days_of_week: 'ALL',
-          start_time: '11:00',
-          end_time: '23:00',
-          items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
-        };
-    this.showDealModal = true;
-  }
-
-  addDealItem(): void {
-    if (this.products.length > 0) {
-      this.dealForm.items.push({ product_id: this.products[0].id, quantity: 1 });
-    }
-  }
-
-  removeDealItem(index: number): void {
-    this.dealForm.items.splice(index, 1);
-  }
-
-  saveDeal(): void {
-    if (!this.dealForm.title) {
-      this.notify.error('Please enter meal deal title');
-      return;
-    }
-    const obs = this.editingDeal
-      ? this.productService.updateDeal(this.editingDeal.id, this.dealForm)
-      : this.productService.createDeal(this.dealForm);
-
-    obs.subscribe({
-      next: () => {
-        this.notify.success(`Meal deal ${this.editingDeal ? 'updated' : 'created'} successfully`);
-        this.showDealModal = false;
-        this.loadDeals();
-      },
-      error: (err) => this.notify.error(err?.error?.message || 'Failed to save meal deal'),
-    });
-  }
-
-  deleteDeal(id: number): void {
-    this.notify.confirm({
-      title: 'Delete Meal Deal',
-      message: 'Are you sure you want to delete this meal deal?',
-      confirmText: 'Delete',
-      isDestructive: true,
-      onConfirm: () => {
-        this.productService.deleteDeal(id).subscribe({
-          next: () => {
-            this.notify.info('Meal deal deleted');
-            this.loadDeals();
-          },
-          error: (err) => this.notify.error(err?.error?.message || 'Failed to delete meal deal'),
+          error: (err) => this.notify.error(err?.error?.message || 'Failed to delete combo deal'),
         });
       },
     });
@@ -1602,6 +2392,29 @@ export class ProductsComponent implements OnInit {
   get filteredProducts(): (Product & { selected?: boolean })[] {
     let list = this.products;
 
+    // Search, category and status are applied here rather than re-queried on
+    // every keystroke: the catalog is already loaded in full, so filtering it
+    // locally keeps the table in step with the input and lets clearing a
+    // filter restore rows without another round trip.
+    const q = this.searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q) ||
+          p.category_name?.toLowerCase().includes(q)
+      );
+    }
+
+    if (this.selectedCategory !== undefined && this.selectedCategory !== null) {
+      list = list.filter((p) => p.category_id === this.selectedCategory);
+    }
+
+    if (this.selectedStatus) {
+      list = list.filter((p) => p.status === this.selectedStatus);
+    }
+
     if (this.activeNavTab === 'active') {
       list = list.filter((p) => p.status === 'ACTIVE');
     } else if (this.activeNavTab === 'low_stock') {
@@ -1627,9 +2440,21 @@ export class ProductsComponent implements OnInit {
     return list;
   }
 
+  /**
+   * The current page, never past the end of the filtered list.
+   *
+   * Deleting the last rows on the final page, or any refresh that returns
+   * fewer records, used to leave `currentPage` pointing past the end and the
+   * table rendering empty. Clamped on read rather than written back, so it
+   * cannot fire a change-after-checked error during rendering.
+   */
+  get safePage(): number {
+    return Math.min(Math.max(1, this.currentPage), this.totalPages);
+  }
+
   get paginatedProducts(): (Product & { selected?: boolean })[] {
     const list = this.filteredProducts;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
@@ -1642,11 +2467,11 @@ export class ProductsComponent implements OnInit {
   }
 
   get paginationStart(): number {
-    return this.filteredProducts.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return this.filteredProducts.length === 0 ? 0 : (this.safePage - 1) * this.pageSize + 1;
   }
 
   get paginationEnd(): number {
-    return Math.min(this.currentPage * this.pageSize, this.filteredProducts.length);
+    return Math.min(this.safePage * this.pageSize, this.filteredProducts.length);
   }
 
   calcStockPercent(curr: number, threshold: number): number {
@@ -1740,20 +2565,11 @@ export class ProductsComponent implements OnInit {
         break;
 
       case 'combos':
-        name = 'menu_combo_meals';
+        name = 'menu_combo_deals';
         headers = ['Code', 'Name', 'Combo Price', 'Original Price', 'Savings', 'Items', 'Available'];
         rows = this.filteredCombos.map((c) => [
           q(c.code), q(c.name), c.combo_price, c.original_price ?? '', c.savings_amount ?? '',
           c.items?.length ?? 0, c.is_available ? 'Yes' : 'No',
-        ]);
-        break;
-
-      case 'deals':
-        name = 'menu_meal_deals';
-        headers = ['Code', 'Title', 'Deal Price', 'Discount %', 'Days', 'Start', 'End', 'Active'];
-        rows = this.filteredDeals.map((d) => [
-          q(d.code), q(d.title), d.deal_price, d.discount_percentage ?? '',
-          q(d.days_of_week || 'ALL'), q(d.start_time || ''), q(d.end_time || ''), d.is_active ? 'Yes' : 'No',
         ]);
         break;
 
@@ -1787,23 +2603,23 @@ export class ProductsComponent implements OnInit {
     const cat = (categoryName || '').toLowerCase();
     if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
       return {
-        'background-color': '#FFFBEB',
-        'color': '#B45309',
-        'border': '1px solid #FDE68A'
+        'background-color': 'var(--warning-light, #FFFBEB)',
+        'color': 'var(--warning, #B45309)',
+        'border': '1px solid var(--warning-light, #FDE68A)'
       };
     }
     if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {
       return {
-        'background-color': '#FAF5FF',
-        'color': '#7E22CE',
-        'border': '1px solid #E9D5FF'
+        'background-color': 'var(--bg-app, #FAF5FF)',
+        'color': 'var(--primary, #7E22CE)',
+        'border': '1px solid var(--card-border, #E9D5FF)'
       };
     }
     if (cat.includes('appetizer') || cat.includes('salad') || cat.includes('soup') || cat.includes('veg')) {
       return {
         'background-color': '#F0FDF4',
-        'color': '#15803D',
-        'border': '1px solid #BBF7D0'
+        'color': 'var(--success, #15803D)',
+        'border': '1px solid var(--success-light, #BBF7D0)'
       };
     }
     if (cat.includes('dessert') || cat.includes('sweet') || cat.includes('cake') || cat.includes('ice')) {

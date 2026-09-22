@@ -9,13 +9,14 @@ import { AuthService } from '../../core/auth/services/auth.service';
 import { Vendor, VendorPurchase, VendorPayment, VendorStats } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
 type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance' | 'rating' | 'performance';
 
 @Component({
   selector: 'app-vendors',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent, CustomDropdownComponent],
   template: `
     <div class="vendors-page-wrapper">
       <app-page-loader
@@ -1166,24 +1167,24 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 </div>
                 <div class="form-group">
                   <label class="form-label">Category Group *</label>
-                  <select [(ngModel)]="vendorForm.category" name="category" required class="form-control">
-                    <option value="Meat & Poultry">Meat & Poultry</option>
-                    <option value="Rice & Grains">Rice & Grains</option>
-                    <option value="Spices & Condiments">Spices & Condiments</option>
-                    <option value="Dairy & Fresh Produce">Dairy & Fresh Produce</option>
-                    <option value="Packaging & Disposables">Packaging & Disposables</option>
-                    <option value="Beverages & Syrups">Beverages & Syrups</option>
-                    <option value="Equipment & Maintenance">Equipment & Maintenance</option>
-                    <option value="General Supplies">General Supplies</option>
-                  </select>
+                  <app-custom-dropdown
+                    [options]="categoryOptions"
+                    [(ngModel)]="vendorForm.category"
+                    name="category"
+                    [searchable]="true"
+                    placeholder="Select category group"
+                    minWidth="100%"
+                  ></app-custom-dropdown>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Status</label>
-                  <select [(ngModel)]="vendorForm.status" name="status" class="form-control">
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
-                    <option value="BLOCKED">BLOCKED</option>
-                  </select>
+                  <app-custom-dropdown
+                    [options]="vendorStatusOptions"
+                    [(ngModel)]="vendorForm.status"
+                    name="status"
+                    placeholder="Select status"
+                    minWidth="100%"
+                  ></app-custom-dropdown>
                 </div>
               </div>
             </div>
@@ -1268,15 +1269,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 </div>
                 <div class="form-group">
                   <label class="form-label">Payment Terms</label>
-                  <select [(ngModel)]="vendorForm.payment_terms" name="payment_terms" class="form-control">
-                    <option value="NET_30">Net 30 Days</option>
-                    <option value="NET_15">Net 15 Days</option>
-                    <option value="NET_7">Net 7 Days</option>
-                    <option value="NET_45">Net 45 Days</option>
-                    <option value="NET_60">Net 60 Days</option>
-                    <option value="COD">Cash On Delivery (COD)</option>
-                    <option value="ADVANCE">Advance Required</option>
-                  </select>
+                  <app-custom-dropdown
+                    [options]="paymentTermsOptions"
+                    [(ngModel)]="vendorForm.payment_terms"
+                    name="payment_terms"
+                    placeholder="Select payment terms"
+                    minWidth="100%"
+                  ></app-custom-dropdown>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Credit Limit ({{ defaultCurrency }})</label>
@@ -1533,7 +1532,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       padding: 1.5rem;
       max-width: 1600px;
       margin: 0 auto;
-      min-height: 100vh;
+      /* 60vh, as every other page wrapper uses: enough to hold the page
+         loader up, without being taller than the pane it sits in. Measured
+         against the viewport, 100vh always overflowed <main> — which is a
+         64px header shorter — so this page alone carried a scrollbar with
+         nothing under it to scroll. */
+      min-height: 60vh;
       font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
     }
 
@@ -1543,11 +1547,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.5rem;
       font-size: 0.8125rem;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
       margin-bottom: 1rem;
     }
     .breadcrumb-separator {
-      color: #9CA3AF;
+      color: var(--text-dim, #9CA3AF);
     }
     .breadcrumb-current {
       color: var(--primary, #7E22CE);
@@ -1560,10 +1564,10 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       justify-content: space-between;
       align-items: center;
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       padding: 1.25rem 1.75rem;
-      box-shadow: 0 4px 20px -2px rgba(46, 16, 101, 0.06);
+      box-shadow: 0 4px 20px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
       margin-bottom: 1.5rem;
       flex-wrap: wrap;
       gap: 1rem;
@@ -1577,12 +1581,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       width: 52px;
       height: 52px;
       border-radius: 14px;
-      background: linear-gradient(135deg, #7E22CE 0%, #9333EA 100%);
+      background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
       color: #FFFFFF;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 16px -4px rgba(126, 34, 206, 0.35);
+      box-shadow: 0 8px 16px -4px rgba(var(--primary-rgb, 126, 34, 206), 0.35);
     }
     .header-icon-box .material-symbols-outlined {
       font-size: 28px;
@@ -1595,7 +1599,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .page-title {
       font-size: 1.5rem;
       font-weight: 800;
-      color: #2E1065;
+      color: var(--text-main, #2E1065);
       letter-spacing: -0.02em;
     }
     .status-dot-pill {
@@ -1609,14 +1613,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .status-dot-pill.is-active {
       background: #F0FDF4;
-      color: #16A34A;
-      border: 1px solid #BBF7D0;
+      color: var(--success, #16A34A);
+      border: 1px solid var(--success-light, #BBF7D0);
     }
     .status-dot {
       width: 7px;
       height: 7px;
       border-radius: 50%;
-      background: #16A34A;
+      background: var(--success, #16A34A);
       animation: pulse-dot 2s infinite;
     }
     @keyframes pulse-dot {
@@ -1628,7 +1632,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.625rem;
       font-size: 0.8125rem;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
       margin-top: 0.25rem;
     }
     .meta-item {
@@ -1641,7 +1645,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       color: var(--primary, #7E22CE);
     }
     .meta-dot {
-      color: #CBD5E1;
+      color: var(--text-dim, #CBD5E1);
     }
     .header-action-buttons {
       display: flex;
@@ -1661,21 +1665,21 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid transparent;
     }
     .btn-primary {
-      background: linear-gradient(135deg, #7E22CE 0%, #6B21A8 100%);
+      background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
       color: #FFFFFF;
-      box-shadow: 0 4px 12px -2px rgba(126, 34, 206, 0.35);
+      box-shadow: 0 4px 12px -2px rgba(var(--primary-rgb, 126, 34, 206), 0.35);
     }
     .btn-primary:hover {
-      background: linear-gradient(135deg, #9333EA 0%, #7E22CE 100%);
+      background: linear-gradient(135deg, var(--primary-hover, #9333EA) 0%, var(--primary, #7E22CE) 100%);
       transform: translateY(-1px);
     }
     .btn-outline {
       background: #FFFFFF;
-      color: #6B21A8;
-      border-color: #E9D5FF;
+      color: var(--primary-variant, #6B21A8);
+      border-color: var(--card-border, #E9D5FF);
     }
     .btn-outline:hover {
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
       border-color: #D8B4FE;
     }
 
@@ -1688,10 +1692,10 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .kpi-card {
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 14px;
       padding: 1.25rem;
-      box-shadow: 0 2px 10px -1px rgba(46, 16, 101, 0.04);
+      box-shadow: 0 2px 10px -1px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
       transition: transform 0.15s ease;
     }
     .kpi-card:hover {
@@ -1708,7 +1712,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
     }
     .kpi-icon-badge {
       width: 36px;
@@ -1721,14 +1725,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .kpi-icon-badge .material-symbols-outlined {
       font-size: 20px;
     }
-    .bg-purple-light { background: #FAF5FF; }
-    .text-purple { color: #7E22CE; }
+    .bg-purple-light { background: var(--bg-app, #FAF5FF); }
+    .text-purple { color: var(--primary, #7E22CE); }
     .bg-rose-light { background: #FFF1F2; }
     .text-rose { color: #E11D48; }
     .bg-indigo-light { background: #EEF2FF; }
     .text-indigo { color: #4F46E5; }
-    .bg-amber-light { background: #FFFBEB; }
-    .text-amber { color: #D97706; }
+    .bg-amber-light { background: var(--warning-light, #FFFBEB); }
+    .text-amber { color: var(--warning, #D97706); }
     .kpi-value {
       font-size: 1.75rem;
       font-weight: 800;
@@ -1738,7 +1742,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .kpi-subtext {
       font-size: 0.75rem;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
     }
 
     /* Filter Toolbar */
@@ -1747,7 +1751,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       justify-content: space-between;
       align-items: center;
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 12px;
       padding: 0.75rem 1rem;
       margin-bottom: 1rem;
@@ -1758,8 +1762,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      background: var(--bg-app, #F8FAFC);
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 8px;
       padding: 0.4rem 0.75rem;
       flex: 1;
@@ -1767,7 +1771,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       max-width: 500px;
     }
     .search-icon {
-      color: #94A3B8;
+      color: var(--text-dim, #94A3B8);
       font-size: 20px;
     }
     .search-input {
@@ -1782,7 +1786,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       background: transparent;
       border: none;
       cursor: pointer;
-      color: #94A3B8;
+      color: var(--text-dim, #94A3B8);
       display: flex;
     }
     .clear-search-btn .material-symbols-outlined {
@@ -1801,11 +1805,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.8125rem;
     }
     .filter-label {
-      color: #64748B;
+      color: var(--text-muted, #64748B);
       font-weight: 500;
     }
     .filter-select {
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 8px;
       padding: 0.4rem 0.6rem;
       font-size: 0.8125rem;
@@ -1815,7 +1819,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .view-toggle-group {
       display: flex;
-      background: #F1F5F9;
+      background: var(--card-hover, #F1F5F9);
       border-radius: 8px;
       padding: 2px;
     }
@@ -1825,14 +1829,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       padding: 0.35rem 0.5rem;
       border-radius: 6px;
       cursor: pointer;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .view-btn.active {
       background: #FFFFFF;
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
@@ -1852,7 +1856,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       padding: 0.4rem 0.85rem;
       border-radius: 9999px;
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       font-size: 0.8125rem;
       font-weight: 600;
       color: #475569;
@@ -1862,11 +1866,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .cat-pill:hover {
       border-color: #D8B4FE;
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
     }
     .cat-pill.active {
-      background: #7E22CE;
-      border-color: #7E22CE;
+      background: var(--primary, #7E22CE);
+      border-color: var(--primary, #7E22CE);
       color: #FFFFFF;
     }
     .cat-count {
@@ -1888,10 +1892,10 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .vendor-card {
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       padding: 1.25rem;
-      box-shadow: 0 2px 10px -1px rgba(46, 16, 101, 0.04);
+      box-shadow: 0 2px 10px -1px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
@@ -1899,7 +1903,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .vendor-card:hover {
       transform: translateY(-3px);
-      box-shadow: 0 10px 25px -4px rgba(126, 34, 206, 0.12);
+      box-shadow: 0 10px 25px -4px rgba(var(--primary-rgb, 126, 34, 206), 0.12);
       border-color: #C084FC;
     }
     .vc-top-row {
@@ -1912,8 +1916,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       width: 48px;
       height: 48px;
       border-radius: 12px;
-      background: linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%);
-      color: #7E22CE;
+      background: linear-gradient(135deg, var(--primary-light, #F3E8FF) 0%, var(--card-border, #E9D5FF) 100%);
+      color: var(--primary, #7E22CE);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1933,8 +1937,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #7E22CE;
-      background: #FAF5FF;
+      color: var(--primary, #7E22CE);
+      background: var(--bg-app, #FAF5FF);
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
     }
@@ -1951,13 +1955,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: inline-block;
       font-size: 0.6875rem;
       font-weight: 600;
-      color: #4B5563;
+      color: var(--text-muted, #4B5563);
       background: #F3F4F6;
       padding: 0.15rem 0.5rem;
       border-radius: 9999px;
     }
     .vc-contact-box {
-      background: #F8FAFC;
+      background: var(--bg-app, #F8FAFC);
       border-radius: 10px;
       padding: 0.625rem 0.75rem;
       margin-bottom: 1rem;
@@ -1974,7 +1978,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .vc-contact-item .material-symbols-outlined {
       font-size: 15px;
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
     }
 
     /* Credit Gauge */
@@ -1991,7 +1995,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.6875rem;
       font-weight: 700;
       text-transform: uppercase;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
     }
     .gauge-amount {
       font-size: 0.9375rem;
@@ -2001,7 +2005,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .gauge-track {
       width: 100%;
       height: 7px;
-      background: #E2E8F0;
+      background: var(--card-border, #E2E8F0);
       border-radius: 9999px;
       overflow: hidden;
     }
@@ -2014,12 +2018,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: flex;
       justify-content: space-between;
       font-size: 0.6875rem;
-      color: #94A3B8;
+      color: var(--text-dim, #94A3B8);
       margin-top: 0.25rem;
     }
     .gauge-safe { background: #10B981; }
     .gauge-warning { background: #F59E0B; }
-    .gauge-danger { background: #EF4444; }
+    .gauge-danger { background: var(--danger, #EF4444); }
 
     /* Performance Row */
     .vc-performance-row {
@@ -2027,8 +2031,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       justify-content: space-between;
       padding: 0.625rem 0;
-      border-top: 1px dashed #E2E8F0;
-      border-bottom: 1px dashed #E2E8F0;
+      border-top: 1px dashed var(--card-border, #E2E8F0);
+      border-bottom: 1px dashed var(--card-border, #E2E8F0);
       margin-bottom: 1rem;
     }
     .vc-rating {
@@ -2042,7 +2046,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.25rem;
       font-size: 0.75rem;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
     }
 
     /* Actions Row */
@@ -2067,12 +2071,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid transparent;
     }
     .btn-view {
-      background: #FAF5FF;
-      color: #7E22CE;
-      border-color: #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      color: var(--primary, #7E22CE);
+      border-color: var(--card-border, #E9D5FF);
     }
     .btn-view:hover {
-      background: #F3E8FF;
+      background: var(--primary-light, #F3E8FF);
     }
     .btn-purchase {
       background: #EEF2FF;
@@ -2094,10 +2098,10 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     /* Table View */
     .vendor-table-card {
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       overflow-x: auto;
-      box-shadow: 0 4px 20px -2px rgba(46, 16, 101, 0.04);
+      box-shadow: 0 4px 20px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
     }
     .vt-table {
       width: 100%;
@@ -2106,16 +2110,16 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.8125rem;
     }
     .vt-table th {
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
       color: #581C87;
       font-weight: 700;
       padding: 0.875rem 1rem;
-      border-bottom: 1px solid #E9D5FF;
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
       white-space: nowrap;
     }
     .vt-table td {
       padding: 0.875rem 1rem;
-      border-bottom: 1px solid #F1F5F9;
+      border-bottom: 1px solid var(--card-border, #F1F5F9);
       color: #334155;
       vertical-align: middle;
     }
@@ -2124,7 +2128,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       transition: background 0.12s ease;
     }
     .table-row-clickable:hover {
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
     }
     .vt-vendor-col {
       display: flex;
@@ -2135,8 +2139,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       width: 38px;
       height: 38px;
       border-radius: 10px;
-      background: #F3E8FF;
-      color: #7E22CE;
+      background: var(--primary-light, #F3E8FF);
+      color: var(--primary, #7E22CE);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2145,17 +2149,17 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       background: #FFFFFF;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
     }
     .table-icon-btn:hover {
-      background: #F8FAFC;
-      border-color: #CBD5E1;
+      background: var(--bg-app, #F8FAFC);
+      border-color: var(--card-border, #CBD5E1);
     }
     .table-icon-btn .material-symbols-outlined {
       font-size: 18px;
@@ -2171,12 +2175,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    .badge-active { background: #DCFCE7; color: #15803D; }
-    .badge-inactive { background: #F1F5F9; color: #64748B; }
-    .badge-blocked { background: #FEE2E2; color: #B91C1C; }
-    .badge-paid { background: #DCFCE7; color: #15803D; }
-    .badge-partial { background: #FEF3C7; color: #B45309; }
-    .badge-unpaid { background: #FEE2E2; color: #B91C1C; }
+    .badge-active { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); }
+    .badge-inactive { background: var(--card-hover, #F1F5F9); color: var(--text-muted, #64748B); }
+    .badge-blocked { background: var(--danger-light, #FEE2E2); color: var(--danger, #B91C1C); }
+    .badge-paid { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); }
+    .badge-partial { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); }
+    .badge-unpaid { background: var(--danger-light, #FEE2E2); color: var(--danger, #B91C1C); }
 
     /* Modals & Drawers */
     .modal-backdrop {
@@ -2211,8 +2215,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .drawer-header {
       padding: 1.25rem 1.75rem;
-      background: #FAF5FF;
-      border-bottom: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -2226,12 +2230,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       width: 56px;
       height: 56px;
       border-radius: 14px;
-      background: #7E22CE;
+      background: var(--primary, #7E22CE);
       color: #FFFFFF;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(126, 34, 206, 0.3);
+      box-shadow: 0 4px 12px rgba(var(--primary-rgb, 126, 34, 206), 0.3);
     }
     .dh-badge-row {
       display: flex;
@@ -2242,7 +2246,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .dh-title {
       font-size: 1.35rem;
       font-weight: 800;
-      color: #2E1065;
+      color: var(--text-main, #2E1065);
     }
     .dh-right {
       display: flex;
@@ -2263,25 +2267,25 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .btn-edit {
       background: #FFFFFF;
       border-color: #D8B4FE;
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
     }
     .btn-edit:hover {
-      background: #F3E8FF;
+      background: var(--primary-light, #F3E8FF);
     }
     .drawer-close-btn {
       width: 36px;
       height: 36px;
       border-radius: 50%;
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
     }
     .drawer-close-btn:hover {
-      background: #F1F5F9;
+      background: var(--card-hover, #F1F5F9);
       color: #1E293B;
     }
 
@@ -2291,7 +2295,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.25rem;
       background: #FFFFFF;
-      border-bottom: 1px solid #E2E8F0;
+      border-bottom: 1px solid var(--card-border, #E2E8F0);
       padding: 0.5rem 1.25rem 0;
       overflow-x: auto;
     }
@@ -2302,7 +2306,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       padding: 0.625rem 0.875rem;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
       border: none;
       background: transparent;
       border-bottom: 2px solid transparent;
@@ -2314,26 +2318,29 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 17px;
     }
     .d-tab:hover {
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
     }
     .d-tab.active {
-      color: #7E22CE;
-      border-bottom-color: #7E22CE;
+      color: var(--primary, #7E22CE);
+      border-bottom-color: var(--primary, #7E22CE);
     }
 
     /* Drawer Body */
     .drawer-body {
       flex: 1;
+      /* A flex item is floored at its content height unless told otherwise,
+         which would make this pane grow instead of scroll. */
+      min-height: 0;
       overflow-y: auto;
       padding: 1.5rem 1.75rem;
-      background: #F8FAFC;
+      background: var(--bg-app, #F8FAFC);
     }
     .tab-pane {
       animation: fadeIn 0.15s ease-out;
     }
     .section-card {
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 14px;
       padding: 1.5rem;
       box-shadow: 0 1px 4px rgba(0,0,0,0.03);
@@ -2348,7 +2355,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       margin-bottom: 1.25rem;
     }
     .section-title .material-symbols-outlined {
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
       font-size: 22px;
     }
 
@@ -2371,15 +2378,15 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
     }
     .info-val {
       font-size: 0.875rem;
       color: #1E293B;
     }
     .notes-box {
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 8px;
       padding: 0.75rem;
       font-size: 0.8125rem;
@@ -2387,8 +2394,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       margin-top: 0.35rem;
     }
     .address-box {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      background: var(--bg-app, #F8FAFC);
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 8px;
       padding: 0.75rem;
       display: flex;
@@ -2404,8 +2411,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 0.75rem;
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 12px;
       padding: 1rem;
     }
@@ -2417,7 +2424,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.6875rem;
       font-weight: 700;
       text-transform: uppercase;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
     }
     .cb-val {
       font-size: 1.15rem;
@@ -2428,7 +2435,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .gauge-track-large {
       width: 100%;
       height: 12px;
-      background: #E2E8F0;
+      background: var(--card-border, #E2E8F0);
       border-radius: 9999px;
       overflow: hidden;
     }
@@ -2457,8 +2464,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
     }
     .rating-hero-card {
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
+      background: var(--warning-light, #FFFBEB);
+      border: 1px solid var(--warning-light, #FDE68A);
       border-radius: 14px;
       padding: 1.5rem;
       text-align: center;
@@ -2473,14 +2480,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .sub-ratings-card {
       background: #FFFFFF;
-      border: 1px solid #F1F5F9;
+      border: 1px solid var(--card-border, #F1F5F9);
       border-radius: 12px;
       padding: 1rem;
     }
     .sr-track {
       width: 100%;
       height: 8px;
-      background: #E2E8F0;
+      background: var(--card-border, #E2E8F0);
       border-radius: 9999px;
       overflow: hidden;
     }
@@ -2497,7 +2504,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .pm-card {
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 12px;
       padding: 1.25rem;
     }
@@ -2518,13 +2525,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .pm-label {
       font-size: 0.75rem;
       font-weight: 600;
-      color: #64748B;
+      color: var(--text-muted, #64748B);
       margin-bottom: 0.625rem;
     }
     .pm-bar {
       width: 100%;
       height: 6px;
-      background: #E2E8F0;
+      background: var(--card-border, #E2E8F0);
       border-radius: 9999px;
       overflow: hidden;
     }
@@ -2537,11 +2544,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .empty-tab-state {
       text-align: center;
       padding: 3rem 1rem;
-      color: #94A3B8;
+      color: var(--text-dim, #94A3B8);
     }
     .empty-tab-state .material-symbols-outlined {
       font-size: 48px;
-      color: #CBD5E1;
+      color: var(--text-dim, #CBD5E1);
       margin-bottom: 0.5rem;
     }
 
@@ -2577,26 +2584,29 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .fmp-header {
       padding: 1.25rem 1.5rem;
-      background: #FAF5FF;
-      border-bottom: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .fmp-form {
       flex: 1;
+      /* A flex item is floored at its content height unless told otherwise,
+         which would make this pane grow instead of scroll. */
+      min-height: 0;
       overflow-y: auto;
       padding: 1.5rem;
     }
     .fmp-section {
       margin-bottom: 1.5rem;
       padding-bottom: 1.25rem;
-      border-bottom: 1px dashed #E2E8F0;
+      border-bottom: 1px dashed var(--card-border, #E2E8F0);
     }
     .fmp-section-heading {
       font-size: 0.875rem;
       font-weight: 800;
-      color: #7E22CE;
+      color: var(--primary, #7E22CE);
       text-transform: uppercase;
       letter-spacing: 0.04em;
       margin-bottom: 1rem;
@@ -2620,7 +2630,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       color: #475569;
     }
     .form-control {
-      border: 1px solid #CBD5E1;
+      border: 1px solid var(--card-border, #CBD5E1);
       border-radius: 8px;
       padding: 0.5rem 0.75rem;
       font-size: 0.8125rem;
@@ -2630,8 +2640,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       transition: border-color 0.15s ease;
     }
     .form-control:focus {
-      border-color: #7E22CE;
-      box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.1);
+      border-color: var(--primary, #7E22CE);
+      box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 126, 34, 206), 0.1);
     }
     .fmp-footer {
       display: flex;
@@ -2698,6 +2708,34 @@ export class VendorsComponent implements OnInit {
   public isRatingModalOpen = false;
 
   public defaultCurrency = 'SAR';
+
+  // Dropdown option sets (shared custom dropdown, not native selects)
+  public categoryOptions: DropdownOption[] = [
+    { value: 'Meat & Poultry', label: 'Meat & Poultry', icon: 'kebab_dining', description: 'Chicken, mutton, beef & fresh cuts' },
+    { value: 'Rice & Grains', label: 'Rice & Grains', icon: 'grain', description: 'Basmati, flour, pulses & cereals' },
+    { value: 'Spices & Condiments', label: 'Spices & Condiments', icon: 'local_fire_department', description: 'Masala, sauces & seasoning' },
+    { value: 'Dairy & Fresh Produce', label: 'Dairy & Fresh Produce', icon: 'egg_alt', description: 'Milk, cheese, eggs & vegetables' },
+    { value: 'Packaging & Disposables', label: 'Packaging & Disposables', icon: 'takeout_dining', description: 'Boxes, cups, cutlery & bags' },
+    { value: 'Beverages & Syrups', label: 'Beverages & Syrups', icon: 'local_cafe', description: 'Soft drinks, juices & concentrates' },
+    { value: 'Equipment & Maintenance', label: 'Equipment & Maintenance', icon: 'handyman', description: 'Kitchen gear, repairs & service' },
+    { value: 'General Supplies', label: 'General Supplies', icon: 'inventory_2', description: 'Cleaning, stationery & misc items' },
+  ];
+
+  public vendorStatusOptions: DropdownOption[] = [
+    { value: 'ACTIVE', label: 'Active', icon: 'check_circle', description: 'Vendor can receive new purchase orders' },
+    { value: 'INACTIVE', label: 'Inactive', icon: 'pause_circle', description: 'Hidden from new orders, records kept' },
+    { value: 'BLOCKED', label: 'Blocked', icon: 'block', description: 'Barred from all procurement activity' },
+  ];
+
+  public paymentTermsOptions: DropdownOption[] = [
+    { value: 'NET_7', label: 'Net 7 Days', icon: 'schedule', description: 'Payment due 7 days after invoice' },
+    { value: 'NET_15', label: 'Net 15 Days', icon: 'schedule', description: 'Payment due 15 days after invoice' },
+    { value: 'NET_30', label: 'Net 30 Days', icon: 'schedule', description: 'Payment due 30 days after invoice' },
+    { value: 'NET_45', label: 'Net 45 Days', icon: 'schedule', description: 'Payment due 45 days after invoice' },
+    { value: 'NET_60', label: 'Net 60 Days', icon: 'schedule', description: 'Payment due 60 days after invoice' },
+    { value: 'COD', label: 'Cash On Delivery', icon: 'payments', description: 'Settled at the point of delivery' },
+    { value: 'ADVANCE', label: 'Advance Required', icon: 'account_balance_wallet', description: 'Paid in full before dispatch' },
+  ];
 
   // Form states
   public vendorForm: Partial<Vendor> = this.resetVendorForm();

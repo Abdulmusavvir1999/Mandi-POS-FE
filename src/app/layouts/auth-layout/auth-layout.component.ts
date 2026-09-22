@@ -19,7 +19,7 @@ import { ToastComponent } from '../../shared/components/toast/toast.component';
         width: 100vw;
         height: 100vh;
         overflow: hidden;
-        background: #F8FAFC;
+        background: var(--bg-app, #F8FAFC);
         position: relative;
       }
     `,

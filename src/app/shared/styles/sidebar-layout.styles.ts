@@ -215,7 +215,7 @@ export const SIDEBAR_LAYOUT_CSS = `
     transition: all 0.15s ease;
   }
   .mobile-close-btn:hover {
-    background: rgba(220, 38, 38, 0.2);
+    background: rgba(var(--danger-rgb, 220, 38, 38), 0.2);
     color: #F87171;
     border-color: #F87171;
   }
@@ -373,6 +373,9 @@ export const SIDEBAR_LAYOUT_CSS = `
   /* ── 2. NAVIGATION SCROLL AREA ───────────────────────────────────── */
   .sidebar-nav-scroll {
     flex: 1;
+    /* A flex item is floored at its content height unless told otherwise,
+       which would make this pane grow instead of scroll. */
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 12px var(--sb-nav-pad);
@@ -729,7 +732,7 @@ export const SIDEBAR_LAYOUT_CSS = `
   }
 
   .logout-button:hover {
-    background-color: rgba(220, 38, 38, 0.15);
+    background-color: rgba(var(--danger-rgb, 220, 38, 38), 0.15);
     color: #F87171;
     transform: translateX(2px);
   }
@@ -756,7 +759,7 @@ export const SIDEBAR_LAYOUT_CSS = `
     transition: background-color var(--sb-anim) ease, color var(--sb-anim) ease;
   }
   .collapsed-logout-btn:hover {
-    background-color: rgba(220, 38, 38, 0.15);
+    background-color: rgba(var(--danger-rgb, 220, 38, 38), 0.15);
     color: #F87171;
   }
 
@@ -1209,6 +1212,48 @@ export const SIDEBAR_LAYOUT_CSS = `
 
     :host(app-sidebar) .collapse-toggle-btn {
       display: none;
+    }
+  }
+
+  /* ── TOUCH SIZING ───────────────────────────────────────────────────
+     The nav rows are anchors, not buttons, so the 44px floor in section
+     109 of styles.css does not reach them — that rule deliberately does
+     not blanket every a element, because most anchors in this app are
+     inline text links inside sentences and stretching those would wreck
+     the copy. The sidebar is the exception worth naming: it is the
+     primary navigation surface and every row is a discrete target.
+
+     48px rather than the bare 44px minimum. These rows are stacked with
+     no gutter between them, so each one wants a little more than the
+     floor to keep a thumb from catching the row above.
+
+     Keyed off any-pointer: coarse to match section 109 — a till reports
+     a fine primary pointer even though it is driven by hand. */
+  @media (any-pointer: coarse) {
+    :host(app-sidebar) {
+      --sb-item-h: 48px;
+    }
+
+    :host(app-sidebar) .menu-item {
+      padding: 0 12px;
+      gap: 12px;
+    }
+
+    :host(app-sidebar) .logout-button,
+    :host(app-sidebar) .collapsed-logout-btn,
+    :host(app-sidebar) .collapse-toggle-btn,
+    :host(app-sidebar) .mobile-close-btn {
+      min-height: 48px;
+      min-width: 48px;
+    }
+
+    /* The foldable section labels are real buttons, so the 44px floor in
+       section 109 already covers them; they are not repeated here. */
+
+    /* The nav pane is scrolled with a thumb rather than a wheel. */
+    :host(app-sidebar) .sidebar-nav-scroll {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
   }
 `;

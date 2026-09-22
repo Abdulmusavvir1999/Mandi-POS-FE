@@ -23,19 +23,34 @@ export class ReportService {
     return this.http.get<ApiResponse<any>>(`${this.API_URL}/sales`, { params });
   }
 
-  public getProductSalesReport(dateFrom?: string, dateTo?: string, categoryId?: number): Observable<ApiResponse<any>> {
+  public getProductSalesReport(
+    dateFrom?: string,
+    dateTo?: string,
+    categoryId?: number,
+    paymentMethod?: string,
+    orderType?: string
+  ): Observable<ApiResponse<any>> {
     let params = new HttpParams();
     if (dateFrom) params = params.set('dateFrom', dateFrom);
     if (dateTo) params = params.set('dateTo', dateTo);
     if (categoryId) params = params.set('categoryId', categoryId);
+    if (paymentMethod) params = params.set('paymentMethod', paymentMethod);
+    if (orderType) params = params.set('orderType', orderType);
 
     return this.http.get<ApiResponse<any>>(`${this.API_URL}/products`, { params });
   }
 
-  public getCategorySalesReport(dateFrom?: string, dateTo?: string): Observable<ApiResponse<any>> {
+  public getCategorySalesReport(
+    dateFrom?: string,
+    dateTo?: string,
+    paymentMethod?: string,
+    orderType?: string
+  ): Observable<ApiResponse<any>> {
     let params = new HttpParams();
     if (dateFrom) params = params.set('dateFrom', dateFrom);
     if (dateTo) params = params.set('dateTo', dateTo);
+    if (paymentMethod) params = params.set('paymentMethod', paymentMethod);
+    if (orderType) params = params.set('orderType', orderType);
 
     return this.http.get<ApiResponse<any>>(`${this.API_URL}/categories`, { params });
   }

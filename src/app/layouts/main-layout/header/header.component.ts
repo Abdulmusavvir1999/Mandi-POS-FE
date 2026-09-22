@@ -192,7 +192,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         background: linear-gradient(90deg, var(--primary, #7E22CE), var(--primary-hover, #6B21A8)) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4);
+        box-shadow: 0 4px 12px rgba(var(--primary-rgb, 126, 34, 206), 0.4);
       }
 
       .clock-badge {
@@ -245,14 +245,14 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         transition: all 0.2s ease;
       }
       .user-card:hover {
-        background: rgba(126, 34, 206, 0.45);
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.45);
         border-color: #C084FC;
-        box-shadow: 0 4px 12px rgba(126, 34, 206, 0.3);
+        box-shadow: 0 4px 12px rgba(var(--primary-rgb, 126, 34, 206), 0.3);
         transform: translateY(-1px);
       }
       .active-user-card {
         border-color: #C084FC !important;
-        background: rgba(126, 34, 206, 0.5) !important;
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.5) !important;
         box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.35) !important;
       }
       @media (min-width: 640px) {
@@ -341,7 +341,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
       }
       .signout-btn:hover {
         color: var(--danger, #DC2626);
-        background: rgba(220, 38, 38, 0.15);
+        background: rgba(var(--danger-rgb, 220, 38, 38), 0.15);
       }
     `,
   ],

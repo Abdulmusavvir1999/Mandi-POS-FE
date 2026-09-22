@@ -32,6 +32,19 @@ export const routes: Routes = [
       import('./features/back-office/back-office.component').then((m) => m.BackOfficeComponent),
   },
 
+  // Where the Back-Office password is set. Same guard, same standalone
+  // treatment — but deliberately not behind the Back-Office unlock itself:
+  // this is how that password comes into existence, so requiring it here
+  // would leave a fresh install with no way in at all.
+  {
+    path: 'admin/back-office-password',
+    canActivate: [backOfficeGuard],
+    loadComponent: () =>
+      import('./features/back-office/back-office-password.component').then(
+        (m) => m.BackOfficePasswordComponent
+      ),
+  },
+
   // Main Dashboard / POS Shell Layout Routes (Protected)
   {
     path: '',

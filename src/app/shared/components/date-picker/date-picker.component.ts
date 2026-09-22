@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { openFloatingPanel, releaseFloatingPanel } from '../floating-panel-registry';
 
 interface DayCell {
   date: Date;
@@ -216,12 +217,12 @@ interface DayCell {
         outline: none;
         box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 1px 3px rgba(46, 16, 101, 0.04);
+        box-shadow: 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
       }
 
       .date-trigger:hover:not(:disabled) {
         border-color: var(--primary, #7e22ce);
-        box-shadow: 0 2px 8px rgba(126, 34, 206, 0.08);
+        box-shadow: 0 2px 8px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
       }
 
       .date-trigger:disabled {
@@ -231,8 +232,8 @@ interface DayCell {
 
       .date-picker-container.is-open .date-trigger {
         border-color: var(--primary, #7e22ce);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15)),
-          0 4px 12px rgba(46, 16, 101, 0.06);
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15)),
+          0 4px 12px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
       }
 
       .trigger-icon {
@@ -277,7 +278,7 @@ interface DayCell {
 
       .trigger-clear:hover {
         color: var(--danger, #dc2626);
-        background: var(--danger-light, rgba(220, 38, 38, 0.12));
+        background: var(--danger-light, rgba(var(--danger-rgb, 220, 38, 38), 0.12));
       }
 
       /* ── Panel ─────────────────────────────────────────────────── */
@@ -295,8 +296,8 @@ interface DayCell {
         border: 1.5px solid var(--card-border, #e9d5ff);
         border-radius: 16px;
         z-index: 2000;
-        box-shadow: 0 16px 36px -4px rgba(46, 16, 101, 0.16),
-          0 6px 12px -2px rgba(46, 16, 101, 0.08);
+        box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16),
+          0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
         visibility: hidden;
       }
 
@@ -357,7 +358,7 @@ interface DayCell {
       }
 
       .cal-nav-btn:hover {
-        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
         color: var(--primary, #7e22ce);
       }
 
@@ -383,7 +384,7 @@ interface DayCell {
       }
 
       .cal-title-btn:hover {
-        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
         color: var(--primary, #7e22ce);
       }
 
@@ -436,7 +437,7 @@ interface DayCell {
       }
 
       .cal-day:hover:not(:disabled):not(.is-selected) {
-        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
         color: var(--primary, #7e22ce);
       }
 
@@ -459,7 +460,7 @@ interface DayCell {
         );
         color: #ffffff;
         font-weight: 800;
-        box-shadow: 0 4px 12px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
       }
 
       .cal-day:disabled {
@@ -493,7 +494,7 @@ interface DayCell {
       }
 
       .cal-chip:hover:not(.is-selected) {
-        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
         color: var(--primary, #7e22ce);
       }
 
@@ -511,7 +512,7 @@ interface DayCell {
         );
         color: #ffffff;
         font-weight: 800;
-        box-shadow: 0 4px 12px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
       }
 
       /* ── Footer ────────────────────────────────────────────────── */
@@ -542,7 +543,7 @@ interface DayCell {
       .cal-foot-btn:hover {
         border-color: var(--primary, #7e22ce);
         color: var(--primary, #7e22ce);
-        background: var(--primary-light, rgba(126, 34, 206, 0.08));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.08));
       }
 
       .cal-foot-btn.is-primary {
@@ -556,8 +557,37 @@ interface DayCell {
       }
 
       .cal-foot-btn.is-primary:hover {
-        box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
         color: #ffffff;
+      }
+
+      /* ─── Touch sizing ───────────────────────────────────────────────
+         Section 109 of styles.css raises every button to a 44px minimum
+         on a touch-capable device, and a day cell is a button. Seven of
+         them plus the gaps need 332px of content box, which the 292px
+         panel above cannot give — the grid would spill out of its own
+         card. So the panel is widened to match the cells rather than the
+         cells being exempted: a 37px day target is the single worst hit
+         area in the app, and it is the one people tap most when filtering
+         a report or backdating an entry.
+
+         positionPanel() measures offsetWidth at open time, so the new
+         width is picked up with no change to the positioning logic. */
+      @media (any-pointer: coarse) {
+        .calendar-panel {
+          width: 344px;
+        }
+
+        .cal-day {
+          height: 44px;
+          font-size: 0.9rem;
+        }
+
+        /* The weekday header has to keep step with the widened grid or
+           the letters drift out of line with the columns they label. */
+        .cal-weekdays {
+          font-size: 0.75rem;
+        }
       }
     `,
   ],
@@ -619,6 +649,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnInit, OnDest
   ngOnDestroy(): void {
     window.removeEventListener('resize', this.reposition);
     document.removeEventListener('scroll', this.reposition, true);
+    releaseFloatingPanel(this);
   }
 
   // ── Display ───────────────────────────────────────────────────────
@@ -697,16 +728,18 @@ export class DatePickerComponent implements ControlValueAccessor, OnInit, OnDest
   toggleOpen(event: MouseEvent): void {
     event.stopPropagation();
     if (this.disabled) return;
-    this.isOpen = !this.isOpen;
     if (this.isOpen) {
-      this.view = 'days';
-      this.viewDate = this.startOfDay(this.selectedDate ? new Date(this.selectedDate) : new Date());
-      this.isPositioned = false;
-      // The panel has to exist in the DOM before it can be measured.
-      setTimeout(() => this.positionPanel());
-    } else {
+      this.close();
       this.onTouched();
+      return;
     }
+    openFloatingPanel(this);
+    this.isOpen = true;
+    this.view = 'days';
+    this.viewDate = this.startOfDay(this.selectedDate ? new Date(this.selectedDate) : new Date());
+    this.isPositioned = false;
+    // The panel has to exist in the DOM before it can be measured.
+    setTimeout(() => this.positionPanel());
   }
 
   cycleView(): void {
@@ -766,10 +799,12 @@ export class DatePickerComponent implements ControlValueAccessor, OnInit, OnDest
     this.close();
   }
 
-  private close(): void {
+  /** Public so the shared registry can dismiss this panel when another opens. */
+  public close(): void {
     this.isOpen = false;
     this.isPositioned = false;
     this.view = 'days';
+    releaseFloatingPanel(this);
   }
 
   @HostListener('document:click', ['$event'])

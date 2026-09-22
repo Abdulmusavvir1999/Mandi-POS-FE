@@ -102,6 +102,32 @@ export class BackOfficeService {
   }
 
   /**
+   * Withdrawn orders, so they can be put back.
+   *
+   * Rows here hold no `order_number` — withdrawing releases it — so each
+   * carries `released_number` instead: the number it gave up, read back out of
+   * `delete_json`. Search matches that too.
+   */
+  public getDeletedOrders(filters: { page?: number; limit?: number; search?: string }): Observable<
+    ApiResponse<BackOfficeOrder[]>
+  > {
+    let params = new HttpParams()
+      .set('page', filters.page || 1)
+      .set('limit', filters.limit || 20);
+    if (filters.search) params = params.set('search', filters.search);
+
+    return this.http.get<ApiResponse<BackOfficeOrder[]>>(`${this.API_URL}/orders/deleted`, { params });
+  }
+
+  public restoreOrder(id: number): Observable<ApiResponse<BulkResult>> {
+    return this.http.post<ApiResponse<BulkResult>>(`${this.API_URL}/orders/${id}/restore`, {});
+  }
+
+  public restoreOrders(orderIds: number[]): Observable<ApiResponse<BulkResult>> {
+    return this.http.post<ApiResponse<BulkResult>>(`${this.API_URL}/orders/bulk-restore`, { orderIds });
+  }
+
+  /**
    * Applies the discount in full to every selected order — a fixed 100 means
    * 100 off each order, not 100 shared between them.
    */
@@ -151,5 +177,29 @@ export class BackOfficeService {
 
   public deleteInvoices(invoiceIds: number[]): Observable<ApiResponse<BulkResult>> {
     return this.http.post<ApiResponse<BulkResult>>(`${this.API_URL}/invoices/bulk-delete`, { invoiceIds });
+  }
+
+  /**
+   * Withdrawn invoices, so they can be put back. Each row carries
+   * `released_number` — the `bill_number` it gave up — since the column itself
+   * is NULL once withdrawn.
+   */
+  public getDeletedInvoices(filters: { page?: number; limit?: number; search?: string }): Observable<
+    ApiResponse<Bill[]>
+  > {
+    let params = new HttpParams()
+      .set('page', filters.page || 1)
+      .set('limit', filters.limit || 20);
+    if (filters.search) params = params.set('search', filters.search);
+
+    return this.http.get<ApiResponse<Bill[]>>(`${this.API_URL}/invoices/deleted`, { params });
+  }
+
+  public restoreInvoice(id: number): Observable<ApiResponse<BulkResult>> {
+    return this.http.post<ApiResponse<BulkResult>>(`${this.API_URL}/invoices/${id}/restore`, {});
+  }
+
+  public restoreInvoices(invoiceIds: number[]): Observable<ApiResponse<BulkResult>> {
+    return this.http.post<ApiResponse<BulkResult>>(`${this.API_URL}/invoices/bulk-restore`, { invoiceIds });
   }
 }

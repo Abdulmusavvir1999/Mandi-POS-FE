@@ -802,7 +802,7 @@ import { RouterLink } from '@angular/router';
         background: var(--primary-light, #F3E8FF);
         border: 1px solid var(--card-border, #E9D5FF);
         color: var(--primary, #7E22CE);
-        box-shadow: 0 1px 2px rgba(46, 16, 101, 0.06);
+        box-shadow: 0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
       }
 
       .category-thumb img {
@@ -848,7 +848,7 @@ import { RouterLink } from '@angular/router';
         gap: 0.3rem;
         padding: 0.2rem 0.6rem 0.2rem 0.45rem;
         border-radius: 999px;
-        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
         border: 1px solid var(--card-border, #E9D5FF);
         color: var(--primary, #7E22CE);
         font-size: 0.6875rem;
@@ -874,7 +874,7 @@ import { RouterLink } from '@angular/router';
         background: transparent;
         border-style: dashed;
         border-color: #E5E7EB;
-        color: #9CA3AF;
+        color: var(--text-dim, #9CA3AF);
       }
 
       /* ─── Image upload field ─── */
@@ -1101,8 +1101,8 @@ export class CategoriesComponent implements OnInit {
       list = list.filter((c) => c.status === this.statusFilter);
     }
 
-    if (this.searchQuery) {
-      const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (q) {
       list = list.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
@@ -1121,9 +1121,21 @@ export class CategoriesComponent implements OnInit {
     return list;
   }
 
+  /**
+   * The current page, never past the end of the filtered list.
+   *
+   * Deleting the last rows on the final page, or any refresh that returns
+   * fewer records, used to leave `currentPage` pointing past the end and the
+   * table rendering empty. Clamped on read rather than written back, so it
+   * cannot fire a change-after-checked error during rendering.
+   */
+  get safePage(): number {
+    return Math.min(Math.max(1, this.currentPage), this.totalPages);
+  }
+
   get paginatedCategories(): Category[] {
     const list = this.filteredCategories;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
@@ -1136,11 +1148,11 @@ export class CategoriesComponent implements OnInit {
   }
 
   get paginationStart(): number {
-    return this.filteredCategories.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return this.filteredCategories.length === 0 ? 0 : (this.safePage - 1) * this.pageSize + 1;
   }
 
   get paginationEnd(): number {
-    return Math.min(this.currentPage * this.pageSize, this.filteredCategories.length);
+    return Math.min(this.safePage * this.pageSize, this.filteredCategories.length);
   }
 
   get isAllSelected(): boolean {

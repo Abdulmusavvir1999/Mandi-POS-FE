@@ -6,23 +6,17 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SidebarLayoutService } from '../../../core/services/sidebar-layout.service';
 import { SIDEBAR_LAYOUT_CSS } from '../../../shared/styles/sidebar-layout.styles';
+import {
+  NavItem,
+  NavSection,
+  SIDEBAR_ALERTS_SHORTCUT,
+  SIDEBAR_NAV_SECTIONS,
+} from '../../../core/config/sidebar-nav.config';
 
-export interface NavItem {
-  id: string;
-  label: string;
-  route: string;
-  queryParams?: Record<string, string>;
-  iconName: string;
-  badge?: string;
-  permission?: string;
-  roles?: string[];
-  isPos?: boolean;
-}
-
-export interface NavSection {
-  title: string;
-  items: NavItem[];
-}
+// The menu moved to core/config so the Settings page can list it for renaming
+// without importing this component. Re-exported here because callers have
+// always taken these two from the rail.
+export type { NavItem, NavSection };
 
 @Component({
   selector: 'app-sidebar',
@@ -154,11 +148,11 @@ export interface NavSection {
                   (click)="toggleSection(section)"
                   [attr.aria-expanded]="!isFolded(section)"
                 >
-                  <span>{{ section.title }}</span>
+                  <span>{{ sectionName(section) }}</span>
                   <span class="material-symbols-outlined section-chevron">expand_more</span>
                 </button>
                 <ng-template #staticLabel>
-                  <div class="section-label">{{ section.title }}</div>
+                  <div class="section-label">{{ sectionName(section) }}</div>
                 </ng-template>
               </ng-container>
               <div class="section-divider-collapsed" *ngIf="isCollapsed"></div>
@@ -171,15 +165,15 @@ export interface NavSection {
                     [routerLink]="item.route"
                     [queryParams]="item.queryParams || null"
                     (click)="onNavItemClick()"
-                    (mouseenter)="showTip($event, item.label)"
+                    (mouseenter)="showTip($event, itemName(item))"
                     (mouseleave)="hideTip()"
-                    (focus)="showTip($event, item.label)"
+                    (focus)="showTip($event, itemName(item))"
                     (blur)="hideTip()"
                     routerLinkActive="is-active"
                     [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' || item.route === '/pos' || item.route === '/settings' || (item.queryParams !== undefined) }"
                     class="menu-item"
                     [class.pos-special-item]="item.isPos"
-                    [attr.aria-label]="item.label"
+                    [attr.aria-label]="itemName(item)"
                     [attr.id]="'nav-item-' + item.id"
                   >
                     <!-- Active Left Indicator Bar -->
@@ -191,7 +185,7 @@ export interface NavSection {
                     </div>
 
                     <!-- Menu Text -->
-                    <span class="item-label" *ngIf="!isCollapsed">{{ item.label }}</span>
+                    <span class="item-label" *ngIf="!isCollapsed">{{ itemName(item) }}</span>
 
                     <!-- Subtle Badge / Hotkey hint -->
                     <span *ngIf="!isCollapsed && item.badge" class="item-badge">
@@ -293,160 +287,31 @@ export class SidebarComponent {
   public tooltip = signal<{ label: string; top: number } | null>(null);
   private foldedSections = signal<Record<string, boolean>>({});
 
-  public navSections: NavSection[] = [
-    {
-      title: 'POS COUNTER & OPERATIONS',
-      items: [
-        {
-          id: 'pos',
-          label: 'POS Billing',
-          route: '/pos',
-          iconName: 'point_of_sale',
-          badge: 'F1',
-          permission: 'pos.billing',
-          isPos: true,
-        },
-        {
-          id: 'orders',
-          label: 'Kitchen Display (KDS)',
-          route: '/orders',
-          iconName: 'receipt_long',
-          permission: 'order.manage',
-        },
-        {
-          id: 'dining',
-          label: 'Dining & Tables',
-          route: '/dining',
-          iconName: 'table_restaurant',
-          permission: 'dining.manage',
-        },
-        {
-          id: 'queue',
-          label: 'Takeaway Queue',
-          route: '/queue',
-          iconName: 'takeout_dining',
-          permission: 'queue.manage',
-        },
-        {
-          id: 'drafts',
-          label: 'Held Drafts',
-          route: '/draft-bills',
-          iconName: 'drafts',
-          permission: 'pos.hold_bill',
-        },
-      ],
-    },
-    {
-      title: 'CATALOG & INVENTORY',
-      items: [
-        {
-          id: 'dashboard',
-          label: 'Live Dashboard',
-          route: '/dashboard',
-          iconName: 'dashboard',
-          permission: 'dashboard.view',
-        },
-        {
-          id: 'products',
-          label: 'Dishes & Products',
-          route: '/products',
-          iconName: 'inventory_2',
-          permission: 'product.manage',
-        },
-        {
-          id: 'categories',
-          label: 'Categories',
-          route: '/categories',
-          iconName: 'category',
-          permission: 'category.manage',
-        },
-        {
-          id: 'stock',
-          label: 'Stock Ledger',
-          route: '/stock',
-          iconName: 'warehouse',
-          permission: 'stock.view',
-        },
-        {
-          id: 'vendors',
-          label: 'Vendor Management',
-          route: '/vendors',
-          iconName: 'local_shipping',
-        },
-        {
-          id: 'customers',
-          label: 'Customers',
-          route: '/customers',
-          iconName: 'group',
-          permission: 'customer.view',
-        },
-        {
-          id: 'bills',
-          label: 'Sales Bills',
-          route: '/bills',
-          iconName: 'receipt',
-          permission: 'bill.view',
-        },
-      ],
-    },
-    {
-      title: 'ADMINISTRATION',
-      items: [
-        {
-          id: 'reports',
-          label: 'Reports & Analytics',
-          route: '/reports',
-          iconName: 'analytics',
-          permission: 'reports.view',
-        },
-        {
-          id: 'users',
-          label: 'Staff & Roles',
-          route: '/users',
-          iconName: 'manage_accounts',
-          permission: 'user.manage',
-        },
-        {
-          // Deliberately unpermissioned: `stafftrack.view` widens this page to
-          // the whole roster, it does not unlock it. Every authenticated user
-          // has their own activity to look at, and the API returns only that
-          // much without the permission, so hiding the row would conceal a
-          // page they are entitled to rather than protect anything.
-          id: 'staff-track',
-          label: 'Staff Track',
-          route: '/staff-track',
-          iconName: 'groups',
-        },
-        {
-          id: 'audit',
-          label: 'Audit Trail',
-          route: '/audit',
-          iconName: 'history',
-          permission: 'audit.view',
-        },
-        {
-          id: 'settings',
-          label: 'POS Settings',
-          route: '/settings',
-          iconName: 'settings',
-          permission: 'settings.manage',
-        },
-      ],
-    },
-  ];
-
+  /** The shipped menu. Renames are applied at render time, not here, so
+   *  this stays the single description of what the rail contains. */
+  public navSections: NavSection[] = SIDEBAR_NAV_SECTIONS;
   /** Shortcut surfaced by templates with the quickActions capability. */
-  public readonly alertsShortcut: NavItem = {
-    id: 'quick-alerts',
-    label: 'Alerts',
-    route: '/orders',
-    iconName: 'notifications',
-    permission: 'order.manage',
-  };
+  public readonly alertsShortcut: NavItem = SIDEBAR_ALERTS_SHORTCUT;
+
+  /**
+   * What a row is called here: the operator's name for it if they have set
+   * one in Settings, otherwise the shipped wording.
+   */
+  public itemName(item: NavItem): string {
+    return this.sidebarLayout.itemLabel(item.id, item.label);
+  }
+
+  public sectionName(section: NavSection): string {
+    return this.sidebarLayout.sectionLabel(section.id, section.title);
+  }
 
   /**
    * Menu items are never added or removed by a template — search only hides
    * rows that do not match, and permissions still gate every row downstream.
+   *
+   * Matching is against the displayed name, so searching for what the operator
+   * renamed a module to finds it. Reads the rename signals, so the list
+   * recomputes the moment a name changes.
    */
   public readonly filteredSections = computed<NavSection[]>(() => {
     const q = this.searchQuery().trim().toLowerCase();
@@ -456,8 +321,8 @@ export class SidebarComponent {
         ...section,
         items: section.items.filter(
           (item) =>
-            item.label.toLowerCase().includes(q) ||
-            section.title.toLowerCase().includes(q),
+            this.itemName(item).toLowerCase().includes(q) ||
+            this.sectionName(section).toLowerCase().includes(q),
         ),
       }))
       .filter((section) => section.items.length > 0);
@@ -480,12 +345,12 @@ export class SidebarComponent {
     if (this.isCollapsed) return false;
     if (!this.sidebarLayout.pageCaps().collapsibleSections) return false;
     if (this.searchQuery().trim()) return false; // never hide search hits
-    return !!this.foldedSections()[section.title];
+    return !!this.foldedSections()[section.id];
   }
 
   public toggleSection(section: NavSection): void {
     const current = { ...this.foldedSections() };
-    current[section.title] = !current[section.title];
+    current[section.id] = !current[section.id];
     this.foldedSections.set(current);
   }
 

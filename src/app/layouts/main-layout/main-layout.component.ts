@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -44,6 +44,7 @@ import { SidebarLayoutService } from '../../core/services/sidebar-layout.service
 
         <!-- Routed Feature Screen with Canvas -->
         <main
+          #scrollArea
           class="flex-1 overflow-hidden min-w-0"
           [ngClass]="isPosRoute ? 'p-0 w-full h-full' : 'overflow-y-auto p-3 sm:p-4 md:p-6'"
           [style.color]="'var(--text-main, #2E1065)'"
@@ -62,6 +63,9 @@ export class MainLayoutComponent {
   private router = inject(Router);
   private sidebarLayout = inject(SidebarLayoutService);
 
+  /** The one pane that scrolls on a feature route; see resetScroll(). */
+  private scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
+
   public isSidebarCollapsed = signal(false);
   public isMobileSidebarOpen = false;
   public isPosRoute = false;
@@ -73,6 +77,7 @@ export class MainLayoutComponent {
       .subscribe((event: any) => {
         this.checkPosRoute(event.urlAfterRedirects || event.url);
         this.isMobileSidebarOpen = false;
+        this.resetScroll();
       });
 
     // Each sidebar template opens with the operator's remembered rail state,
@@ -81,6 +86,24 @@ export class MainLayoutComponent {
       const slot = this.sidebarLayout.collapseSlot();
       this.isSidebarCollapsed.set(this.sidebarLayout.resolveInitialCollapsed(slot));
     });
+  }
+
+  /**
+   * Opens every route at its top.
+   *
+   * The document does not scroll in this shell, so the browser has no scroll
+   * position of its own to restore and Angular's scroll restoration has
+   * nothing to act on — <main> simply keeps whatever offset the previous
+   * screen left behind, and the next one opens part-way down.
+   *
+   * Instant, not smooth: easing a whole screen back to the top on every
+   * navigation is a wait, not a flourish. The global smooth rule would
+   * otherwise apply here, so the jump is asked for explicitly.
+   */
+  private resetScroll(): void {
+    const el = this.scrollArea()?.nativeElement;
+    if (!el) return;
+    el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
   }
 
   public onToggleCollapse(): void {

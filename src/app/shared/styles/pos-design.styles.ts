@@ -148,6 +148,8 @@ export const POS_DESIGN_CSS = `
     [class*='pos-design-'] .dish-title { order: 1; margin: 0; color: var(--pos-title-color); }
     [class*='pos-design-'] .dish-price-tag { order: 2; color: var(--pos-price-color); }
     [class*='pos-design-'] .dish-desc { order: 3; }
+    /* Combo savings row — same order as the description it follows. */
+    [class*='pos-design-'] .combo-meta { order: 3; }
     [class*='pos-design-'] .dish-specs { order: 4; display: none; }
     [class*='pos-design-'] .dish-card-footer { order: 5; display: none; }
     [class*='pos-design-'] .dish-cta { order: 6; }
@@ -207,6 +209,36 @@ export const POS_DESIGN_CSS = `
     [class*='pos-design-'] .cat-avatar-bubble { background: var(--card-accent, var(--pos-accent1)); }
     [class*='pos-design-'] .cat-circle-card.is-selected .cat-avatar-bubble {
       box-shadow: 0 0 0 3px var(--pos-highlight);
+    }
+
+    /* Menu Dishes / Combo Deals pills. Both tabs show the same card design, so
+       the switch between them has to be part of it — left on the theme purple
+       it sat as a stray bright pill above a neon or half-colour grid.
+       Active uses the highlight rather than the button colour: Half Colour
+       paints its buttons white, which on a white rail is no state at all. */
+    [class*='pos-design-'] .pos-catalog-tab {
+      background: var(--pos-card-bg);
+      border-color: var(--pos-card-border);
+      color: var(--pos-nav-color);
+    }
+    [class*='pos-design-'] .pos-catalog-tab:hover:not(.is-active) {
+      background: var(--pos-card-bg);
+      color: var(--pos-nav-color);
+      border-color: var(--pos-highlight);
+    }
+    [class*='pos-design-'] .pos-catalog-tab.is-active {
+      background: var(--pos-highlight);
+      border-color: transparent;
+      color: #FFFFFF;
+      box-shadow: 0 6px 16px -8px var(--pos-highlight);
+    }
+    [class*='pos-design-'] .pos-catalog-tab-count {
+      background: var(--pos-highlight);
+      color: #FFFFFF;
+    }
+    [class*='pos-design-'] .pos-catalog-tab.is-active .pos-catalog-tab-count {
+      background: rgba(255, 255, 255, 0.24);
+      color: #FFFFFF;
     }
 
     /* ═══ 1. NEON SPOTLIGHT ═══════════════════════════════════════════════
@@ -574,6 +606,39 @@ export const POS_DESIGN_CSS = `
       color: var(--pos-button-color);
     }
 
+    /* ─── Portion-count badge, in every design ────────────────────────── */
+
+    /* The stock card floats it in white over a gradient; here the media band
+       is full-bleed and each card carries its own accent, so the badge takes
+       that accent.
+
+       It goes top-LEFT here, not top-right: Neon and Diagonal both park the
+       price chip in the top-right corner, and the badge sat on top of it. The
+       corner it takes instead is free in every design - the NEW ribbon that
+       would own it is hidden in all four, bar the one exception below. */
+    [class*='pos-design-'] .dish-variant-badge {
+      top: 0.55rem;
+      left: 0.55rem;
+      right: auto;
+      z-index: 5;
+      min-width: 1.45rem;
+      height: 1.45rem;
+      padding: 0 0.42rem;
+      background: var(--card-accent, var(--pos-accent1));
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      color: #FFFFFF;
+      font-size: 0.625rem;
+      box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.45);
+    }
+
+    /* Colour Arch is the exception: it is the one design that shows the NEW
+       flag, top-left, and it keeps its price in the flow - so the badge takes
+       the free right corner there. */
+    .pos-design-arch .dish-variant-badge {
+      left: auto;
+      right: 0.8rem;
+    }
+
     /* ─── Out of stock, in every design ───────────────────────────────── */
     [class*='pos-design-'] .dish-hero-card.is-out-of-stock { opacity: 0.55; }
 
@@ -585,7 +650,7 @@ export const POS_DESIGN_CSS = `
       z-index: 5;
       padding: 0.16rem 0.6rem;
       border-radius: 999px;
-      background: #DC2626;
+      background: var(--danger, #DC2626);
       color: #FFFFFF;
       font-size: 0.5625rem;
       font-weight: 800;

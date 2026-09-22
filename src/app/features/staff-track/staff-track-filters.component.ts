@@ -122,14 +122,14 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
             type="text"
             title="Search"
             [(ngModel)]="filters.search"
-            (ngModelChange)="emit()"
+            (ngModelChange)="onSearchTyped()"
             [placeholder]="searchPlaceholder"
             class="toolbar-search-input"
           />
           <button
             *ngIf="filters.search"
             type="button"
-            (click)="filters.search = ''; emit()"
+            (click)="filters.search = ''; emitNow()"
             class="search-clear-btn"
             title="Clear search"
           >
@@ -157,7 +157,7 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         padding: 3px;
         border-radius: 12px;
         background: #F5F3FF;
-        border: 1px solid #E9D5FF;
+        border: 1px solid var(--card-border, #E9D5FF);
       }
       .st-preset-btn {
         border: 0;
@@ -166,7 +166,7 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         border-radius: 9px;
         font-size: 11px;
         font-weight: 700;
-        color: #6B21A8;
+        color: var(--primary-variant, #6B21A8);
         cursor: pointer;
         white-space: nowrap;
         transition: background 0.15s ease, color 0.15s ease;
@@ -175,15 +175,15 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         background: #EDE9FE;
       }
       .st-preset-btn.is-active {
-        background: #7E22CE;
+        background: var(--primary, #7E22CE);
         color: #FFFFFF;
       }
       .st-filter-count {
         font-size: 11px;
         font-weight: 700;
-        color: #6B21A8;
-        background: #F3E8FF;
-        border: 1px solid #E9D5FF;
+        color: var(--primary-variant, #6B21A8);
+        background: var(--primary-light, #F3E8FF);
+        border: 1px solid var(--card-border, #E9D5FF);
         padding: 5px 10px;
         border-radius: 999px;
         white-space: nowrap;
@@ -207,6 +207,9 @@ export class StaffTrackFiltersComponent implements OnInit {
   @Output() filtersChange = new EventEmitter<StaffTrackFilters>();
 
   public activePreset: string | null = 'today';
+
+  /** Debounce handle for the free-text search box. */
+  private searchTimer: any = null;
 
   public presets = [
     { key: 'today', label: 'Today' },
@@ -361,7 +364,26 @@ export class StaffTrackFiltersComponent implements OnInit {
     this.filters.tableId = null;
     this.filters.module = '';
     this.filters.search = '';
+    clearTimeout(this.searchTimer);
     this.applyPreset('today');
+  }
+
+  /**
+   * Waits for a pause in typing before emitting.
+   *
+   * Each emit costs the parent several requests - the header pair plus the
+   * active tab - so firing one per keystroke both floods the server and lets
+   * an early, slower response land after a later one.
+   */
+  onSearchTyped(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.emit(), 350);
+  }
+
+  /** Emits at once, cancelling any pending debounce. For discrete actions. */
+  emitNow(): void {
+    clearTimeout(this.searchTimer);
+    this.emit();
   }
 
   emit(): void {

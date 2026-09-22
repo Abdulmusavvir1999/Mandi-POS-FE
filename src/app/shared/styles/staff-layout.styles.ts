@@ -57,7 +57,7 @@ export const STAFF_LAYOUT_CSS = `
   }
 
   .staff-id-top-strap {
-    background: #0F172A;
+    background: var(--text-main, #0F172A);
     padding: 8px 12px 6px;
     display: flex;
     flex-direction: column;
@@ -68,8 +68,8 @@ export const STAFF_LAYOUT_CSS = `
     width: 36px;
     height: 7px;
     border-radius: 999px;
-    background: #475569;
-    border: 1.5px solid #1E293B;
+    background: var(--text-muted, #475569);
+    border: 1.5px solid var(--text-main, #1E293B);
     margin-bottom: 4px;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
@@ -78,7 +78,7 @@ export const STAFF_LAYOUT_CSS = `
     font-weight: 900;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #94A3B8;
+    color: var(--text-dim, #94A3B8);
   }
   .staff-id-hologram-strip {
     height: 5px;
@@ -103,7 +103,7 @@ export const STAFF_LAYOUT_CSS = `
     width: 72px;
     height: 72px;
     border-radius: 50%;
-    background: #F1F5F9;
+    background: var(--card-hover, #F1F5F9);
     border: 3px solid var(--staff-accent-color, #4F46E5);
     display: flex;
     align-items: center;
@@ -130,7 +130,7 @@ export const STAFF_LAYOUT_CSS = `
     border: 2.5px solid #FFFFFF;
   }
   .staff-id-active-pulse.is-inactive {
-    background-color: #EF4444;
+    background-color: var(--danger, #EF4444);
   }
 
   .staff-id-title-name {
@@ -168,10 +168,10 @@ export const STAFF_LAYOUT_CSS = `
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background: #F8FAFC;
+    background: var(--bg-app, #F8FAFC);
     padding: 8px 10px;
     border-radius: 8px;
-    border: 1px solid #E2E8F0;
+    border: 1px solid var(--card-border, #E2E8F0);
     font-size: 11px;
     color: var(--staff-text-muted, #64748B);
     margin-bottom: 12px;
@@ -190,7 +190,7 @@ export const STAFF_LAYOUT_CSS = `
   .staff-id-barcode-footer {
     width: 100%;
     background: #FAFAFA;
-    border-top: 1px solid #E2E8F0;
+    border-top: 1px solid var(--card-border, #E2E8F0);
     padding: 8px 14px;
     display: flex;
     align-items: center;
@@ -203,7 +203,7 @@ export const STAFF_LAYOUT_CSS = `
     height: 20px;
   }
   .staff-id-barcode-bar {
-    background: #0F172A;
+    background: var(--text-main, #0F172A);
     height: 100%;
     width: 2px;
   }
@@ -213,7 +213,7 @@ export const STAFF_LAYOUT_CSS = `
     font-family: monospace;
     font-size: 9px;
     font-weight: 800;
-    color: #475569;
+    color: var(--text-muted, #475569);
     letter-spacing: 0.05em;
   }
 
@@ -228,7 +228,7 @@ export const STAFF_LAYOUT_CSS = `
   /* ═══════════════════════════════════════════════════════════════ */
   .staff-layout-darkneon.staff-stage {
     background: #0B0F19 !important;
-    border: 1px solid #1F2937;
+    border: 1px solid var(--text-main, #1F2937);
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
   }
   .staff-layout-darkneon .staff-dark-grid {
@@ -239,7 +239,7 @@ export const STAFF_LAYOUT_CSS = `
   }
 
   .staff-dark-card {
-    background: #111827;
+    background: var(--text-main, #111827);
     border: 1px solid rgba(6, 182, 212, 0.3);
     border-radius: var(--staff-card-radius, 14px);
     padding: var(--staff-padding, 18px);
@@ -278,8 +278,8 @@ export const STAFF_LAYOUT_CSS = `
     display: inline-block;
   }
   .staff-dark-radar-dot.is-off {
-    background: #EF4444;
-    box-shadow: 0 0 8px #EF4444;
+    background: var(--danger, #EF4444);
+    box-shadow: 0 0 8px var(--danger, #EF4444);
   }
 
   .staff-dark-center {
@@ -292,7 +292,7 @@ export const STAFF_LAYOUT_CSS = `
     width: 52px;
     height: 52px;
     border-radius: 12px;
-    background: #1E293B;
+    background: var(--text-main, #1E293B);
     border: 1.5px solid #06B6D4;
     box-shadow: 0 0 12px rgba(6, 182, 212, 0.2);
     display: flex;
@@ -318,7 +318,7 @@ export const STAFF_LAYOUT_CSS = `
   }
   .staff-dark-sub {
     font-size: 12px;
-    color: #9CA3AF;
+    color: var(--text-dim, #9CA3AF);
     font-family: monospace;
   }
   .staff-dark-role-pill {
@@ -337,12 +337,12 @@ export const STAFF_LAYOUT_CSS = `
 
   .staff-dark-console-box {
     background: #0B0F19;
-    border: 1px solid #1F2937;
+    border: 1px solid var(--text-main, #1F2937);
     border-radius: 8px;
     padding: 8px 10px;
     font-family: monospace;
     font-size: 11px;
-    color: #9CA3AF;
+    color: var(--text-dim, #9CA3AF);
     margin-bottom: 12px;
     display: flex;
     flex-direction: column;
@@ -467,13 +467,13 @@ export const STAFF_LAYOUT_CSS = `
     justify-content: space-between;
     font-size: 11px;
     font-weight: 700;
-    color: #475569;
+    color: var(--text-muted, #475569);
   }
   .staff-roster-gauge-bar {
     width: 100%;
     height: 6px;
     border-radius: 999px;
-    background: #E2E8F0;
+    background: var(--card-border, #E2E8F0);
     overflow: hidden;
   }
   .staff-roster-gauge-fill {
@@ -513,8 +513,8 @@ export const STAFF_LAYOUT_CSS = `
   .staff-roster-pill-btn:hover { opacity: 0.9; }
   .staff-roster-pill-btn.is-delete {
     background: transparent;
-    border-color: #EF4444;
-    color: #EF4444;
+    border-color: var(--danger, #EF4444);
+    color: var(--danger, #EF4444);
   }
   .staff-roster-pill-btn.is-delete:hover {
     background: #FEF2F2;
@@ -538,14 +538,14 @@ export const STAFF_LAYOUT_CSS = `
     text-align: left;
   }
   .staff-power-table th {
-    background: #F1F5F9;
+    background: var(--card-hover, #F1F5F9);
     padding: 10px 14px;
     font-weight: 800;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #475569;
-    border-bottom: 2px solid #CBD5E1;
+    color: var(--text-muted, #475569);
+    border-bottom: 2px solid var(--card-border, #CBD5E1);
   }
   .staff-power-table td {
     padding: var(--staff-padding, 12px) 14px;
@@ -554,7 +554,7 @@ export const STAFF_LAYOUT_CSS = `
     vertical-align: middle;
   }
   .staff-power-table tbody tr:nth-child(even) {
-    background-color: #F8FAFC;
+    background-color: var(--bg-app, #F8FAFC);
   }
   .staff-power-table tbody tr:hover {
     background-color: #EFF6FF !important;
@@ -646,7 +646,7 @@ export const STAFF_LAYOUT_CSS = `
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
   .staff-bento-status-pill.is-off {
-    color: #EF4444;
+    color: var(--danger, #EF4444);
   }
 
   .staff-bento-body {
@@ -711,8 +711,8 @@ export const STAFF_LAYOUT_CSS = `
     margin-bottom: 12px;
   }
   .staff-bento-tile {
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: var(--bg-app, #F8FAFC);
+    border: 1px solid var(--card-border, #E2E8F0);
     border-radius: 12px;
     padding: 8px 6px;
     display: flex;
@@ -723,19 +723,19 @@ export const STAFF_LAYOUT_CSS = `
     font-size: 9px;
     font-weight: 800;
     text-transform: uppercase;
-    color: #64748B;
+    color: var(--text-muted, #64748B);
     letter-spacing: 0.04em;
   }
   .staff-bento-tile-val {
     font-size: 13px;
     font-weight: 800;
-    color: #0F172A;
+    color: var(--text-main, #0F172A);
     margin-top: 2px;
   }
 
   .staff-bento-contacts {
     width: 100%;
-    background: #FAF5FF;
+    background: var(--bg-app, #FAF5FF);
     border-radius: 12px;
     padding: 8px 12px;
     font-size: 11px;
@@ -750,7 +750,7 @@ export const STAFF_LAYOUT_CSS = `
   .staff-bento-footer {
     padding: 12px var(--staff-padding, 20px);
     background: #FAFAFA;
-    border-top: 1px solid #F1F5F9;
+    border-top: 1px solid var(--card-border, #F1F5F9);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -828,7 +828,7 @@ export const STAFF_LAYOUT_CSS = `
     background: linear-gradient(135deg, rgba(167,139,250,0.3), rgba(244,63,94,0.2));
     border: 2px solid rgba(255,255,255,0.3);
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; font-weight: 900; color: #F8FAFC;
+    font-size: 22px; font-weight: 900; color: var(--bg-app, #F8FAFC);
     margin-bottom: 12px;
     box-shadow: 0 0 20px rgba(167, 139, 250, 0.2);
     overflow: hidden;
@@ -913,7 +913,7 @@ export const STAFF_LAYOUT_CSS = `
     padding: 2px 8px; background: #FACC15; color: #000; font-size: 9px;
     font-weight: 900; text-transform: uppercase; border: 2px solid #000;
   }
-  .staff-brutal-status-tag.is-off { background: #EF4444; color: #FFF; }
+  .staff-brutal-status-tag.is-off { background: var(--danger, #EF4444); color: #FFF; }
   .staff-brutal-body {
     padding: var(--staff-padding, 18px);
     display: flex; gap: 14px; align-items: flex-start;
@@ -980,9 +980,9 @@ export const STAFF_LAYOUT_CSS = `
     transition: all 0.2s ease;
   }
   .staff-metro-tile:nth-child(5n+1) { background: #2563EB; }
-  .staff-metro-tile:nth-child(5n+2) { background: #DC2626; }
+  .staff-metro-tile:nth-child(5n+2) { background: var(--danger, #DC2626); }
   .staff-metro-tile:nth-child(5n+3) { background: #059669; }
-  .staff-metro-tile:nth-child(5n+4) { background: #D97706; }
+  .staff-metro-tile:nth-child(5n+4) { background: var(--warning, #D97706); }
   .staff-metro-tile:nth-child(5n+5) { background: #7C3AED; }
   .staff-metro-tile:hover { filter: brightness(1.1); transform: scale(calc(var(--staff-card-scale, 1) * 1.02)); }
   .staff-metro-watermark {
@@ -1111,7 +1111,7 @@ export const STAFF_LAYOUT_CSS = `
   .staff-timeline-time {
     display: inline-flex; align-items: center; gap: 3px;
     padding: 2px 8px; border-radius: 6px;
-    background: #F1F5F9; color: #475569;
+    background: var(--card-hover, #F1F5F9); color: var(--text-muted, #475569);
     font-size: 10px; font-weight: 600; font-family: monospace;
   }
   .staff-timeline-contact {
@@ -1130,8 +1130,8 @@ export const STAFF_LAYOUT_CSS = `
     cursor: pointer; transition: all 0.15s;
   }
   .staff-timeline-btn:hover { background: var(--staff-accent-color, #7C3AED); color: #FFF; }
-  .staff-timeline-btn.is-delete { color: #EF4444; background: #FEF2F2; }
-  .staff-timeline-btn.is-delete:hover { background: #EF4444; color: #FFF; }
+  .staff-timeline-btn.is-delete { color: var(--danger, #EF4444); background: #FEF2F2; }
+  .staff-timeline-btn.is-delete:hover { background: var(--danger, #EF4444); color: #FFF; }
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   /* DESIGN 10: FLOATING CAPSULE CHIPS                                     */
@@ -1202,8 +1202,8 @@ export const STAFF_LAYOUT_CSS = `
     cursor: pointer; transition: all 0.15s;
   }
   .staff-pill-btn:hover { background: var(--staff-accent-color, #F97316); color: #FFF; }
-  .staff-pill-btn.is-delete { color: #EF4444; background: #FEF2F2; }
-  .staff-pill-btn.is-delete:hover { background: #EF4444; color: #FFF; }
+  .staff-pill-btn.is-delete { color: var(--danger, #EF4444); background: #FEF2F2; }
+  .staff-pill-btn.is-delete:hover { background: var(--danger, #EF4444); color: #FFF; }
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   /* DESIGN 11: SCI-FI RADIAL HUD                                         */

@@ -141,7 +141,7 @@ import { NotificationService, ToastPosition, ToastType, ToastMessage } from '../
       }
 
       .toast-paused {
-        border-color: var(--primary, rgba(126, 34, 206, 0.4));
+        border-color: var(--primary, rgba(var(--primary-rgb, 126, 34, 206), 0.4));
       }
 
       /* Inner Body Layout */
@@ -285,7 +285,7 @@ import { NotificationService, ToastPosition, ToastType, ToastMessage } from '../
         border-left: 4px solid var(--success, #16a34a);
       }
       .icon-success {
-        background: rgba(22, 163, 74, 0.15);
+        background: rgba(var(--success-rgb, 22, 163, 74), 0.15);
         color: var(--success, #16a34a);
       }
       .bar-success {
@@ -297,7 +297,7 @@ import { NotificationService, ToastPosition, ToastType, ToastMessage } from '../
         border-left: 4px solid var(--danger, #dc2626);
       }
       .icon-error {
-        background: rgba(220, 38, 38, 0.15);
+        background: rgba(var(--danger-rgb, 220, 38, 38), 0.15);
         color: var(--danger, #dc2626);
       }
       .bar-error {
@@ -309,7 +309,7 @@ import { NotificationService, ToastPosition, ToastType, ToastMessage } from '../
         border-left: 4px solid var(--warning, #ea580c);
       }
       .icon-warning {
-        background: rgba(234, 88, 12, 0.15);
+        background: rgba(var(--warning-rgb, 234, 88, 12), 0.15);
         color: var(--warning, #ea580c);
       }
       .bar-warning {

@@ -147,8 +147,8 @@ export const CATEGORY_LAYOUT_CSS = `
   .cat-clean-btn:not(:first-child):hover {
     background: #FEF2F2;
     border-color: #FCA5A5;
-    color: #DC2626;
-    box-shadow: 0 4px 10px -4px rgba(220, 38, 38, 0.4);
+    color: var(--danger, #DC2626);
+    box-shadow: 0 4px 10px -4px rgba(var(--danger-rgb, 220, 38, 38), 0.4);
   }
 
   /* Status pills */
@@ -210,7 +210,7 @@ export const CATEGORY_LAYOUT_CSS = `
     border: 1.5px solid var(--cat-card-border, #E9D5FF);
     border-radius: var(--cat-card-radius, 18px);
     padding: var(--cat-padding, 18px);
-    box-shadow: 0 10px 25px -12px rgba(126, 34, 206, 0.22);
+    box-shadow: 0 10px 25px -12px rgba(var(--primary-rgb, 126, 34, 206), 0.22);
     display: flex;
     flex-direction: column;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -219,7 +219,7 @@ export const CATEGORY_LAYOUT_CSS = `
   }
   .cat-bento-card:hover {
     transform: scale(calc(var(--cat-card-scale, 1) * 1.02)) translateY(-3px);
-    box-shadow: 0 18px 34px -14px rgba(126, 34, 206, 0.34);
+    box-shadow: 0 18px 34px -14px rgba(var(--primary-rgb, 126, 34, 206), 0.34);
     border-color: var(--cat-accent-color, #7E22CE);
   }
   .cat-bento-card:hover .cat-bento-icon {
@@ -324,7 +324,7 @@ export const CATEGORY_LAYOUT_CSS = `
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #64748B;
+    color: var(--text-muted, #64748B);
     border-bottom: 1px solid #E5E7EB;
     white-space: nowrap;
   }
@@ -489,7 +489,7 @@ export const CATEGORY_LAYOUT_CSS = `
     transition: background-color 0.15s ease;
   }
   .cat-list-row + .cat-list-row {
-    border-top: 1px solid #F1F5F9;
+    border-top: 1px solid var(--card-border, #F1F5F9);
   }
   .cat-list-row:hover {
     background-color: color-mix(in srgb, var(--cat-accent-color, #7E22CE) 5%, transparent);

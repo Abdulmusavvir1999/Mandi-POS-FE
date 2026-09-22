@@ -93,10 +93,10 @@ import { BulkResult } from '../../core/services/back-office.service';
         margin-bottom: 0.4rem;
       }
       .bo-result-heading.is-ok {
-        color: #16a34a;
+        color: var(--success, #16A34A);
       }
       .bo-result-heading.is-bad {
-        color: #dc2626;
+        color: var(--danger, #DC2626);
       }
       .bo-result-row {
         display: flex;
@@ -104,11 +104,11 @@ import { BulkResult } from '../../core/services/back-office.service';
         gap: 0.6rem;
         padding: 0.45rem 0.6rem;
         border-radius: 0.55rem;
-        background: rgba(22, 163, 74, 0.07);
+        background: rgba(var(--success-rgb, 22, 163, 74), 0.07);
         margin-bottom: 0.3rem;
       }
       .bo-result-row.is-bad {
-        background: rgba(220, 38, 38, 0.08);
+        background: rgba(var(--danger-rgb, 220, 38, 38), 0.08);
       }
       .bo-result-ref {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

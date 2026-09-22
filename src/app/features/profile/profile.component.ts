@@ -491,7 +491,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
               <div class="card-meta">
                 <span class="card-label">Active Permissions</span>
                 <span class="card-value">
-                  {{ user?.role === 'ADMIN' ? 'Full Administrator Access (All)' : (user?.permissions?.length || 0) + ' Granted' }}
+                  {{ hasFullAccess ? 'Full Unrestricted Access (All)' : (user?.permissions?.length || 0) + ' Granted' }}
                 </span>
               </div>
             </div>
@@ -503,7 +503,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
               <span>Granted Permissions</span>
             </h3>
 
-            <div *ngIf="user?.role === 'ADMIN'" class="admin-all-access-badge">
+            <div *ngIf="hasFullAccess" class="admin-all-access-badge">
               <span class="material-symbols-outlined">verified</span>
               <div>
                 <strong>Super Administrator Role</strong>
@@ -511,7 +511,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
               </div>
             </div>
 
-            <div class="permissions-tags-wrap" *ngIf="user?.role !== 'ADMIN'">
+            <div class="permissions-tags-wrap" *ngIf="!hasFullAccess">
               <span
                 *ngFor="let perm of user?.permissions"
                 class="perm-chip"
@@ -526,6 +526,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
           </div>
         </div>
       </div>
+
     </div>
   `,
   styles: [`
@@ -555,7 +556,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       align-items: center;
       justify-content: space-between;
       gap: 1.5rem;
-      box-shadow: 0 4px 20px -4px rgba(46, 16, 101, 0.08);
+      box-shadow: 0 4px 20px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
       flex-wrap: wrap;
     }
 
@@ -581,7 +582,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 24px -4px var(--primary-glow, rgba(126, 34, 206, 0.45));
+      box-shadow: 0 8px 24px -4px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
       border: 2px solid rgba(255, 255, 255, 0.85);
     }
 
@@ -592,9 +593,9 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       width: 1rem;
       height: 1rem;
       border-radius: 9999px;
-      background: #16A34A;
+      background: var(--success, #16A34A);
       border: 2.5px solid var(--card-bg, #FFFFFF);
-      box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
+      box-shadow: 0 2px 6px rgba(var(--success-rgb, 22, 163, 74), 0.4);
     }
 
     .header-user-meta {
@@ -626,7 +627,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       border-radius: 9999px;
       background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
       color: #FFFFFF;
-      box-shadow: 0 2px 8px var(--primary-glow, rgba(126, 34, 206, 0.3));
+      box-shadow: 0 2px 8px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
     }
 
     .status-pill {
@@ -637,16 +638,16 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       font-weight: 700;
       padding: 0.2rem 0.6rem;
       border-radius: 9999px;
-      background: #DCFCE7;
-      color: #15803D;
-      border: 1px solid #BBF7D0;
+      background: var(--success-light, #DCFCE7);
+      color: var(--success, #15803D);
+      border: 1px solid var(--success-light, #BBF7D0);
     }
 
     .status-dot {
       width: 0.45rem;
       height: 0.45rem;
       border-radius: 9999px;
-      background: #16A34A;
+      background: var(--success, #16A34A);
     }
 
     .header-submeta-row {
@@ -670,6 +671,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       color: var(--primary, #7E22CE);
     }
 
+
     /* ─── Tab Navigation ─── */
     .tab-nav-bar {
       display: flex;
@@ -679,7 +681,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 1rem;
       padding: 0.375rem;
-      box-shadow: 0 2px 10px -2px rgba(46, 16, 101, 0.05);
+      box-shadow: 0 2px 10px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
       overflow-x: auto;
     }
 
@@ -701,13 +703,13 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
 
     .tab-btn:hover {
       color: var(--primary, #7E22CE);
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
     }
 
     .tab-btn.is-active {
       background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
       color: #FFFFFF;
-      box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
     }
 
     /* ─── Panel Card ─── */
@@ -716,7 +718,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 1.25rem;
       padding: 1.75rem;
-      box-shadow: 0 4px 20px -4px rgba(46, 16, 101, 0.08);
+      box-shadow: 0 4px 20px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -727,15 +729,15 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       align-items: center;
       gap: 0.875rem;
       padding-bottom: 1rem;
-      border-bottom: 1px solid #F3E8FF;
+      border-bottom: 1px solid var(--card-border, #F3E8FF);
     }
 
     .panel-icon-wrap {
       width: 2.75rem;
       height: 2.75rem;
       border-radius: 0.75rem;
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       color: var(--primary, #7E22CE);
       display: flex;
       align-items: center;
@@ -789,7 +791,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
     }
 
     .required-star {
-      color: #DC2626;
+      color: var(--danger, #DC2626);
       font-weight: 900;
     }
 
@@ -799,7 +801,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       padding: 0.1rem 0.4rem;
       border-radius: 9999px;
       background: #F3F4F6;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
     }
 
     .input-icon-wrap {
@@ -812,7 +814,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       position: absolute;
       left: 0.85rem;
       font-size: 1.15rem;
-      color: #9CA3AF;
+      color: var(--text-dim, #9CA3AF);
       pointer-events: none;
     }
 
@@ -831,20 +833,20 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       border: 1px solid #D8B4FE;
       background: #FFFFFF;
       font-size: 0.875rem;
-      color: #1F2937;
+      color: var(--text-main, #1F2937);
       transition: all 0.2s ease;
       outline: none;
     }
 
     .form-input:focus {
       border-color: var(--primary, #7E22CE);
-      box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+      box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
     }
 
     .form-input.is-readonly-input {
       background: #F9FAFB;
       border-color: #E5E7EB;
-      color: #4B5563;
+      color: var(--text-muted, #4B5563);
       cursor: not-allowed;
     }
 
@@ -853,7 +855,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       right: 0.5rem;
       background: transparent;
       border: none;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
       cursor: pointer;
       padding: 0.35rem;
       display: flex;
@@ -869,14 +871,14 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
 
     .field-error {
       font-size: 0.72rem;
-      color: #DC2626;
+      color: var(--danger, #DC2626);
       font-weight: 600;
       margin: 0.1rem 0 0 0;
     }
 
     .field-helper-text {
       font-size: 0.72rem;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
       margin: 0.1rem 0 0 0;
     }
 
@@ -885,8 +887,8 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       display: flex;
       align-items: flex-start;
       gap: 0.875rem;
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       padding: 1rem 1.15rem;
       border-radius: 0.875rem;
     }
@@ -915,8 +917,8 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
     .password-strength-wrap {
       margin-top: 0.5rem;
       padding: 0.75rem;
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 0.75rem;
       display: flex;
       flex-direction: column;
@@ -939,7 +941,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
 
     .strength-label {
       font-size: 0.72rem;
-      color: #4B5563;
+      color: var(--text-muted, #4B5563);
     }
 
     .checklist-grid {
@@ -959,13 +961,13 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       align-items: center;
       gap: 0.35rem;
       font-size: 0.72rem;
-      color: #9CA3AF;
+      color: var(--text-dim, #9CA3AF);
       font-weight: 500;
       transition: color 0.15s ease;
     }
 
     .check-item.is-met {
-      color: #15803D;
+      color: var(--success, #15803D);
       font-weight: 600;
     }
 
@@ -980,7 +982,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       justify-content: flex-end;
       gap: 0.75rem;
       padding-top: 1rem;
-      border-top: 1px solid #F3E8FF;
+      border-top: 1px solid var(--card-border, #F3E8FF);
     }
 
     /* ─── Buttons ─── */
@@ -1003,18 +1005,18 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       color: var(--primary, #7E22CE);
     }
     .btn-outline-purple:hover:not(:disabled) {
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
       border-color: var(--primary, #7E22CE);
     }
 
     .btn-gradient-purple {
       background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
       color: #FFFFFF;
-      box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
     }
     .btn-gradient-purple:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.45));
+      box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
     }
 
     .action-btn:disabled {
@@ -1047,8 +1049,8 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
     }
 
     .info-pill-card {
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 0.875rem;
       padding: 1rem;
       display: flex;
@@ -1067,7 +1069,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
 
     .card-label {
       font-size: 0.7rem;
-      color: #6B7280;
+      color: var(--text-muted, #6B7280);
       font-weight: 600;
       text-transform: uppercase;
     }
@@ -1099,7 +1101,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       display: flex;
       align-items: flex-start;
       gap: 0.85rem;
-      background: linear-gradient(135deg, rgba(126, 34, 206, 0.08) 0%, rgba(107, 33, 168, 0.04) 100%);
+      background: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.08) 0%, rgba(var(--primary-variant-rgb, 107, 33, 168), 0.04) 100%);
       border: 1px solid #D8B4FE;
       padding: 1.15rem;
       border-radius: 0.875rem;
@@ -1133,21 +1135,21 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       font-weight: 700;
       padding: 0.35rem 0.75rem;
       border-radius: 0.5rem;
-      background: #F3E8FF;
-      color: #6B21A8;
-      border: 1px solid #E9D5FF;
+      background: var(--primary-light, #F3E8FF);
+      color: var(--primary-variant, #6B21A8);
+      border: 1px solid var(--card-border, #E9D5FF);
       font-family: 'JetBrains Mono', monospace;
     }
 
     .perm-check {
       font-size: 0.9rem;
-      color: #16A34A;
+      color: var(--success, #16A34A);
       font-weight: 900;
     }
 
     .no-perms-text {
       font-size: 0.8rem;
-      color: #9CA3AF;
+      color: var(--text-dim, #9CA3AF);
       font-style: italic;
     }
   `]
@@ -1160,6 +1162,28 @@ export class ProfileComponent implements OnInit {
   public activeTab: ProfileTab = 'personal';
   public user: User | null = null;
   public isRefreshing = false;
+
+  /**
+   * The super administrator, which holds no role at all.
+   *
+   * Read here only by `hasFullAccess`. The Back-Office password itself is not
+   * a profile setting and lives at `/admin/back-office-password`.
+   */
+  public get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
+  /**
+   * Whether this account bypasses the per-screen permission checks.
+   *
+   * ADMIN does, through its role. The super administrator holds no role at
+   * all, so it carries no permission codes — listing them would show an empty
+   * set and read as an account with no access, which is the opposite of the
+   * truth.
+   */
+  public get hasFullAccess(): boolean {
+    return this.user?.role === 'ADMIN' || this.isSuperAdmin;
+  }
 
   // Profile Form State
   public profileName = '';

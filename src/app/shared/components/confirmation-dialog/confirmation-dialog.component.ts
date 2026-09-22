@@ -44,16 +44,16 @@ import { NotificationService } from '../../../core/services/notification.service
   `,
   styles: [`
     .btn-danger {
-      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+      background: linear-gradient(135deg, var(--danger, #EF4444) 0%, var(--danger, #DC2626) 100%) !important;
       color: #FFFFFF !important;
-      border: 1px solid #DC2626 !important;
-      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.38) !important;
+      border: 1px solid var(--danger, #DC2626) !important;
+      box-shadow: 0 4px 14px rgba(var(--danger-rgb, 220, 38, 38), 0.38) !important;
     }
     .btn-danger:hover {
-      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+      background: linear-gradient(135deg, var(--danger, #DC2626) 0%, var(--danger, #B91C1C) 100%) !important;
       color: #FFFFFF !important;
-      border-color: #B91C1C !important;
-      box-shadow: 0 8px 22px -2px rgba(220, 38, 38, 0.58) !important;
+      border-color: var(--danger, #B91C1C) !important;
+      box-shadow: 0 8px 22px -2px rgba(var(--danger-rgb, 220, 38, 38), 0.58) !important;
       transform: translateY(-1px);
     }
     .btn-danger:active {
@@ -61,7 +61,7 @@ import { NotificationService } from '../../../core/services/notification.service
       transform: translateY(0) scale(0.97);
     }
     .btn-danger::before {
-      background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+      background: linear-gradient(135deg, var(--danger, #EF4444), var(--danger, #DC2626)) !important;
     }
     .btn-secondary {
       background: var(--card-bg, #ffffff) !important;
@@ -70,9 +70,9 @@ import { NotificationService } from '../../../core/services/notification.service
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
     }
     .btn-secondary:hover {
-      background: #F8FAFC !important;
+      background: var(--bg-app, #F8FAFC) !important;
       color: #0F172A !important;
-      border-color: #94A3B8 !important;
+      border-color: var(--text-dim, #94A3B8) !important;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
       transform: translateY(-1px);
     }

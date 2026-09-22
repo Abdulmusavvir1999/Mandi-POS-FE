@@ -55,15 +55,47 @@ export class AuthService {
   public hasPermission(permCode: string): boolean {
     const user = this.currentUserSignal();
     if (!user) return false;
-    if (user.role === 'ADMIN') return true;
+    if (this.hasUnrestrictedAccess()) return true;
     return user.permissions?.includes(permCode) || false;
   }
 
   public hasRole(...roles: string[]): boolean {
     const user = this.currentUserSignal();
     if (!user) return false;
-    if (user.role === 'ADMIN') return true;
+    if (this.hasUnrestrictedAccess()) return true;
     return roles.includes(user.role);
+  }
+
+  /**
+   * Whether this is the super administrator — the one account allowed into
+   * `/admin/back-office`.
+   *
+   * ADMIN is deliberately not included. The Back-Office deletes orders and
+   * invoices outright and re-prices settled bills, and that sits one step above
+   * the administrator who runs the shop day to day.
+   *
+   * The server identifies this account by its having no `role_id` at all and
+   * resolves it to the name `SUPER_ADMIN`; case and separators are normalised
+   * away here so `superAdmin` and `Super Admin` read the same. This only
+   * decides what the UI offers — `requireBackOfficeRole` on the server is what
+   * actually enforces the rule.
+   */
+  public isSuperAdmin(): boolean {
+    const role = this.currentUserSignal()?.role;
+    if (!role) return false;
+    return String(role).toUpperCase().replace(/[^A-Z]/g, '') === 'SUPERADMIN';
+  }
+
+  /**
+   * Whether this account bypasses the per-screen permission checks.
+   *
+   * ADMIN always has. The super administrator holds no role, so it has no
+   * permission codes at all and would otherwise be signed in but bounced off
+   * every screen it opened, including the dashboard it lands on. It sits above
+   * ADMIN, so it gets the same blanket access rather than none.
+   */
+  private hasUnrestrictedAccess(): boolean {
+    return this.currentUserSignal()?.role === 'ADMIN' || this.isSuperAdmin();
   }
 
   public updateProfile(data: { name: string; email?: string; phone?: string; image_url?: string }): Observable<ApiResponse<User>> {

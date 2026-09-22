@@ -113,16 +113,16 @@ export const DEFAULT_ACTION_BUTTON_CSS = `
 
   /* Stock-in and other additive actions, which are not the page's accent. */
   .dv-btn.is-success {
-    border-color: color-mix(in srgb, #16A34A 24%, transparent);
-    background: color-mix(in srgb, #16A34A 9%, var(--dv-surface));
-    color: #15803D;
+    border-color: color-mix(in srgb, var(--success, #16A34A) 24%, transparent);
+    background: color-mix(in srgb, var(--success, #16A34A) 9%, var(--dv-surface));
+    color: var(--success, #15803D);
   }
 
   .dv-btn.is-success:hover {
     border-color: transparent;
-    background: #16A34A;
+    background: var(--success, #16A34A);
     color: #FFFFFF;
-    box-shadow: 0 8px 18px -6px rgba(22, 163, 74, 0.55);
+    box-shadow: 0 8px 18px -6px rgba(var(--success-rgb, 22, 163, 74), 0.55);
   }
 
   /* Destructive: neutral at rest so it is never the loudest thing on a card,
@@ -130,12 +130,12 @@ export const DEFAULT_ACTION_BUTTON_CSS = `
   .dv-btn.is-danger:hover {
     border-color: #FCA5A5;
     background: #FEF2F2;
-    color: #DC2626;
-    box-shadow: 0 6px 14px -6px rgba(220, 38, 38, 0.45);
+    color: var(--danger, #DC2626);
+    box-shadow: 0 6px 14px -6px rgba(var(--danger-rgb, 220, 38, 38), 0.45);
   }
 
   .dv-btn.is-danger:focus-visible {
-    outline-color: #DC2626;
+    outline-color: var(--danger, #DC2626);
   }
 
   @media (prefers-reduced-motion: reduce) {

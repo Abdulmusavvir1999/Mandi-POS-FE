@@ -364,7 +364,7 @@ import {
       .draft-card:hover {
         transform: translateY(-2px);
         border-color: var(--primary-hover, #c084fc);
-        box-shadow: 0 10px 26px -6px var(--primary-glow, rgba(126, 34, 206, 0.28));
+        box-shadow: 0 10px 26px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.28));
       }
 
       /* ── Header ───────────────────────────────────────────────── */
@@ -402,7 +402,7 @@ import {
         align-self: flex-start;
         padding: 0.12rem 0.5rem;
         border-radius: 9999px;
-        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
         color: var(--primary, #7e22ce);
         font-size: 0.6875rem;
         font-weight: 700;
@@ -420,7 +420,7 @@ import {
         padding: 0.2rem 0.55rem;
         border-radius: 9999px;
         background: rgba(217, 119, 6, 0.12);
-        color: #b45309;
+        color: var(--warning, #B45309);
         border: 1px solid rgba(217, 119, 6, 0.25);
         font-size: 0.6875rem;
         font-weight: 800;
@@ -430,7 +430,7 @@ import {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #d97706;
+        background: var(--warning, #D97706);
         animation: holdPulse 1.8s ease-in-out infinite;
       }
 
@@ -510,7 +510,7 @@ import {
         justify-content: space-between;
         gap: 0.5rem;
         padding: 0.6rem 1rem;
-        background: var(--primary-light, rgba(126, 34, 206, 0.07));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.07));
         border-top: 1px solid var(--card-border, #f1e8fb);
       }
 
@@ -585,7 +585,7 @@ import {
 
       .draft-btn.is-danger:hover {
         border-color: var(--danger, #dc2626);
-        background: var(--danger-light, rgba(220, 38, 38, 0.1));
+        background: var(--danger-light, rgba(var(--danger-rgb, 220, 38, 38), 0.1));
         color: var(--danger, #dc2626);
       }
 
@@ -602,7 +602,7 @@ import {
       }
 
       .draft-btn.is-primary:hover {
-        box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
         transform: translateY(-1px);
       }
 

@@ -1086,8 +1086,8 @@ export class StockDetailComponent implements OnInit {
 
   // ── Tab Filters & Pagination ─────────────────────────────────────────
   get filteredEntries(): StockEntry[] {
-    if (!this.searchQuery) return this.entries;
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.entries;
     return this.entries.filter(
       (e) =>
         e.entry_number.toLowerCase().includes(q) ||
@@ -1097,9 +1097,22 @@ export class StockDetailComponent implements OnInit {
     );
   }
 
+  /**
+   * The current page, never past the end of the list it is paging.
+   *
+   * A narrowing filter, a delete on the final page, or any refresh that
+   * returns fewer rows used to leave `currentPage` pointing past the end and
+   * the table rendering empty. Clamped on read rather than written back, so
+   * it cannot fire a change-after-checked error during rendering.
+   */
+  safePage(totalItems: number): number {
+    return Math.min(Math.max(1, this.currentPage), this.getTotalPages(totalItems));
+  }
+
   get paginatedEntries(): StockEntry[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredEntries.slice(start, start + this.pageSize);
+    const list = this.filteredEntries;
+    const start = (this.safePage(list.length) - 1) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
   }
 
   get filteredMovements(): StockMovement[] {
@@ -1107,8 +1120,8 @@ export class StockDetailComponent implements OnInit {
     if (this.selectedMovementType !== 'all') {
       list = list.filter((m) => m.movement_type.toLowerCase() === this.selectedMovementType.toLowerCase());
     }
-    if (!this.searchQuery) return list;
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return list;
     return list.filter(
       (m) =>
         m.movement_type.toLowerCase().includes(q) ||
@@ -1120,8 +1133,9 @@ export class StockDetailComponent implements OnInit {
   }
 
   get paginatedMovements(): StockMovement[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredMovements.slice(start, start + this.pageSize);
+    const list = this.filteredMovements;
+    const start = (this.safePage(list.length) - 1) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
   }
 
   getCurrentTotal(): number {
@@ -1139,11 +1153,11 @@ export class StockDetailComponent implements OnInit {
   }
 
   paginationStart(totalItems: number): number {
-    return totalItems === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return totalItems === 0 ? 0 : (this.safePage(totalItems) - 1) * this.pageSize + 1;
   }
 
   paginationEnd(totalItems: number): number {
-    return Math.min(this.currentPage * this.pageSize, totalItems);
+    return Math.min(this.safePage(totalItems) * this.pageSize, totalItems);
   }
 
   // ── Actions ─────────────────────────────────────────────────────────

@@ -286,6 +286,10 @@ export const BASELINE_SIDEBAR_CAPS: SidebarTemplateCaps = {
 export interface SidebarPersistedConfig {
   activeKey: SidebarTemplateKey;
   overrides?: Partial<Record<SidebarTemplateKey, Partial<SidebarTokens>>>;
+  /** Renamed menu rows, keyed by NavItem.id. Absent id = shipped wording. */
+  itemNames?: Record<string, string>;
+  /** Renamed group headers, keyed by NavSection.id. */
+  sectionNames?: Record<string, string>;
 }
 
 /** A template, or the stock rail shown while customization is off. */
@@ -304,7 +308,23 @@ export class SidebarLayoutService {
   private _activeKey = signal<SidebarTemplateKey>('classic');
   private _overrides = signal<Partial<Record<SidebarTemplateKey, Partial<SidebarTokens>>>>({});
 
+  // Menu names are deliberately kept outside the per-template overrides: what
+  // an operator calls a module is a property of the menu, not of the rail
+  // design, so switching template must not take the renames away.
+  private _itemNames = signal<Record<string, string>>({});
+  private _sectionNames = signal<Record<string, string>>({});
+
   public readonly activeKey = computed(() => this._activeKey());
+
+  public readonly itemNames = computed(() => this._itemNames());
+  public readonly sectionNames = computed(() => this._sectionNames());
+
+  /** True when anything on the rail has been renamed. */
+  public readonly hasCustomNames = computed(
+    () =>
+      Object.keys(this._itemNames()).length > 0 ||
+      Object.keys(this._sectionNames()).length > 0,
+  );
 
   /**
    * Whether the rail applies its saved template at all. The switch lives in
@@ -408,6 +428,12 @@ export class SidebarLayoutService {
         if (parsed.overrides && typeof parsed.overrides === 'object') {
           this._overrides.set(parsed.overrides);
         }
+        if (parsed.itemNames && typeof parsed.itemNames === 'object') {
+          this._itemNames.set(this.cleanNames(parsed.itemNames));
+        }
+        if (parsed.sectionNames && typeof parsed.sectionNames === 'object') {
+          this._sectionNames.set(this.cleanNames(parsed.sectionNames));
+        }
       }
     } catch (e) {
       console.warn('Could not parse system_sidebar_layout setting:', e);
@@ -427,6 +453,69 @@ export class SidebarLayoutService {
     this._overrides.set(currentOverrides);
   }
 
+  // ── Menu names ────────────────────────────────────────────────────────
+
+  /**
+   * The name to show for a row: the operator's, or the shipped one.
+   *
+   * Callers pass the shipped label rather than it being looked up here, so a
+   * row that is not in the config at all — a shortcut, a future addition —
+   * still renders without a special case.
+   */
+  public itemLabel(id: string, fallback: string): string {
+    return this._itemNames()[id] || fallback;
+  }
+
+  public sectionLabel(id: string, fallback: string): string {
+    return this._sectionNames()[id] || fallback;
+  }
+
+  /**
+   * Stores a rename. Blank, whitespace or the shipped wording all clear the
+   * override instead of storing it, so the map only ever holds real changes
+   * and "reset" is just clearing the box.
+   */
+  public setItemName(id: string, value: string, shipped: string): void {
+    this._itemNames.set(this.withName(this._itemNames(), id, value, shipped));
+  }
+
+  public setSectionName(id: string, value: string, shipped: string): void {
+    this._sectionNames.set(this.withName(this._sectionNames(), id, value, shipped));
+  }
+
+  /** Puts every row back to the wording it ships with. */
+  public resetMenuNames(): void {
+    this._itemNames.set({});
+    this._sectionNames.set({});
+  }
+
+  private withName(
+    current: Record<string, string>,
+    id: string,
+    value: string,
+    shipped: string,
+  ): Record<string, string> {
+    const next = { ...current };
+    const trimmed = (value || '').trim();
+    if (!trimmed || trimmed === shipped) {
+      delete next[id];
+    } else {
+      next[id] = trimmed;
+    }
+    return next;
+  }
+
+  /** Drops blanks and non-strings that a hand-edited setting could carry. */
+  private cleanNames(raw: Record<string, unknown>): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [id, value] of Object.entries(raw)) {
+      if (typeof value !== 'string') continue;
+      const trimmed = value.trim();
+      if (trimmed) out[id] = trimmed;
+    }
+    return out;
+  }
+
   public resetActiveTemplateToDefaults(): void {
     const currentKey = this._activeKey();
     const currentOverrides = { ...this._overrides() };
@@ -438,6 +527,8 @@ export class SidebarLayoutService {
     const config: SidebarPersistedConfig = {
       activeKey: this._activeKey(),
       overrides: this._overrides(),
+      itemNames: this._itemNames(),
+      sectionNames: this._sectionNames(),
     };
     return {
       system_sidebar_layout: JSON.stringify(config),

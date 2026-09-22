@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { SettingsService } from '../../core/services/settings.service';
+import { BackupService, BackupInfo, FolderCheck, BrowseResult } from '../../core/services/backup.service';
+import { AuthService } from '../../core/auth/services/auth.service';
 import { NotificationService, ToastPosition } from '../../core/services/notification.service';
 import { ThemeService, DEFAULT_THEME_PALETTES, ThemePalette } from '../../core/services/theme.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
@@ -83,7 +85,7 @@ import {
 } from '../../core/services/customization.service';
 import { PrinterService } from '../../core/services/printer.service';
 
-type SettingsTab = 'customization' | 'theme' | 'toast' | 'business' | 'hardware' | 'posdesign' | 'dishpage' | 'dining' | 'categorydesign' | 'stockdesign' | 'customerdesign' | 'staffdesign' | 'sidebardesign' | 'printer' | 'notification' | 'invoice';
+type SettingsTab = 'customization' | 'theme' | 'toast' | 'business' | 'hardware' | 'posdesign' | 'dishpage' | 'dining' | 'categorydesign' | 'stockdesign' | 'customerdesign' | 'staffdesign' | 'sidebardesign' | 'printer' | 'notification' | 'invoice' | 'databackup';
 
 /** Branding images that can be replaced from the Store tab. */
 import { SidebarLayoutPreviewComponent } from '../../shared/components/sidebar-layout-preview/sidebar-layout-preview.component';
@@ -96,6 +98,11 @@ import {
   SIDEBAR_TEMPLATE_OPTIONS,
   SIDEBAR_TOKEN_META,
 } from '../../core/services/sidebar-layout.service';
+import {
+  NavItem,
+  NavSection,
+  SIDEBAR_NAV_SECTIONS,
+} from '../../core/config/sidebar-nav.config';
 
 type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
@@ -270,6 +277,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           >
             <span class="material-symbols-outlined">receipt</span>
             <span>Invoice Settings</span>
+          </button>
+
+          <!-- Administrators only: a backup is every row of every table,
+               including password hashes, so the tab is hidden rather than
+               shown-and-refused for anyone else. -->
+          <button
+            *ngIf="isAdmin"
+            type="button"
+            (click)="openDataBackup()"
+            class="tab-btn"
+            [class.is-active]="activeTab === 'databackup'"
+          >
+            <span class="material-symbols-outlined">database</span>
+            <span>Data Backup</span>
           </button>
         </div>
 
@@ -2237,6 +2258,83 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           </div>
         </div>
 
+        <!-- Menu Names -->
+        <div class="setting-card">
+          <div class="card-header-bar">
+            <div>
+              <h2 class="card-title">Menu Names</h2>
+              <p class="card-subtitle">
+                Rename any group or module on the rail to the wording your floor actually uses. Routing,
+                icons and permissions are untouched — only the text changes. Leave a box empty to keep the
+                name it ships with.
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="active-preset-tag" *ngIf="sidebarLayout.hasCustomNames()">
+                <strong>{{ renamedCount() }}</strong> renamed
+              </span>
+              <button
+                type="button"
+                class="action-btn btn-outline-purple !py-1 !px-2.5 !text-xs"
+                [disabled]="!sidebarLayout.hasCustomNames()"
+                (click)="resetSidebarMenuNames()"
+                title="Put every group and module back to its shipped name"
+              >
+                <span class="material-symbols-outlined">restart_alt</span>
+                <span>Reset Names</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="menu-name-groups">
+            <section class="menu-name-group" *ngFor="let section of sidebarNavSections">
+              <header class="menu-name-group-head">
+                <span class="material-symbols-outlined">folder</span>
+                <input
+                  type="text"
+                  class="form-control menu-name-input is-group"
+                  [value]="sidebarLayout.sectionLabel(section.id, section.title)"
+                  (input)="onSectionNameInput(section, $event)"
+                  [attr.placeholder]="section.title"
+                  [attr.aria-label]="'Name for the ' + section.title + ' group'"
+                />
+                <span
+                  class="menu-name-shipped"
+                  *ngIf="sidebarLayout.sectionNames()[section.id]"
+                  [title]="'Ships as ' + section.title"
+                >was {{ section.title }}</span>
+              </header>
+
+              <div class="menu-name-rows">
+                <div class="menu-name-row" *ngFor="let item of section.items">
+                  <span class="menu-name-icon">
+                    <span class="material-symbols-outlined">{{ item.iconName }}</span>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control menu-name-input"
+                    [value]="sidebarLayout.itemLabel(item.id, item.label)"
+                    (input)="onItemNameInput(item, $event)"
+                    [attr.placeholder]="item.label"
+                    [attr.aria-label]="'Name for the ' + item.label + ' module'"
+                  />
+                  <span class="menu-name-route font-mono">{{ item.route }}</span>
+                  <button
+                    type="button"
+                    class="menu-name-revert"
+                    *ngIf="sidebarLayout.itemNames()[item.id]"
+                    (click)="revertItemName(item)"
+                    [title]="'Back to ' + item.label"
+                    [attr.aria-label]="'Reset this module to ' + item.label"
+                  >
+                    <span class="material-symbols-outlined">undo</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
         <!-- Live Interactive Preview -->
         <div class="setting-card">
           <div class="card-header-bar">
@@ -3768,6 +3866,131 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           </div>
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- LIVE INVOICE PREVIEW                                            -->
+        <!-- Sample data, real settings: every field below redraws this the  -->
+        <!-- moment it changes, so the paper size, blocks, date format and   -->
+        <!-- money format can be judged without printing anything.           -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="setting-card">
+          <div class="card-header-bar pb-3">
+            <div class="flex-align-center gap-2">
+              <span class="material-symbols-outlined icon-purple">preview</span>
+              <div>
+                <h3 class="card-title-sm">Live Invoice Preview</h3>
+                <p class="card-subtitle">Sample order, your settings — updates as you edit below</p>
+              </div>
+            </div>
+            <span class="active-preset-tag">{{ invoicePaperLabel }}</span>
+          </div>
+
+          <div class="invoice-preview-stage">
+            <div class="invoice-sheet" [ngClass]="invoicePaperClass">
+              <!-- Header: business identity -->
+              <div class="inv-head">
+                <div class="inv-head-brand">
+                  <div class="inv-logo" *ngIf="settingsMap['INVOICE_SHOW_LOGO'] === 'true'">
+                    {{ invoiceBrandInitials }}
+                  </div>
+                  <div>
+                    <div class="inv-biz-name">{{ settingsMap['BUSINESS_NAME'] || 'Your Restaurant' }}</div>
+                    <div class="inv-biz-line" *ngIf="settingsMap['BUSINESS_ADDRESS']">{{ settingsMap['BUSINESS_ADDRESS'] }}</div>
+                    <div class="inv-biz-line" *ngIf="settingsMap['BUSINESS_PHONE']">{{ settingsMap['BUSINESS_PHONE'] }}</div>
+                    <div class="inv-biz-line" *ngIf="settingsMap['BUSINESS_GSTIN']">
+                      GSTIN: <strong>{{ settingsMap['BUSINESS_GSTIN'] }}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="inv-head-meta">
+                  <div class="inv-doc-title">{{ settingsMap['INVOICE_TITLE'] || 'TAX INVOICE' }}</div>
+                  <div class="inv-meta-row"><span>No.</span><strong>{{ invoiceNumberPreview }}</strong></div>
+                  <div class="inv-meta-row"><span>Date</span><strong>{{ invoiceIssueDate }}</strong></div>
+                  <div class="inv-meta-row" *ngIf="invoiceDueDays > 0"><span>Due</span><strong>{{ invoiceDueDate }}</strong></div>
+                </div>
+              </div>
+
+              <!-- Line items -->
+              <table class="inv-table">
+                <thead>
+                  <tr>
+                    <th class="inv-col-desc">Item</th>
+                    <th class="inv-col-num">Qty</th>
+                    <th class="inv-col-num">Rate</th>
+                    <th class="inv-col-num">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let line of invoicePreviewItems">
+                    <td class="inv-col-desc">{{ line.name }}</td>
+                    <td class="inv-col-num">{{ line.qty }}</td>
+                    <td class="inv-col-num">{{ invoiceMoney(line.rate) }}</td>
+                    <td class="inv-col-num">{{ invoiceMoney(line.qty * line.rate) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Tax slab table, only when the breakdown is switched on -->
+              <table class="inv-table inv-tax-table" *ngIf="settingsMap['INVOICE_SHOW_TAX_BREAKDOWN'] === 'true' && invoiceTaxRate > 0">
+                <thead>
+                  <tr>
+                    <th class="inv-col-desc">Tax</th>
+                    <th class="inv-col-num">Taxable</th>
+                    <th class="inv-col-num">Rate</th>
+                    <th class="inv-col-num">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="inv-col-desc">{{ invoiceTaxLabel }}</td>
+                    <td class="inv-col-num">{{ invoiceMoney(invoiceSubtotal) }}</td>
+                    <td class="inv-col-num">{{ invoiceTaxRate }}%</td>
+                    <td class="inv-col-num">{{ invoiceMoney(invoiceTaxAmount) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Totals -->
+              <div class="inv-totals">
+                <div class="inv-total-row"><span>Subtotal</span><span>{{ invoiceMoney(invoiceSubtotal) }}</span></div>
+                <div class="inv-total-row" *ngIf="invoiceTaxRate > 0">
+                  <span>{{ invoiceTaxLabel }} ({{ invoiceTaxRate }}%)</span>
+                  <span>{{ invoiceMoney(invoiceTaxAmount) }}</span>
+                </div>
+                <div class="inv-total-row is-grand"><span>Total</span><span>{{ invoiceMoney(invoiceGrandTotal) }}</span></div>
+              </div>
+
+              <!-- Payment QR and signature block -->
+              <div
+                class="inv-foot-blocks"
+                *ngIf="settingsMap['INVOICE_SHOW_QR'] === 'true' || settingsMap['INVOICE_SHOW_SIGNATURE'] === 'true'"
+              >
+                <div class="inv-qr-block" *ngIf="settingsMap['INVOICE_SHOW_QR'] === 'true'">
+                  <!-- Stand-in for the real code: the invoice printer renders
+                       the scannable one, this only holds its place. -->
+                  <div class="inv-qr-glyph" aria-hidden="true"></div>
+                  <div class="inv-qr-text">
+                    <div>Scan to pay</div>
+                    <strong>{{ settingsMap['INVOICE_UPI_ID'] || 'restaurant@upi' }}</strong>
+                  </div>
+                </div>
+                <div class="inv-sign-block" *ngIf="settingsMap['INVOICE_SHOW_SIGNATURE'] === 'true'">
+                  <div class="inv-sign-rule"></div>
+                  <div>{{ settingsMap['INVOICE_SIGNATORY'] || 'Authorised Signatory' }}</div>
+                </div>
+              </div>
+
+              <!-- Legal text -->
+              <div class="inv-terms" *ngIf="settingsMap['INVOICE_TERMS']">
+                <div class="inv-terms-label">Terms &amp; Conditions</div>
+                <div>{{ settingsMap['INVOICE_TERMS'] }}</div>
+              </div>
+              <div class="inv-footer-note" *ngIf="settingsMap['INVOICE_FOOTER_NOTE']">
+                {{ settingsMap['INVOICE_FOOTER_NOTE'] }}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="two-col-grid">
           <!-- 1. How every invoice reference is composed -->
           <div class="setting-card">
@@ -3935,6 +4158,349 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           </div>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- DATA BACKUP                                                     -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'databackup'" class="tab-content-pane">
+        <div class="preview-strip">
+          <div>
+            <div class="preview-strip-label">Backup File Name</div>
+            <div class="preview-strip-value">{{ backupFileName }}</div>
+          </div>
+          <div>
+            <div class="preview-strip-label">Tables</div>
+            <div class="preview-strip-value">{{ backupInfo ? backupInfo.totalTables : '—' }}</div>
+          </div>
+          <div>
+            <div class="preview-strip-label">Approx. Size</div>
+            <div class="preview-strip-value">{{ backupInfo ? formatBytes(backupInfo.totalSizeBytes) : '—' }}</div>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="card-header-bar pb-3">
+            <div class="flex-align-center gap-2">
+              <span class="material-symbols-outlined icon-purple">cloud_download</span>
+              <div>
+                <h3 class="card-title-sm">Back Up The Database</h3>
+                <p class="card-subtitle">
+                  Exports every table and every row to a single .sql file you can restore from
+                </p>
+              </div>
+            </div>
+            <span class="active-preset-tag" *ngIf="backupInfo">{{ backupInfo.database }}</span>
+          </div>
+
+          <div class="backup-body">
+            <!-- ─────────────────────────────────────────────────────────── -->
+            <!-- BACKUP LOCATION                                             -->
+            <!-- A path on the machine running the POS server. Said plainly   -->
+            <!-- because on a multi-PC install it is NOT the machine the      -->
+            <!-- operator is sitting at, and a wrong assumption there means   -->
+            <!-- looking for backups on the wrong computer.                   -->
+            <!-- ─────────────────────────────────────────────────────────── -->
+            <div class="form-vertical-group">
+              <label class="control-label" for="backupFolderPath">Backup Location</label>
+              <div class="backup-path-row">
+                <input
+                  id="backupFolderPath"
+                  type="text"
+                  class="control-input"
+                  [(ngModel)]="backupFolderPath"
+                  (ngModelChange)="backupFolderDirty = true; backupFolderCheck = null"
+                  placeholder="C:\POS Backups"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+                <button
+                  type="button"
+                  class="btn-path-browse"
+                  [disabled]="isPickingNatively"
+                  title="Browse for a folder on the POS server"
+                  (click)="openFolderBrowser()"
+                >
+                  <span class="material-symbols-outlined" [class.is-spinning]="isPickingNatively">
+                    {{ isPickingNatively ? 'progress_activity' : 'folder_open' }}
+                  </span>
+                  <span>{{ isPickingNatively ? 'Waiting…' : 'Browse' }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-path-save"
+                  [disabled]="isSavingFolder || !backupFolderPath.trim()"
+                  (click)="saveBackupFolder()"
+                >
+                  <span class="material-symbols-outlined" [class.is-spinning]="isSavingFolder">
+                    {{ isSavingFolder ? 'progress_activity' : 'save' }}
+                  </span>
+                  <span>{{ isSavingFolder ? 'Checking…' : 'Save Location' }}</span>
+                </button>
+              </div>
+
+              <p class="control-hint">
+                Full path on the computer running the POS server — the same PC as this browser on a
+                standard single-machine install. Every backup is written here automatically.
+              </p>
+
+              <div
+                class="backup-path-status"
+                *ngIf="backupFolderCheck"
+                [class.is-ok]="backupFolderCheck.ok"
+                [class.is-bad]="!backupFolderCheck.ok"
+              >
+                <span class="material-symbols-outlined">
+                  {{ backupFolderCheck.ok ? 'check_circle' : 'error' }}
+                </span>
+                <span>{{ backupFolderCheck.message }}</span>
+              </div>
+
+              <!-- Offered only when the folder is genuinely missing, so the
+                   operator can create it without leaving the screen. -->
+              <button
+                type="button"
+                class="btn-path-create"
+                *ngIf="backupFolderCheck && !backupFolderCheck.ok && !backupFolderCheck.exists && backupFolderPath.trim()"
+                [disabled]="isSavingFolder"
+                (click)="saveBackupFolder(true)"
+              >
+                <span class="material-symbols-outlined">create_new_folder</span>
+                <span>Create this folder and use it</span>
+              </button>
+            </div>
+
+            <div class="backup-note" *ngIf="backupFolderConfigured">
+              <span class="material-symbols-outlined">folder_open</span>
+              <p>
+                <strong>Backup Now</strong> writes <strong>{{ backupFileName }}</strong> into
+                <strong>{{ backupFolderSaved }}</strong>. If a backup for today is already there,
+                the new one is saved as <strong>{{ backupSecondFileName }}</strong> so nothing is
+                overwritten.
+              </p>
+            </div>
+
+            <div class="backup-note is-warning" *ngIf="!backupFolderConfigured && backupSupportsFolder">
+              <span class="material-symbols-outlined">info</span>
+              <p>
+                No location set yet, so <strong>Backup Now</strong> will ask you to choose a folder
+                each time. Set a location above to have every backup saved there automatically.
+              </p>
+            </div>
+
+            <!-- Firefox and Safari cannot let a page write to a chosen folder,
+                 so the UI says where the file will actually land rather than
+                 implying the location was picked. -->
+            <div class="backup-note is-warning" *ngIf="!backupFolderConfigured && !backupSupportsFolder">
+              <span class="material-symbols-outlined">info</span>
+              <p>
+                No location set, and this browser cannot open a folder picker, so the backup will go
+                to your <strong>downloads folder</strong> as <strong>{{ backupFileName }}</strong>.
+                Set a location above to save backups on the server instead.
+              </p>
+            </div>
+
+            <div class="backup-actions">
+              <button
+                type="button"
+                class="btn-backup-now"
+                [disabled]="isBackingUp"
+                (click)="runBackup()"
+              >
+                <span class="material-symbols-outlined" [class.is-spinning]="isBackingUp">
+                  {{ isBackingUp ? 'progress_activity' : 'backup' }}
+                </span>
+                <span>{{ isBackingUp ? 'Backing up…' : 'Backup Now' }}</span>
+              </button>
+
+              <div class="backup-status" *ngIf="backupStatus">
+                <span
+                  class="material-symbols-outlined"
+                  [class.status-ok]="backupStatus.kind === 'ok'"
+                  [class.status-bad]="backupStatus.kind === 'error'"
+                >
+                  {{ backupStatus.kind === 'ok' ? 'check_circle' : 'error' }}
+                </span>
+                <span>{{ backupStatus.message }}</span>
+              </div>
+            </div>
+
+            <div class="backup-safety">
+              <span class="material-symbols-outlined">verified_user</span>
+              <span>
+                Reading only — a backup never changes, deletes or locks your data.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-card" *ngIf="backupInfo">
+          <div class="card-header-bar pb-3">
+            <div class="flex-align-center gap-2">
+              <span class="material-symbols-outlined icon-purple">table_rows</span>
+              <div>
+                <h3 class="card-title-sm">What Gets Backed Up</h3>
+                <p class="card-subtitle">
+                  {{ backupInfo.totalTables }} tables, roughly
+                  {{ backupInfo.totalRows | number }} rows
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-table-grid">
+            <div class="backup-table-chip" *ngFor="let t of backupInfo.tables">
+              <span class="chip-name">{{ t.name }}</span>
+              <span class="chip-rows">{{ t.rows | number }}</span>
+            </div>
+          </div>
+
+          <p class="backup-footnote">
+            Row counts are the database's own estimates. Uploaded images live on disk, not in the
+            database, so they are not part of this file.
+          </p>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- FOLDER BROWSER                                                  -->
+      <!-- Browses the POS server's filesystem, because the destination     -->
+      <!-- must be a path the API can write to and the browser's own picker  -->
+      <!-- never reveals a path.                                            -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="fb-backdrop" *ngIf="showFolderBrowser" (click)="closeFolderBrowser()">
+        <div class="fb-dialog" (click)="$event.stopPropagation()">
+          <div class="fb-head">
+            <div class="flex-align-center gap-2">
+              <span class="material-symbols-outlined icon-purple">folder_open</span>
+              <div>
+                <h3 class="card-title-sm">Choose Backup Folder</h3>
+                <p class="card-subtitle">Folders on the computer running the POS server</p>
+              </div>
+            </div>
+            <button type="button" class="fb-close" (click)="closeFolderBrowser()" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="fb-bar">
+            <button
+              type="button"
+              class="fb-icon-btn"
+              [disabled]="!browseResult?.parent || isBrowsing"
+              title="Up one level"
+              (click)="browseTo(browseResult!.parent!)"
+            >
+              <span class="material-symbols-outlined">arrow_upward</span>
+            </button>
+
+            <div class="fb-path">{{ browseResult?.path || 'This computer' }}</div>
+
+            <button
+              type="button"
+              class="fb-icon-btn"
+              [disabled]="isBrowsing || !browseResult?.path"
+              title="New folder here"
+              (click)="startNewFolder()"
+            >
+              <span class="material-symbols-outlined">create_new_folder</span>
+            </button>
+          </div>
+
+          <div class="fb-drives" *ngIf="browseResult?.roots?.length">
+            <button
+              type="button"
+              class="fb-drive"
+              *ngFor="let d of browseResult!.roots"
+              [class.is-active]="browseResult!.path === d.path"
+              (click)="browseTo(d.path)"
+            >
+              <span class="material-symbols-outlined">hard_drive</span>
+              <span>{{ d.name }}</span>
+            </button>
+          </div>
+
+          <!-- Inline new-folder row, shown only while naming one. -->
+          <div class="fb-newfolder" *ngIf="isNamingFolder">
+            <span class="material-symbols-outlined">create_new_folder</span>
+            <input
+              type="text"
+              class="control-input"
+              [(ngModel)]="newFolderName"
+              placeholder="Folder name"
+              (keyup.enter)="createFolderHere()"
+              (keyup.escape)="isNamingFolder = false"
+              #newFolderInput
+            />
+            <button type="button" class="btn-path-save" [disabled]="isCreatingFolder" (click)="createFolderHere()">
+              <span class="material-symbols-outlined" [class.is-spinning]="isCreatingFolder">
+                {{ isCreatingFolder ? 'progress_activity' : 'check' }}
+              </span>
+              <span>Create</span>
+            </button>
+            <button type="button" class="fb-icon-btn" (click)="isNamingFolder = false" title="Cancel">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="fb-list">
+            <div class="fb-loading" *ngIf="isBrowsing">
+              <span class="material-symbols-outlined is-spinning">progress_activity</span>
+              <span>Reading folder…</span>
+            </div>
+
+            <div class="fb-error" *ngIf="!isBrowsing && browseResult?.error">
+              <span class="material-symbols-outlined">lock</span>
+              <span>{{ browseResult!.error }}</span>
+            </div>
+
+            <div
+              class="fb-empty"
+              *ngIf="!isBrowsing && !browseResult?.error && browseResult?.folders?.length === 0"
+            >
+              <span class="material-symbols-outlined">folder_off</span>
+              <span>No sub-folders here. You can still select this folder.</span>
+            </div>
+
+            <button
+              type="button"
+              class="fb-row"
+              *ngFor="let f of browseResult?.folders"
+              (dblclick)="browseTo(f.path)"
+              (click)="selectedBrowsePath = f.path"
+              [class.is-selected]="selectedBrowsePath === f.path"
+            >
+              <span class="material-symbols-outlined">folder</span>
+              <span class="fb-row-name">{{ f.name }}</span>
+              <span
+                class="material-symbols-outlined fb-enter"
+                title="Open"
+                (click)="$event.stopPropagation(); browseTo(f.path)"
+                >chevron_right</span
+              >
+            </button>
+          </div>
+
+          <div class="fb-foot">
+            <div class="fb-chosen">
+              <span class="fb-chosen-label">Selected</span>
+              <span class="fb-chosen-path">{{ selectedBrowsePath || browseResult?.path || '—' }}</span>
+            </div>
+            <div class="fb-foot-actions">
+              <button type="button" class="btn-path-browse" (click)="closeFolderBrowser()">Cancel</button>
+              <button
+                type="button"
+                class="btn-backup-now"
+                [disabled]="!(selectedBrowsePath || browseResult?.path)"
+                (click)="useSelectedFolder()"
+              >
+                <span class="material-symbols-outlined">check</span>
+                <span>Use This Folder</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [
@@ -3992,7 +4558,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        box-shadow: 0 2px 8px var(--primary-light, rgba(126, 34, 206, 0.12));
+        box-shadow: 0 2px 8px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
       }
 
       .header-icon-badge .material-symbols-outlined {
@@ -4072,12 +4638,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
         color: #ffffff;
         border: 1px solid var(--primary, #7E22CE);
-        box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
       }
 
       .btn-gradient-purple:hover {
         background: linear-gradient(135deg, var(--primary-hover, #9333EA) 0%, var(--primary, #7E22CE) 100%);
-        box-shadow: 0 8px 22px var(--primary-glow, rgba(126, 34, 206, 0.45));
+        box-shadow: 0 8px 22px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
       }
 
       .btn-outline-purple {
@@ -4091,7 +4657,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         background: var(--bg-app, #FAF5FF);
         border-color: var(--primary, #A855F7);
         color: var(--primary, #7E22CE);
-        box-shadow: 0 4px 12px var(--primary-light, rgba(126, 34, 206, 0.12));
+        box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
       }
 
       .btn-sm {
@@ -4134,7 +4700,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
       .tab-scroll-arrow:hover:not(:disabled) {
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 4px 12px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 4px 12px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
       }
 
       .tab-scroll-arrow:disabled { opacity: 0.32; cursor: not-allowed; }
@@ -4168,6 +4734,260 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
       @media (prefers-reduced-motion: reduce) {
         .tab-nav-bar { scroll-behavior: auto; }
+      }
+
+      /* ═══════════════════════════════════════════════════════════════ */
+      /* LIVE INVOICE PREVIEW                                            */
+      /* ═══════════════════════════════════════════════════════════════ */
+      /* The sheet is intentionally printed-paper white and near-black in
+         both themes: an invoice does not follow the brand palette, and
+         showing it recoloured would misrepresent what comes out of the
+         printer. Only the stage around it follows the theme. */
+      .invoice-preview-stage {
+        display: flex;
+        justify-content: center;
+        padding: 1.25rem;
+        border-radius: 16px;
+        background: var(--bg-app, #FAF5FF);
+        border: 1.5px dashed var(--card-border, #E9D5FF);
+        overflow-x: auto;
+      }
+
+      .invoice-sheet {
+        width: 100%;
+        flex-shrink: 0;
+        background: #ffffff;
+        color: #1f2937;
+        border-radius: 6px;
+        box-shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.35);
+        padding: 1.5rem 1.6rem;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.75rem;
+        line-height: 1.5;
+      }
+
+      .invoice-sheet.is-a4 { max-width: 700px; }
+      .invoice-sheet.is-a5 { max-width: 500px; }
+
+      /* The till roll is genuinely this narrow, so the preview stops
+         pretending otherwise: one column, monospace, no rules. */
+      .invoice-sheet.is-thermal {
+        max-width: 300px;
+        padding: 1.1rem 0.9rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.6875rem;
+      }
+
+      .inv-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 1.25rem;
+        padding-bottom: 0.9rem;
+        border-bottom: 2px solid #111827;
+      }
+
+      .invoice-sheet.is-thermal .inv-head {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.6rem;
+        border-bottom-style: dashed;
+        border-bottom-width: 1px;
+      }
+
+      .inv-head-brand {
+        display: flex;
+        gap: 0.7rem;
+        align-items: flex-start;
+        min-width: 0;
+      }
+
+      .invoice-sheet.is-thermal .inv-head-brand {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .inv-logo {
+        flex-shrink: 0;
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #111827;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 0.8125rem;
+        letter-spacing: 0.02em;
+      }
+
+      .inv-biz-name {
+        font-weight: 800;
+        font-size: 0.9375rem;
+        color: #111827;
+        line-height: 1.25;
+      }
+
+      .inv-biz-line {
+        font-size: 0.6875rem;
+        color: #4b5563;
+        white-space: pre-line;
+      }
+
+      .inv-head-meta {
+        text-align: right;
+        flex-shrink: 0;
+      }
+
+      .invoice-sheet.is-thermal .inv-head-meta { text-align: center; }
+
+      .inv-doc-title {
+        font-weight: 800;
+        font-size: 0.9375rem;
+        letter-spacing: 0.08em;
+        color: #111827;
+        margin-bottom: 0.35rem;
+      }
+
+      .inv-meta-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        font-size: 0.6875rem;
+        color: #4b5563;
+      }
+
+      .invoice-sheet.is-thermal .inv-meta-row { justify-content: center; }
+
+      .inv-meta-row strong { color: #111827; }
+
+      .inv-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.9rem;
+      }
+
+      .inv-table th {
+        text-align: left;
+        font-size: 0.625rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #6b7280;
+        border-bottom: 1px solid #d1d5db;
+        padding: 0.35rem 0.4rem;
+      }
+
+      .inv-table td {
+        padding: 0.4rem;
+        border-bottom: 1px solid #f3f4f6;
+        color: #1f2937;
+      }
+
+      .inv-col-num { text-align: right; white-space: nowrap; }
+      .inv-table th.inv-col-num { text-align: right; }
+
+      .inv-tax-table { margin-top: 0.75rem; }
+
+      .inv-totals {
+        margin-top: 0.85rem;
+        margin-left: auto;
+        width: 62%;
+      }
+
+      .invoice-sheet.is-thermal .inv-totals { width: 100%; }
+
+      .inv-total-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.22rem 0;
+        color: #4b5563;
+      }
+
+      .inv-total-row.is-grand {
+        margin-top: 0.3rem;
+        padding-top: 0.45rem;
+        border-top: 2px solid var(--text-main, #111827);
+        font-weight: 800;
+        font-size: 0.875rem;
+        color: var(--text-main, #111827);
+      }
+
+      .inv-foot-blocks {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1.25rem;
+        margin-top: 1.4rem;
+      }
+
+      .invoice-sheet.is-thermal .inv-foot-blocks {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.9rem;
+      }
+
+      .inv-qr-block {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      /* A placeholder, not a scannable code — the print path renders the
+         real one. The checker pattern reads as "QR goes here" at a glance. */
+      .inv-qr-glyph {
+        width: 3.1rem;
+        height: 3.1rem;
+        flex-shrink: 0;
+        border: 2px solid #111827;
+        border-radius: 4px;
+        background-image:
+          linear-gradient(45deg, #111827 25%, transparent 25%, transparent 75%, #111827 75%),
+          linear-gradient(45deg, #111827 25%, transparent 25%, transparent 75%, #111827 75%);
+        background-size: 0.62rem 0.62rem;
+        background-position: 0 0, 0.31rem 0.31rem;
+      }
+
+      .inv-qr-text { font-size: 0.625rem; color: #4b5563; }
+      .inv-qr-text strong { display: block; color: #111827; font-size: 0.6875rem; }
+
+      .inv-sign-block {
+        text-align: center;
+        font-size: 0.6875rem;
+        color: #4b5563;
+        min-width: 9rem;
+      }
+
+      .inv-sign-rule {
+        height: 2.2rem;
+        border-bottom: 1px solid #9ca3af;
+        margin-bottom: 0.3rem;
+      }
+
+      .inv-terms {
+        margin-top: 1.3rem;
+        padding-top: 0.7rem;
+        border-top: 1px dashed #d1d5db;
+        font-size: 0.625rem;
+        color: #4b5563;
+        white-space: pre-line;
+      }
+
+      .inv-terms-label {
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #111827;
+        margin-bottom: 0.15rem;
+      }
+
+      .inv-footer-note {
+        margin-top: 0.8rem;
+        text-align: center;
+        font-size: 0.6875rem;
+        font-style: italic;
+        color: #4b5563;
+        white-space: pre-line;
       }
 
       /* ─── Brand Theme sub-tab rail ─── */
@@ -4290,12 +5110,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
     .design-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 24px -10px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      box-shadow: 0 10px 24px -10px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
     }
 
     .design-card.is-selected {
       border-color: var(--primary, #7E22CE);
-      box-shadow: 0 0 0 4px var(--primary-light, rgba(126, 34, 206, 0.12));
+      box-shadow: 0 0 0 4px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
     }
 
     .density-row {
@@ -4366,7 +5186,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
     .design-preview-btn:hover {
       border-color: var(--primary, #7E22CE);
-      box-shadow: 0 4px 12px -6px var(--primary-glow, rgba(126, 34, 206, 0.35));
+      box-shadow: 0 4px 12px -6px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
     }
 
     .design-name-row {
@@ -4567,7 +5387,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       padding: 0.7rem 0.9rem;
       border-radius: 12px;
       border: 1px solid var(--primary, #C084FC);
-      background: var(--primary-light, rgba(126, 34, 206, 0.09));
+      background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.09));
     }
 
     .design-override-note.is-muted {
@@ -4647,7 +5467,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .switch-row input:checked + .switch-track .switch-knob { left: 1.32rem; }
 
     .switch-row input:focus-visible + .switch-track {
-      box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.25));
+      box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.25));
     }
 
     .switch-label {
@@ -4683,7 +5503,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     /* Some on, some off: the knob sits centred so the master switch never
        claims a state none of the eight pages are actually in. */
     .custom-master .switch-track.is-mixed {
-      background: var(--primary-light, rgba(126, 34, 206, 0.25));
+      background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.25));
       border-color: var(--primary, #C084FC);
     }
 
@@ -4726,7 +5546,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
     .custom-row.is-on .custom-row-icon {
       border-color: var(--primary, #C084FC);
-      background: var(--primary-light, rgba(126, 34, 206, 0.09));
+      background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.09));
       color: var(--primary, #7E22CE);
     }
 
@@ -4795,7 +5615,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       padding: 0.7rem 0.95rem;
       border-radius: 14px;
       border: 1.5px solid var(--primary, #C084FC);
-      background: var(--primary-light, rgba(126, 34, 206, 0.09));
+      background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.09));
     }
 
     .customization-status-bar.is-off {
@@ -5147,7 +5967,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       width: 18px;
       height: 4px;
       border-radius: 9999px;
-      background: #E2E8F0;
+      background: var(--card-border, #E2E8F0);
     }
     .neu-p-top { top: -5px; }
     .neu-p-bot { bottom: -5px; }
@@ -5195,15 +6015,15 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       justify-content: space-between;
       padding: 4px 6px;
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 4px;
     }
     .thumb-list-code { font-size: 8px; font-weight: 800; font-family: monospace; color: #0F172A; }
-    .thumb-list-bar { height: 4px; width: 40px; background: #CBD5E1; border-radius: 2px; }
+    .thumb-list-bar { height: 4px; width: 40px; background: var(--card-border, #CBD5E1); border-radius: 2px; }
     .thumb-list-pill { width: 8px; height: 8px; border-radius: 50%; }
     .thumb-list-pill.is-busy { background: #F97316; }
     .thumb-list-pill.is-free { background: #10B981; }
-    .thumb-list-pill.is-blocked { background: #EF4444; }
+    .thumb-list-pill.is-blocked { background: var(--danger, #EF4444); }
 
     /* Card List Thumbnail */
     .thumb-cardlist-wrap {
@@ -5218,7 +6038,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       gap: 6px;
       padding: 5px 8px;
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 6px;
     }
     .thumb-cl-badge {
@@ -5228,10 +6048,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       padding: 2px 4px;
       border-radius: 3px;
     }
-    .thumb-cl-badge.is-busy { background: #7E22CE; }
+    .thumb-cl-badge.is-busy { background: var(--primary, #7E22CE); }
     .thumb-cl-badge.is-free { background: #10B981; }
     .thumb-cl-body { display: flex; flex-direction: column; gap: 3px; }
-    .thumb-cl-line { height: 3px; background: #94A3B8; border-radius: 2px; }
+    .thumb-cl-line { height: 3px; background: var(--text-dim, #94A3B8); border-radius: 2px; }
     .thumb-cl-dwell { height: 2px; width: 30px; background: #F97316; border-radius: 1px; }
 
     /* ═══════════════════════════════════════════════════════════════════ */
@@ -5254,10 +6074,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     }
     .design-card:hover .category-mini-thumb {
       border-color: #C084FC;
-      box-shadow: 0 10px 22px -14px rgba(126, 34, 206, 0.65);
+      box-shadow: 0 10px 22px -14px rgba(var(--primary-rgb, 126, 34, 206), 0.65);
     }
     .design-card.is-selected .category-mini-thumb {
-      border-color: #A855F7;
+      border-color: var(--primary-hover, #A855F7);
     }
 
     /* ═══════════════════════════════════════════════════════════════════ */
@@ -5298,7 +6118,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       display: block;
       height: 4px;
       border-radius: 2px;
-      background: #CBD5E1;
+      background: var(--card-border, #CBD5E1);
       flex-shrink: 0;
     }
     .cat-line.is-title { height: 5px; background: #5B21B6; }
@@ -5309,8 +6129,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       width: 18px;
       height: 18px;
       border-radius: 6px;
-      background: #F3E8FF;
-      border: 1px solid #E9D5FF;
+      background: var(--primary-light, #F3E8FF);
+      border: 1px solid var(--card-border, #E9D5FF);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -5328,10 +6148,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       border-radius: 5px;
       flex-shrink: 0;
     }
-    .cat-chip.is-count { color: #FFFFFF; background: #7E22CE; }
-    .cat-chip.is-soft { color: #6D28D9; background: #F3E8FF; }
-    .cat-chip.is-live { color: #16A34A; background: #DCFCE7; font-size: 6px; padding: 3px 4px; }
-    .cat-seq { font-size: 7.5px; font-weight: 800; color: #94A3B8; flex-shrink: 0; }
+    .cat-chip.is-count { color: #FFFFFF; background: var(--primary, #7E22CE); }
+    .cat-chip.is-soft { color: #6D28D9; background: var(--primary-light, #F3E8FF); }
+    .cat-chip.is-live { color: var(--success, #16A34A); background: var(--success-light, #DCFCE7); font-size: 6px; padding: 3px 4px; }
+    .cat-seq { font-size: 7.5px; font-weight: 800; color: var(--text-dim, #94A3B8); flex-shrink: 0; }
     .cat-seq.is-boxed {
       color: #6D28D9;
       background: #F5F3FF;
@@ -5344,8 +6164,8 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       width: 3px;
       height: 3px;
       border-radius: 50%;
-      background: #CBD5E1;
-      box-shadow: 0 -4px 0 #CBD5E1, 0 4px 0 #CBD5E1;
+      background: var(--card-border, #CBD5E1);
+      box-shadow: 0 -4px 0 var(--card-border, #CBD5E1), 0 4px 0 var(--card-border, #CBD5E1);
       flex-shrink: 0;
       margin-right: 1px;
     }
@@ -5359,9 +6179,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       gap: 7px;
       padding: 0 8px;
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 9px;
-      box-shadow: 0 3px 8px -4px rgba(126, 34, 206, 0.28);
+      box-shadow: 0 3px 8px -4px rgba(var(--primary-rgb, 126, 34, 206), 0.28);
     }
     .cat-bento-hero .cat-stack { flex: 1; }
     .cat-bento-row { flex: 1; display: flex; gap: 6px; }
@@ -5380,7 +6200,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .cat-table {
       gap: 0;
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 8px;
       overflow: hidden;
     }
@@ -5390,17 +6210,17 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       gap: 6px;
       padding: 0 8px;
       height: 18px;
-      background: #F8FAFC;
-      border-bottom: 1px solid #E2E8F0;
+      background: var(--bg-app, #F8FAFC);
+      border-bottom: 1px solid var(--card-border, #E2E8F0);
     }
-    .cat-col { height: 3px; border-radius: 2px; background: #94A3B8; opacity: 0.55; }
+    .cat-col { height: 3px; border-radius: 2px; background: var(--text-dim, #94A3B8); opacity: 0.55; }
     .cat-table-row {
       flex: 1;
       display: flex;
       align-items: center;
       gap: 7px;
       padding: 0 8px;
-      border-bottom: 1px solid #F1F5F9;
+      border-bottom: 1px solid var(--card-border, #F1F5F9);
     }
     .cat-table-row:last-child { border-bottom: none; }
     .cat-table-row .cat-line { flex: 1; }
@@ -5419,9 +6239,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       align-items: center;
       justify-content: center;
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 8px;
-      box-shadow: 0 2px 5px -3px rgba(126, 34, 206, 0.3);
+      box-shadow: 0 2px 5px -3px rgba(var(--primary-rgb, 126, 34, 206), 0.3);
     }
     .cat-tile-glyph { font-size: 13px; line-height: 1; }
     .cat-tile-dot {
@@ -5454,7 +6274,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       flex: 1;
       min-width: 0;
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 9px;
       overflow: hidden;
       box-shadow: 0 4px 10px -6px rgba(15, 23, 42, 0.3);
@@ -5464,7 +6284,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .cat-card-banner {
       display: block;
       height: 26px;
-      background: linear-gradient(135deg, #7E22CE, #C084FC);
+      background: linear-gradient(135deg, var(--primary, #7E22CE), #C084FC);
       flex-shrink: 0;
     }
     .cat-avatar.is-float {
@@ -5491,7 +6311,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       height: 3px;
       width: 100%;
       border-radius: 2px;
-      background: #F1F5F9;
+      background: var(--card-hover, #F1F5F9);
       overflow: hidden;
       margin-top: 1px;
     }
@@ -5499,7 +6319,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       display: block;
       height: 100%;
       border-radius: 2px;
-      background: linear-gradient(90deg, #7E22CE, #C084FC);
+      background: linear-gradient(90deg, var(--primary, #7E22CE), #C084FC);
     }
 
     /* ═══════════════════════════════════════════════════════════════════ */
@@ -5514,13 +6334,13 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       gap: 0;
       border-radius: 12px;
       overflow: hidden;
-      border: 1px solid #E9D5FF;
-      background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+      border: 1px solid var(--card-border, #E9D5FF);
+      background: linear-gradient(135deg, var(--bg-app, #F8FAFC), var(--card-hover, #F1F5F9));
       padding: 0;
       transition: box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .design-card:hover .sb-mini-thumb {
-      box-shadow: 0 10px 22px -12px rgba(46, 16, 101, 0.55);
+      box-shadow: 0 10px 22px -12px rgba(var(--text-main-rgb, 46, 16, 101), 0.55);
     }
 
     .sb-mini-rail {
@@ -5529,7 +6349,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       flex-direction: column;
       gap: 5px;
       padding: 7px 6px;
-      background: #2E1065;
+      background: var(--text-main, #2E1065);
       box-sizing: border-box;
     }
     .sb-mini-head { display: flex; align-items: center; gap: 4px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.12); }
@@ -5564,7 +6384,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       padding: 9px 8px;
       box-sizing: border-box;
     }
-    .sb-mini-block { flex: 1; border-radius: 6px; background: #FFFFFF; border: 1px solid #E2E8F0; }
+    .sb-mini-block { flex: 1; border-radius: 6px; background: #FFFFFF; border: 1px solid var(--card-border, #E2E8F0); }
 
     /* 1 · Default — flat rail, accent bar on the active row */
     .thumb-sb-default .sb-mini-row.is-active { box-shadow: inset 2px 0 0 #C084FC; }
@@ -5594,10 +6414,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-sb-compact .sb-mini-row { height: 9px; border-radius: 3px; }
 
     /* 5 · Floating — detached rounded panel with real elevation */
-    .thumb-sb-floating { background: linear-gradient(135deg, #EEF2FF, #F8FAFC); padding: 7px; gap: 7px; }
+    .thumb-sb-floating { background: linear-gradient(135deg, #EEF2FF, var(--bg-app, #F8FAFC)); padding: 7px; gap: 7px; }
     .thumb-sb-floating .sb-mini-rail {
       border-radius: 11px;
-      box-shadow: 0 8px 18px -6px rgba(46, 16, 101, 0.6);
+      box-shadow: 0 8px 18px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.6);
     }
     .thumb-sb-floating .sb-mini-canvas { padding: 0; }
     .thumb-sb-floating .sb-mini-row { border-radius: 6px; }
@@ -5621,7 +6441,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
     /* 7 · Elegant — gradient wash and hairline heading rule */
     .thumb-sb-elegant .sb-mini-rail {
-      background: linear-gradient(180deg, #2E1065, #1E0A45);
+      background: linear-gradient(180deg, var(--text-main, #2E1065), #1E0A45);
     }
     .thumb-sb-elegant .sb-mini-row { border-radius: 5px; }
     .thumb-sb-elegant .sb-mini-row.is-active {
@@ -5633,7 +6453,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     /* 8 · Dashboard Pro — widest rail, solid accent active row */
     .thumb-sb-dashboardpro .sb-mini-rail { width: 58%; }
     .thumb-sb-dashboardpro .sb-mini-row.is-active { background: #C084FC; }
-    .thumb-sb-dashboardpro .sb-mini-row.is-active i { background: #2E1065; }
+    .thumb-sb-dashboardpro .sb-mini-row.is-active i { background: var(--text-main, #2E1065); }
     .thumb-sb-dashboardpro .sb-mini-row.is-active b { background: rgba(46,16,101,0.6); }
 
     /* 9 · Glass — translucent frosted panel over a colourful canvas */
@@ -5647,7 +6467,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     }
     .thumb-sb-glass .sb-mini-rail {
       border-radius: 10px;
-      background: rgba(46, 16, 101, 0.55);
+      background: rgba(var(--text-main-rgb, 46, 16, 101), 0.55);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       border: 1px solid rgba(255,255,255,0.28);
@@ -5702,13 +6522,13 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       border-radius: 999px;
       font-size: 0.625rem;
       font-weight: 600;
-      color: #6B21A8;
-      background: #FAF5FF;
-      border: 1px solid #E9D5FF;
+      color: var(--primary-variant, #6B21A8);
+      background: var(--bg-app, #FAF5FF);
+      border: 1px solid var(--card-border, #E9D5FF);
     }
     .sb-highlight-chip .material-symbols-outlined {
       font-size: 12px !important;
-      color: #A855F7;
+      color: var(--primary-hover, #A855F7);
     }
     .sb-cap-row {
       display: flex;
@@ -5740,7 +6560,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       align-items: center;
       justify-content: center;
       padding: 8px;
-      background: #F8FAFC;
+      background: var(--bg-app, #F8FAFC);
       border: 1px solid rgba(0, 0, 0, 0.05);
       position: relative;
     }
@@ -5750,7 +6570,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-stk-wh-card {
       width: 110px;
       background: #FFFFFF;
-      border: 1.5px solid #CBD5E1;
+      border: 1.5px solid var(--card-border, #CBD5E1);
       border-radius: 8px;
       padding: 6px 8px;
       display: flex;
@@ -5760,20 +6580,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     }
     .thumb-stk-wh-head { display: flex; justify-content: space-between; align-items: center; }
     .thumb-stk-sku { font-size: 8px; font-weight: 800; font-family: monospace; color: #2563EB; background: #EFF6FF; padding: 1px 3px; border-radius: 3px; }
-    .thumb-stk-dot-green { width: 6px; height: 6px; border-radius: 50%; background: #16A34A; }
-    .thumb-stk-dot-amber { width: 6px; height: 6px; border-radius: 50%; background: #D97706; }
-    .thumb-stk-bar-bg { height: 4px; width: 100%; background: #E2E8F0; border-radius: 2px; overflow: hidden; }
-    .thumb-stk-bar-green { height: 100%; background: #16A34A; border-radius: 2px; display: block; }
-    .thumb-stk-bar-amber { height: 100%; background: #D97706; border-radius: 2px; display: block; }
+    .thumb-stk-dot-green { width: 6px; height: 6px; border-radius: 50%; background: var(--success, #16A34A); }
+    .thumb-stk-dot-amber { width: 6px; height: 6px; border-radius: 50%; background: var(--warning, #D97706); }
+    .thumb-stk-bar-bg { height: 4px; width: 100%; background: var(--card-border, #E2E8F0); border-radius: 2px; overflow: hidden; }
+    .thumb-stk-bar-green { height: 100%; background: var(--success, #16A34A); border-radius: 2px; display: block; }
+    .thumb-stk-bar-amber { height: 100%; background: var(--warning, #D97706); border-radius: 2px; display: block; }
     .thumb-stk-chips { display: flex; justify-content: space-between; font-size: 8px; font-weight: 700; font-family: monospace; }
-    .thumb-stk-val { color: #7E22CE; }
-    .thumb-stk-unit { color: #64748B; }
+    .thumb-stk-val { color: var(--primary, #7E22CE); }
+    .thumb-stk-unit { color: var(--text-muted, #64748B); }
 
     /* Financial Ledger Thumb */
     .thumb-stk-fin-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
     .thumb-stk-fin-row {
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 5px;
       padding: 4px 6px;
       display: flex;
@@ -5781,7 +6601,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       justify-content: space-between;
     }
     .thumb-stk-sku-sm { font-size: 8px; font-family: monospace; font-weight: 700; color: #0F766E; }
-    .thumb-stk-line { height: 3px; background: #64748B; border-radius: 1px; }
+    .thumb-stk-line { height: 3px; background: var(--text-muted, #64748B); border-radius: 1px; }
     .thumb-stk-val-sm { font-size: 8px; font-family: monospace; font-weight: 700; color: #0369A1; }
 
     /* Compact Kanban Thumb */
@@ -5790,14 +6610,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       width: 52px;
       height: 48px;
       background: #FFFFFF;
-      border: 1px solid #E9D5FF;
+      border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 8px;
       padding: 4px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
-    .thumb-stk-qty-num { font-size: 11px; font-weight: 800; font-family: monospace; color: #2E1065; text-align: center; }
+    .thumb-stk-qty-num { font-size: 11px; font-weight: 800; font-family: monospace; color: var(--text-main, #2E1065); text-align: center; }
 
     /* List View Thumb */
     .thumb-stk-list-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
@@ -5816,7 +6636,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-stk-exec-card {
       width: 105px;
       background: #FFFFFF;
-      border: 1.5px solid #E2E8F0;
+      border: 1.5px solid var(--card-border, #E2E8F0);
       border-radius: 10px;
       padding: 6px 8px;
       display: flex;
@@ -5839,7 +6659,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       align-items: center;
       justify-content: center;
       padding: 8px;
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
       border: 1px solid rgba(0, 0, 0, 0.05);
       position: relative;
     }
@@ -5849,41 +6669,41 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-cust-vip-card {
       width: 110px;
       background: #FFFFFF;
-      border: 1.5px solid #E9D5FF;
+      border: 1.5px solid var(--card-border, #E9D5FF);
       border-radius: 10px;
       padding: 6px 8px;
       display: flex;
       flex-direction: column;
       gap: 4px;
-      box-shadow: 0 4px 10px rgba(126, 34, 206, 0.08);
+      box-shadow: 0 4px 10px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
     }
     .thumb-cust-vip-head { display: flex; justify-content: space-between; align-items: center; }
-    .thumb-cust-avatar-sm { width: 20px; height: 20px; border-radius: 6px; background: #F3E8FF; color: #7E22CE; font-size: 8px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-    .thumb-cust-vip-pill { font-size: 7px; font-weight: 800; color: #B45309; background: #FEF3C7; padding: 1px 4px; border-radius: 3px; }
+    .thumb-cust-avatar-sm { width: 20px; height: 20px; border-radius: 6px; background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); font-size: 8px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+    .thumb-cust-vip-pill { font-size: 7px; font-weight: 800; color: var(--warning, #B45309); background: var(--warning-light, #FEF3C7); padding: 1px 4px; border-radius: 3px; }
     .thumb-cust-bar-gold { height: 4px; background: #F59E0B; border-radius: 2px; }
 
     /* Clean Table Thumb */
     .thumb-cust-clean-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .thumb-cust-clean-row { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 4px 6px; display: flex; justify-content: space-between; align-items: center; }
-    .thumb-cust-seq { font-size: 8px; font-weight: 700; color: #64748B; }
+    .thumb-cust-clean-row { background: #FFFFFF; border: 1px solid var(--card-border, #E2E8F0); border-radius: 4px; padding: 4px 6px; display: flex; justify-content: space-between; align-items: center; }
+    .thumb-cust-seq { font-size: 8px; font-weight: 700; color: var(--text-muted, #64748B); }
     .thumb-cust-pill-blue { font-size: 7px; font-weight: 800; color: #1D4ED8; background: #EFF6FF; padding: 1px 3px; border-radius: 2px; }
     .thumb-cust-pill-green { font-size: 7px; font-weight: 800; color: #047857; background: #ECFDF5; padding: 1px 3px; border-radius: 2px; }
 
     /* Compact Tiles Thumb */
     .thumb-cust-compact-wrap { width: 100%; display: flex; gap: 6px; justify-content: center; }
-    .thumb-cust-compact-tile { width: 50px; background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 6px; padding: 4px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+    .thumb-cust-compact-tile { width: 50px; background: #FFFFFF; border: 1.5px solid var(--card-border, #CBD5E1); border-radius: 6px; padding: 4px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
     .thumb-cust-avatar-xs { width: 16px; height: 16px; border-radius: 4px; background: #CCFBF1; color: #0F766E; font-size: 7px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 
     /* List View Thumb */
     .thumb-cust-list-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .thumb-cust-list-row { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 4px 6px; display: flex; align-items: center; gap: 4px; }
-    .thumb-cust-check { width: 5px; height: 5px; border-radius: 2px; border: 1px solid #7E22CE; }
-    .thumb-cust-tag-green { margin-left: auto; font-size: 7px; font-weight: 700; color: #16A34A; background: #DCFCE7; padding: 1px 3px; border-radius: 2px; }
+    .thumb-cust-list-row { background: #FFFFFF; border: 1px solid var(--card-border, #E2E8F0); border-radius: 4px; padding: 4px 6px; display: flex; align-items: center; gap: 4px; }
+    .thumb-cust-check { width: 5px; height: 5px; border-radius: 2px; border: 1px solid var(--primary, #7E22CE); }
+    .thumb-cust-tag-green { margin-left: auto; font-size: 7px; font-weight: 700; color: var(--success, #16A34A); background: var(--success-light, #DCFCE7); padding: 1px 3px; border-radius: 2px; }
 
     /* Card View Thumb */
     .thumb-cust-card-wrap { width: 100%; display: flex; justify-content: center; }
-    .thumb-cust-exec-card { width: 95px; background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); }
-    .thumb-cust-card-banner { height: 14px; background: linear-gradient(135deg, #7E22CE, #C084FC); }
+    .thumb-cust-exec-card { width: 95px; background: #FFFFFF; border: 1.5px solid var(--card-border, #E2E8F0); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); }
+    .thumb-cust-card-banner { height: 14px; background: linear-gradient(135deg, var(--primary, #7E22CE), #C084FC); }
     .thumb-cust-card-body { padding: 4px; display: flex; align-items: center; gap: 4px; }
     .thumb-cust-line { height: 4px; background: #334155; border-radius: 2px; }
 
@@ -5899,7 +6719,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       align-items: center;
       justify-content: center;
       padding: 8px;
-      background: #F8FAFC;
+      background: var(--bg-app, #F8FAFC);
       border: 1px solid rgba(0, 0, 0, 0.05);
       position: relative;
     }
@@ -5909,7 +6729,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-staff-id-card {
       width: 110px;
       background: #FFFFFF;
-      border: 1.5px solid #CBD5E1;
+      border: 1.5px solid var(--card-border, #CBD5E1);
       border-radius: 10px;
       padding: 6px 8px;
       display: flex;
@@ -5918,7 +6738,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       box-shadow: 0 4px 10px rgba(79, 70, 229, 0.08);
       position: relative;
     }
-    .thumb-staff-id-slot { height: 3px; width: 24px; background: #94A3B8; border-radius: 2px; margin: 0 auto; }
+    .thumb-staff-id-slot { height: 3px; width: 24px; background: var(--text-dim, #94A3B8); border-radius: 2px; margin: 0 auto; }
     .thumb-staff-id-head { display: flex; justify-content: space-between; align-items: center; }
     .thumb-staff-avatar-sm { width: 18px; height: 18px; border-radius: 6px; background: #EEF2FF; color: #4F46E5; font-size: 8px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
     .thumb-staff-pill-green { font-size: 7px; font-weight: 800; color: #059669; background: #ECFDF5; padding: 1px 4px; border-radius: 3px; }
@@ -5956,19 +6776,19 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
     /* 3. Horizontal Roster Stream Thumb */
     .thumb-staff-roster-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .thumb-staff-roster-row { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 3px 5px; display: flex; align-items: center; gap: 4px; }
+    .thumb-staff-roster-row { background: #FFFFFF; border: 1px solid var(--card-border, #E2E8F0); border-radius: 6px; padding: 3px 5px; display: flex; align-items: center; gap: 4px; }
     .thumb-staff-roster-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-    .thumb-staff-roster-gauge { width: 100%; height: 3px; background: #E2E8F0; border-radius: 2px; overflow: hidden; }
+    .thumb-staff-roster-gauge { width: 100%; height: 3px; background: var(--card-border, #E2E8F0); border-radius: 2px; overflow: hidden; }
     .thumb-staff-gauge-bar { height: 100%; background: #0D9488; border-radius: 2px; }
     .thumb-staff-pill-teal { font-size: 6px; font-weight: 800; color: #0F766E; background: #CCFBF1; padding: 1px 3px; border-radius: 2px; }
 
     /* 4. Enterprise SaaS Power Table Thumb */
     .thumb-staff-list-wrap { width: 100%; display: flex; flex-direction: column; }
-    .thumb-staff-list-head { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 4px 4px 0 0; padding: 2px 4px; display: flex; align-items: center; gap: 4px; }
-    .thumb-staff-line-head { height: 3px; background: #94A3B8; border-radius: 1px; }
-    .thumb-staff-list-row { border: 1px solid #E2E8F0; border-top: none; padding: 3px 4px; display: flex; align-items: center; gap: 4px; }
+    .thumb-staff-list-head { background: var(--card-hover, #F1F5F9); border: 1px solid var(--card-border, #CBD5E1); border-radius: 4px 4px 0 0; padding: 2px 4px; display: flex; align-items: center; gap: 4px; }
+    .thumb-staff-line-head { height: 3px; background: var(--text-dim, #94A3B8); border-radius: 1px; }
+    .thumb-staff-list-row { border: 1px solid var(--card-border, #E2E8F0); border-top: none; padding: 3px 4px; display: flex; align-items: center; gap: 4px; }
     .thumb-staff-list-row.zebra-w { background: #FFFFFF; }
-    .thumb-staff-list-row.zebra-s { background: #F8FAFC; border-radius: 0 0 4px 4px; }
+    .thumb-staff-list-row.zebra-s { background: var(--bg-app, #F8FAFC); border-radius: 0 0 4px 4px; }
     .thumb-staff-tag-blue { margin-left: auto; font-size: 6px; font-weight: 700; color: #1D4ED8; background: #EFF6FF; padding: 1px 3px; border-radius: 2px; }
 
     /* 5. Modern Bento Metric Profile Thumb */
@@ -5976,7 +6796,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-staff-bento-card {
       width: 105px;
       background: #FFFFFF;
-      border: 1.5px solid #F3E8FF;
+      border: 1.5px solid var(--card-border, #F3E8FF);
       border-radius: 10px;
       overflow: hidden;
       box-shadow: 0 3px 8px rgba(139, 92, 246, 0.1);
@@ -6000,7 +6820,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-staff-bento-metrics { display: flex; gap: 2px; padding: 2px 4px 4px; }
     .thumb-staff-bento-box {
       flex: 1;
-      background: #FAF5FF;
+      background: var(--bg-app, #FAF5FF);
       border: 1px solid #EDE9FE;
       border-radius: 3px;
       font-size: 5px;
@@ -6051,9 +6871,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       flex-direction: column; justify-content: flex-end; min-height: 22px;
     }
     .thumb-staff-metro-tile.tile-blue { background: #2563EB; }
-    .thumb-staff-metro-tile.tile-red { background: #DC2626; }
+    .thumb-staff-metro-tile.tile-red { background: var(--danger, #DC2626); }
     .thumb-staff-metro-tile.tile-green { background: #059669; }
-    .thumb-staff-metro-tile.tile-amber { background: #D97706; }
+    .thumb-staff-metro-tile.tile-amber { background: var(--warning, #D97706); }
     .thumb-staff-metro-wm {
       position: absolute; top: -2px; right: 0; font-size: 18px; font-weight: 900;
       color: rgba(0,0,0,0.12); line-height: 1;
@@ -6071,11 +6891,11 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     }
     .thumb-staff-timeline-node-t {
       width: 6px; height: 6px; border-radius: 50%; background: #7C3AED;
-      margin-left: -4px; z-index: 1; box-shadow: 0 0 0 1.5px #F8FAFC, 0 0 0 3px #7C3AED;
+      margin-left: -4px; z-index: 1; box-shadow: 0 0 0 1.5px var(--bg-app, #F8FAFC), 0 0 0 3px #7C3AED;
     }
     .thumb-staff-timeline-bubble {
       display: flex; gap: 3px; align-items: center;
-      background: #FFF; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 4px;
+      background: #FFF; border: 1px solid var(--card-border, #E2E8F0); border-radius: 5px; padding: 2px 4px;
       margin-left: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
@@ -6083,7 +6903,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     .thumb-staff-pill-wrap { width: 100%; display: flex; flex-direction: column; gap: 3px; }
     .thumb-staff-pill-row {
       display: flex; align-items: center; gap: 3px;
-      background: #FFF; border: 1px solid #E2E8F0; border-radius: 99px;
+      background: #FFF; border: 1px solid var(--card-border, #E2E8F0); border-radius: 99px;
       padding: 2px 4px 2px 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .thumb-staff-pill-orange {
@@ -6120,7 +6940,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       appearance: none;
       height: 6px;
       border-radius: 3px;
-      background: #E2E8F0;
+      background: var(--card-border, #E2E8F0);
       outline: none;
     }
     .range-slider::-webkit-slider-thumb {
@@ -6129,9 +6949,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: #7E22CE;
+      background: var(--primary, #7E22CE);
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(126, 34, 206, 0.35);
+      box-shadow: 0 2px 5px rgba(var(--primary-rgb, 126, 34, 206), 0.35);
       transition: transform 0.1s ease;
     }
     .range-slider::-webkit-slider-thumb:hover {
@@ -6222,7 +7042,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         border-color: var(--primary, #C084FC);
         color: var(--primary, #7E22CE);
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px var(--primary-light, rgba(126, 34, 206, 0.12));
+        box-shadow: 0 6px 16px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
       }
 
       .tab-btn:hover .material-symbols-outlined {
@@ -6233,7 +7053,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
         color: #ffffff;
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 6px 20px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 6px 20px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
         transform: translateY(-1px);
       }
 
@@ -6322,6 +7142,143 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         color: var(--primary, #7E22CE);
       }
 
+      /* ─── Menu Names editor ─────────────────────────────────────────
+         One row per module, so renaming the rail reads as a list of the
+         rail rather than a form. The icon and route travel with each row:
+         they are how an operator tells two similarly named modules apart
+         once the shipped wording is gone. */
+
+      .menu-name-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+        padding: 0.25rem 0 0.15rem;
+      }
+
+      .menu-name-group {
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        border-radius: var(--radius-lg, 16px);
+        background: var(--card-bg, #ffffff);
+        overflow: hidden;
+      }
+
+      .menu-name-group-head {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.7rem 0.85rem;
+        background: var(--bg-app, #FAF5FF);
+        border-bottom: 1.5px solid var(--card-border, #E9D5FF);
+      }
+
+      .menu-name-group-head > .material-symbols-outlined {
+        font-size: 18px;
+        color: var(--primary, #7E22CE);
+        flex: none;
+      }
+
+      .menu-name-rows {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .menu-name-row {
+        display: grid;
+        grid-template-columns: 2rem minmax(0, 1fr) auto 2rem;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.5rem 0.85rem;
+        border-bottom: 1px solid var(--card-border, #F3E8FF);
+      }
+
+      .menu-name-row:last-child {
+        border-bottom: none;
+      }
+
+      .menu-name-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 9px;
+        background: var(--primary-light, #F3E8FF);
+        color: var(--primary, #7E22CE);
+        flex: none;
+      }
+
+      .menu-name-icon .material-symbols-outlined {
+        font-size: 17px;
+      }
+
+      .menu-name-input {
+        height: 2.3rem;
+        min-height: 2.3rem;
+        font-size: 0.8125rem;
+        padding: 0.35rem 0.6rem;
+      }
+
+      .menu-name-input.is-group {
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+      }
+
+      /* The shipped wording, kept in view once a group carries a new name so
+         the change is reversible from memory rather than from a backup. */
+      .menu-name-shipped {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--text-muted, #6B7280);
+        white-space: nowrap;
+        flex: none;
+      }
+
+      .menu-name-route {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--text-dim, #9CA3AF);
+        white-space: nowrap;
+      }
+
+      .menu-name-revert {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        border-radius: 9px;
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: transparent;
+        color: var(--text-muted, #6B7280);
+        cursor: pointer;
+        transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+      }
+
+      .menu-name-revert:hover {
+        background: var(--primary, #7E22CE);
+        border-color: var(--primary, #7E22CE);
+        color: #ffffff;
+      }
+
+      .menu-name-revert .material-symbols-outlined {
+        font-size: 16px;
+      }
+
+      /* The route is the first thing worth dropping on a narrow screen: the
+         icon and the name together already identify the row. */
+      @media (max-width: 767px) {
+        .menu-name-row {
+          grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+        }
+
+        .menu-name-route {
+          display: none;
+        }
+      }
+
       .active-preset-tag {
         background: var(--bg-app, #FAF5FF);
         border: 1.5px solid var(--card-border, #E9D5FF);
@@ -6385,13 +7342,13 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         border-color: var(--primary, #C084FC);
         background: var(--bg-app, #FAF5FF);
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px var(--primary-light, rgba(126, 34, 206, 0.1));
+        box-shadow: 0 6px 16px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
       }
 
       .preset-item-card.is-selected {
         border-color: var(--primary, #7E22CE);
         background: var(--primary-light, #F3E8FF);
-        box-shadow: 0 0 0 2px var(--primary-light, rgba(126, 34, 206, 0.25)), 0 6px 16px var(--primary-glow, rgba(126, 34, 206, 0.12));
+        box-shadow: 0 0 0 2px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.25)), 0 6px 16px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
       }
 
       .preset-active-banner {
@@ -6572,7 +7529,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
       .hex-text-input:focus {
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
       }
 
       /* Sandbox */
@@ -6614,7 +7571,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       .mock-action-card {
         padding: 1rem;
         background: #ffffff;
-        border: 1.5px solid #E9D5FF;
+        border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 12px;
         display: flex;
         align-items: center;
@@ -6624,7 +7581,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       .mock-badges-card {
         padding: 1rem;
         background: #ffffff;
-        border: 1.5px solid #E9D5FF;
+        border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 12px;
         display: flex;
         align-items: center;
@@ -6673,14 +7630,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         height: 10px;
         border-radius: 9999px;
       }
-      .dot-red { background: #ef4444; }
+      .dot-red { background: var(--danger, #EF4444); }
       .dot-amber { background: #f59e0b; }
       .dot-green { background: #10b981; }
 
       .screen-meta-title {
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.7rem;
-        color: #94a3b8;
+        color: var(--text-dim, #94A3B8);
         margin-left: 0.5rem;
       }
 
@@ -6690,7 +7647,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         gap: 0.35rem;
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.7rem;
-        color: #64748b;
+        color: var(--text-muted, #64748B);
       }
 
       .positions-row {
@@ -6705,7 +7662,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         border-radius: 12px;
         border: 1.5px solid #334155;
         background: rgba(30, 41, 59, 0.85);
-        color: #cbd5e1;
+        color: var(--text-dim, #CBD5E1);
         cursor: pointer;
         display: flex;
         flex-direction: column;
@@ -6714,16 +7671,16 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       }
 
       .position-pad:hover {
-        border-color: #64748b;
+        border-color: var(--text-muted, #64748B);
         background: #334155;
         transform: translateY(-2px);
       }
 
       .position-pad.is-selected {
-        border-color: #A855F7;
-        background: rgba(126, 34, 206, 0.35);
+        border-color: var(--primary-hover, #A855F7);
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.35);
         color: #ffffff;
-        box-shadow: 0 0 0 2px #7E22CE, 0 8px 20px rgba(126, 34, 206, 0.4);
+        box-shadow: 0 0 0 2px var(--primary, #7E22CE), 0 8px 20px rgba(var(--primary-rgb, 126, 34, 206), 0.4);
       }
 
       .pad-title-row {
@@ -6743,7 +7700,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
       .pad-subtext {
         font-size: 0.6875rem;
-        color: #94a3b8;
+        color: var(--text-dim, #94A3B8);
         margin: 0;
       }
 
@@ -6785,12 +7742,12 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       .board-title {
         font-size: 0.75rem;
         font-weight: 800;
-        color: #e2e8f0;
+        color: var(--text-dim, #E2E8F0);
       }
 
       .board-desc {
         font-size: 0.6875rem;
-        color: #94a3b8;
+        color: var(--text-dim, #94A3B8);
         margin-top: 0.2rem;
       }
 
@@ -6852,7 +7809,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
       .control-input:focus, .control-select:focus, .control-textarea:focus {
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
       }
 
       .control-hint {
@@ -6895,7 +7852,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 8px var(--primary-glow, rgba(126, 34, 206, 0.3));
+        box-shadow: 0 2px 8px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
       }
 
       .playground-title {
@@ -6939,9 +7896,9 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
       }
 
-      .btn-test-success { background: linear-gradient(135deg, #16a34a, #15803d); }
-      .btn-test-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-      .btn-test-warning { background: linear-gradient(135deg, #ea580c, #c2410c); }
+      .btn-test-success { background: linear-gradient(135deg, var(--success, #16A34A), var(--success, #15803D)); }
+      .btn-test-error { background: linear-gradient(135deg, var(--danger, #DC2626), var(--danger, #B91C1C)); }
+      .btn-test-warning { background: linear-gradient(135deg, var(--warning, #EA580C), #c2410c); }
       .btn-test-info { background: linear-gradient(135deg, var(--primary, #7e22ce), var(--primary-hover, #6b21a8)); }
       .btn-test-loading { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
 
@@ -7086,7 +8043,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         gap: 0.625rem;
         padding: 0.875rem 1.125rem;
         border-radius: 14px;
-        background: rgba(126, 34, 206, 0.06);
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.06);
         border: 1.5px dashed var(--card-border, #E9D5FF);
       }
 
@@ -7145,7 +8102,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         gap: 1.25rem;
         padding: 1.125rem 1.375rem;
         border-radius: 16px;
-        background: linear-gradient(135deg, rgba(126, 34, 206, 0.1), rgba(147, 51, 234, 0.03));
+        background: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.1), rgba(var(--primary-rgb, 147, 51, 234), 0.03));
         border: 1.5px solid var(--card-border, #E9D5FF);
       }
 
@@ -7185,12 +8142,414 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       .ml-auto { margin-left: auto; }
       .font-mono { font-family: 'JetBrains Mono', monospace; }
       .font-bold { font-weight: 700; }
-      .text-purple { color: #7E22CE; }
+      .text-purple { color: var(--primary, #7E22CE); }
       .spin-icon { animation: spin 1s linear infinite; }
 
       @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
+      }
+
+      /* ── Data Backup ─────────────────────────────────────────────── */
+      .backup-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+        padding-top: 0.25rem;
+      }
+
+      .backup-path-row {
+        display: flex;
+        gap: 0.6rem;
+        align-items: stretch;
+      }
+      .backup-path-row .control-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.82rem;
+      }
+
+      .btn-path-save,
+      .btn-path-create,
+      .btn-path-browse {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0 1.05rem;
+        border-radius: 10px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--surface-muted, #F5F3FF);
+        color: #6D28D9;
+        font-size: 0.8rem;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .btn-path-save:hover:not(:disabled),
+      .btn-path-create:hover:not(:disabled),
+      .btn-path-browse:hover:not(:disabled) {
+        background: #EDE9FE;
+        border-color: #C4B5FD;
+      }
+      .btn-path-save:disabled,
+      .btn-path-create:disabled,
+      .btn-path-browse:disabled { opacity: 0.55; cursor: not-allowed; }
+      .btn-path-save .material-symbols-outlined,
+      .btn-path-create .material-symbols-outlined,
+      .btn-path-browse .material-symbols-outlined { font-size: 1.1rem; }
+      .btn-path-save .is-spinning,
+      .btn-path-browse .is-spinning { animation: spin 1s linear infinite; }
+
+      .btn-path-create {
+        margin-top: 0.6rem;
+        padding: 0.55rem 1rem;
+        align-self: flex-start;
+      }
+
+      .backup-path-status {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.45rem;
+        margin-top: 0.55rem;
+        font-size: 0.79rem;
+        font-weight: 600;
+        line-height: 1.45;
+      }
+      .backup-path-status .material-symbols-outlined { font-size: 1.1rem; flex-shrink: 0; }
+      .backup-path-status.is-ok { color: var(--success, #16A34A); }
+      .backup-path-status.is-bad { color: var(--danger, #DC2626); }
+
+      .backup-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        background: var(--surface-muted, #F5F3FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+      }
+      .backup-note .material-symbols-outlined {
+        font-size: 1.3rem;
+        color: var(--primary, #7E22CE);
+        flex-shrink: 0;
+      }
+      .backup-note p {
+        margin: 0;
+        font-size: 0.83rem;
+        line-height: 1.55;
+        color: var(--text-muted, #6B7280);
+      }
+      .backup-note strong { color: var(--text-main, #2E1065); font-weight: 700; }
+      .backup-note.is-warning {
+        background: var(--warning-light, #FFFBEB);
+        border-color: var(--warning-light, #FDE68A);
+      }
+      .backup-note.is-warning .material-symbols-outlined { color: var(--warning, #B45309); }
+
+      .backup-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .btn-backup-now {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #6D28D9;
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, #6D28D9 100%);
+        color: #FFFFFF;
+        font-size: 0.86rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(109, 40, 217, 0.32);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .btn-backup-now:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(109, 40, 217, 0.4);
+      }
+      .btn-backup-now:disabled { opacity: 0.65; cursor: progress; }
+      .btn-backup-now .is-spinning { animation: spin 1s linear infinite; }
+
+      .backup-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-muted, #6B7280);
+      }
+      .backup-status .status-ok { color: var(--success, #16A34A); }
+      .backup-status .status-bad { color: var(--danger, #DC2626); }
+
+      .backup-safety {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--success, #16A34A);
+      }
+      .backup-safety .material-symbols-outlined { font-size: 1.15rem; }
+
+      .backup-table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 0.5rem;
+        padding-top: 0.25rem;
+      }
+      .backup-table-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 9px;
+        background: var(--surface-muted, #F9FAFB);
+        border: 1px solid var(--card-border, #E9D5FF);
+      }
+      .chip-name {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chip-rows {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--primary, #7E22CE);
+        flex-shrink: 0;
+      }
+
+      .backup-footnote {
+        margin: 0.9rem 0 0;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        color: var(--text-muted, #6B7280);
+      }
+
+      /* ── Folder browser dialog ───────────────────────────────────── */
+      .fb-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        background: rgba(17, 12, 34, 0.55);
+        backdrop-filter: blur(2px);
+      }
+
+      .fb-dialog {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 620px;
+        max-height: 82vh;
+        border-radius: 16px;
+        background: var(--card-bg, #ffffff);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        box-shadow: 0 24px 60px rgba(17, 12, 34, 0.35);
+        overflow: hidden;
+      }
+
+      .fb-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.05rem 1.25rem;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+      .fb-close {
+        display: inline-flex;
+        padding: 0.35rem;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-muted, #6B7280);
+        cursor: pointer;
+      }
+      .fb-close:hover { background: var(--surface-muted, #F5F3FF); color: #6D28D9; }
+
+      .fb-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.25rem;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+        background: var(--surface-muted, #FAFAFA);
+      }
+      .fb-path {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        direction: rtl;
+        text-align: left;
+      }
+
+      .fb-icon-btn {
+        display: inline-flex;
+        padding: 0.35rem;
+        border-radius: 8px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #ffffff);
+        color: #6D28D9;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .fb-icon-btn:hover:not(:disabled) { background: #EDE9FE; }
+      .fb-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .fb-icon-btn .material-symbols-outlined { font-size: 1.15rem; }
+
+      .fb-drives {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        padding: 0.65rem 1.25rem;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+      .fb-drive {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #ffffff);
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--text-main, #2E1065);
+        cursor: pointer;
+      }
+      .fb-drive .material-symbols-outlined { font-size: 1rem; color: #6D28D9; }
+      .fb-drive:hover { background: #F5F3FF; }
+      .fb-drive.is-active { background: #EDE9FE; border-color: #C4B5FD; }
+
+      .fb-newfolder {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.25rem;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+        background: var(--warning-light, #FFFBEB);
+      }
+      .fb-newfolder .material-symbols-outlined { color: var(--warning, #B45309); font-size: 1.15rem; }
+      .fb-newfolder .control-input { flex: 1 1 auto; min-width: 0; }
+
+      .fb-list {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 0.4rem 0.6rem;
+        min-height: 180px;
+      }
+
+      .fb-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        width: 100%;
+        padding: 0.55rem 0.7rem;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+      }
+      .fb-row:hover { background: var(--surface-muted, #F9FAFB); }
+      .fb-row.is-selected {
+        background: #EDE9FE;
+        border-color: #C4B5FD;
+      }
+      .fb-row > .material-symbols-outlined { font-size: 1.2rem; color: #A78BFA; flex-shrink: 0; }
+      .fb-row-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.83rem;
+        font-weight: 600;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .fb-enter { color: var(--text-muted, #9CA3AF) !important; }
+      .fb-enter:hover { color: #6D28D9 !important; }
+
+      .fb-loading,
+      .fb-error,
+      .fb-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 2rem 1rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-muted, #6B7280);
+        text-align: center;
+      }
+      .fb-error { color: var(--warning, #B45309); }
+      .fb-loading .is-spinning { animation: spin 1s linear infinite; }
+
+      .fb-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.9rem 1.25rem;
+        border-top: 1px solid var(--card-border, #E9D5FF);
+        background: var(--surface-muted, #FAFAFA);
+        flex-wrap: wrap;
+      }
+      .fb-chosen { min-width: 0; flex: 1 1 200px; }
+      .fb-chosen-label {
+        display: block;
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted, #9CA3AF);
+      }
+      .fb-chosen-path {
+        display: block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .fb-foot-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
+      .fb-foot-actions .btn-path-browse { padding: 0.6rem 1.1rem; }
+
+      @media (max-width: 640px) {
+        .fb-dialog { max-height: 90vh; }
+        .fb-foot { flex-direction: column; align-items: stretch; }
+        .fb-foot-actions { justify-content: stretch; }
+        .fb-foot-actions > * { flex: 1 1 auto; justify-content: center; }
+      }
+
+      @media (max-width: 640px) {
+        .backup-actions { flex-direction: column; align-items: stretch; }
+        .btn-backup-now { justify-content: center; }
+        .backup-path-row { flex-direction: column; }
+        .btn-path-save { justify-content: center; padding: 0.6rem 1rem; }
       }
     `,
   ],
@@ -7201,8 +8560,58 @@ export class SettingsComponent implements OnInit {
   public themeService = inject(ThemeService);
   public notify = inject(NotificationService);
   public printer = inject(PrinterService);
+  private backup = inject(BackupService);
+  private auth = inject(AuthService);
 
   public activeTab: SettingsTab = 'customization';
+
+  // ── Data Backup ────────────────────────────────────────────────────────
+  public backupInfo: BackupInfo | null = null;
+  public isBackingUp = false;
+  public backupStatus: { kind: 'ok' | 'error'; message: string } | null = null;
+
+  /** What is in the input box — may differ from what is saved until saved. */
+  public backupFolderPath = '';
+  /** The path actually persisted on the server. */
+  public backupFolderSaved = '';
+  public backupFolderConfigured = false;
+  public backupFolderDirty = false;
+  public isSavingFolder = false;
+  public backupFolderCheck: FolderCheck | null = null;
+
+  // Folder browser dialog
+  public showFolderBrowser = false;
+  public isBrowsing = false;
+  public browseResult: BrowseResult | null = null;
+  /** Single-click highlight; empty means "the folder currently open". */
+  public selectedBrowsePath = '';
+  public isNamingFolder = false;
+  public newFolderName = '';
+  public isCreatingFolder = false;
+
+  /** Null until probed; false sends Browse to the in-app browser. */
+  public nativePickerAvailable: boolean | null = null;
+  public isPickingNatively = false;
+
+  /** Whether this browser can offer a real folder picker. */
+  public get backupSupportsFolder(): boolean {
+    return this.backup.canChooseFolder;
+  }
+
+  /** `21-09-2026.sql` — recomputed per render so it is right past midnight. */
+  public get backupFileName(): string {
+    return this.backup.suggestedFileName();
+  }
+
+  /** The name a second backup on the same day would take. */
+  public get backupSecondFileName(): string {
+    return this.backupFileName.replace(/\.sql$/i, '_2.sql');
+  }
+
+  /** A full export includes password hashes, so it is administrators only. */
+  public get isAdmin(): boolean {
+    return this.auth.userRole() === 'ADMIN';
+  }
 
   /** The palette plus the eight page designs, as one rail under Brand Theme. */
   public readonly themeGroupTabs: ReadonlyArray<{ tab: SettingsTab; label: string }> = [
@@ -7517,7 +8926,7 @@ export class SettingsComponent implements OnInit {
   diningTokenSwatch(token: DiningTokenKey): string {
     const value = String(this.diningTokenValue(token));
     if (!/^#[0-9a-f]{6}$/i.test(value)) {
-      return '#7E22CE';
+      return 'var(--primary, #7E22CE)';
     }
     return value;
   }
@@ -7562,7 +8971,7 @@ export class SettingsComponent implements OnInit {
 
   categoryTokenSwatch(token: CategoryTokenKey): string {
     const val = String(this.categoryTokenValue(token));
-    if (!/^#[0-9a-f]{6}$/i.test(val)) return '#7E22CE';
+    if (!/^#[0-9a-f]{6}$/i.test(val)) return 'var(--primary, #7E22CE)';
     return val;
   }
 
@@ -7650,7 +9059,7 @@ export class SettingsComponent implements OnInit {
 
   customerTokenSwatch(token: CustomerTokenKey): string {
     const val = String(this.customerTokenValue(token));
-    if (!/^#[0-9a-f]{6}$/i.test(val)) return '#7E22CE';
+    if (!/^#[0-9a-f]{6}$/i.test(val)) return 'var(--primary, #7E22CE)';
     return val;
   }
 
@@ -7752,6 +9161,39 @@ export class SettingsComponent implements OnInit {
     const value = Number(target.value);
     if (Number.isNaN(value)) return;
     this.sidebarLayout.setToken(token, value);
+  }
+
+  // ── Menu names ────────────────────────────────────────────────────────
+  // The rail and this editor read the same SIDEBAR_NAV_SECTIONS, so a module
+  // added to the menu shows up here to be renamed without any further work.
+
+  public sidebarNavSections: NavSection[] = SIDEBAR_NAV_SECTIONS;
+
+  /** How many groups and modules currently carry a name of the operator's. */
+  renamedCount(): number {
+    return (
+      Object.keys(this.sidebarLayout.itemNames()).length +
+      Object.keys(this.sidebarLayout.sectionNames()).length
+    );
+  }
+
+  onItemNameInput(item: NavItem, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.sidebarLayout.setItemName(item.id, value, item.label);
+  }
+
+  onSectionNameInput(section: NavSection, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.sidebarLayout.setSectionName(section.id, value, section.title);
+  }
+
+  revertItemName(item: NavItem): void {
+    this.sidebarLayout.setItemName(item.id, '', item.label);
+  }
+
+  resetSidebarMenuNames(): void {
+    this.sidebarLayout.resetMenuNames();
+    this.notify.info('Every group and module is back to the name it ships with.');
   }
 
   resetSidebarLayout(): void {
@@ -8149,6 +9591,102 @@ export class SettingsComponent implements OnInit {
     return prefix + cycleToken + String(next).padStart(pad, '0');
   }
 
+  // ── Live invoice preview ────────────────────────────────────────────
+  // Sample order, deliberately fixed: the preview exists to judge layout and
+  // formatting, so the figures must not move for reasons unrelated to a
+  // setting the user just changed.
+  public readonly invoicePreviewItems: ReadonlyArray<{ name: string; qty: number; rate: number }> = [
+    { name: 'Chicken Mandi (Full)', qty: 1, rate: 58 },
+    { name: 'Lamb Madfoon (Half)', qty: 2, rate: 42.5 },
+    { name: 'Fresh Mint Lemonade', qty: 3, rate: 9 },
+  ];
+
+  get invoiceTaxRate(): number {
+    if (this.settingsMap['TAX_ENABLED'] === 'false') return 0;
+    const rate = Number(this.settingsMap['TAX_PERCENTAGE']);
+    return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  }
+
+  get invoiceTaxLabel(): string {
+    return this.settingsMap['TAX_NAME'] || 'Tax';
+  }
+
+  get invoiceSubtotal(): number {
+    return this.invoicePreviewItems.reduce((sum, l) => sum + l.qty * l.rate, 0);
+  }
+
+  get invoiceTaxAmount(): number {
+    return this.invoiceSubtotal * (this.invoiceTaxRate / 100);
+  }
+
+  get invoiceGrandTotal(): number {
+    return this.invoiceSubtotal + this.invoiceTaxAmount;
+  }
+
+  get invoiceDueDays(): number {
+    const days = Number(this.settingsMap['INVOICE_DUE_DAYS']);
+    return Number.isFinite(days) && days > 0 ? days : 0;
+  }
+
+  get invoiceIssueDate(): string {
+    return this.invoiceFormatDate(new Date());
+  }
+
+  get invoiceDueDate(): string {
+    const due = new Date();
+    due.setDate(due.getDate() + this.invoiceDueDays);
+    return this.invoiceFormatDate(due);
+  }
+
+  /** Paper choice drives the sheet width, which is the whole point of seeing it. */
+  get invoicePaperClass(): string {
+    switch (this.settingsMap['INVOICE_PAPER_SIZE']) {
+      case 'A5': return 'is-a5';
+      case '80mm': return 'is-thermal';
+      default: return 'is-a4';
+    }
+  }
+
+  get invoicePaperLabel(): string {
+    const match = this.invoicePaperOptions.find((o) => o.value === (this.settingsMap['INVOICE_PAPER_SIZE'] || 'A4'));
+    return match ? match.label : 'A4 (210 x 297mm)';
+  }
+
+  /** Stands in for a logo the settings screen has no upload for yet. */
+  get invoiceBrandInitials(): string {
+    const name = (this.settingsMap['BUSINESS_NAME'] || 'Your Restaurant').trim();
+    return name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w.charAt(0).toUpperCase())
+      .join('');
+  }
+
+  /** Applies the decimal count and symbol placement chosen on this tab. */
+  public invoiceMoney(amount: number): string {
+    const raw = Number(this.settingsMap['INVOICE_DECIMALS']);
+    const decimals = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), 3) : 2;
+    const symbol = this.settingsMap['CURRENCY_SYMBOL'] || '₹';
+    const figure = (Number.isFinite(amount) ? amount : 0).toFixed(decimals);
+    return this.settingsMap['INVOICE_CURRENCY_POSITION'] === 'suffix' ? `${figure} ${symbol}` : `${symbol}${figure}`;
+  }
+
+  /** Hand-rolled rather than DatePipe: the stored format strings are the
+   *  four offered above, not the full Angular pattern language. */
+  public invoiceFormatDate(date: Date): string {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const MM = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(date.getFullYear());
+    const MMM = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
+
+    switch (this.settingsMap['INVOICE_DATE_FORMAT']) {
+      case 'MM/dd/yyyy': return `${MM}/${dd}/${yyyy}`;
+      case 'yyyy-MM-dd': return `${yyyy}-${MM}-${dd}`;
+      case 'dd MMM yyyy': return `${dd} ${MMM} ${yyyy}`;
+      default: return `${dd}/${MM}/${yyyy}`;
+    }
+  }
+
   /** Plain-language echo of the reset cycle, shown beside the number preview. */
   get invoiceResetLabel(): string {
     const cycle = this.settingsMap['INVOICE_RESET_CYCLE'] || 'yearly';
@@ -8436,7 +9974,359 @@ export class SettingsComponent implements OnInit {
       'printer',
       'notification',
       'invoice',
+      'databackup',
     ].includes(tab);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DATA BACKUP
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Opens the tab and loads what a backup would contain.
+   *
+   * The summary is fetched on open rather than with the rest of the settings
+   * because it queries INFORMATION_SCHEMA across every table, and nobody
+   * visiting the theme tab should pay for that.
+   */
+  public openDataBackup(): void {
+    this.activeTab = 'databackup';
+    this.backupStatus = null;
+
+    // Always re-read the folder: it may have been changed from another
+    // session, and showing a stale path would send someone looking for
+    // backups in the wrong place.
+    this.loadBackupFolder();
+
+    if (this.backupInfo) return;
+
+    this.backup
+      .getInfo()
+      .then((res) => {
+        if (res.success && res.data) this.backupInfo = res.data;
+      })
+      .catch(() => {
+        // The summary is a nicety; Backup Now works without it, so a failure
+        // here is not worth a toast.
+        this.backupInfo = null;
+      });
+  }
+
+  private loadBackupFolder(): void {
+    this.backup
+      .getFolder()
+      .then((res) => {
+        const data = res.data;
+        if (!data) return;
+
+        this.backupFolderConfigured = !!data.configured;
+        this.backupFolderSaved = data.path ?? '';
+
+        // Only overwrite the input when the operator has not started editing,
+        // so a reload cannot discard something half-typed.
+        if (!this.backupFolderDirty) {
+          this.backupFolderPath = data.path ?? '';
+        }
+
+        // Surface a saved-but-now-broken path — a removed USB drive or a
+        // renamed folder — rather than waiting for a backup to fail.
+        this.backupFolderCheck =
+          data.configured && !data.ok
+            ? {
+                path: data.path,
+                ok: false,
+                exists: data.exists,
+                writable: data.writable,
+                created: false,
+                message: data.message,
+              }
+            : null;
+      })
+      .catch(() => {
+        this.backupFolderConfigured = false;
+      });
+  }
+
+  // ── Folder browser ─────────────────────────────────────────────────────
+
+  /**
+   * Browse: Windows' own Select Folder dialog where the server can open it,
+   * the in-app folder browser otherwise.
+   *
+   * The native dialog opens on the POS server's desktop, which on a standard
+   * single-PC install is the screen in front of the operator. It is preferred
+   * because it is the file picker they already know — drives, Quick Access,
+   * New folder, a path box. The in-app browser stays as the fallback for a
+   * non-Windows server, or one with no interactive desktop.
+   */
+  public async openFolderBrowser(): Promise<void> {
+    if (this.isPickingNatively) return;
+
+    // Probed once and remembered, so Browse does not pay for the check every
+    // time it is clicked.
+    if (this.nativePickerAvailable === null) {
+      try {
+        const probe = await this.backup.pickerAvailable();
+        this.nativePickerAvailable = probe.data?.available ?? false;
+      } catch {
+        this.nativePickerAvailable = false;
+      }
+    }
+
+    if (!this.nativePickerAvailable) {
+      this.openInAppBrowser();
+      return;
+    }
+
+    this.isPickingNatively = true;
+    try {
+      const res = await this.backup.pickFolderNatively(this.backupFolderPath.trim() || undefined);
+      const data = res.data;
+
+      if (!data || data.status === 'unsupported') {
+        this.nativePickerAvailable = false;
+        this.openInAppBrowser();
+        return;
+      }
+
+      // Cancelling is not a failure and leaves everything as it was.
+      if (data.status === 'cancelled') return;
+
+      if (data.path) {
+        this.backupFolderPath = data.path;
+        this.backupFolderDirty = true;
+        this.backupFolderCheck = null;
+        // Chosen from the OS dialog, so save it straight away rather than
+        // making them press Save Location as well.
+        await this.saveBackupFolder();
+      }
+    } catch (err: any) {
+      // A timeout means the dialog had nowhere to appear — an API running as a
+      // service with no desktop. Fall back rather than leaving Browse dead.
+      this.notify.warning(
+        err?.error?.message ??
+          'The Windows folder dialog could not be opened. Using the built-in browser instead.',
+        'Opening Built-in Browser'
+      );
+      this.nativePickerAvailable = false;
+      this.openInAppBrowser();
+    } finally {
+      this.isPickingNatively = false;
+    }
+  }
+
+  /**
+   * Opens the in-app browser at whatever is already in the box, so it
+   * continues from the current location rather than the drive list.
+   */
+  public openInAppBrowser(): void {
+    this.showFolderBrowser = true;
+    this.isNamingFolder = false;
+    this.newFolderName = '';
+    this.selectedBrowsePath = '';
+    this.browseTo(this.backupFolderPath.trim() || undefined);
+  }
+
+  public closeFolderBrowser(): void {
+    this.showFolderBrowser = false;
+    this.isNamingFolder = false;
+  }
+
+  /** Lists a folder. Passing nothing lists the drive roots. */
+  public browseTo(folderPath?: string): void {
+    this.isBrowsing = true;
+    this.isNamingFolder = false;
+    this.selectedBrowsePath = '';
+
+    this.backup
+      .browse(folderPath)
+      .then((res) => {
+        this.browseResult = res.data ?? null;
+
+        // A path typed into the box that no longer exists would leave the
+        // dialog stuck on an error with nothing to click, so fall back to the
+        // drive list.
+        if (this.browseResult?.error && folderPath && this.browseResult.path === '') {
+          this.browseTo(undefined);
+        }
+      })
+      .catch(() => {
+        this.browseResult = null;
+        this.notify.error('The folder list could not be loaded.', 'Browse Failed');
+      })
+      .finally(() => {
+        this.isBrowsing = false;
+      });
+  }
+
+  public startNewFolder(): void {
+    this.isNamingFolder = true;
+    this.newFolderName = '';
+  }
+
+  /** Creates a subfolder in the open folder, then navigates into it. */
+  public async createFolderHere(): Promise<void> {
+    const parent = this.browseResult?.path;
+    const name = this.newFolderName.trim();
+    if (!parent || !name || this.isCreatingFolder) return;
+
+    this.isCreatingFolder = true;
+    try {
+      const res = await this.backup.createFolder(parent, name);
+      if (res.success && res.data?.ok) {
+        this.isNamingFolder = false;
+        this.newFolderName = '';
+        this.browseTo(res.data.path);
+      }
+    } catch (err: any) {
+      this.notify.error(
+        err?.error?.message ?? 'The folder could not be created.',
+        'Folder Not Created'
+      );
+    } finally {
+      this.isCreatingFolder = false;
+    }
+  }
+
+  /**
+   * Takes the highlighted folder — or the open one when nothing is highlighted
+   * — and saves it as the destination in one step, so choosing a folder does
+   * not also require pressing Save Location.
+   */
+  public async useSelectedFolder(): Promise<void> {
+    const chosen = this.selectedBrowsePath || this.browseResult?.path;
+    if (!chosen) return;
+
+    this.backupFolderPath = chosen;
+    this.backupFolderDirty = true;
+    this.closeFolderBrowser();
+    await this.saveBackupFolder();
+  }
+
+  /** Validates the typed path and, if usable, saves it as the destination. */
+  public async saveBackupFolder(create = false): Promise<void> {
+    const folder = this.backupFolderPath.trim();
+    if (!folder || this.isSavingFolder) return;
+
+    this.isSavingFolder = true;
+    this.backupFolderCheck = null;
+
+    try {
+      const res = await this.backup.saveFolder(folder, create);
+      this.backupFolderCheck = res.data ?? null;
+
+      if (res.success && res.data?.ok) {
+        this.backupFolderSaved = res.data.path;
+        this.backupFolderPath = res.data.path;
+        this.backupFolderConfigured = true;
+        this.backupFolderDirty = false;
+        this.notify.success(
+          res.data.created ? 'Folder created and saved as the backup location.' : 'Backup location saved.',
+          'Location Saved'
+        );
+      }
+    } catch (err: any) {
+      // A rejected path comes back as a 400 with the reason attached, which is
+      // more useful on the field than in a toast.
+      const check = err?.error?.error?.details ?? err?.error?.details;
+      this.backupFolderCheck = check ?? {
+        path: folder,
+        ok: false,
+        exists: false,
+        writable: false,
+        created: false,
+        message: err?.error?.message ?? 'The location could not be saved.',
+      };
+    } finally {
+      this.isSavingFolder = false;
+    }
+  }
+
+  /**
+   * Runs the backup: folder picker where the browser supports it, ordinary
+   * download where it does not.
+   *
+   * Dismissing the picker is not a failure — it leaves no message at all,
+   * because an error toast for "I changed my mind" is noise.
+   */
+  public async runBackup(): Promise<void> {
+    if (this.isBackingUp) return;
+
+    this.isBackingUp = true;
+    this.backupStatus = null;
+
+    try {
+      // A configured folder wins: the server writes the file itself, so there
+      // is nothing to pick and nothing to download. The picker and the plain
+      // download remain the fallbacks for when no location has been set.
+      const result = this.backupFolderConfigured
+        ? await this.backup.backupToConfiguredFolder()
+        : this.backup.canChooseFolder
+          ? await this.backup.backupToFolder()
+          : await this.backup.backupToDownloads();
+
+      const size = this.formatBytes(result.bytes);
+
+      if (result.via === 'server') {
+        this.backupStatus = {
+          kind: 'ok',
+          message: result.renamedFrom
+            ? `Saved as ${result.filePath} (${size}) — ${result.renamedFrom} already existed.`
+            : `Saved to ${result.filePath} (${size}).`,
+        };
+        this.notify.success(
+          result.renamedFrom
+            ? `A backup for today already existed, so this one was saved as ${result.fileName}.`
+            : `${result.fileName} saved to ${this.backupFolderSaved}.`,
+          'Backup Saved'
+        );
+      } else if (result.renamedFrom) {
+        this.backupStatus = {
+          kind: 'ok',
+          message: `Saved as ${result.fileName} (${size}) — ${result.renamedFrom} already existed.`,
+        };
+        this.notify.success(
+          `A backup for today already existed, so this one was saved as ${result.fileName}.`,
+          'Backup Saved'
+        );
+      } else if (result.via === 'download') {
+        this.backupStatus = {
+          kind: 'ok',
+          message: `${result.fileName} (${size}) saved to your downloads folder.`,
+        };
+        this.notify.success(`${result.fileName} saved to your downloads folder.`, 'Backup Saved');
+      } else {
+        this.backupStatus = {
+          kind: 'ok',
+          message: `${result.fileName} (${size}) saved to the folder you chose.`,
+        };
+        this.notify.success(`${result.fileName} saved successfully.`, 'Backup Saved');
+      }
+    } catch (err: any) {
+      const code = String(err?.message ?? '');
+
+      if (code === 'BACKUP_CANCELLED') {
+        this.backupStatus = null;
+      } else if (code === 'FOLDER_PICKER_UNSUPPORTED') {
+        this.backupStatus = {
+          kind: 'error',
+          message: 'This browser cannot open a folder picker. Try Chrome or Edge.',
+        };
+      } else {
+        this.backupStatus = { kind: 'error', message: code || 'The backup could not be completed.' };
+        this.notify.error(code || 'The backup could not be completed.', 'Backup Failed');
+      }
+    } finally {
+      this.isBackingUp = false;
+    }
+  }
+
+  public formatBytes(bytes: number): string {
+    const value = Number(bytes) || 0;
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 
   public scrollActiveTabIntoView(): void {

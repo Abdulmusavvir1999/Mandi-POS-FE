@@ -819,22 +819,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
                 Section / Dining Area
               </label>
-              <input
-                title="Section / Dining Area"
-                type="text"
+              <app-custom-dropdown
+                [options]="sectionOptions"
                 [(ngModel)]="tableForm.section"
                 name="section"
-                class="form-control text-sm w-full"
-                placeholder="e.g. Main Hall, VIP Section, Outdoor Terrace"
-                list="diningSectionOptions"
-                required
-              />
-              <datalist id="diningSectionOptions">
-                <option *ngFor="let sec of sections" [value]="sec"></option>
-              </datalist>
+                placeholder="Select Section"
+                minWidth="100%"
+              ></app-custom-dropdown>
             </div>
 
             <div class="grid grid-cols-2 gap-3.5 items-start">
@@ -1220,28 +1214,37 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 Party Guest Count / Covers
               </label>
               <div class="flex items-center gap-3">
-                <button
-                  type="button"
-                  (click)="seatForm.guestCount = (seatForm.guestCount > 1 ? seatForm.guestCount - 1 : 1)"
-                  class="w-10 h-10 rounded-xl border border-purple-200 bg-purple-50 font-black text-purple-900 text-lg flex items-center justify-center hover:bg-purple-100"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min="1"
-                  [(ngModel)]="seatForm.guestCount"
-                  class="form-control text-center font-mono font-bold text-lg w-24"
-                />
-                <button
-                  type="button"
-                  (click)="seatForm.guestCount = seatForm.guestCount + 1"
-                  class="w-10 h-10 rounded-xl border border-purple-200 bg-purple-50 font-black text-purple-900 text-lg flex items-center justify-center hover:bg-purple-100"
-                >
-                  +
-                </button>
-                <span class="text-xs text-slate-500">
-                  (Table capacity is {{ tableToSeat?.capacity }})
+                <div class="guest-stepper">
+                  <button
+                    type="button"
+                    class="guest-stepper-btn"
+                    title="One fewer cover"
+                    aria-label="Decrease guest count"
+                    [disabled]="seatForm.guestCount <= 1"
+                    (click)="seatForm.guestCount = (seatForm.guestCount > 1 ? seatForm.guestCount - 1 : 1)"
+                  >
+                    <span class="material-symbols-outlined">remove</span>
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    [(ngModel)]="seatForm.guestCount"
+                    class="guest-stepper-input font-mono"
+                    aria-label="Party guest count"
+                  />
+                  <button
+                    type="button"
+                    class="guest-stepper-btn"
+                    title="One more cover"
+                    aria-label="Increase guest count"
+                    (click)="seatForm.guestCount = seatForm.guestCount + 1"
+                  >
+                    <span class="material-symbols-outlined">add</span>
+                  </button>
+                </div>
+                <span class="guest-capacity-hint">
+                  Table capacity is
+                  <strong>{{ tableToSeat?.capacity }}</strong>
                 </span>
               </div>
               <p *ngIf="seatForm.guestCount > (tableToSeat?.capacity || 0)" class="text-xs text-amber-600 mt-1 font-semibold">
@@ -1679,6 +1682,109 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         to { transform: rotate(360deg); }
       }
 
+      /* ─── Guest count stepper (Seat Guests modal) ───
+         The -/+ pair used to be styled with Tailwind purple utilities this
+         project does not ship, so both rendered as bare grey squares. Rebuilt
+         as one pill whose tint is mixed off the live primary, so it follows
+         whatever theme is active instead of staying violet. */
+      .guest-stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem;
+        border-radius: 9999px;
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 5%, #FFFFFF);
+        box-shadow: inset 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
+      }
+
+      .guest-stepper-btn {
+        width: 2.5rem;
+        height: 2.5rem;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 9999px;
+        cursor: pointer;
+        color: #FFFFFF;
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
+        box-shadow: 0 6px 14px -7px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
+        transition:
+          transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 0.18s ease,
+          filter 0.18s ease;
+      }
+
+      .guest-stepper-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: brightness(1.07);
+        box-shadow: 0 10px 20px -8px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
+      }
+
+      .guest-stepper-btn:active:not(:disabled) {
+        transform: translateY(0) scale(0.93);
+        box-shadow: 0 3px 8px -5px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.4));
+      }
+
+      .guest-stepper-btn:focus-visible {
+        outline: 2px solid var(--primary, #7E22CE);
+        outline-offset: 2px;
+      }
+
+      /* At one cover there is nothing left to take away. */
+      .guest-stepper-btn:disabled {
+        cursor: not-allowed;
+        color: var(--text-dim, #9CA3AF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 8%, #FFFFFF);
+        box-shadow: none;
+      }
+
+      .guest-stepper-btn .material-symbols-outlined {
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .guest-stepper-input {
+        width: 5rem;
+        height: 2.5rem;
+        border: none;
+        background: transparent;
+        text-align: center;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-main, #2E1065);
+      }
+
+      .guest-stepper-input:focus {
+        outline: none;
+      }
+
+      /* The -/+ pair is the control; the native spinners only crowd it. */
+      .guest-stepper-input::-webkit-outer-spin-button,
+      .guest-stepper-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .guest-stepper-input {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      .guest-capacity-hint {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .guest-capacity-hint strong {
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+      }
+
       /* ─── Occupancy meter on the KPI strip ─── */
       .occupancy-track {
         height: 6px;
@@ -1705,12 +1811,21 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         position: relative;
         isolation: isolate;
         overflow: hidden;
+        /* The wash was four fixed lavenders, which stayed lavender under an
+           Ocean Blue or Emerald theme. Same tint strengths, mixed off the
+           active primary instead, so the panel tints with the palette. */
         background:
-          linear-gradient(160deg, #F3E9FF 0%, #FBF7FF 42%, #EEF2FF 74%, #F6EEFF 100%);
+          linear-gradient(
+            160deg,
+            color-mix(in srgb, var(--primary, #7E22CE) 11%, #FFFFFF) 0%,
+            color-mix(in srgb, var(--primary, #7E22CE) 4%, #FFFFFF) 42%,
+            color-mix(in srgb, var(--primary, #7E22CE) 8%, #FFFFFF) 74%,
+            color-mix(in srgb, var(--primary, #7E22CE) 10%, #FFFFFF) 100%
+          );
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 22px;
         padding: 1.25rem 1.35rem 1.6rem;
-        box-shadow: 0 10px 34px -10px rgba(46, 16, 101, 0.16);
+        box-shadow: 0 10px 34px -10px rgba(var(--text-main-rgb, 46, 16, 101), 0.16);
         display: flex;
         flex-direction: column;
         gap: 1.15rem;
@@ -1723,7 +1838,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         inset: -30%;
         z-index: -1;
         background:
-          radial-gradient(26% 30% at 12% 16%, var(--primary-glow, rgba(126, 34, 206, 0.35)) 0%, transparent 72%),
+          radial-gradient(26% 30% at 12% 16%, var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)) 0%, transparent 72%),
           radial-gradient(24% 28% at 38% 8%, rgba(29, 78, 216, 0.3) 0%, transparent 72%),
           radial-gradient(26% 30% at 64% 20%, rgba(14, 116, 144, 0.32) 0%, transparent 72%),
           radial-gradient(24% 28% at 90% 12%, rgba(134, 25, 143, 0.28) 0%, transparent 72%),
@@ -1806,11 +1921,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         display: inline-block;
       }
 
-      .dot-free { background: #16A34A; box-shadow: 0 0 8px rgba(22, 163, 74, 0.7); }
-      .dot-busy { background: #EA580C; box-shadow: 0 0 8px rgba(234, 88, 12, 0.7); }
+      .dot-free { background: var(--success, #16A34A); box-shadow: 0 0 8px rgba(var(--success-rgb, 22, 163, 74), 0.7); }
+      .dot-busy { background: var(--warning, #EA580C); box-shadow: 0 0 8px rgba(var(--warning-rgb, 234, 88, 12), 0.7); }
       .dot-reserved { background: #6366F1; box-shadow: 0 0 8px rgba(99, 102, 241, 0.7); }
       .dot-cleaning { background: #06B6D4; box-shadow: 0 0 8px rgba(6, 182, 212, 0.7); }
-      .dot-blocked { background: #DC2626; box-shadow: 0 0 8px rgba(220, 38, 38, 0.7); }
+      .dot-blocked { background: var(--danger, #DC2626); box-shadow: 0 0 8px rgba(var(--danger-rgb, 220, 38, 38), 0.7); }
 
       .floor-empty {
         padding: 2.5rem 1rem;
@@ -1834,12 +1949,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
          kitchen invents still gets a stable colour. The hue only ever tints the
          glass and the section chip - it never carries status, which stays
          green / amber / red, and never replaces the purple action accent. */
-      .zone-0 { --zone: #7E22CE; --zone-wash: rgba(126, 34, 206, 0.16); }
+      .zone-0 { --zone: var(--primary, #7E22CE); --zone-wash: rgba(var(--primary-rgb, 126, 34, 206), 0.16); }
       .zone-1 { --zone: #0E7490; --zone-wash: rgba(14, 116, 144, 0.16); }
       .zone-2 { --zone: #4338CA; --zone-wash: rgba(67, 56, 202, 0.16); }
       .zone-3 { --zone: #BE185D; --zone-wash: rgba(190, 24, 93, 0.15); }
       .zone-4 { --zone: #047857; --zone-wash: rgba(4, 120, 87, 0.15); }
-      .zone-5 { --zone: #B45309; --zone-wash: rgba(180, 83, 9, 0.15); }
+      .zone-5 { --zone: var(--warning, #B45309); --zone-wash: rgba(180, 83, 9, 0.15); }
       .zone-6 { --zone: #1D4ED8; --zone-wash: rgba(29, 78, 216, 0.15); }
       .zone-7 { --zone: #86198F; --zone-wash: rgba(134, 25, 143, 0.15); }
 
@@ -1861,7 +1976,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           radial-gradient(118% 88% at 100% 0%, var(--status-wash, transparent) 0%, transparent 58%),
           linear-gradient(
             152deg,
-            var(--zone-wash, rgba(126, 34, 206, 0.14)) 0%,
+            var(--zone-wash, rgba(var(--primary-rgb, 126, 34, 206), 0.14)) 0%,
             rgba(255, 255, 255, 0.5) 46%,
             rgba(255, 255, 255, 0.32) 100%
           );
@@ -1874,9 +1989,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           inset 0 1px 0 rgba(255, 255, 255, 0.95),
           inset 1px 0 0 rgba(255, 255, 255, 0.55),
           inset -1px 0 0 rgba(255, 255, 255, 0.25),
-          inset 0 -1px 0 rgba(46, 16, 101, 0.07),
-          0 2px 6px -2px rgba(46, 16, 101, 0.12),
-          0 16px 36px -18px var(--tile-shadow, rgba(46, 16, 101, 0.35));
+          inset 0 -1px 0 rgba(var(--text-main-rgb, 46, 16, 101), 0.07),
+          0 2px 6px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.12),
+          0 16px 36px -18px var(--tile-shadow, rgba(var(--text-main-rgb, 46, 16, 101), 0.35));
         cursor: pointer;
         transition:
           transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1931,9 +2046,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           inset 0 1px 0 rgba(255, 255, 255, 1),
           inset 1px 0 0 rgba(255, 255, 255, 0.7),
           inset -1px 0 0 rgba(255, 255, 255, 0.3),
-          inset 0 -1px 0 rgba(46, 16, 101, 0.07),
-          0 4px 10px -4px rgba(46, 16, 101, 0.14),
-          0 26px 50px -20px var(--tile-shadow, rgba(46, 16, 101, 0.45));
+          inset 0 -1px 0 rgba(var(--text-main-rgb, 46, 16, 101), 0.07),
+          0 4px 10px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.14),
+          0 26px 50px -20px var(--tile-shadow, rgba(var(--text-main-rgb, 46, 16, 101), 0.45));
       }
 
       .table-tile:hover::after {
@@ -1949,14 +2064,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
          section hue rather than replacing it. */
       .table-tile.is-free {
         --tile-accent: #16A34A;
-        --tile-shadow: rgba(22, 163, 74, 0.35);
-        --status-wash: rgba(22, 163, 74, 0.16);
+        --tile-shadow: rgba(var(--success-rgb, 22, 163, 74), 0.35);
+        --status-wash: rgba(var(--success-rgb, 22, 163, 74), 0.16);
       }
 
       .table-tile.is-busy {
         --tile-accent: #EA580C;
-        --tile-shadow: rgba(234, 88, 12, 0.38);
-        --status-wash: rgba(234, 88, 12, 0.18);
+        --tile-shadow: rgba(var(--warning-rgb, 234, 88, 12), 0.38);
+        --status-wash: rgba(var(--warning-rgb, 234, 88, 12), 0.18);
       }
 
       .table-tile.is-reserved {
@@ -1973,8 +2088,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
       .table-tile.is-blocked {
         --tile-accent: #DC2626;
-        --tile-shadow: rgba(220, 38, 38, 0.3);
-        --status-wash: rgba(220, 38, 38, 0.12);
+        --tile-shadow: rgba(var(--danger-rgb, 220, 38, 38), 0.3);
+        --status-wash: rgba(var(--danger-rgb, 220, 38, 38), 0.12);
         filter: saturate(0.6);
       }
 
@@ -2096,11 +2211,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         box-shadow: 0 0 7px currentColor;
       }
 
-      .status-free { color: #15803D; }
+      .status-free { color: var(--success, #15803D); }
       .status-busy { color: #C2410C; }
       .status-reserved { color: #4F46E5; }
       .status-cleaning { color: #0891B2; }
-      .status-blocked { color: #B91C1C; }
+      .status-blocked { color: var(--danger, #B91C1C); }
 
       /* A seated table is the one staff need to spot across the room. */
       .status-busy .status-dot {
@@ -2119,7 +2234,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       /* Hairline etched into glass: a dark line with a light one under it. */
       .tile-rule {
         height: 1px;
-        background: rgba(46, 16, 101, 0.09);
+        background: rgba(var(--text-main-rgb, 46, 16, 101), 0.09);
         box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
       }
 
@@ -2172,14 +2287,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         flex: 1;
         height: 5px;
         border-radius: 3px;
-        background: rgba(46, 16, 101, 0.1);
+        background: rgba(var(--text-main-rgb, 46, 16, 101), 0.1);
         border: 1px solid rgba(255, 255, 255, 0.7);
       }
 
       .dwell-ticks i.on {
         background: var(--tile-accent, #EA580C);
         border-color: var(--tile-accent, #EA580C);
-        box-shadow: 0 0 7px rgba(234, 88, 12, 0.45);
+        box-shadow: 0 0 7px rgba(var(--warning-rgb, 234, 88, 12), 0.45);
       }
 
       .dwell-legend {
@@ -2208,7 +2323,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         -webkit-backdrop-filter: blur(8px) saturate(140%);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.9),
-          inset 0 -1px 0 rgba(46, 16, 101, 0.05);
+          inset 0 -1px 0 rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
       }
 
       .tile-cells > div {
@@ -2221,7 +2336,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       }
 
       .tile-cells > div + div {
-        border-left: 1px solid rgba(46, 16, 101, 0.07);
+        border-left: 1px solid rgba(var(--text-main-rgb, 46, 16, 101), 0.07);
       }
 
       .tile-cells span {
@@ -2270,7 +2385,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       }
 
       .is-blocked-note {
-        color: #B91C1C;
+        color: var(--danger, #B91C1C);
         align-items: flex-start;
         line-height: 1.35;
       }
@@ -2378,7 +2493,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       }
 
       .btn-outline-danger:hover {
-        background: #FEE2E2;
+        background: var(--danger-light, #FEE2E2);
         border-color: var(--danger, #DC2626);
       }
 
@@ -2395,14 +2510,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         height: 18px;
         padding: 0 4px;
         border-radius: 9999px;
-        background: #DC2626;
+        background: var(--danger, #DC2626);
         color: #ffffff;
         font-size: 10px;
         font-weight: 900;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);
+        box-shadow: 0 2px 4px rgba(var(--danger-rgb, 220, 38, 38), 0.4);
       }
 
       /* KPI Tints */
@@ -2447,21 +2562,21 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         align-items: center;
         justify-content: space-between;
         padding: 1.15rem 1.35rem;
-        background: #FAF5FF;
-        border-bottom: 1.5px solid #E9D5FF;
+        background: var(--bg-app, #FAF5FF);
+        border-bottom: 1.5px solid var(--card-border, #E9D5FF);
       }
 
       .drawer-title {
         font-family: 'Outfit', sans-serif;
         font-size: 1.05rem;
         font-weight: 800;
-        color: #2E1065;
+        color: var(--text-main, #2E1065);
         margin: 0;
       }
 
       .drawer-subtitle {
         font-size: 0.72rem;
-        color: #6B7280;
+        color: var(--text-muted, #6B7280);
         margin: 0.15rem 0 0;
       }
 
@@ -2476,6 +2591,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
       .drawer-body {
         flex: 1;
+        /* A flex item is floored at its content height unless told otherwise,
+           which would make this pane grow instead of scroll. */
+        min-height: 0;
         overflow-y: auto;
         padding: 1.1rem;
         display: flex;
@@ -2491,21 +2609,21 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       /* Waitlist & Reservation Cards */
       .waitlist-card, .reservation-card {
         background: #ffffff;
-        border: 1.5px solid #E9D5FF;
+        border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 14px;
         padding: 0.85rem 1rem;
-        box-shadow: 0 2px 6px rgba(46, 16, 101, 0.04);
+        box-shadow: 0 2px 6px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
         transition: all 0.2s ease;
       }
 
       .waitlist-card:hover, .reservation-card:hover {
         border-color: #C084FC;
-        box-shadow: 0 6px 16px rgba(126, 34, 206, 0.08);
+        box-shadow: 0 6px 16px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
       }
 
       .waitlist-card.is-notified {
         border-color: #60A5FA;
-        background: #F8FAFC;
+        background: var(--bg-app, #F8FAFC);
       }
 
       .waitlist-card.is-seated, .reservation-card.is-seated {
@@ -2517,8 +2635,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.78rem;
         font-weight: 900;
-        color: #7E22CE;
-        background: #FAF5FF;
+        color: var(--primary, #7E22CE);
+        background: var(--bg-app, #FAF5FF);
         border: 1.5px solid #D8B4FE;
         border-radius: 8px;
         padding: 0.2rem 0.5rem;
@@ -2544,11 +2662,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         text-transform: uppercase;
       }
 
-      .chip-waiting { background: #FFFBEB; color: #D97706; }
+      .chip-waiting { background: var(--warning-light, #FFFBEB); color: var(--warning, #D97706); }
       .chip-notified { background: #EFF6FF; color: #2563EB; }
       .chip-confirmed { background: #EEF2FF; color: #4F46E5; }
       .chip-seated { background: #ECFDF5; color: #059669; }
-      .chip-cancelled { background: #FEF2F2; color: #DC2626; }
+      .chip-cancelled { background: #FEF2F2; color: var(--danger, #DC2626); }
 
       .waitlist-meta-row, .reservation-meta-row {
         display: flex;
@@ -2561,7 +2679,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         align-items: center;
         gap: 0.25rem;
         font-size: 0.7rem;
-        color: #4B5563;
+        color: var(--text-muted, #4B5563);
         background: #F3F4F6;
         padding: 0.2rem 0.5rem;
         border-radius: 6px;
@@ -2629,6 +2747,16 @@ export class DiningComponent implements OnInit, OnDestroy {
 
   private nowMs = Date.now();
   private clockTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Fixed floor plan areas — a table always belongs to one of these six. */
+  public sectionOptions: DropdownOption[] = [
+    { value: 'Main AC Hall', label: 'Main AC Hall', icon: 'ac_unit', description: 'Air conditioned main dining hall' },
+    { value: 'Majlis Carpet Floor', label: 'Majlis Carpet Floor', icon: 'weekend', description: 'Traditional floor seating majlis' },
+    { value: 'Family Enclosure', label: 'Family Enclosure', icon: 'family_restroom', description: 'Curtained family cabins' },
+    { value: 'Outdoor Terrace', label: 'Outdoor Terrace', icon: 'deck', description: 'Open air terrace seating' },
+    { value: 'Rooftop Garden', label: 'Rooftop Garden', icon: 'yard', description: 'Rooftop garden dining' },
+    { value: 'VIP Private Cabin', label: 'VIP Private Cabin', icon: 'diamond', description: 'Private cabins for VIP guests' },
+  ];
 
   public tableStatusOptions: DropdownOption[] = [
     { value: 'AVAILABLE', label: 'AVAILABLE', icon: 'check_circle', description: 'Table ready for incoming guests' },
@@ -3219,7 +3347,7 @@ export class DiningComponent implements OnInit, OnDestroy {
     this.tableForm = {
       tableNumber: '',
       name: '',
-      section: this.selectedSection || 'Main AC Hall',
+      section: this.normalizeSection(this.selectedSection),
       capacity: 4,
       status: 'AVAILABLE',
     };
@@ -3232,11 +3360,17 @@ export class DiningComponent implements OnInit, OnDestroy {
     this.tableForm = {
       tableNumber: table.table_number,
       name: table.name,
-      section: table.section,
+      section: this.normalizeSection(table.section),
       capacity: table.capacity,
       status: table.status,
     };
     this.showTableModal = true;
+  }
+
+  /** Legacy/free-text sections are snapped to the fixed list so the dropdown never opens blank. */
+  private normalizeSection(section: string | null | undefined): string {
+    const match = this.sectionOptions.find((o) => o.value === section);
+    return match ? String(match.value) : String(this.sectionOptions[0].value);
   }
 
   saveTable(): void {

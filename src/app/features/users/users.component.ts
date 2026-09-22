@@ -417,7 +417,7 @@ interface ModuleGroup {
                   <span
                     class="staff-id-active-pulse"
                     [class.is-inactive]="u.status !== 'ACTIVE'"
-                    [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #10B981)' : '#EF4444'"
+                    [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #10B981)' : 'var(--danger, #EF4444)'"
                   ></span>
                 </div>
 
@@ -626,7 +626,7 @@ interface ModuleGroup {
                     >
                       <span
                         class="w-1.5 h-1.5 rounded-full"
-                        [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #16A34A)' : '#64748B'"
+                        [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #16A34A)' : 'var(--text-muted, #64748B)'"
                       ></span>
                       {{ u.status || 'Active' }}
                     </span>
@@ -720,7 +720,7 @@ interface ModuleGroup {
               </div>
               <div class="staff-glass-handle">&#64;{{ u.username }}</div>
               <div class="staff-glass-role">
-                <span class="staff-glass-status" [style.color]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : '#EF4444'" [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : '#EF4444'"></span>
+                <span class="staff-glass-status" [style.color]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : 'var(--danger, #EF4444)'" [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : 'var(--danger, #EF4444)'"></span>
                 <span class="material-symbols-outlined" style="font-size: 13px;">{{ getRoleIcon(u.role) }}</span>
                 <span>{{ u.role }}</span>
               </div>
@@ -797,7 +797,7 @@ interface ModuleGroup {
               <div class="staff-metro-check">
                 <input title="Select user" type="checkbox" [(ngModel)]="u.selected" class="custom-checkbox" />
               </div>
-              <span class="staff-metro-status" [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : '#EF4444'"></span>
+              <span class="staff-metro-status" [style.backgroundColor]="u.status === 'ACTIVE' ? 'var(--staff-status-active-color, #34D399)' : 'var(--danger, #EF4444)'"></span>
               <div class="staff-metro-content">
                 <div class="staff-metro-avatar">
                   <img *ngIf="u.image_url" [src]="settingsService.assetUrl(u.image_url)" [alt]="u.name" />
@@ -951,7 +951,7 @@ interface ModuleGroup {
             <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'group_off' }}</span>
             <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Staff Accounts Found' }}</div>
             <p class="empty-desc">{{ isLoading ? 'Fetching records from server…' : loadError ? loadError : 'No users match your selected role filter or search query.' }}</p>
-            <button type="button" (click)="selectedRole = ''; searchQuery = ''" class="action-btn btn-sm btn-outline-purple mt-2">
+            <button type="button" (click)="selectedRole = ''; searchQuery = ''; currentPage = 1" class="action-btn btn-sm btn-outline-purple mt-2">
               <span>Reset Filters</span>
             </button>
           </div>
@@ -1077,10 +1077,10 @@ interface ModuleGroup {
                 <span class="material-symbols-outlined">{{ editingUserId ? 'manage_accounts' : 'person_add' }}</span>
               </div>
               <div>
-                <h2 class="text-base font-bold text-[#1F2937] leading-tight m-0">
+                <h2 class="text-base font-bold text-[var(--text-main, #1F2937)] leading-tight m-0">
                   {{ editingUserId ? 'Edit Staff Account' : 'Add New Staff Member' }}
                 </h2>
-                <p class="text-xs text-[#6B7280] m-0 mt-0.5">
+                <p class="text-xs text-[var(--text-muted, #6B7280)] m-0 mt-0.5">
                   {{ editingUserId ? 'Update user profile and assign dynamic roles.' : 'Create a new staff login with dynamic RBAC permissions.' }}
                 </p>
               </div>
@@ -1101,7 +1101,7 @@ interface ModuleGroup {
             <input type="password" name="fake_password_remembered" style="display:none" tabindex="-1" autocomplete="new-password" />
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+              <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                 Full Name
               </label>
               <input
@@ -1118,7 +1118,7 @@ interface ModuleGroup {
 
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                   Username
                 </label>
                 <input
@@ -1138,7 +1138,7 @@ interface ModuleGroup {
 
               <!-- Fully Dynamic Role Select Dropdown -->
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
+                <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-1 block">
                   Staff Role (Dynamic)
                 </label>
                 <app-custom-dropdown
@@ -1152,7 +1152,7 @@ interface ModuleGroup {
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+              <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                 Email Address
               </label>
               <input
@@ -1170,7 +1170,7 @@ interface ModuleGroup {
 
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                   Phone Number (Optional)
                 </label>
                 <input
@@ -1185,7 +1185,7 @@ interface ModuleGroup {
               </div>
 
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
+                <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-1 block">
                   Status
                 </label>
                 <app-custom-dropdown
@@ -1199,7 +1199,7 @@ interface ModuleGroup {
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+              <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                 {{ editingUserId ? 'New Password (Leave blank to keep unchanged)' : 'Password' }}
               </label>
               <input
@@ -1215,7 +1215,7 @@ interface ModuleGroup {
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+              <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                 Staff Photo (Optional)
               </label>
               <div class="image-upload-row">
@@ -1257,7 +1257,7 @@ interface ModuleGroup {
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[var(--card-border, #E9D5FF)]">
               <button
                 type="button"
                 (click)="showUserModal = false"
@@ -1287,10 +1287,10 @@ interface ModuleGroup {
                 <span class="material-symbols-outlined">{{ editingRoleId ? 'tune' : 'add_moderator' }}</span>
               </div>
               <div>
-                <h2 class="text-base font-bold text-[#1F2937] leading-tight m-0">
+                <h2 class="text-base font-bold text-[var(--text-main, #1F2937)] leading-tight m-0">
                   {{ editingRoleId ? 'Edit Role & Permissions: ' + roleForm.name : 'Create Custom Role' }}
                 </h2>
-                <p class="text-xs text-[#6B7280] m-0 mt-0.5">
+                <p class="text-xs text-[var(--text-muted, #6B7280)] m-0 mt-0.5">
                   <ng-container *ngIf="!editingRoleId">
                     Using {{ customRoles.length }} of {{ maxCustomRoles }} custom roles.
                   </ng-container>
@@ -1311,7 +1311,7 @@ interface ModuleGroup {
           <form (ngSubmit)="saveRole()" class="p-6 space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                   Role Name <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -1326,7 +1326,7 @@ interface ModuleGroup {
               </div>
 
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                   Description
                 </label>
                 <input
@@ -1414,7 +1414,7 @@ interface ModuleGroup {
               </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-[var(--card-border, #E9D5FF)]">
               <button
                 type="button"
                 (click)="showRoleModal = false"
@@ -1620,7 +1620,9 @@ export class UsersComponent implements OnInit {
   loadUsers(): void {
     this.isLoading = true;
     this.loadError = null;
-    this.userService.getUsers().subscribe({
+    // The default page size is 50; the role filter and search box work over
+    // whatever is loaded here, so a smaller page would hide staff from them.
+    this.userService.getUsers(1, 200).subscribe({
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
@@ -1683,13 +1685,13 @@ export class UsersComponent implements OnInit {
 
   getRoleBadgeStyle(roleName: string): { background: string; color: string; border: string } {
     if (!roleName) {
-      return { background: '#F3F4F6', color: '#4B5563', border: '1px solid #E5E7EB' };
+      return { background: '#F3F4F6', color: 'var(--text-muted, #4B5563)', border: '1px solid #E5E7EB' };
     }
     const palettes = [
       { background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }, // Blue
-      { background: '#FAF5FF', color: '#7E22CE', border: '1px solid #E9D5FF' }, // Purple
-      { background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' }, // Green
-      { background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A' }, // Amber
+      { background: 'var(--bg-app, #FAF5FF)', color: 'var(--primary, #7E22CE)', border: '1px solid var(--card-border, #E9D5FF)' }, // Purple
+      { background: '#F0FDF4', color: 'var(--success, #15803D)', border: '1px solid var(--success-light, #BBF7D0)' }, // Green
+      { background: 'var(--warning-light, #FFFBEB)', color: 'var(--warning, #B45309)', border: '1px solid var(--warning-light, #FDE68A)' }, // Amber
       { background: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4' }, // Teal
       { background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }, // Rose
       { background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE' }, // Indigo
@@ -1733,8 +1735,8 @@ export class UsersComponent implements OnInit {
       list = list.filter((u) => (u.role || '').toLowerCase() === this.selectedRole.toLowerCase());
     }
 
-    if (this.searchQuery) {
-      const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (q) {
       list = list.filter(
         (u) =>
           u.name.toLowerCase().includes(q) ||
@@ -1747,9 +1749,21 @@ export class UsersComponent implements OnInit {
     return list;
   }
 
+  /**
+   * The current page, never past the end of the filtered list.
+   *
+   * Deleting the last rows on the final page, or any refresh that returns
+   * fewer records, used to leave `currentPage` pointing past the end and the
+   * table rendering empty. Clamped on read rather than written back, so it
+   * cannot fire a change-after-checked error during rendering.
+   */
+  get safePage(): number {
+    return Math.min(Math.max(1, this.currentPage), this.totalPages);
+  }
+
   get paginatedUsers(): (User & { selected?: boolean })[] {
     const list = this.filteredUsers;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
@@ -1762,11 +1776,11 @@ export class UsersComponent implements OnInit {
   }
 
   get paginationStart(): number {
-    return this.filteredUsers.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return this.filteredUsers.length === 0 ? 0 : (this.safePage - 1) * this.pageSize + 1;
   }
 
   get paginationEnd(): number {
-    return Math.min(this.currentPage * this.pageSize, this.filteredUsers.length);
+    return Math.min(this.safePage * this.pageSize, this.filteredUsers.length);
   }
 
   public isUploadingImage = false;

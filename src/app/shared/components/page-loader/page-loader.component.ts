@@ -126,8 +126,8 @@ import { CommonModule } from '@angular/common';
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #e9d5ff);
         border-radius: 18px;
-        box-shadow: 0 16px 36px -4px rgba(46, 16, 101, 0.16),
-          0 6px 12px -2px rgba(46, 16, 101, 0.08);
+        box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16),
+          0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
         text-align: center;
         font-family: 'Plus Jakarta Sans', sans-serif;
       }
@@ -147,7 +147,7 @@ import { CommonModule } from '@angular/common';
         position: absolute;
         inset: 0;
         border-radius: 50%;
-        border: 3px solid var(--primary-light, rgba(126, 34, 206, 0.15));
+        border: 3px solid var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
         border-top-color: var(--primary, #7e22ce);
         animation: loaderSpin 0.8s linear infinite;
       }
@@ -197,7 +197,7 @@ import { CommonModule } from '@angular/common';
         height: 4px;
         margin-top: 0.85rem;
         border-radius: 9999px;
-        background: var(--primary-light, rgba(126, 34, 206, 0.12));
+        background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
         overflow: hidden;
       }
 
@@ -233,7 +233,7 @@ import { CommonModule } from '@angular/common';
         height: 52px;
         margin-bottom: 0.35rem;
         border-radius: 50%;
-        background: var(--danger-light, rgba(220, 38, 38, 0.12));
+        background: var(--danger-light, rgba(var(--danger-rgb, 220, 38, 38), 0.12));
       }
 
       .error-icon-wrap .material-symbols-outlined {
@@ -273,7 +273,7 @@ import { CommonModule } from '@angular/common';
       }
 
       .retry-btn:hover {
-        box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
         transform: translateY(-1px);
       }
 

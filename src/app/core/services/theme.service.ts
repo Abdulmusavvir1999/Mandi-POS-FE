@@ -109,6 +109,52 @@ export const DEFAULT_THEME_PALETTES: Record<string, { name: string; icon: string
   },
 };
 
+/**
+ * The Mandi brand purple, as every page design shipped its brand slots.
+ *
+ * It is the marker for "this token is the app's brand color", not "this design
+ * wants purple": a design that ships some other hue in the same slot — the
+ * checkered floor's red runner, the minimalist table's near-black button —
+ * chose that hue deliberately and keeps it whatever the theme is.
+ */
+export const BRAND_ACCENT_HEX = '#7E22CE';
+
+/**
+ * Point a design's brand-colored slots at the active theme.
+ *
+ * Page designs store their colors as fixed hexes, so an accent or a filled
+ * button shipped as the brand purple stayed purple after the theme was
+ * switched to Ocean Blue or Emerald, while the sidebar, the page headers and
+ * the design thumbnails in Settings — all of which read `--primary` — had
+ * already moved.
+ *
+ * A slot is redirected to `primary` only when BOTH hold:
+ *   - the design's stock value for it is the brand purple, and
+ *   - the admin has not picked a color for it in Customize.
+ *
+ * So a recolored page keeps the color its admin chose, and "Reset to defaults"
+ * is what puts that page back on the theme.
+ */
+export function applyThemeBrand<T extends Record<string, any>>(
+  tokens: T,
+  stock: T,
+  saved: Partial<T>,
+  slots: readonly (keyof T)[],
+  primary: string
+): T {
+  if (!primary) return tokens;
+
+  const resolved: T = { ...tokens };
+  for (const slot of slots) {
+    if (saved[slot] !== undefined) continue;
+    const shipped = stock[slot];
+    if (typeof shipped === 'string' && shipped.trim().toUpperCase() === BRAND_ACCENT_HEX) {
+      resolved[slot] = primary as T[keyof T];
+    }
+  }
+  return resolved;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -336,6 +382,41 @@ export class ThemeService {
     root.style.setProperty('--danger', p.danger);
     root.style.setProperty('--error', p.danger);
     root.style.setProperty('--warning', p.warning);
+
+    // The tinted backgrounds that pair with them — status pills, callout boxes,
+    // selected rows. These were declared once in styles.css :root and never
+    // re-derived here, so a re-themed palette changed the status colour but
+    // left every tint behind it the stock green/red/amber. Derived from the
+    // palette's own status colours so the two always agree, and lifted in dark
+    // mode where a 12% wash over a dark surface is invisible.
+    const tint = isDark ? 0.24 : 0.12;
+    root.style.setProperty('--success-light', this.adjustColorOpacity(p.success, tint));
+    root.style.setProperty('--danger-light', this.adjustColorOpacity(p.danger, tint));
+    root.style.setProperty('--error-light', this.adjustColorOpacity(p.danger, tint));
+    root.style.setProperty('--warning-light', this.adjustColorOpacity(p.warning, tint));
+
+    // Raw channels, for the places that need an arbitrary alpha.
+    //
+    // The POS glass design layers the brand colour at a dozen different
+    // opacities — card gradients, the ambient wash, every shadow — and a fixed
+    // `--primary-light` cannot express that. These let CSS write
+    // `rgba(var(--primary-rgb), 0.58)` and still follow the palette.
+    root.style.setProperty('--primary-rgb', this.hexToChannels(p.primary));
+    root.style.setProperty('--primary-variant-rgb', this.hexToChannels(p.primary));
+    root.style.setProperty('--text-main-rgb', this.hexToChannels(mainTextColor));
+    root.style.setProperty('--success-rgb', this.hexToChannels(p.success));
+    root.style.setProperty('--danger-rgb', this.hexToChannels(p.danger));
+    root.style.setProperty('--warning-rgb', this.hexToChannels(p.warning));
+  }
+
+  /** `#7E22CE` -> `126, 34, 206`, for use inside rgba(). */
+  private hexToChannels(hex: string): string {
+    if (!hex || !hex.startsWith('#')) return '126, 34, 206';
+    const clean = hex.replace('#', '');
+    const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+    if (full.length !== 6) return '126, 34, 206';
+    const n = parseInt(full, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(', ');
   }
 
   private adjustColorBrightness(hex: string, percent: number): string {

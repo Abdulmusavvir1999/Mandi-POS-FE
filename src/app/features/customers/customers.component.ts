@@ -114,7 +114,10 @@ export class CustomersComponent implements OnInit {
   loadCustomers(): void {
     this.isLoading = true;
     this.loadError = null;
-    this.customerService.getCustomers(1, 250, this.searchQuery).subscribe({
+    // Fetched unfiltered on purpose - the search box filters this list
+    // client-side, so narrowing it here would leave rows missing after the
+    // search is cleared, until the next reload.
+    this.customerService.getCustomers(1, 250).subscribe({
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
@@ -188,9 +191,9 @@ export class CustomersComponent implements OnInit {
 
   getTierBg(c: Customer): string {
     const tier = this.getTier(c);
-    if (tier.includes('Platinum')) return '#F3E8FF';
-    if (tier.includes('Gold')) return '#FEF3C7';
-    if (tier.includes('Silver')) return '#F1F5F9';
+    if (tier.includes('Platinum')) return 'var(--primary-light, #F3E8FF)';
+    if (tier.includes('Gold')) return 'var(--warning-light, #FEF3C7)';
+    if (tier.includes('Silver')) return 'var(--card-hover, #F1F5F9)';
     if (tier.includes('VIP')) return '#FDF2F8';
     if (tier.includes('Regular')) return '#CCFBF1';
     return '#F3F4F6';
@@ -198,29 +201,29 @@ export class CustomersComponent implements OnInit {
 
   getTierColor(c: Customer): string {
     const tier = this.getTier(c);
-    if (tier.includes('Platinum')) return '#7E22CE';
-    if (tier.includes('Gold')) return '#B45309';
+    if (tier.includes('Platinum')) return 'var(--primary, #7E22CE)';
+    if (tier.includes('Gold')) return 'var(--warning, #B45309)';
     if (tier.includes('Silver')) return '#475569';
     if (tier.includes('VIP')) return '#BE185D';
     if (tier.includes('Regular')) return '#0F766E';
-    return '#6B7280';
+    return 'var(--text-muted, #6B7280)';
   }
 
   getActivityBadge(c: Customer): { label: string; bg: string; color: string; icon: string } {
     const status = c.activity_status || 'ACTIVE';
     if (status === 'FREQUENT') {
-      return { label: 'Frequent Diner', bg: '#DCFCE7', color: '#15803D', icon: 'trending_up' };
+      return { label: 'Frequent Diner', bg: 'var(--success-light, #DCFCE7)', color: 'var(--success, #15803D)', icon: 'trending_up' };
     }
     if (status === 'AT_RISK') {
-      return { label: 'At-Risk Diner', bg: '#FEE2E2', color: '#B91C1C', icon: 'warning' };
+      return { label: 'At-Risk Diner', bg: 'var(--danger-light, #FEE2E2)', color: 'var(--danger, #B91C1C)', icon: 'warning' };
     }
     if (status === 'DORMANT') {
-      return { label: 'Dormant (>90d)', bg: '#F3F4F6', color: '#6B7280', icon: 'schedule' };
+      return { label: 'Dormant (>90d)', bg: '#F3F4F6', color: 'var(--text-muted, #6B7280)', icon: 'schedule' };
     }
     if (status === 'NEW') {
       return { label: 'New Diner', bg: '#E0E7FF', color: '#4338CA', icon: 'fiber_new' };
     }
-    return { label: 'Active Guest', bg: '#E9D5FF', color: '#7E22CE', icon: 'check_circle' };
+    return { label: 'Active Guest', bg: 'var(--card-border, #E9D5FF)', color: 'var(--primary, #7E22CE)', icon: 'check_circle' };
   }
 
   get filteredCustomers(): (Customer & { selected?: boolean })[] {
@@ -238,8 +241,8 @@ export class CustomersComponent implements OnInit {
     }
 
     // Search query filtering
-    if (this.searchQuery) {
-      const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.trim().toLowerCase();
+    if (q) {
       list = list.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
@@ -271,9 +274,21 @@ export class CustomersComponent implements OnInit {
     return list;
   }
 
+  /**
+   * The current page, never past the end of the filtered list.
+   *
+   * Deleting the last rows on the final page, or any refresh that returns
+   * fewer records, used to leave `currentPage` pointing past the end and the
+   * table rendering empty. Clamped on read rather than written back, so it
+   * cannot fire a change-after-checked error during rendering.
+   */
+  get safePage(): number {
+    return Math.min(Math.max(1, this.currentPage), this.totalPages);
+  }
+
   get paginatedCustomers(): (Customer & { selected?: boolean })[] {
     const list = this.filteredCustomers;
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start = (this.safePage - 1) * this.pageSize;
     return list.slice(start, start + this.pageSize);
   }
 
@@ -286,11 +301,11 @@ export class CustomersComponent implements OnInit {
   }
 
   get paginationStart(): number {
-    return this.filteredCustomers.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return this.filteredCustomers.length === 0 ? 0 : (this.safePage - 1) * this.pageSize + 1;
   }
 
   get paginationEnd(): number {
-    return Math.min(this.currentPage * this.pageSize, this.filteredCustomers.length);
+    return Math.min(this.safePage * this.pageSize, this.filteredCustomers.length);
   }
 
   getInitials(name: string): string {
@@ -409,15 +424,15 @@ export class CustomersComponent implements OnInit {
   getNoteBadgeStyle(type: string): { bg: string; color: string; icon: string; border: string } {
     switch (type) {
       case 'ALLERGY':
-        return { bg: '#FEE2E2', color: '#DC2626', icon: 'warning', border: '#FCA5A5' };
+        return { bg: 'var(--danger-light, #FEE2E2)', color: 'var(--danger, #DC2626)', icon: 'warning', border: '#FCA5A5' };
       case 'DIETARY':
-        return { bg: '#DCFCE7', color: '#16A34A', icon: 'eco', border: '#86EFAC' };
+        return { bg: 'var(--success-light, #DCFCE7)', color: 'var(--success, #16A34A)', icon: 'eco', border: '#86EFAC' };
       case 'VIP_REQUEST':
-        return { bg: '#FEF3C7', color: '#D97706', icon: 'star', border: '#FDE68A' };
+        return { bg: 'var(--warning-light, #FEF3C7)', color: 'var(--warning, #D97706)', icon: 'star', border: 'var(--warning-light, #FDE68A)' };
       case 'PREFERENCE':
-        return { bg: '#EDE9FE', color: '#7E22CE', icon: 'favorite', border: '#DDD6FE' };
+        return { bg: '#EDE9FE', color: 'var(--primary, #7E22CE)', icon: 'favorite', border: '#DDD6FE' };
       default:
-        return { bg: '#F3F4F6', color: '#4B5563', icon: 'notes', border: '#E5E7EB' };
+        return { bg: '#F3F4F6', color: 'var(--text-muted, #4B5563)', icon: 'notes', border: '#E5E7EB' };
     }
   }
 

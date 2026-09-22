@@ -458,6 +458,11 @@ export class AuditComponent implements OnInit {
   public isLoading = false;
   public loadError: string | null = null;
 
+  /** Debounce for the action search box, so typing is not one request per key. */
+  private searchTimer: any = null;
+  /** Identifies the newest request, so a slow earlier one cannot overwrite it. */
+  private loadToken = 0;
+
   public moduleOptions: DropdownOption[] = [
     { value: '', label: 'All Event Modules', icon: 'dataset' },
     { value: 'AUTH', label: 'Auth & Login Events', icon: 'lock_open', description: 'Logins, logouts & permissions' },
@@ -476,13 +481,18 @@ export class AuditComponent implements OnInit {
   }
 
   loadLogs(page = 1): void {
+    // A filter change supersedes whatever is in flight; the pending debounce
+    // would otherwise fire a second, redundant request straight after.
+    clearTimeout(this.searchTimer);
     this.currentPage = page;
     this.isLoading = true;
     this.loadError = null;
+    const token = ++this.loadToken;
     this.auditService
-      .getLogs(page, this.pageSize, this.selectedModule || undefined, this.searchAction || undefined)
+      .getLogs(page, this.pageSize, this.selectedModule || undefined, this.searchAction.trim() || undefined)
       .subscribe({
         next: (res) => {
+          if (token !== this.loadToken) return;
           this.isLoading = false;
           if (res.success) {
             this.logs = res.data;
@@ -490,6 +500,7 @@ export class AuditComponent implements OnInit {
           }
         },
         error: (err) => {
+          if (token !== this.loadToken) return;
           this.isLoading = false;
           this.loadError = err?.error?.message || 'Unable to load the audit trail from the server.';
         },
@@ -509,8 +520,8 @@ export class AuditComponent implements OnInit {
   }
 
   onSearchChanged(): void {
-    this.currentPage = 1;
-    this.loadLogs(1);
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.loadLogs(1), 300);
   }
 
   clearSearch(): void {

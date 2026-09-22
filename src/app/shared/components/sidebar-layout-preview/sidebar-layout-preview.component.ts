@@ -1,9 +1,11 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, Input, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  SidebarLayoutService,
   SidebarTemplateCaps,
   SidebarTemplateKey,
 } from '../../../core/services/sidebar-layout.service';
+import { SIDEBAR_NAV_SECTIONS } from '../../../core/config/sidebar-nav.config';
 import { SIDEBAR_LAYOUT_CSS } from '../../styles/sidebar-layout.styles';
 
 interface PreviewNavItem {
@@ -89,7 +91,7 @@ interface PreviewNavSection {
           <!-- Navigation Groups -->
           <nav class="sidebar-nav-scroll">
             <div class="nav-groups-wrapper">
-              <div class="nav-section" *ngFor="let section of sampleSections">
+              <div class="nav-section" *ngFor="let section of sampleSections()">
                 <ng-container *ngIf="!previewCollapsed()">
                   <div
                     *ngIf="caps?.collapsibleSections; else plainLabel"
@@ -207,10 +209,10 @@ interface PreviewNavSection {
         height: 520px;
         border-radius: 16px;
         overflow: hidden;
-        border: 1px solid #E9D5FF;
+        border: 1px solid var(--card-border, #E9D5FF);
         background:
           radial-gradient(1200px 400px at -10% -10%, color-mix(in srgb, var(--sidebar-active-accent, #C084FC) 22%, transparent), transparent 60%),
-          linear-gradient(135deg, #F8FAFC, #F1F5F9);
+          linear-gradient(135deg, var(--bg-app, #F8FAFC), var(--card-hover, #F1F5F9));
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
       }
 
@@ -237,7 +239,7 @@ interface PreviewNavSection {
         padding: 0 14px;
         border-radius: 12px;
         background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        border: 1px solid var(--card-border, #E2E8F0);
         box-shadow: 0 2px 8px -4px rgba(15, 23, 42, 0.18);
       }
 
@@ -257,7 +259,7 @@ interface PreviewNavSection {
         padding: 16px;
         border-radius: 14px;
         background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        border: 1px solid var(--card-border, #E2E8F0);
         box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.25);
       }
 
@@ -267,11 +269,11 @@ interface PreviewNavSection {
         display: block;
         height: 8px;
         border-radius: 999px;
-        background: #E2E8F0;
+        background: var(--card-border, #E2E8F0);
       }
       .sb-fake-line-lg {
         height: 16px;
-        background: color-mix(in srgb, var(--sidebar-active-accent, #C084FC) 32%, #E2E8F0);
+        background: color-mix(in srgb, var(--sidebar-active-accent, #C084FC) 32%, var(--card-border, #E2E8F0));
       }
       .sb-fake-pill {
         height: 10px;
@@ -281,7 +283,7 @@ interface PreviewNavSection {
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        background: color-mix(in srgb, var(--sidebar-active-accent, #C084FC) 40%, #E2E8F0);
+        background: color-mix(in srgb, var(--sidebar-active-accent, #C084FC) 40%, var(--card-border, #E2E8F0));
       }
       /* Named sbw-* rather than w-*: the global utilities in styles.css set
          width AND height with !important, which would square these bars off. */
@@ -305,9 +307,9 @@ interface PreviewNavSection {
         height: 32px;
         padding: 0 12px;
         border-radius: 999px;
-        border: 1px solid #E9D5FF;
+        border: 1px solid var(--card-border, #E9D5FF);
         background: #FFFFFF;
-        color: #6B21A8;
+        color: var(--primary-variant, #6B21A8);
         font-size: 12px;
         font-weight: 600;
         cursor: pointer;
@@ -316,13 +318,13 @@ interface PreviewNavSection {
       .sb-preview-toggle:hover {
         border-color: #C084FC;
         transform: translateY(-1px);
-        box-shadow: 0 6px 14px -8px rgba(126, 34, 206, 0.6);
+        box-shadow: 0 6px 14px -8px rgba(var(--primary-rgb, 126, 34, 206), 0.6);
       }
       .sb-preview-toggle.is-on {
-        background: linear-gradient(135deg, #7E22CE, #A855F7);
-        border-color: #7E22CE;
+        background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #A855F7));
+        border-color: var(--primary, #7E22CE);
         color: #FFFFFF;
-        box-shadow: 0 6px 16px -8px rgba(126, 34, 206, 0.8);
+        box-shadow: 0 6px 16px -8px rgba(var(--primary-rgb, 126, 34, 206), 0.8);
       }
       .sb-preview-toggle .material-symbols-outlined {
         font-size: 16px !important;
@@ -335,7 +337,7 @@ interface PreviewNavSection {
         margin-left: auto;
         font-size: 11px;
         font-weight: 500;
-        color: #64748B;
+        color: var(--text-muted, #64748B);
       }
       .sb-preview-hint .material-symbols-outlined {
         font-size: 15px !important;
@@ -362,30 +364,31 @@ export class SidebarLayoutPreviewComponent {
 
   public previewCollapsed = signal(false);
 
-  public sampleSections: PreviewNavSection[] = [
-    {
-      title: 'POS COUNTER & OPERATIONS',
-      items: [
-        { label: 'POS Billing', iconName: 'point_of_sale', badge: 'F1', isPos: true },
-        { label: 'Kitchen Display (KDS)', iconName: 'receipt_long', isActive: true },
-        { label: 'Dining & Tables', iconName: 'table_restaurant' },
-        { label: 'Takeaway Queue', iconName: 'takeout_dining' },
-      ],
-    },
-    {
-      title: 'CATALOG & INVENTORY',
-      items: [
-        { label: 'Live Dashboard', iconName: 'dashboard' },
-        { label: 'Dishes & Products', iconName: 'inventory_2' },
-        { label: 'Stock Ledger', iconName: 'warehouse' },
-      ],
-    },
-    {
-      title: 'ADMINISTRATION',
-      items: [
-        { label: 'Reports & Analytics', iconName: 'analytics' },
-        { label: 'POS Settings', iconName: 'settings' },
-      ],
-    },
-  ];
+  private sidebarLayout = inject(SidebarLayoutService);
+
+  /**
+   * Built from the real menu rather than a copy of it, and through the same
+   * rename resolver the rail uses — so an operator renaming a module in the
+   * card above sees it change here as they type. Each group is trimmed to
+   * the first few rows: the preview is a shape to judge a design by, not a
+   * second copy of the navigation.
+   */
+  private static readonly PREVIEW_ROWS = 4;
+
+  public sampleSections = computed<PreviewNavSection[]>(() =>
+    SIDEBAR_NAV_SECTIONS.map((section, sectionIndex) => ({
+      title: this.sidebarLayout.sectionLabel(section.id, section.title),
+      items: section.items
+        .slice(0, SidebarLayoutPreviewComponent.PREVIEW_ROWS)
+        .map((item, itemIndex) => ({
+          label: this.sidebarLayout.itemLabel(item.id, item.label),
+          iconName: item.iconName,
+          badge: item.badge,
+          isPos: item.isPos,
+          // One row is drawn active so the design's active treatment is
+          // visible; the second row of the first group, as before.
+          isActive: sectionIndex === 0 && itemIndex === 1,
+        })),
+    })),
+  );
 }

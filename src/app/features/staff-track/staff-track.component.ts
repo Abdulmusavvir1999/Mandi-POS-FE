@@ -1194,7 +1194,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
       .spin-icon { animation: spin 1s linear infinite; }
       @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-      .st-muted { color: #6B7280; font-size: 11px; }
+      .st-muted { color: var(--text-muted, #6B7280); font-size: 11px; }
       .st-clickable { cursor: pointer; }
       .st-clickable:hover { transform: translateY(-2px); }
 
@@ -1203,16 +1203,16 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
          reachable by keyboard as well as pointer. */
       .st-row-link { cursor: pointer; transition: background 0.14s ease; }
       .st-row-link:hover > td { background: #FAF7FE; }
-      .st-row-link:hover > td:first-child { box-shadow: inset 3px 0 0 #7E22CE; }
+      .st-row-link:hover > td:first-child { box-shadow: inset 3px 0 0 var(--primary, #7E22CE); }
       .st-row-link:focus-visible { outline: none; }
-      .st-row-link:focus-visible > td { background: #F3E8FF; }
-      .st-row-link:focus-visible > td:first-child { box-shadow: inset 3px 0 0 #7E22CE; }
+      .st-row-link:focus-visible > td { background: var(--primary-light, #F3E8FF); }
+      .st-row-link:focus-visible > td:first-child { box-shadow: inset 3px 0 0 var(--primary, #7E22CE); }
 
       .st-card-note {
         margin-top: 8px;
         font-size: 10px;
         line-height: 1.45;
-        color: #6B7280;
+        color: var(--text-muted, #6B7280);
       }
 
       .st-section-head {
@@ -1223,8 +1223,8 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         padding: 16px 18px 12px;
         border-bottom: 1px solid #F1E9FB;
       }
-      .st-section-title { font-size: 14px; font-weight: 800; color: #2E1065; }
-      .st-section-sub { font-size: 11px; color: #6B7280; margin-top: 3px; max-width: 70ch; }
+      .st-section-title { font-size: 14px; font-weight: 800; color: var(--text-main, #2E1065); }
+      .st-section-sub { font-size: 11px; color: var(--text-muted, #6B7280); margin-top: 3px; max-width: 70ch; }
 
       .st-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
       @media (max-width: 1100px) { .st-grid-2 { grid-template-columns: 1fr; } }
@@ -1244,8 +1244,8 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         padding: 12px 16px; margin-bottom: 16px;
       }
       .st-live-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-      .st-live-label { font-size: 13px; font-weight: 800; color: #2E1065; }
-      .st-live-sub { font-size: 11px; color: #6B7280; }
+      .st-live-label { font-size: 13px; font-weight: 800; color: var(--text-main, #2E1065); }
+      .st-live-sub { font-size: 11px; color: var(--text-muted, #6B7280); }
 
       .st-live-chip {
         display: inline-block; margin-left: 5px; padding: 1px 7px; border-radius: 999px;
@@ -1255,11 +1255,11 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
 
       .st-activity-cell { display: flex; flex-direction: column; gap: 2px; }
       .st-activity-label { font-size: 11px; font-weight: 700; color: #4C1D95; }
-      .st-activity-time { font-size: 10px; color: #6B7280; }
+      .st-activity-time { font-size: 10px; color: var(--text-muted, #6B7280); }
 
       .st-inline-error {
         display: flex; align-items: center; gap: 12px;
-        background: #FEF2F2; border: 1px solid #FECACA; border-radius: 14px;
+        background: #FEF2F2; border: 1px solid var(--danger-light, #FECACA); border-radius: 14px;
         padding: 14px 16px; margin-bottom: 16px; color: #991B1B;
       }
       .st-inline-error-title { font-weight: 800; font-size: 13px; }
@@ -1268,10 +1268,10 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
 
       .st-report-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
       .st-preset-btn-lg {
-        border: 1px solid #E9D5FF; background: #FFFFFF; color: #6B21A8;
+        border: 1px solid var(--card-border, #E9D5FF); background: #FFFFFF; color: var(--primary-variant, #6B21A8);
         padding: 8px 16px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer;
       }
-      .st-preset-btn-lg.is-active { background: #7E22CE; color: #FFFFFF; border-color: #7E22CE; }
+      .st-preset-btn-lg.is-active { background: var(--primary, #7E22CE); color: #FFFFFF; border-color: var(--primary, #7E22CE); }
 
       .st-modal { max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto; }
 
@@ -1279,22 +1279,22 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
       }
       .st-attr-item { background: #FAF7FE; border: 1px solid #EDE4F8; border-radius: 12px; padding: 11px 13px; }
-      .st-attr-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #7E22CE; }
-      .st-attr-value { font-size: 13px; font-weight: 700; color: #2E1065; margin-top: 4px; }
-      .st-attr-empty { color: #9CA3AF; font-weight: 500; font-style: italic; font-size: 11px; }
-      .st-attr-time { font-size: 10px; color: #6B7280; margin-top: 2px; }
+      .st-attr-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--primary, #7E22CE); }
+      .st-attr-value { font-size: 13px; font-weight: 700; color: var(--text-main, #2E1065); margin-top: 4px; }
+      .st-attr-empty { color: var(--text-dim, #9CA3AF); font-weight: 500; font-style: italic; font-size: 11px; }
+      .st-attr-time { font-size: 10px; color: var(--text-muted, #6B7280); margin-top: 2px; }
 
       .st-timeline { margin-top: 12px; padding-left: 6px; }
       .st-timeline-item { position: relative; padding-left: 20px; padding-bottom: 14px; border-left: 2px solid #EDE4F8; }
       .st-timeline-item:last-child { border-left-color: transparent; padding-bottom: 0; }
       .st-timeline-dot {
         position: absolute; left: -6px; top: 2px; width: 10px; height: 10px;
-        border-radius: 50%; background: #7E22CE; border: 2px solid #FFFFFF;
+        border-radius: 50%; background: var(--primary, #7E22CE); border: 2px solid #FFFFFF;
         box-shadow: 0 0 0 2px #EDE4F8;
       }
       .st-timeline-top { display: flex; align-items: center; gap: 8px; }
-      .st-timeline-time { font-size: 11px; font-weight: 800; color: #7E22CE; font-family: ui-monospace, monospace; }
-      .st-timeline-actor { font-size: 11px; font-weight: 700; color: #2E1065; }
+      .st-timeline-time { font-size: 11px; font-weight: 800; color: var(--primary, #7E22CE); font-family: ui-monospace, monospace; }
+      .st-timeline-actor { font-size: 11px; font-weight: 700; color: var(--text-main, #2E1065); }
       .st-timeline-action { font-size: 12px; color: #374151; margin-top: 1px; }
     `,
   ],
@@ -1316,6 +1316,13 @@ export class StaffTrackComponent implements OnInit {
   private loadedTabs = new Set<TabKey>();
 
   public filters: StaffTrackFilters = {};
+
+  /**
+   * Bumped whenever the filters change. Every in-flight response carries the
+   * token it was issued under and is dropped if it no longer matches, so a
+   * slow request for an old filter state cannot overwrite a newer one.
+   */
+  private filterToken = 0;
 
   /**
    * Set from the filter bar's `scopeChange`, which reports what the API said it
@@ -1437,6 +1444,7 @@ export class StaffTrackComponent implements OnInit {
 
   onFiltersChange(f: StaffTrackFilters): void {
     this.filters = { ...this.filters, ...f };
+    this.filterToken++;
     this.ordersPage = 1;
     this.activityPage = 1;
     // A new range invalidates every cached tab, not just the visible one.
@@ -1446,12 +1454,17 @@ export class StaffTrackComponent implements OnInit {
   }
 
   private reloadHeader(): void {
+    const token = this.filterToken;
     this.staffTrackService.getOverview(this.filters).subscribe({
-      next: (res) => (this.overview = res.data),
+      next: (res) => {
+        if (token !== this.filterToken) return;
+        this.overview = res.data;
+      },
       error: () => {},
     });
     this.staffTrackService.getStaff(this.filters, 1, 100).subscribe({
       next: (res) => {
+        if (token !== this.filterToken) return;
         this.staff = res.data || [];
         this.loadedTabs.add('overview');
         this.loadedTabs.add('performance');
@@ -1493,21 +1506,24 @@ export class StaffTrackComponent implements OnInit {
     }
   }
 
-  private handleError(err: any): void {
+  private handleError(err: any, token = this.filterToken): void {
+    if (token !== this.filterToken) return;
     this.isTabLoading = false;
     this.tabError = this.messageFor(err, 'Unable to load this view. Please try again.');
   }
 
   loadStaff(): void {
     this.isTabLoading = true;
+    const token = this.filterToken;
     this.staffTrackService.getStaff(this.filters, 1, 100).subscribe({
       next: (res) => {
+        if (token !== this.filterToken) return;
         this.isTabLoading = false;
         this.staff = res.data || [];
         this.loadedTabs.add('overview');
         this.loadedTabs.add('performance');
       },
-      error: (err) => this.handleError(err),
+      error: (err) => this.handleError(err, token),
     });
   }
 
@@ -1526,14 +1542,16 @@ export class StaffTrackComponent implements OnInit {
 
   loadOrders(): void {
     this.isTabLoading = true;
+    const token = this.filterToken;
     this.staffTrackService.getOrders(this.filters, this.ordersPage, 25).subscribe({
       next: (res) => {
+        if (token !== this.filterToken) return;
         this.isTabLoading = false;
         this.orders = res.data || [];
         this.ordersPagination = res.pagination;
         this.loadedTabs.add('orders');
       },
-      error: (err) => this.handleError(err),
+      error: (err) => this.handleError(err, token),
     });
   }
 
@@ -1545,38 +1563,44 @@ export class StaffTrackComponent implements OnInit {
 
   loadRevenue(): void {
     this.isTabLoading = true;
+    const token = this.filterToken;
     this.staffTrackService.getRevenue(this.filters).subscribe({
       next: (res) => {
+        if (token !== this.filterToken) return;
         this.isTabLoading = false;
         this.revenue = res.data;
         this.loadedTabs.add('revenue');
       },
-      error: (err) => this.handleError(err),
+      error: (err) => this.handleError(err, token),
     });
   }
 
   loadTables(): void {
     this.isTabLoading = true;
+    const token = this.filterToken;
     this.staffTrackService.getTables(this.filters).subscribe({
       next: (res) => {
+        if (token !== this.filterToken) return;
         this.isTabLoading = false;
         this.tables = res.data;
         this.loadedTabs.add('tables');
       },
-      error: (err) => this.handleError(err),
+      error: (err) => this.handleError(err, token),
     });
   }
 
   loadActivity(): void {
     this.isTabLoading = true;
+    const token = this.filterToken;
     this.staffTrackService.getActivity(this.filters, this.activityPage, 50).subscribe({
       next: (res) => {
+        if (token !== this.filterToken) return;
         this.isTabLoading = false;
         this.activity = res.data || [];
         this.activityPagination = res.pagination;
         this.loadedTabs.add('activity');
       },
-      error: (err) => this.handleError(err),
+      error: (err) => this.handleError(err, token),
     });
   }
 
@@ -1599,7 +1623,9 @@ export class StaffTrackComponent implements OnInit {
   loadReport(): void {
     this.isTabLoading = true;
     this.tabError = null;
+    const token = this.filterToken;
     const done = (rows: any[]) => {
+      if (token !== this.filterToken) return;
       this.isTabLoading = false;
       this.reportRows = rows || [];
       this.loadedTabs.add('reports');
@@ -1608,27 +1634,27 @@ export class StaffTrackComponent implements OnInit {
     if (this.activeReport === 'orders') {
       this.staffTrackService.getOrdersReport(this.filters).subscribe({
         next: (r) => done(r.data),
-        error: (e) => this.handleError(e),
+        error: (e) => this.handleError(e, token),
       });
     } else if (this.activeReport === 'revenue') {
       this.staffTrackService.getRevenueReport(this.filters).subscribe({
         next: (r) => done(r.data?.data),
-        error: (e) => this.handleError(e),
+        error: (e) => this.handleError(e, token),
       });
     } else if (this.activeReport === 'tables') {
       this.staffTrackService.getTablesReport(this.filters).subscribe({
         next: (r) => done(r.data?.perStaff),
-        error: (e) => this.handleError(e),
+        error: (e) => this.handleError(e, token),
       });
     } else if (this.activeReport === 'activity') {
       this.staffTrackService.getActivityReport(this.filters).subscribe({
         next: (r) => done(r.data),
-        error: (e) => this.handleError(e),
+        error: (e) => this.handleError(e, token),
       });
     } else {
       this.staffTrackService.getSummaryReport(this.summaryPeriod, this.filters).subscribe({
         next: (r) => done(r.data?.rows),
-        error: (e) => this.handleError(e),
+        error: (e) => this.handleError(e, token),
       });
     }
   }

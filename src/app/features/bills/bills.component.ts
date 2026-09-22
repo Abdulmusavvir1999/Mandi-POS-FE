@@ -235,13 +235,13 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               title="Search bills"
               type="text"
               [(ngModel)]="searchQuery"
-              (ngModelChange)="currentPage = 1; loadBills(1)"
+              (ngModelChange)="onSearchChanged()"
               placeholder="Search bill #, guest name, cashier..."
               class="toolbar-search-input"
             />
             <button
               *ngIf="searchQuery"
-              (click)="searchQuery = ''; currentPage = 1; loadBills(1)"
+              (click)="searchQuery = ''; loadBills(1)"
               class="search-clear-btn"
               title="Clear search"
             >
@@ -481,6 +481,11 @@ export class BillsComponent implements OnInit {
   public pageSize = 10;
   public currentPage = 1;
 
+  /** Debounce for the search box, so typing is not one request per key. */
+  private searchTimer: any = null;
+  /** Identifies the newest request, so a slow earlier one cannot overwrite it. */
+  private loadToken = 0;
+
   public showReceiptModal = false;
   public receiptData: any = null;
 
@@ -488,10 +493,20 @@ export class BillsComponent implements OnInit {
     this.loadBills(1);
   }
 
+  /** Waits for a pause in typing before querying the server. */
+  onSearchChanged(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.loadBills(1), 300);
+  }
+
   loadBills(page = 1): void {
+    // A filter or page change supersedes a pending debounce, which would
+    // otherwise fire a second, redundant request straight after this one.
+    clearTimeout(this.searchTimer);
     this.isLoading = true;
     this.loadError = null;
     this.currentPage = page;
+    const token = ++this.loadToken;
     this.billService
       .getBills(
         page,
@@ -504,6 +519,7 @@ export class BillsComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
+          if (token !== this.loadToken) return;
           this.isLoading = false;
           if (res.success) {
             this.bills = res.data;
@@ -511,6 +527,7 @@ export class BillsComponent implements OnInit {
           }
         },
         error: (err) => {
+          if (token !== this.loadToken) return;
           this.isLoading = false;
           this.loadError = err?.error?.message || 'Unable to load data from the server.';
         },

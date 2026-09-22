@@ -152,7 +152,7 @@ import { SettingsService } from '../../core/services/settings.service';
         display: flex;
         width: 100%;
         height: 100%;
-        background-color: #FAF5FF;
+        background-color: var(--bg-app, #FAF5FF);
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
 
@@ -365,7 +365,7 @@ import { SettingsService } from '../../core/services/settings.service';
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 20px;
         padding: 2.5rem 2.25rem 2rem;
-        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--primary-light, rgba(126, 34, 206, 0.03));
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.03));
         box-sizing: border-box;
       }
 
@@ -394,7 +394,7 @@ import { SettingsService } from '../../core/services/settings.service';
         align-items: center;
         justify-content: center;
         margin-bottom: 1rem;
-        box-shadow: 0 8px 16px -4px var(--primary-glow, rgba(46, 16, 101, 0.35));
+        box-shadow: 0 8px 16px -4px var(--primary-glow, rgba(var(--text-main-rgb, 46, 16, 101), 0.35));
       }
 
       .card-title {
@@ -447,7 +447,7 @@ import { SettingsService } from '../../core/services/settings.service';
       .input-wrapper.is-focused {
         background: var(--card-bg, #FFFFFF);
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.12));
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
       }
 
       .field-icon {
@@ -510,13 +510,13 @@ import { SettingsService } from '../../core/services/settings.service';
         align-items: center;
         justify-content: center;
         transition: all 0.18s ease;
-        box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.35));
+        box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
         margin-top: 0.35rem;
       }
 
       .submit-button:hover:not(:disabled) {
         background: linear-gradient(135deg, var(--primary-hover, #6B21A8) 0%, var(--primary, #581C87) 100%);
-        box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.45));
+        box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
       }
 
       .submit-button:focus-visible {
@@ -554,7 +554,7 @@ import { SettingsService } from '../../core/services/settings.service';
         text-align: center;
         font-size: 0.74rem;
         font-weight: 700;
-        color: #9333EA;
+        color: var(--primary-hover, #9333EA);
         opacity: 0.7;
         letter-spacing: 0.02em;
       }

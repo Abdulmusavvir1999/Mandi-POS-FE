@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { CustomizationService } from './customization.service';
+import { ThemeService, applyThemeBrand } from './theme.service';
 
 export type CategoryDesignKey = 'showcase' | 'clean' | 'compact' | 'list' | 'card';
 
@@ -235,6 +236,9 @@ export const CATEGORY_DESIGNS: CategoryDesignOption[] = [
 
 export const CATEGORY_DESIGN_OPTIONS = CATEGORY_DESIGNS;
 
+/** Tokens that carry the app's brand color, so they follow the theme. */
+const CATEGORY_BRAND_SLOTS: readonly CategoryTokenKey[] = ['accentColor', 'buttonBg'];
+
 export const DEFAULT_CATEGORY_DESIGN: CategoryDesignKey = 'showcase';
 
 /**
@@ -255,6 +259,7 @@ interface StoredCategoryLayout {
 export class CategoryLayoutService {
   private settingsService = inject(SettingsService);
   private customization = inject(CustomizationService);
+  private theme = inject(ThemeService);
 
   private readonly layoutKeySignal = signal<CategoryDesignKey>(DEFAULT_CATEGORY_DESIGN);
   private readonly overridesSignal = signal<StoredCategoryLayout['overrides']>({});
@@ -308,11 +313,35 @@ export class CategoryLayoutService {
   }
 
   public tokensFor(key: CategoryDesignKey): CategoryTokens {
-    return { ...this.designFor(key).defaults, ...(this.overridesSignal()[key] || {}) };
+    const saved = this.overridesSignal()[key] || {};
+    return this.withThemeBrand(key, { ...this.designFor(key).defaults, ...saved }, saved);
   }
 
   public defaultsFor(key: CategoryDesignKey): CategoryTokens {
-    return { ...this.designFor(key).defaults };
+    return this.withThemeBrand(key, { ...this.designFor(key).defaults }, {});
+  }
+
+  /**
+   * The catalog's brand color follows the system theme.
+   *
+   * The card banner is a gradient off `--cat-accent-color` and the filled row
+   * button is `--cat-button-bg`; both shipped as the brand purple on Bento
+   * Showcase, List View and Card View — the baseline — so they stayed purple
+   * under an Ocean Blue theme. Minimalist Clean's blue and Compact Badge's
+   * teal are that design's own palette and are left alone.
+   */
+  private withThemeBrand(
+    key: CategoryDesignKey,
+    tokens: CategoryTokens,
+    saved: Partial<CategoryTokens>
+  ): CategoryTokens {
+    return applyThemeBrand(
+      tokens,
+      this.designFor(key).defaults,
+      saved,
+      CATEGORY_BRAND_SLOTS,
+      this.theme.currentPalette().primary
+    );
   }
 
   public cssVars(key?: CategoryDesignKey): Record<string, string> {

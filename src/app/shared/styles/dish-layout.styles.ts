@@ -319,13 +319,13 @@ export const DISH_LAYOUT_CSS = `
       border: 1px solid rgba(15, 23, 42, 0.12);
       border-radius: 8px;
       background: #FFFFFF;
-      color: #334155;
+      color: var(--text-muted, #334155);
       cursor: pointer;
       box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.35);
     }
 
-    [class*='dish-layout-'] .catalog-card-actions button:hover { color: #0F172A; }
-    [class*='dish-layout-'] .catalog-card-actions button.is-danger:hover { color: #DC2626; }
+    [class*='dish-layout-'] .catalog-card-actions button:hover { color: var(--text-main, #0F172A); }
+    [class*='dish-layout-'] .catalog-card-actions button.is-danger:hover { color: var(--danger, #DC2626); }
     [class*='dish-layout-'] .catalog-card-actions .material-symbols-outlined { font-size: 16px; }
 
     /* Empty state, in the palette of whichever design is on. */
@@ -379,7 +379,7 @@ export const DISH_LAYOUT_CSS = `
       z-index: 5;
       padding: 0.16rem 0.6rem;
       border-radius: 999px;
-      background: #DC2626;
+      background: var(--danger, #DC2626);
       color: #FFFFFF;
       font-size: 0.5625rem;
       font-weight: 800;
