@@ -11,8 +11,8 @@ export class OfflinePosService {
   private http = inject(HttpClient);
   private notify = inject(NotificationService);
 
-  private readonly STORAGE_QUEUE_KEY = 'mandi_pos_offline_orders_queue';
-  private readonly STORAGE_CATALOG_KEY = 'mandi_pos_offline_catalog_cache';
+  private readonly STORAGE_QUEUE_KEY = '_pos_offline_orders_queue';
+  private readonly STORAGE_CATALOG_KEY = '_pos_offline_catalog_cache';
 
   public isOnline = signal<boolean>(navigator.onLine);
   public pendingOrders = signal<OfflineOrder[]>([]);
@@ -116,7 +116,7 @@ export class OfflinePosService {
     this.pendingOrders.set(list);
     try {
       localStorage.setItem(this.STORAGE_QUEUE_KEY, JSON.stringify(list));
-    } catch {}
+    } catch { }
     this.notify.info(`Order #${order.billNumber} queued locally in offline storage`);
     return order;
   }
@@ -126,14 +126,14 @@ export class OfflinePosService {
     this.pendingOrders.set(list);
     try {
       localStorage.setItem(this.STORAGE_QUEUE_KEY, JSON.stringify(list));
-    } catch {}
+    } catch { }
   }
 
   public clearPendingOrders(): void {
     this.pendingOrders.set([]);
     try {
       localStorage.removeItem(this.STORAGE_QUEUE_KEY);
-    } catch {}
+    } catch { }
   }
 
   // --- Sync Engine ---

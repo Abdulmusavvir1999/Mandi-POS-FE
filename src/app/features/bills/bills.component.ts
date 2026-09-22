@@ -110,9 +110,11 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           [class.is-active]="selectedOrderType === 'DINING'"
         >
           <span class="material-symbols-outlined">table_restaurant</span>
-          <span>Dine-In Orders</span>
+          <span>Dine In</span>
         </button>
 
+        <!-- Takeaway covers what used to be split across takeaway, walk-in,
+             pickup and counter. -->
         <button
           type="button"
           (click)="selectedOrderType = 'TAKEAWAY'; currentPage = 1; loadBills(1)"
@@ -120,17 +122,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
           [class.is-active]="selectedOrderType === 'TAKEAWAY'"
         >
           <span class="material-symbols-outlined">takeout_dining</span>
-          <span>Takeaway / Parcel</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="selectedOrderType = 'WALK_IN'; currentPage = 1; loadBills(1)"
-          class="module-tab-btn"
-          [class.is-active]="selectedOrderType === 'WALK_IN'"
-        >
-          <span class="material-symbols-outlined">storefront</span>
-          <span>Quick Counter</span>
+          <span>Takeaway</span>
         </button>
       </div>
 
@@ -340,8 +332,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                   <span
                     class="badge"
                     [ngClass]="{
-                      'badge-info': bill.order_type === 'WALK_IN',
-                      'badge-warning': bill.order_type === 'TAKEAWAY',
+                      'badge-warning': bill.order_type !== 'DINING',
                       'badge-primary': bill.order_type === 'DINING'
                     }"
                   >

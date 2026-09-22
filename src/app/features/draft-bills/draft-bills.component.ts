@@ -652,9 +652,8 @@ export class DraftBillsComponent implements OnInit {
 
   public orderTypeOptions: DropdownOption[] = [
     { value: '', label: 'All Order Types', icon: 'receipt_long' },
-    { value: 'DINING', label: 'Dine-In', icon: 'table_restaurant', description: 'Table seating' },
-    { value: 'TAKEAWAY', label: 'Takeaway', icon: 'takeout_dining', description: 'Packed parcels' },
-    { value: 'WALK_IN', label: 'Walk-In', icon: 'storefront', description: 'Quick counter' },
+    { value: 'DINING', label: 'Dine In', icon: 'table_restaurant', description: 'Table seating' },
+    { value: 'TAKEAWAY', label: 'Takeaway', icon: 'takeout_dining', description: 'Parcels, pickup & counter' },
   ];
 
   ngOnInit(): void {

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "mandi-pos-admin": {
+    "-pos-admin": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/mandi-pos-admin",
+            "outputPath": "dist/-pos-admin",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -59,10 +59,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "mandi-pos-admin:build:production"
+              "buildTarget": "-pos-admin:build:production"
             },
             "development": {
-              "buildTarget": "mandi-pos-admin:build:development"
+              "buildTarget": "-pos-admin:build:development"
             }
           },
           "defaultConfiguration": "development"

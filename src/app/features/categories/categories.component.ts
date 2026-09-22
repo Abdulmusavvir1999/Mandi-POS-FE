@@ -676,7 +676,7 @@ import { RouterLink } from '@angular/router';
                 type="text"
                 [(ngModel)]="form.name"
                 name="name"
-                placeholder="e.g. Mandi Specials"
+                placeholder="e.g.  Specials"
                 class="form-control text-sm w-full"
                 required
               />
@@ -1056,14 +1056,14 @@ export class CategoriesComponent implements OnInit {
     this.loadError = null;
     this.categoryService.getCategories(true).subscribe({
       next: (res) => {
-          this.isLoading = false;
+        this.isLoading = false;
         if (res.success) this.categories = res.data;
       },
-        error: (err) => {
-          this.isLoading = false;
-          this.loadError = err?.error?.message || 'Unable to load data from the server.';
-        },
-      });
+      error: (err) => {
+        this.isLoading = false;
+        this.loadError = err?.error?.message || 'Unable to load data from the server.';
+      },
+    });
   }
 
   get activeCount(): number {
@@ -1199,7 +1199,7 @@ export class CategoriesComponent implements OnInit {
             },
             // Reported by the global error interceptor; present so a failure
             // cannot escape as an unhandled rejection.
-            error: () => {},
+            error: () => { },
           });
         });
       },
@@ -1247,7 +1247,7 @@ export class CategoriesComponent implements OnInit {
         },
         // Reported by the global error interceptor; present so a failure
         // cannot escape as an unhandled rejection.
-        error: () => {},
+        error: () => { },
       });
     } else {
       this.categoryService.createCategory(this.form).subscribe({
@@ -1258,7 +1258,7 @@ export class CategoriesComponent implements OnInit {
         },
         // Reported by the global error interceptor; present so a failure
         // cannot escape as an unhandled rejection.
-        error: () => {},
+        error: () => { },
       });
     }
   }
@@ -1277,7 +1277,7 @@ export class CategoriesComponent implements OnInit {
           },
           // Reported by the global error interceptor; present so a failure
           // cannot escape as an unhandled rejection.
-          error: () => {},
+          error: () => { },
         });
       },
     });

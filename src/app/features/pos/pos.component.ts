@@ -43,6 +43,7 @@ import {
   Bill,
   PosDayClosing,
   PrinterConfig,
+  orderTypeLabel,
 } from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
@@ -764,11 +765,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <div class="address-header-card">
           <div class="flex items-center justify-between">
             <span class="address-card-title">
-              {{ cartService.orderType() === 'DINING' ? 'DINING TABLE / SECTION' : 'DELIVERY ADDRESS' }}
-            </span>
-            <span class="time-badge">
-              <span class="material-symbols-outlined text-[13px]">schedule</span>
-              <span>20 min</span>
+              {{ cartService.orderType() === 'DINING' ? 'DINING TABLE / SECTION' : 'CUSTOMER (OPTIONAL)' }}
             </span>
           </div>
 
@@ -779,17 +776,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 {{ cartService.selectedTable() ? 'Table ' + cartService.selectedTable()?.table_number + ' (' + cartService.selectedTable()?.section + ')' : 'Click to select Dining Table' }}
               </div>
               <div class="address-line font-medium" *ngIf="cartService.orderType() !== 'DINING'">
-                {{ cartService.selectedCustomer() ? cartService.selectedCustomer()?.address || cartService.selectedCustomer()?.name : 'Po.1478, Street No. 52 West New York' }}
+                {{ cartService.selectedCustomer()?.name || 'Click to attach a customer' }}
               </div>
             </div>
-            <span class="material-symbols-outlined text-white/70 text-sm ml-auto">edit</span>
+            <span class="material-symbols-outlined address-edit-icon">edit</span>
           </div>
         </div>
 
         <!-- CART TITLE & ACTIVE ORDER ID -->
         <div class="cart-title-strip">
           <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-2xl text-white">shopping_cart</span>
+            <span class="material-symbols-outlined cart-heading-icon">shopping_cart</span>
             <h2 class="cart-heading">Cart</h2>
             <span *ngIf="cartService.items().length > 0" class="pos-mobile-cart-item-count-badge">
               {{ cartService.itemCount() }}
@@ -804,17 +801,21 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               aria-label="Close Cart"
               title="Close Cart"
             >
-              <span class="material-symbols-outlined text-[20px]">close</span>
+              <span class="material-symbols-outlined">close</span>
             </button>
           </div>
         </div>
 
-        <!-- ORDER TYPE SEGMENTED SWITCHER (5 Order Types) -->
-        <div class="order-type-segmented-bar !overflow-x-auto no-scrollbar flex items-center gap-1">
+        <!-- ORDER TYPE SEGMENTED SWITCHER -->
+        <!-- Two types only. Walk-in, pickup and counter said something about
+             how the customer arrived, not how the order is served, and the
+             kitchen, the receipt and every report treated all three exactly
+             as takeaway - so they are takeaway. -->
+        <div class="order-type-segmented-bar flex items-center gap-1">
           <button
             type="button"
             (click)="openTableSelector()"
-            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
+            class="seg-pill-btn"
             [class.is-active-seg]="cartService.orderType() === 'DINING'"
           >
             Dine In
@@ -822,43 +823,21 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <button
             type="button"
             (click)="setOrderType('TAKEAWAY')"
-            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
+            class="seg-pill-btn"
             [class.is-active-seg]="cartService.orderType() === 'TAKEAWAY'"
           >
             Takeaway
-          </button>
-          <button
-            type="button"
-            (click)="setOrderType('WALK_IN')"
-            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
-            [class.is-active-seg]="cartService.orderType() === 'WALK_IN'"
-          >
-            Walk-in
-          </button>
-          <button
-            type="button"
-            (click)="setOrderType('PICKUP')"
-            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
-            [class.is-active-seg]="cartService.orderType() === 'PICKUP'"
-          >
-            Pickup
-          </button>
-          <button
-            type="button"
-            (click)="setOrderType('COUNTER')"
-            class="seg-pill-btn whitespace-nowrap !text-[11px] !px-2.5"
-            [class.is-active-seg]="cartService.orderType() === 'COUNTER'"
-          >
-            Counter
           </button>
         </div>
 
         <!-- CART ITEMS LIST -->
         <div class="cart-items-scroll-pane no-scrollbar">
           <div *ngIf="cartService.items().length === 0" class="cart-empty-wrap">
-            <span class="material-symbols-outlined text-4xl text-white/40">shopping_bag</span>
-            <p class="text-xs text-white/70 mt-2 font-medium">Your cart is empty.</p>
-            <p class="text-[11px] text-white/50">Click any dish on the left to add.</p>
+            <div class="cart-empty-card">
+              <span class="material-symbols-outlined cart-empty-icon">shopping_bag</span>
+              <p class="cart-empty-title">Your cart is empty</p>
+              <p class="cart-empty-hint">Click any dish on the left to add it to the bill.</p>
+            </div>
           </div>
 
           <!-- Cart Item Row -->
@@ -872,20 +851,20 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
 
             <div class="cart-item-details">
-              <div class="flex items-center gap-1.5 flex-wrap">
+              <div class="cart-line-headline">
                 <h4 class="item-name">
                   {{ item.product.name }}
                   <span *ngIf="item.variant" class="cart-variant-chip">{{ item.variant.name }}</span>
                 </h4>
-                <span *ngIf="item.itemType === 'COMBO'" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">🍱 COMBO</span>
+                <span *ngIf="item.itemType === 'COMBO'" class="cart-line-chip is-combo">🍱 COMBO</span>
                 <span *ngIf="item.isComplimentary" class="complimentary-badge">
                   ★ FREE (COMP)
                 </span>
               </div>
 
               <!-- Selected Add-ons Display -->
-              <div *ngIf="item.selectedAddons && item.selectedAddons.length > 0" class="flex flex-wrap gap-1 mt-1 mb-0.5">
-                <span *ngFor="let a of item.selectedAddons" class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
+              <div *ngIf="item.selectedAddons && item.selectedAddons.length > 0" class="cart-addon-chips">
+                <span *ngFor="let a of item.selectedAddons" class="cart-line-chip is-addon">
                   + {{ a.name }} ({{ a.price | appCurrency:'1.0-0' }})
                 </span>
               </div>
@@ -900,7 +879,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 </ng-container>
               </p>
 
-              <div *ngIf="item.isComplimentary && item.complimentaryReason" class="text-[10px] text-emerald-300 font-semibold italic mt-0.5">
+              <div *ngIf="item.isComplimentary && item.complimentaryReason" class="cart-comp-note">
                 Note: {{ item.complimentaryReason }}
               </div>
 
@@ -924,12 +903,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   </button>
                 </div>
 
-                <span class="font-mono text-xs font-bold text-white/90">
+                <span class="cart-line-total font-mono">
                   {{ (item.isComplimentary ? 0 : item.unitPrice * item.quantity) | appCurrency:'1.2-2' }}
                 </span>
 
                 <!-- Complimentary & Item Note Buttons -->
-                <div class="flex items-center gap-1.5">
+                <div class="cart-line-actions">
                   <button
                     type="button"
                     (click)="openItemNoteModal(item)"
@@ -937,7 +916,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     [class.is-active]="!!item.notes"
                     title="Add or Edit Kitchen Note"
                   >
-                    <span class="material-symbols-outlined text-[13px]">edit_note</span>
+                    <span class="material-symbols-outlined">edit_note</span>
                   </button>
                   <button
                     type="button"
@@ -946,7 +925,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                     [class.is-active]="item.isComplimentary"
                     [title]="item.isComplimentary ? 'Revoke Complimentary' : 'Mark Complimentary (Free)'"
                   >
-                    <span class="material-symbols-outlined text-[13px]">{{ item.isComplimentary ? 'star' : 'redeem' }}</span>
+                    <span class="material-symbols-outlined">{{ item.isComplimentary ? 'star' : 'redeem' }}</span>
                   </button>
                 </div>
               </div>
@@ -958,7 +937,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               class="cart-item-remove-btn"
               title="Remove item"
             >
-              <span class="material-symbols-outlined text-[18px]">cancel</span>
+              <span class="material-symbols-outlined">cancel</span>
             </button>
           </div>
         </div>
@@ -984,7 +963,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <!-- SERVICE CHARGE & SURCHARGE CONTROLS -->
         <div class="cart-billing-addons font-mono">
           <div class="billing-addon-row">
-            <span class="text-[11px] text-white/70">Service Charge:</span>
+            <span class="billing-addon-label">Service Charge</span>
             <div class="flex items-center gap-1">
               <button
                 *ngFor="let rate of [0, 5, 10]"
@@ -998,7 +977,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
           </div>
           <div class="billing-addon-row mt-1">
-            <span class="text-[11px] text-white/70">Packaging / Surcharge:</span>
+            <span class="billing-addon-label">Packaging / Surcharge</span>
             <div class="flex items-center gap-1">
               <button
                 *ngFor="let sur of [0, 20, 50]"
@@ -1020,25 +999,36 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <span class="totals-value">{{ cartService.subtotal() | appCurrency:'1.2-2' }}</span>
           </div>
 
-          <div class="totals-row" *ngIf="cartService.discountAmount() > 0">
-            <span class="totals-label text-amber-200">
+          <div class="totals-row is-credit" *ngIf="cartService.discountAmount() > 0">
+            <span class="totals-label">
               Discount <span *ngIf="cartService.couponCode()">({{ cartService.couponCode() }})</span>
             </span>
-            <span class="totals-value text-amber-200">- {{ cartService.discountAmount() | appCurrency:'1.2-2' }}</span>
+            <span class="totals-value">- {{ cartService.discountAmount() | appCurrency:'1.2-2' }}</span>
           </div>
 
-          <div class="totals-row" *ngIf="cartService.serviceChargeAmount() > 0">
-            <span class="totals-label text-purple-200">Service Charge ({{ cartService.serviceChargeRate() }}%)</span>
-            <span class="totals-value text-purple-200">+ {{ cartService.serviceChargeAmount() | appCurrency:'1.2-2' }}</span>
+          <div class="totals-row is-debit" *ngIf="cartService.serviceChargeAmount() > 0">
+            <span class="totals-label">Service Charge ({{ cartService.serviceChargeRate() }}%)</span>
+            <span class="totals-value">+ {{ cartService.serviceChargeAmount() | appCurrency:'1.2-2' }}</span>
           </div>
 
-          <div class="totals-row" *ngIf="cartService.surchargeAmount() > 0">
-            <span class="totals-label text-teal-200">Surcharge / Packaging</span>
-            <span class="totals-value text-teal-200">+ {{ cartService.surchargeAmount() | appCurrency:'1.2-2' }}</span>
+          <div class="totals-row is-debit" *ngIf="cartService.surchargeAmount() > 0">
+            <span class="totals-label">Surcharge / Packaging</span>
+            <span class="totals-value">+ {{ cartService.surchargeAmount() | appCurrency:'1.2-2' }}</span>
+          </div>
+
+          <!-- The tax line reads differently under the two rules, and the
+               cashier has to be able to tell which bill they are taking:
+               added on top, or already inside the price on the card. -->
+          <div class="totals-row" *ngIf="cartService.isTaxInclusive() && cartService.taxAmount() > 0">
+            <span class="totals-label">Taxable Value</span>
+            <span class="totals-value">{{ cartService.netAmount() | appCurrency:'1.2-2' }}</span>
           </div>
 
           <div class="totals-row">
-            <span class="totals-label">Tax (GST)</span>
+            <span class="totals-label">
+              Tax (GST)
+              <span class="tax-mode-chip" *ngIf="cartService.isTaxInclusive()">incl.</span>
+            </span>
             <span class="totals-value">{{ cartService.taxAmount() | appCurrency:'1.2-2' }}</span>
           </div>
 
@@ -1054,10 +1044,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             type="button"
             (click)="holdCurrentBill()"
             [disabled]="cartService.items().length === 0"
-            class="py-3 px-3.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
+            class="cart-hold-btn"
             title="Hold Current Order as Draft (F4)"
           >
-            <span class="material-symbols-outlined text-[18px]">pause_circle</span>
+            <span class="material-symbols-outlined">pause_circle</span>
             <span>Hold</span>
           </button>
 
@@ -1067,7 +1057,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             [disabled]="cartService.items().length === 0"
             class="confirm-order-btn flex-1"
           >
-            <span class="material-symbols-outlined text-[20px]">point_of_sale</span>
+            <span class="material-symbols-outlined">point_of_sale</span>
             <span>Confirm & Pay (F8)</span>
           </button>
         </div>
@@ -1311,14 +1301,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showCustomerModal">
       <div class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl">
-        <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
-          <div class="flex items-center gap-3.5">
+        <div class="pos-modal-head">
+          <div class="pos-modal-head-main">
             <span class="modal-icon-badge">
               <span class="material-symbols-outlined text-2xl">person</span>
             </span>
             <div>
-              <h3 class="text-xl font-black text-[#2E1065] leading-tight">Customer & Delivery Details</h3>
-              <p class="text-xs text-[var(--text-muted)] mt-0.5">Attach guest profile or delivery address to order</p>
+              <h3 class="pos-modal-title">Customer &amp; Delivery Details</h3>
+              <p class="pos-modal-head-sub">Attach guest profile or delivery address to order</p>
             </div>
           </div>
           <button (click)="showCustomerModal = false" class="modal-close-btn" title="Close" aria-label="Close">
@@ -1326,10 +1316,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </button>
         </div>
 
-        <div class="space-y-3.5">
-          <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Phone Number</label>
-            <div class="flex gap-2">
+        <div class="customer-form">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <div class="customer-phone-row">
               <input
                 title="Phone Number"
                 type="tel"
@@ -1337,15 +1327,15 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 placeholder="10-digit mobile number"
                 class="form-control font-mono text-sm flex-1"
               />
-              <button (click)="searchCustomerByPhone()" class="action-btn btn-outline-purple !py-1.5 !px-3 text-xs flex items-center gap-1">
-                <span class="material-symbols-outlined text-[16px]">search</span>
+              <button (click)="searchCustomerByPhone()" class="action-btn btn-outline-purple customer-lookup-btn">
+                <span class="material-symbols-outlined">search</span>
                 <span>Lookup</span>
               </button>
             </div>
           </div>
 
-          <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Customer Name</label>
+          <div class="form-group">
+            <label class="form-label">Customer Name</label>
             <input
               title="Customer Name"
               type="text"
@@ -1355,8 +1345,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             />
           </div>
 
-          <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Delivery Address (Optional)</label>
+          <div class="form-group">
+            <label class="form-label">Delivery Address (Optional)</label>
             <input
               title="Delivery Address (Optional)"
               type="text"
@@ -1367,13 +1357,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-5 mt-3 border-t border-[#E9D5FF]">
+        <div class="pos-modal-foot">
           <button (click)="showCustomerModal = false" class="action-btn btn-outline-purple">
             Cancel
           </button>
           <button (click)="saveAndSelectCustomer()" class="action-btn btn-gradient-purple">
-            <span class="material-symbols-outlined text-[18px]">check</span>
-            <span>Apply to Cart ✓</span>
+            <span class="material-symbols-outlined">check</span>
+            <span>Apply to Cart</span>
           </button>
         </div>
       </div>
@@ -1658,7 +1648,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 </td>
                 <td class="p-3">
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-[#6B21A8]">
-                    {{ bill.order_type || 'WALK_IN' }}
+                    {{ orderTypeLabel(bill.order_type) }}
                   </span>
                 </td>
                 <td class="p-3">
@@ -2358,8 +2348,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       margin-left: 0.35rem;
       padding: 0.05rem 0.4rem;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.16);
-      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: color-mix(in srgb, var(--sidebar-active-accent, var(--primary, #7E22CE)) 30%, transparent);
+      border: 1px solid color-mix(in srgb, var(--sidebar-active-accent, var(--primary, #7E22CE)) 50%, transparent);
       font-size: 0.625rem;
       font-weight: 800;
       vertical-align: middle;
@@ -3208,65 +3198,130 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     /* RIGHT SIDE CART TERMINAL */
+    /* ═══ THE BILL PANEL ═══════════════════════════════════════════════
+       One dark column against a pale glass page, so it has to carry its own
+       hierarchy: the surfaces below are three weights of the same white wash
+       rather than one flat 8%, which is what made every block read alike.
+       All of it is mixed off --sidebar-bg and --primary, so the panel follows
+       whatever theme is on instead of staying violet. */
     .pos-cart-sidebar {
+      /* One place to retune the panel. Every rule below draws from these. */
+      --cart-raise: rgba(255, 255, 255, 0.06);
+      --cart-raise-strong: rgba(255, 255, 255, 0.11);
+      --cart-sink: rgba(0, 0, 0, 0.22);
+      --cart-line: rgba(255, 255, 255, 0.12);
+      --cart-line-strong: rgba(255, 255, 255, 0.2);
+      --cart-text-soft: rgba(255, 255, 255, 0.78);
+      --cart-text-dim: rgba(255, 255, 255, 0.52);
+      --cart-accent: var(--sidebar-active-accent, var(--primary, #7E22CE));
+      /* Money moving the customer's way, and money moving ours. The theme
+         owns --success / --warning / --danger, but those are chosen to sit on
+         a white page; lifted toward white they read on this dark one and
+         still turn over with the palette. */
+      --cart-credit: color-mix(in srgb, var(--success, #16A34A) 52%, #FFFFFF);
+      --cart-debit: color-mix(in srgb, var(--warning, #EA580C) 58%, #FFFFFF);
+      --cart-danger: color-mix(in srgb, var(--danger, #DC2626) 58%, #FFFFFF);
+
+      position: relative;
       width: 420px;
       height: 100%;
-      background: var(--sidebar-bg, #2E1065);
-      padding: 1.25rem;
+      /* Lighter at the top where the order is written, heavier at the foot
+         where it is settled - it gives a tall flat column a direction. */
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--sidebar-bg, #2E1065) 93%, #FFFFFF) 0%,
+          var(--sidebar-bg, #2E1065) 42%,
+          color-mix(in srgb, var(--sidebar-bg, #2E1065) 88%, #000000) 100%
+        );
+      padding: 1.15rem 1.15rem 1rem;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.85rem;
       color: var(--sidebar-text, #FFFFFF);
-      box-shadow: -4px 0 25px rgba(0, 0, 0, 0.1);
+      box-shadow: -18px 0 45px -25px rgba(0, 0, 0, 0.55);
       flex-shrink: 0;
     }
 
-    /* ADDRESS CARD */
+    /* A lit edge where the panel meets the page, so the join is a seam
+       rather than a butt joint. */
+    .pos-cart-sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 1px;
+      pointer-events: none;
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        color-mix(in srgb, var(--cart-accent) 70%, transparent) 30%,
+        color-mix(in srgb, var(--cart-accent) 70%, transparent) 60%,
+        transparent 100%
+      );
+    }
+
+    /* ADDRESS CARD — the lightest surface: context, not content. */
     .address-header-card {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--cart-raise);
+      border: 1px solid var(--cart-line);
       border-radius: 0.85rem;
-      padding: 0.85rem 1rem;
+      padding: 0.75rem 0.9rem;
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
     }
 
     .address-card-title {
-      font-size: 0.75rem;
-      font-weight: 900;
-      letter-spacing: 0.05em;
-      color: #FFFFFF;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--cart-text-dim);
       text-transform: uppercase;
     }
 
-    .time-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      font-size: 0.72rem;
-      color: rgba(255, 255, 255, 0.85);
-      font-weight: 700;
-    }
-
+    /* The whole row is the target - it opens the table or customer picker. */
     .address-location-row {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0.45rem;
+      margin: -0.2rem -0.35rem;
+      padding: 0.2rem 0.35rem;
+      border-radius: 0.55rem;
       cursor: pointer;
+      transition: background 0.18s ease;
     }
+
+    .address-location-row:hover { background: var(--cart-raise); }
+
     .location-pin {
-      font-size: 1.15rem;
-      color: #FFFFFF;
+      font-size: 1.05rem;
+      color: var(--cart-accent);
     }
+
     .address-text-wrap {
       flex: 1;
+      min-width: 0;
+    }
+
+    .address-line {
       font-size: 0.78rem;
-      color: rgba(255, 255, 255, 0.9);
+      font-weight: 600;
+      color: #FFFFFF;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .address-edit-icon {
+      margin-left: auto;
+      font-size: 15px;
+      color: var(--cart-text-dim);
+      transition: color 0.18s ease;
+    }
+
+    .address-location-row:hover .address-edit-icon { color: #FFFFFF; }
 
     /* CART TITLE STRIP */
     .cart-title-strip {
@@ -3275,17 +3330,27 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       justify-content: space-between;
     }
 
+    .cart-heading-icon {
+      font-size: 1.35rem;
+      color: var(--cart-accent);
+    }
+
     .cart-heading {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       font-weight: 900;
       color: #FFFFFF;
       margin: 0;
       letter-spacing: -0.02em;
     }
 
+    /* The bill number: a reference to read back, not a headline. */
     .order-id-tag {
-      font-size: 0.75rem;
-      color: rgba(255, 255, 255, 0.8);
+      padding: 0.12rem 0.5rem;
+      border-radius: 9999px;
+      background: var(--cart-sink);
+      border: 1px solid var(--cart-line);
+      font-size: 0.7rem;
+      color: var(--cart-text-soft);
       font-weight: 700;
     }
 
@@ -3304,22 +3369,30 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       flex: 1;
       background: none;
       border: none;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 0.78rem;
+      white-space: nowrap;
+      color: var(--cart-text-soft);
+      font-size: 0.6875rem;
       font-weight: 700;
-      padding: 0.45rem 0.5rem;
+      padding: 0.42rem 0.55rem;
       border-radius: 9999px;
       cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .seg-pill-btn.is-active-seg {
-      background: var(--sidebar-active-accent, var(--primary, #7E22CE));
-      color: #FFFFFF;
-      font-weight: 900;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      transition: background 0.2s ease, color 0.2s ease;
     }
 
-    /* CART ITEMS SCROLL PANE */
+    .seg-pill-btn:hover:not(.is-active-seg) {
+      background: var(--cart-raise);
+      color: #FFFFFF;
+    }
+
+    .seg-pill-btn.is-active-seg {
+      background: var(--cart-accent);
+      color: #FFFFFF;
+      font-weight: 800;
+      box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--cart-accent) 75%, transparent);
+    }
+
+    /* CART ITEMS SCROLL PANE — the only part that grows, so everything else
+       keeps its natural height and the panel never develops a dead band. */
     .cart-items-scroll-pane {
       flex: 1;
       /* A flex item is floored at its content height unless told otherwise,
@@ -3332,25 +3405,73 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       padding-right: 0.25rem;
     }
 
+    /* Empty state. The pane is tall, so an icon floating in the middle of it
+       reads as a rendering fault. A dashed card gives the space an edge and
+       says the area is waiting to be filled. */
     .cart-empty-wrap {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
       height: 100%;
+      min-height: 11rem;
       text-align: center;
-      padding: 2rem 0;
+      padding: 0.5rem 0;
+    }
+
+    /* Fills the pane rather than floating in it. A small box centred in a tall
+       empty column leaves a void above and below that reads as a layout fault;
+       stretched, the dashed outline IS the empty region. */
+    .cart-empty-card {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      width: 100%;
+      padding: 1.6rem 1.25rem;
+      border: 1px dashed var(--cart-line-strong);
+      border-radius: 1rem;
+      background: var(--cart-raise);
+    }
+
+    .cart-empty-icon {
+      font-size: 2rem;
+      color: var(--cart-text-dim);
+      margin-bottom: 0.15rem;
+    }
+
+    .cart-empty-title {
+      margin: 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .cart-empty-hint {
+      margin: 0;
+      font-size: 0.6875rem;
+      line-height: 1.45;
+      color: var(--cart-text-dim);
+      max-width: 15rem;
     }
 
     .cart-item-row {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 0.75rem;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      gap: 0.7rem;
+      padding: 0.6rem 0.7rem;
+      background: var(--cart-raise-strong);
+      border: 1px solid var(--cart-line);
       border-radius: 0.85rem;
       position: relative;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .cart-item-row:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: var(--cart-line-strong);
     }
 
     .cart-item-avatar {
@@ -3387,9 +3508,73 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .item-sub-desc {
-      font-size: 0.7rem;
-      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.6875rem;
+      color: var(--cart-text-dim);
       margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Chips that qualify a line: what it is, what was added to it. */
+    .cart-line-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.4rem;
+      font-size: 0.625rem;
+      font-weight: 700;
+      line-height: 1.5;
+      border: 1px solid transparent;
+    }
+
+    .cart-line-chip.is-combo {
+      background: color-mix(in srgb, var(--cart-debit) 22%, transparent);
+      border-color: color-mix(in srgb, var(--cart-debit) 35%, transparent);
+      color: var(--cart-debit);
+    }
+
+    .cart-line-chip.is-addon {
+      background: color-mix(in srgb, var(--cart-credit) 18%, transparent);
+      border-color: color-mix(in srgb, var(--cart-credit) 32%, transparent);
+      color: var(--cart-credit);
+    }
+
+    .cart-addon-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin: 0.2rem 0 0.1rem;
+    }
+
+    .cart-comp-note {
+      margin-top: 0.15rem;
+      font-size: 0.625rem;
+      font-style: italic;
+      font-weight: 600;
+      color: var(--cart-credit);
+    }
+
+    .cart-line-headline {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .cart-line-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .cart-item-remove-btn .material-symbols-outlined { font-size: 18px; }
+
+    .cart-line-total {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #FFFFFF;
+      white-space: nowrap;
     }
 
     .item-stepper-row {
@@ -3398,6 +3583,88 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       gap: 0.5rem;
       margin-top: 0.25rem;
     }
+
+    /* ═══ MODAL RHYTHM ════════════════════════════════════════════════
+       The spacing here was written as p-7 / pb-4 / mb-5 / pt-5 / mt-0.5 /
+       space-y-3.5, and this project ships none of those steps - its utility
+       layer stops at .mb-4, .pt-4, .space-y-3 and has no .pb-* at all. So the
+       divider sat on the title and the three field groups sat flush against
+       one another, which is the gap that was missing. */
+    .pos-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
+    }
+
+    .pos-modal-head-main {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+
+    .pos-modal-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 900;
+      line-height: 1.2;
+      color: var(--text-main, #2E1065);
+    }
+
+    .pos-modal-head-sub {
+      margin: 0.2rem 0 0;
+      font-size: 0.75rem;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .pos-modal-foot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      padding-top: 1.35rem;
+      margin-top: 1.6rem;
+      border-top: 1px solid var(--card-border, #E9D5FF);
+    }
+
+    /* Customer & Delivery body. The global .form-group sets a 0.2rem gap with
+       !important, which puts a label about three pixels off its own input;
+       overridden here by specificity so no other form in the app moves. */
+    .customer-form {
+      display: flex;
+      flex-direction: column;
+      /* The app runs a 14px root, so a rem here is smaller than it reads on
+         paper. These are the values that land on ~24px between groups and
+         ~8px under a label. */
+      gap: 1.7rem;
+    }
+
+    .customer-form .form-group {
+      gap: 0.6rem !important;
+    }
+
+    .customer-phone-row {
+      display: flex;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+
+    .customer-phone-row .form-control { flex: 1; min-width: 0; }
+
+    /* Matches the input it sits beside rather than standing taller than it. */
+    .customer-lookup-btn {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+    }
+
+    .customer-lookup-btn .material-symbols-outlined { font-size: 16px; }
 
     /* Dish dialog: portion picker.
        The options were styled with Tailwind utilities this project does not
@@ -3607,7 +3874,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       width: 1.35rem;
       height: 1.35rem;
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.22);
       border: none;
       color: #FFFFFF;
       display: flex;
@@ -3615,6 +3882,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       justify-content: center;
       cursor: pointer;
       transition: background 0.15s ease;
+    }
+
+    .stepper-circle-btn:hover {
+      background: var(--sidebar-active-accent, var(--primary, #7E22CE));
     }
     .stepper-circle-btn:hover {
       background: rgba(255, 255, 255, 0.45);
@@ -3640,18 +3911,23 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       transition: color 0.15s ease;
     }
     .cart-item-remove-btn:hover {
-      color: #FF6B6B;
+      color: var(--cart-danger, #FF6B6B);
     }
 
     /* PROMOTION CODE BOX */
     .promo-code-box {
       display: flex;
       align-items: center;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--cart-sink);
+      border: 1px solid var(--cart-line);
       border-radius: 9999px;
-      padding: 0.25rem 0.35rem 0.25rem 1rem;
+      padding: 0.25rem 0.3rem 0.25rem 0.9rem;
       gap: 0.5rem;
+      transition: border-color 0.18s ease;
+    }
+
+    .promo-code-box:focus-within {
+      border-color: color-mix(in srgb, var(--cart-accent) 60%, transparent);
     }
 
     .promo-input {
@@ -3664,76 +3940,168 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-weight: 500;
     }
     .promo-input::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+      color: var(--cart-text-dim);
     }
 
     .promo-apply-btn {
-      background: var(--primary, #7E22CE);
+      background: var(--cart-accent);
       color: #FFFFFF;
       border: none;
-      padding: 0.45rem 1rem;
+      padding: 0.42rem 0.95rem;
       border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 900;
-      letter-spacing: 0.04em;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
       cursor: pointer;
-      transition: transform 0.15s ease;
+      transition: filter 0.15s ease, transform 0.15s ease;
     }
     .promo-apply-btn:hover {
-      transform: scale(1.03);
+      filter: brightness(1.08);
+      transform: translateY(-1px);
     }
 
-    /* TOTALS BREAKDOWN */
+    /* TOTALS BREAKDOWN — the part of the panel a cashier reads aloud, so it
+       gets the heaviest surface and the only large type below the heading.
+       .totals-label, .totals-value, .grand-label and .grand-value had no rule
+       anywhere, which is why every line here rendered as plain body text. */
     .cart-totals-section {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
-      padding-top: 0.5rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      gap: 0.3rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 0.9rem;
+      background: var(--cart-sink);
+      border: 1px solid var(--cart-line);
     }
 
     .totals-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.82rem;
-      color: rgba(255, 255, 255, 0.85);
+      gap: 0.75rem;
     }
 
-    .grand-total-row {
-      font-size: 1.15rem;
-      font-weight: 900;
+    .totals-label {
+      font-size: 0.75rem;
+      color: var(--cart-text-soft);
+    }
+
+    .totals-value {
+      font-size: 0.75rem;
+      font-weight: 700;
       color: #FFFFFF;
-      padding-top: 0.35rem;
-      border-top: 1px dashed rgba(255, 255, 255, 0.2);
+      white-space: nowrap;
+    }
+
+    /* Marks a tax that is already inside the prices rather than added to
+       them, so the tax line cannot be read as money on top of the total. */
+    .tax-mode-chip {
+      display: inline-block;
+      margin-left: 0.3rem;
+      padding: 0.02rem 0.32rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      font-size: 0.5625rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #FFFFFF;
+    }
+
+    /* A reduction and an addition should not need reading to tell apart. */
+    .totals-row.is-credit .totals-label,
+    .totals-row.is-credit .totals-value { color: var(--cart-credit); }
+
+    .totals-row.is-debit .totals-label,
+    .totals-row.is-debit .totals-value { color: var(--cart-debit); }
+
+    .grand-total-row {
+      align-items: baseline;
+      margin-top: 0.15rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed var(--cart-line-strong);
+    }
+
+    .grand-label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cart-text-soft);
+    }
+
+    .grand-value {
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      color: #FFFFFF;
+      white-space: nowrap;
     }
 
     /* CONFIRM ORDER ACTION */
     .cart-actions-bottom {
-      padding-top: 0.25rem;
+      padding-top: 0.15rem;
+    }
+
+    /* Hold was carrying bg-white/10 and border-white/20, neither of which
+       this project ships, so it had no surface at all and read as broken
+       beside Confirm & Pay. */
+    .cart-hold-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.8rem 0.9rem;
+      border-radius: 9999px;
+      border: 1px solid var(--cart-line-strong);
+      background: var(--cart-raise-strong);
+      color: #FFFFFF;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .cart-hold-btn .material-symbols-outlined { font-size: 18px; }
+
+    .cart-hold-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .cart-hold-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
     .confirm-order-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
       width: 100%;
       background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
       color: #FFFFFF;
       border: none;
       border-radius: 9999px;
-      padding: 0.85rem;
-      font-size: 0.95rem;
+      padding: 0.8rem;
+      font-size: 0.875rem;
       font-weight: 900;
       letter-spacing: 0.02em;
       cursor: pointer;
-      box-shadow: 0 4px 15px var(--primary-glow, rgba(0, 0, 0, 0.3));
-      transition: transform 0.15s ease, filter 0.15s ease;
+      box-shadow: 0 10px 24px -10px var(--primary-glow, rgba(0, 0, 0, 0.3));
+      transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
     }
+    .confirm-order-btn .material-symbols-outlined { font-size: 20px; }
     .confirm-order-btn:hover:not(:disabled) {
-      filter: brightness(1.1);
+      filter: brightness(1.08);
       transform: translateY(-2px);
+      box-shadow: 0 14px 28px -10px var(--primary-glow, rgba(0, 0, 0, 0.3));
     }
     .confirm-order-btn:disabled {
-      opacity: 0.5;
+      opacity: 0.45;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     .no-scrollbar::-webkit-scrollbar {
@@ -4006,7 +4374,18 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       --g-blur-sm: blur(14px) saturate(170%);
       --g-dish: linear-gradient(145deg, rgba(var(--primary-rgb, 126, 34, 206), 0.58) 0%, rgba(var(--primary-variant-rgb, 107, 33, 168), 0.42) 100%);
       --g-cat: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.62) 0%, rgba(var(--primary-variant-rgb, 107, 33, 168), 0.42) 100%);
-      --g-pill: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.42) 100%);
+      /* Mixed from the card surface, not from white: on a dark palette a
+         white pill kept the theme's light text and placeholder on top of it,
+         which is the one control on this page that has to stay readable. */
+      --g-pill: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--card-bg, #FFFFFF) 88%, transparent) 0%,
+        color-mix(in srgb, var(--card-bg, #FFFFFF) 62%, transparent) 100%
+      );
+      /* The gloss along the pill's top edge. White on a light surface, and
+         nearly nothing on a dark one, which is what a dark pill wants. */
+      --g-pill-gloss: color-mix(in srgb, var(--card-bg, #FFFFFF) 72%, transparent);
+      --g-pill-edge: color-mix(in srgb, var(--card-border, #E9D5FF) 72%, transparent);
       --g-avatar: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.62) 100%);
       --g-edge: 1px solid rgba(255, 255, 255, 0.4);
       --g-scrim: linear-gradient(180deg, rgba(var(--text-main-rgb, 23, 8, 51), 0.04) 0%, rgba(var(--text-main-rgb, 23, 8, 51), 0.16) 45%, rgba(var(--text-main-rgb, 23, 8, 51), 0.34) 100%);
@@ -4036,18 +4415,20 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       background: var(--g-pill);
       -webkit-backdrop-filter: var(--g-blur-sm);
       backdrop-filter: var(--g-blur-sm);
-      border: var(--g-edge);
+      border: 1px solid var(--g-pill-edge, rgba(255, 255, 255, 0.4));
       box-shadow:
         0 8px 24px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.18),
-        inset 1px 1px 0 rgba(255, 255, 255, 0.75);
+        inset 1px 1px 0 var(--g-pill-gloss, rgba(255, 255, 255, 0.75));
     }
 
     .pos-search-pill:focus-within {
-      border-color: rgba(255, 255, 255, 0.85);
+      /* The focus ring is the brand colour in both palettes; a white edge
+         vanished into a light page and glared on a dark one. */
+      border-color: var(--primary, #7E22CE);
       box-shadow:
         0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.18)),
         0 10px 28px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.24),
-        inset 1px 1px 0 rgba(255, 255, 255, 0.85);
+        inset 1px 1px 0 var(--g-pill-gloss, rgba(255, 255, 255, 0.85));
     }
 
     .cat-avatar-bubble {
@@ -4141,6 +4522,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         --g-dish: linear-gradient(145deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
         --g-cat: var(--primary, #7E22CE);
         --g-pill: var(--card-bg, #FFFFFF);
+        --g-pill-gloss: transparent;
+        --g-pill-edge: var(--card-border, #E9D5FF);
         --g-avatar: var(--card-bg, #FFFFFF);
         --g-scrim: none;
       }
@@ -4153,6 +4536,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         --g-dish: linear-gradient(145deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
         --g-cat: var(--primary, #7E22CE);
         --g-pill: var(--card-bg, #FFFFFF);
+        --g-pill-gloss: transparent;
+        --g-pill-edge: var(--card-border, #E9D5FF);
         --g-avatar: var(--card-bg, #FFFFFF);
         --g-scrim: none;
         --g-wash: 0;
@@ -4194,14 +4579,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .complimentary-badge {
       font-size: 0.625rem;
       font-weight: 800;
-      color: #047857;
-      background: #D1FAE5;
+      color: var(--cart-credit, #6EE7B7);
+      background: color-mix(in srgb, var(--success, #16A34A) 26%, transparent);
       padding: 0.1rem 0.4rem;
       border-radius: 999px;
-      border: 1px solid #6EE7B7;
+      border: 1px solid color-mix(in srgb, var(--success, #16A34A) 45%, transparent);
     }
     .is-complimentary-row {
-      border-left: 3px solid #10B981 !important;
+      border-left: 3px solid var(--success, #10B981) !important;
     }
 
     /* Cart item action mini buttons (notes, comp) */
@@ -4223,42 +4608,56 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       color: #FFFFFF;
     }
     .item-action-icon-btn.is-active {
-      background: #F59E0B;
-      border-color: #FBBF24;
-      color: #78350F;
+      background: var(--sidebar-active-accent, var(--primary, #7E22CE));
+      border-color: var(--sidebar-active-accent, var(--primary, #7E22CE));
+      color: #FFFFFF;
     }
 
     /* Service charge & Surcharge billing addons bar */
     .cart-billing-addons {
-      padding: 0.5rem 0.75rem;
-      margin-bottom: 0.5rem;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0;
+      border-radius: 0.9rem;
+      background: var(--cart-raise);
+      border: 1px solid var(--cart-line);
     }
     .billing-addon-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 0.5rem;
     }
+
+    .billing-addon-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--cart-text-soft);
+    }
+
     .billing-chip-btn {
-      padding: 0.15rem 0.45rem;
-      border-radius: 6px;
+      min-width: 2.35rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.45rem;
       font-size: 0.6875rem;
       font-weight: 700;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(255, 255, 255, 0.1);
-      color: #FFFFFF;
+      border: 1px solid var(--cart-line-strong);
+      background: transparent;
+      color: var(--cart-text-soft);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
-    .billing-chip-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
+    .billing-chip-btn:hover:not(.is-selected) {
+      background: var(--cart-raise-strong);
+      color: #FFFFFF;
     }
+    /* Was a hard-coded amber that fought every theme but the violet one. */
     .billing-chip-btn.is-selected {
-      background: #FBBF24;
-      border-color: #F59E0B;
-      color: var(--text-main, #1F2937);
+      background: var(--cart-accent);
+      border-color: var(--cart-accent);
+      color: #FFFFFF;
     }
 
     /* ─── Touch tuning for the till ───────────────────────────────────
@@ -4458,7 +4857,7 @@ export class PosComponent implements OnInit, AfterViewInit {
   public paymentReference = '';
   public isCheckingOut = false;
   public onlineProvider = 'Swiggy';
-  public upiVpa = 'mandi.pos@okaxis';
+  public upiVpa = '.pos@okaxis';
   public autoPrintReceipt = true;
   public autoPrintKot = true;
 
@@ -4584,11 +4983,11 @@ export class PosComponent implements OnInit, AfterViewInit {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().then(() => {
         this.isBrowserFullscreen = true;
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       document.exitFullscreen().then(() => {
         this.isBrowserFullscreen = false;
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }
 
@@ -4652,7 +5051,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         }
       },
       // Secondary data: the interceptor reports it, and the till still works.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -4663,7 +5062,7 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.recentOrders = res.data;
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -4840,7 +5239,7 @@ export class PosComponent implements OnInit, AfterViewInit {
     return !!combo.original_price && combo.original_price > combo.combo_price;
   }
 
-  /** Dishes in the bundle, counting quantities — "1 Mandi + 2 Daqoos" is 3. */
+  /** Dishes in the bundle, counting quantities — "1  + 2 Daqoos" is 3. */
   comboItemCount(combo: ComboDeal): string {
     const n = (combo.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
     return n === 1 ? '1 dish' : `${n} dishes`;
@@ -5137,7 +5536,7 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.combosList = res.data;
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -5148,7 +5547,7 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.addonsList = res.data.filter((a: any) => a.is_available === true || a.is_available === 1);
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -5208,6 +5607,9 @@ export class PosComponent implements OnInit, AfterViewInit {
     }
   }
 
+  /** Template access to the shared label, for bill-history rows. */
+  public orderTypeLabel = orderTypeLabel;
+
   setOrderType(type: OrderType): void {
     this.cartService.orderType.set(type);
     if (type !== 'DINING') {
@@ -5225,7 +5627,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -5263,7 +5665,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -5295,7 +5697,7 @@ export class PosComponent implements OnInit, AfterViewInit {
             },
             // Reported by the global error interceptor; present so a failure
             // cannot escape as an unhandled rejection.
-            error: () => {},
+            error: () => { },
           });
         },
       });
@@ -5555,7 +5957,7 @@ export class PosComponent implements OnInit, AfterViewInit {
   testPrintReceipt(): void {
     const dummyBill = {
       billNumber: 'TEST-001',
-      orderType: 'WALK_IN',
+      orderType: 'TAKEAWAY',
       paymentMethod: 'CASH',
       items: [{ name: 'Thermal Printer Test Item', quantity: 1, unitPrice: 100, totalPrice: 100 }],
       subtotal: 100,
@@ -5604,7 +6006,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.cartService.clearCart();
         this.loadDraftCount();
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -5623,7 +6025,7 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.notify.success(`Draft ${res.data.draft_number} resumed into POS`);
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -5657,7 +6059,7 @@ export class PosComponent implements OnInit, AfterViewInit {
             this.loadDraftCount();
             this.notify.info('Draft deleted');
           },
-          error: () => {},
+          error: () => { },
         });
       },
     });
@@ -5818,7 +6220,7 @@ export class PosComponent implements OnInit, AfterViewInit {
                 this.printerService.printKot(kotRes.data);
               }
             },
-            error: () => {},
+            error: () => { },
           });
         }
 
@@ -5834,7 +6236,7 @@ export class PosComponent implements OnInit, AfterViewInit {
               }
             }
           },
-          error: () => {},
+          error: () => { },
         });
 
         this.cartService.clearCart();
@@ -5852,7 +6254,7 @@ export class PosComponent implements OnInit, AfterViewInit {
     const n = (name || '').toLowerCase();
     if (n.includes('burger')) return '🍔';
     if (n.includes('pizza')) return '🍕';
-    if (n.includes('mandi') || n.includes('rice') || n.includes('biryani')) return '🍗';
+    if (n.includes('') || n.includes('rice') || n.includes('biryani')) return '🍗';
     if (n.includes('taco')) return '🌮';
     if (n.includes('sushi')) return '🍣';
     if (n.includes('gratin') || n.includes('bake')) return '🍲';
@@ -5869,7 +6271,7 @@ export class PosComponent implements OnInit, AfterViewInit {
     if (n.includes('sushi')) return '🍣';
     if (n.includes('gratin')) return '🍲';
     if (n.includes('taco')) return '🌮';
-    if (n.includes('mandi')) return '🍗';
+    if (n.includes('')) return '🍗';
     if (n.includes('biryani')) return '🥘';
     if (n.includes('pudding') || n.includes('sweet') || n.includes('umali')) return '🍮';
     if (n.includes('chicken')) return '🍗';

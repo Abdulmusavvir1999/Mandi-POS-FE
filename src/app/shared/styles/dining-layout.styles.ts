@@ -724,11 +724,6 @@ export const DINING_LAYOUT_CSS = `
     background: #ECFEFF;
     color: #0891B2;
   }
-  .pill-waitlist {
-    background: var(--bg-app, #FAF5FF);
-    color: var(--primary, #7E22CE);
-    border: 1px solid var(--card-border, #E9D5FF);
-  }
   .timer-pill {
     display: inline-flex;
     align-items: center;

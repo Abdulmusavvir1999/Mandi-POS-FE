@@ -35,7 +35,7 @@ export const UNLOCK_HEADER = 'X-Back-Office-Unlock';
 })
 export class BackOfficeAccessService {
   private readonly API_URL = `${environment.apiUrl}/back-office/access`;
-  private readonly UNLOCK_KEY = 'mandi_pos_back_office_unlock';
+  private readonly UNLOCK_KEY = '_pos_back_office_unlock';
 
   private http = inject(HttpClient);
 

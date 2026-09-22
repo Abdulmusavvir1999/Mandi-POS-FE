@@ -546,9 +546,8 @@ export class ReportsComponent implements OnInit {
 
   public orderTypeOptions: DropdownOption[] = [
     { value: '', label: 'All Order Types', icon: 'receipt_long' },
-    { value: 'WALK_IN', label: 'Walk-In Counter', icon: 'storefront', description: 'Takeaway counter' },
-    { value: 'TAKEAWAY', label: 'Takeaway Parcel', icon: 'takeout_dining', description: 'Packed orders' },
-    { value: 'DINING', label: 'Dine-In Restaurant', icon: 'table_restaurant', description: 'Table seating' },
+    { value: 'DINING', label: 'Dine In', icon: 'table_restaurant', description: 'Table service' },
+    { value: 'TAKEAWAY', label: 'Takeaway', icon: 'takeout_dining', description: 'Parcels, pickup & counter' },
   ];
 
   public salesData: any = null;
@@ -610,12 +609,12 @@ export class ReportsComponent implements OnInit {
           this.selectedOrderType || undefined
         )
         .subscribe({
-        next: (res) => {
-          this.isLoading = false;
-          if (res.success) this.productData = res.data;
-        },
-        error: onError,
-      });
+          next: (res) => {
+            this.isLoading = false;
+            if (res.success) this.productData = res.data;
+          },
+          error: onError,
+        });
     } else if (this.activeTab === 'CATEGORIES') {
       this.reportService
         .getCategorySalesReport(
@@ -625,12 +624,12 @@ export class ReportsComponent implements OnInit {
           this.selectedOrderType || undefined
         )
         .subscribe({
-        next: (res) => {
-          this.isLoading = false;
-          if (res.success) this.categoryData = res.data;
-        },
-        error: onError,
-      });
+          next: (res) => {
+            this.isLoading = false;
+            if (res.success) this.categoryData = res.data;
+          },
+          error: onError,
+        });
     } else if (this.activeTab === 'STOCK') {
       this.reportService.getStockReport().subscribe({
         next: (res) => {
@@ -668,14 +667,14 @@ export class ReportsComponent implements OnInit {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `mandi_pos_report_${this.activeTab.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `_pos_report_${this.activeTab.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   }
 
   getCategoryBadgeStyle(categoryName?: string): { [key: string]: string } {
     const cat = (categoryName || '').toLowerCase();
-    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+    if (cat.includes('') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
       return {
         'background-color': '#FFFBEB',
         'color': '#B45309',
@@ -726,7 +725,7 @@ export class ReportsComponent implements OnInit {
 
   getCategoryIcon(categoryName?: string): string {
     const cat = (categoryName || '').toLowerCase();
-    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+    if (cat.includes('') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
       return 'rice_bowl';
     }
     if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {

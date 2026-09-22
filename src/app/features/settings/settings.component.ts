@@ -3196,6 +3196,33 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               </div>
             </div>
 
+            <!-- Which side of the menu price the tax sits on. It changes every
+                 total the system computes, so it is stated here rather than
+                 left to be inferred from the rate. -->
+            <div class="form-vertical-group">
+              <label class="control-label">Tax Type (Price Basis)</label>
+              <app-custom-dropdown
+                [options]="taxInclusiveOptions"
+                [(ngModel)]="settingsMap['TAX_INCLUSIVE']"
+                placeholder="Select tax type"
+                minWidth="100%"
+              ></app-custom-dropdown>
+              <p class="control-hint">
+                <ng-container *ngIf="settingsMap['TAX_INCLUSIVE'] === 'true'">
+                  {{ settingsMap['TAX_PERCENTAGE'] || 0 }}% inclusive on a
+                  {{ currencySymbol }}{{ taxTypeExampleGross | number:'1.2-2' }} dish — guest pays
+                  {{ currencySymbol }}{{ taxTypeExampleGross | number:'1.2-2' }}, of which
+                  {{ currencySymbol }}{{ taxTypeExampleInclusiveTax | number:'1.2-2' }} is tax.
+                </ng-container>
+                <ng-container *ngIf="settingsMap['TAX_INCLUSIVE'] !== 'true'">
+                  {{ settingsMap['TAX_PERCENTAGE'] || 0 }}% exclusive on a
+                  {{ currencySymbol }}{{ taxTypeExampleGross | number:'1.2-2' }} dish — guest pays
+                  {{ currencySymbol }}{{ taxTypeExampleExclusiveTotal | number:'1.2-2' }}, of which
+                  {{ currencySymbol }}{{ taxTypeExampleExclusiveTax | number:'1.2-2' }} is tax.
+                </ng-container>
+              </p>
+            </div>
+
             <!-- POS Behavior Controls -->
             <div class="sub-section-divider">
               <div class="sub-section-title">POS Operational Rules</div>
@@ -3328,7 +3355,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
             <div class="form-vertical-group">
               <label class="control-label">Receipt Tagline / Subtitle</label>
-              <input title="Receipt Tagline / Subtitle" type="text" [(ngModel)]="settingsMap['RECEIPT_TAGLINE']" class="control-input font-mono" placeholder="Authentic Dum Mandi & Arabian Delicacies" />
+              <input title="Receipt Tagline / Subtitle" type="text" [(ngModel)]="settingsMap['RECEIPT_TAGLINE']" class="control-input font-mono" placeholder="Authentic Dum  & Arabian Delicacies" />
             </div>
 
             <div class="form-vertical-group">
@@ -9242,16 +9269,55 @@ export class SettingsComponent implements OnInit {
     { value: 'false', label: 'Tax Computation Disabled', icon: 'block', description: 'Prices are all-inclusive without extra tax' },
   ];
 
+  /**
+   * Which side of the menu price the tax sits on.
+   *
+   * This is not a display preference: INCLUSIVE stops the tax being added to
+   * the bill and has it extracted from the price instead, on the till, on the
+   * server and on the printed receipt alike.
+   */
+  public readonly taxInclusiveOptions: DropdownOption[] = [
+    { value: 'false', label: 'Exclusive (Tax Added on Top)', icon: 'add_circle', description: 'Menu prices are net; tax is added to the bill' },
+    { value: 'true', label: 'Inclusive (Tax Inside Price)', icon: 'adjust', description: 'Menu prices already contain the tax; nothing is added' },
+  ];
+
   public readonly negativeStockOptions: DropdownOption[] = [
     { value: 'false', label: 'Disallow Negative Stock (Strict)', icon: 'inventory_2', description: 'Blocks orders if stock reaches zero' },
     { value: 'true', label: 'Allow Negative Stock (Flexible)', icon: 'published_with_changes', description: 'Allows billing even if stock count is zero' },
   ];
 
+  /** A round number to show the rule on, rather than explain it in prose. */
+  public readonly taxTypeExampleGross = 100;
+
+  public get currencySymbol(): string {
+    return this.settingsMap['CURRENCY_SYMBOL'] || this.settingsMap['currency_symbol'] || '₹';
+  }
+
+  private get taxTypeExampleRate(): number {
+    const rate = Number(this.settingsMap['TAX_PERCENTAGE']);
+    return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  }
+
+  /** Tax contained in a 100 price when the price already includes it. */
+  public get taxTypeExampleInclusiveTax(): number {
+    const rate = this.taxTypeExampleRate;
+    if (rate <= 0) return 0;
+    const gross = this.taxTypeExampleGross;
+    return Math.round((gross - gross / (1 + rate / 100)) * 100) / 100;
+  }
+
+  /** Tax added to a 100 price when the price is net. */
+  public get taxTypeExampleExclusiveTax(): number {
+    return Math.round(((this.taxTypeExampleGross * this.taxTypeExampleRate) / 100) * 100) / 100;
+  }
+
+  public get taxTypeExampleExclusiveTotal(): number {
+    return Math.round((this.taxTypeExampleGross + this.taxTypeExampleExclusiveTax) * 100) / 100;
+  }
+
   public readonly defaultOrderTypeOptions: DropdownOption[] = [
-    { value: 'WALK_IN', label: 'Walk-In / Counter', icon: 'directions_walk', description: 'Fast takeaway & walk-in ordering' },
-    { value: 'DINE_IN', label: 'Dine-In / Table Service', icon: 'table_restaurant', description: 'Table order management' },
-    { value: 'TAKEAWAY', label: 'Takeaway / Parcel', icon: 'shopping_bag', description: 'Pack & parcel orders' },
-    { value: 'DELIVERY', label: 'Home Delivery', icon: 'delivery_dining', description: 'Direct delivery orders' },
+    { value: 'DINING', label: 'Dine In', icon: 'table_restaurant', description: 'Table order management' },
+    { value: 'TAKEAWAY', label: 'Takeaway', icon: 'shopping_bag', description: 'Parcels, pickup & counter' },
   ];
 
   public readonly paperWidthOptions: DropdownOption[] = [
@@ -9432,40 +9498,40 @@ export class SettingsComponent implements OnInit {
     autoLabel: string;
     copiesKey: string;
   }[] = [
-    {
-      title: 'Cashier Receipt Station',
-      subtitle: 'The customer bill printed at the till',
-      icon: 'receipt_long',
-      enabledKey: 'PRINTER_RECEIPT_ENABLED',
-      nameKey: 'PRINTER_RECEIPT_NAME',
-      widthKey: 'PRINTER_RECEIPT_WIDTH',
-      autoKey: 'PRINTER_RECEIPT_AUTO',
-      autoLabel: 'Print On Checkout',
-      copiesKey: 'PRINTER_RECEIPT_COPIES',
-    },
-    {
-      title: 'Kitchen (KOT) Station',
-      subtitle: 'The order ticket the chef line works from',
-      icon: 'soup_kitchen',
-      enabledKey: 'PRINTER_KITCHEN_ENABLED',
-      nameKey: 'PRINTER_KITCHEN_NAME',
-      widthKey: 'PRINTER_KITCHEN_WIDTH',
-      autoKey: 'PRINTER_KITCHEN_AUTO',
-      autoLabel: 'Print On Order Placed',
-      copiesKey: 'PRINTER_KITCHEN_COPIES',
-    },
-    {
-      title: 'Bar / Beverage Station',
-      subtitle: 'Drinks split onto their own ticket',
-      icon: 'local_bar',
-      enabledKey: 'PRINTER_BAR_ENABLED',
-      nameKey: 'PRINTER_BAR_NAME',
-      widthKey: 'PRINTER_BAR_WIDTH',
-      autoKey: 'PRINTER_BAR_AUTO',
-      autoLabel: 'Print On Order Placed',
-      copiesKey: 'PRINTER_BAR_COPIES',
-    },
-  ];
+      {
+        title: 'Cashier Receipt Station',
+        subtitle: 'The customer bill printed at the till',
+        icon: 'receipt_long',
+        enabledKey: 'PRINTER_RECEIPT_ENABLED',
+        nameKey: 'PRINTER_RECEIPT_NAME',
+        widthKey: 'PRINTER_RECEIPT_WIDTH',
+        autoKey: 'PRINTER_RECEIPT_AUTO',
+        autoLabel: 'Print On Checkout',
+        copiesKey: 'PRINTER_RECEIPT_COPIES',
+      },
+      {
+        title: 'Kitchen (KOT) Station',
+        subtitle: 'The order ticket the chef line works from',
+        icon: 'soup_kitchen',
+        enabledKey: 'PRINTER_KITCHEN_ENABLED',
+        nameKey: 'PRINTER_KITCHEN_NAME',
+        widthKey: 'PRINTER_KITCHEN_WIDTH',
+        autoKey: 'PRINTER_KITCHEN_AUTO',
+        autoLabel: 'Print On Order Placed',
+        copiesKey: 'PRINTER_KITCHEN_COPIES',
+      },
+      {
+        title: 'Bar / Beverage Station',
+        subtitle: 'Drinks split onto their own ticket',
+        icon: 'local_bar',
+        enabledKey: 'PRINTER_BAR_ENABLED',
+        nameKey: 'PRINTER_BAR_NAME',
+        widthKey: 'PRINTER_BAR_WIDTH',
+        autoKey: 'PRINTER_BAR_AUTO',
+        autoLabel: 'Print On Order Placed',
+        copiesKey: 'PRINTER_BAR_COPIES',
+      },
+    ];
 
   /** The floor events the Notification Settings tab can switch on and off. */
   public readonly notificationTriggers: { key: string; title: string; subtitle: string }[] = [
@@ -9596,7 +9662,7 @@ export class SettingsComponent implements OnInit {
   // formatting, so the figures must not move for reasons unrelated to a
   // setting the user just changed.
   public readonly invoicePreviewItems: ReadonlyArray<{ name: string; qty: number; rate: number }> = [
-    { name: 'Chicken Mandi (Full)', qty: 1, rate: 58 },
+    { name: 'Chicken  (Full)', qty: 1, rate: 58 },
     { name: 'Lamb Madfoon (Half)', qty: 2, rate: 42.5 },
     { name: 'Fresh Mint Lemonade', qty: 3, rate: 9 },
   ];
@@ -9734,7 +9800,7 @@ export class SettingsComponent implements OnInit {
           autoPrintKot: map['PRINTER_BAR_AUTO'] === 'true',
         },
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   /** Edits on the Printer tab reach the print paths without waiting for a save. */
@@ -9770,7 +9836,7 @@ export class SettingsComponent implements OnInit {
           flat[flatKey] = String(parsed[jsonKey]);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   /**
@@ -9784,11 +9850,11 @@ export class SettingsComponent implements OnInit {
         this.printer.printThermalReceipt(
           {
             bill_number: 'TEST-0001',
-            order_type: 'WALK_IN',
+            order_type: 'TAKEAWAY',
             created_at: new Date().toISOString(),
             cashier_name: 'Test Print',
             items: [
-              { product_name: 'Chicken Mandi', quantity: 1, unit_price: 320, subtotal: 320 },
+              { product_name: 'Chicken ', quantity: 1, unit_price: 320, subtotal: 320 },
               { product_name: 'Mint Lemonade', quantity: 2, unit_price: 60, subtotal: 120 },
             ],
             subtotal: 440,
@@ -9812,7 +9878,7 @@ export class SettingsComponent implements OnInit {
           orderTime: new Date().toISOString(),
           cashierName: 'Test Print',
           notes: 'Test ticket — no kitchen action needed',
-          items: [{ productName: 'Chicken Mandi', quantity: 1 }],
+          items: [{ productName: 'Chicken ', quantity: 1 }],
         });
       }
       this.notify.info('Test page sent to the print dialog.');
@@ -9835,34 +9901,34 @@ export class SettingsComponent implements OnInit {
     accept: string;
     maxMb: number;
   }[] = [
-    {
-      key: 'logo',
-      settingKey: 'BRANDING_LOGO',
-      title: 'Brand Logo',
-      hint: 'Crest in the sidebar header and on the sign-in card. PNG, JPG, WEBP or GIF, up to 2 MB.',
-      icon: 'storefront',
-      accept: 'image/png,image/jpeg,image/webp,image/gif',
-      maxMb: 2,
-    },
-    {
-      key: 'login',
-      settingKey: 'BRANDING_LOGIN_IMAGE',
-      title: 'Login Image',
-      hint: 'Artwork beside the sign-in form. PNG, JPG, WEBP or GIF, up to 5 MB.',
-      icon: 'wallpaper',
-      accept: 'image/png,image/jpeg,image/webp,image/gif',
-      maxMb: 5,
-    },
-    {
-      key: 'favicon',
-      settingKey: 'BRANDING_FAVICON',
-      title: 'Favicon',
-      hint: 'Icon in the browser tab and window title bar. ICO or PNG, up to 1 MB.',
-      icon: 'star',
-      accept: 'image/x-icon,image/png,image/webp,image/gif,.ico',
-      maxMb: 1,
-    },
-  ];
+      {
+        key: 'logo',
+        settingKey: 'BRANDING_LOGO',
+        title: 'Brand Logo',
+        hint: 'Crest in the sidebar header and on the sign-in card. PNG, JPG, WEBP or GIF, up to 2 MB.',
+        icon: 'storefront',
+        accept: 'image/png,image/jpeg,image/webp,image/gif',
+        maxMb: 2,
+      },
+      {
+        key: 'login',
+        settingKey: 'BRANDING_LOGIN_IMAGE',
+        title: 'Login Image',
+        hint: 'Artwork beside the sign-in form. PNG, JPG, WEBP or GIF, up to 5 MB.',
+        icon: 'wallpaper',
+        accept: 'image/png,image/jpeg,image/webp,image/gif',
+        maxMb: 5,
+      },
+      {
+        key: 'favicon',
+        settingKey: 'BRANDING_FAVICON',
+        title: 'Favicon',
+        hint: 'Icon in the browser tab and window title bar. ICO or PNG, up to 1 MB.',
+        icon: 'star',
+        accept: 'image/x-icon,image/png,image/webp,image/gif,.ico',
+        maxMb: 1,
+      },
+    ];
 
   /** Slot currently being uploaded, so its button can show progress. */
   public uploadingSlot: BrandingSlotKey | null = null;
@@ -10033,13 +10099,13 @@ export class SettingsComponent implements OnInit {
         this.backupFolderCheck =
           data.configured && !data.ok
             ? {
-                path: data.path,
-                ok: false,
-                exists: data.exists,
-                writable: data.writable,
-                created: false,
-                message: data.message,
-              }
+              path: data.path,
+              ok: false,
+              exists: data.exists,
+              writable: data.writable,
+              created: false,
+              message: data.message,
+            }
             : null;
       })
       .catch(() => {
@@ -10105,7 +10171,7 @@ export class SettingsComponent implements OnInit {
       // service with no desktop. Fall back rather than leaving Browse dead.
       this.notify.warning(
         err?.error?.message ??
-          'The Windows folder dialog could not be opened. Using the built-in browser instead.',
+        'The Windows folder dialog could not be opened. Using the built-in browser instead.',
         'Opening Built-in Browser'
       );
       this.nativePickerAvailable = false;
@@ -10394,10 +10460,11 @@ export class SettingsComponent implements OnInit {
           flat['receipt_footer_note'] = footer;
           if (b.taxEnabled !== undefined) flat['TAX_ENABLED'] = String(b.taxEnabled);
           if (b.taxName) flat['TAX_NAME'] = b.taxName;
+          if (b.taxInclusive !== undefined) flat['TAX_INCLUSIVE'] = String(b.taxInclusive);
           if (b.allowNegativeStock !== undefined) flat['POS_ALLOW_NEGATIVE_STOCK'] = String(b.allowNegativeStock);
           if (b.defaultOrderType) flat['POS_DEFAULT_ORDER_TYPE'] = b.defaultOrderType;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
 
@@ -10412,7 +10479,7 @@ export class SettingsComponent implements OnInit {
           flat['BRANDING_FAVICON'] = br.favicon || '';
           flat['BRANDING_APP_TITLE'] = br.appTitle || '';
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     // Unpack system_hardware JSON
     const rawHardware = flat['system_hardware'] || flat['SYSTEM_HARDWARE'];
@@ -10439,7 +10506,7 @@ export class SettingsComponent implements OnInit {
           if (h.receiptShowCustomer !== undefined) flat['RECEIPT_SHOW_CUSTOMER'] = String(h.receiptShowCustomer);
           if (h.posSoundEffects !== undefined) flat['POS_SOUND_EFFECTS'] = String(h.posSoundEffects);
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Unpack system_toast JSON
@@ -10455,7 +10522,7 @@ export class SettingsComponent implements OnInit {
           if (t.pauseOnHover !== undefined) flat['TOAST_PAUSE_HOVER'] = String(t.pauseOnHover);
           if (t.animation) flat['TOAST_ANIMATION'] = t.animation;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Unpack the Printer / Notification / Invoice JSON rows
@@ -10543,7 +10610,7 @@ export class SettingsComponent implements OnInit {
         this.notify.error('Unable to sync cloud order. Please check network connection.');
         break;
       case 'warning':
-        this.notify.warning('Chicken Mandi is running low on stock (2 portions left).');
+        this.notify.warning('Chicken  is running low on stock (2 portions left).');
         break;
       case 'info':
         this.notify.info('POS database automated backup completed.');
@@ -10667,8 +10734,9 @@ export class SettingsComponent implements OnInit {
         taxPercentage: taxRate,
         taxEnabled: String(this.settingsMap['TAX_ENABLED']) === 'true' ? 'true' : 'false',
         taxName: this.settingsMap['TAX_NAME'] || 'GST',
+        taxInclusive: String(this.settingsMap['TAX_INCLUSIVE']) === 'true' ? 'true' : 'false',
         allowNegativeStock: this.settingsMap['POS_ALLOW_NEGATIVE_STOCK'] === 'true' ? 'true' : 'false',
-        defaultOrderType: this.settingsMap['POS_DEFAULT_ORDER_TYPE'] || 'WALK_IN',
+        defaultOrderType: this.settingsMap['POS_DEFAULT_ORDER_TYPE'] || 'TAKEAWAY',
       };
       payload['system_business'] = JSON.stringify(businessPayload);
 

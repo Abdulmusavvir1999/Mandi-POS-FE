@@ -10,9 +10,9 @@ import { environment } from '../../../../environments/environment';
 })
 export class AuthService {
   private readonly API_URL = environment.apiUrl;
-  private readonly TOKEN_KEY = 'mandi_pos_token';
-  private readonly REFRESH_KEY = 'mandi_pos_refresh';
-  private readonly USER_KEY = 'mandi_pos_user';
+  private readonly TOKEN_KEY = '_pos_token';
+  private readonly REFRESH_KEY = '_pos_refresh';
+  private readonly USER_KEY = '_pos_user';
 
   private currentUserSignal = signal<User | null>(this.getStoredUser());
 
@@ -21,7 +21,7 @@ export class AuthService {
   public userRole = computed(() => this.currentUserSignal()?.role || null);
   public userPermissions = computed(() => this.currentUserSignal()?.permissions || []);
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router) { }
 
   public login(credentials: { username: string; password: string }): Observable<ApiResponse<{ user: User; token: string; refreshToken: string }>> {
     return this.http.post<ApiResponse<{ user: User; token: string; refreshToken: string }>>(`${this.API_URL}/auth/login`, credentials).pipe(
@@ -37,7 +37,7 @@ export class AuthService {
     const token = this.getToken();
     if (token) {
       this.http.post(`${this.API_URL}/auth/logout`, {}).subscribe({
-        error: () => {},
+        error: () => { },
       });
     }
     if (typeof window !== 'undefined') {
@@ -129,7 +129,7 @@ export class AuthService {
           this.currentUserSignal.set(res.data);
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 

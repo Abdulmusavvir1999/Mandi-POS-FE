@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { normalizeOrderType, orderTypeLabel } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 
@@ -1390,16 +1391,10 @@ export class DashboardComponent implements OnInit {
   }
 
   getOrderTypeClass(type: string): string {
-    const t = (type || '').toUpperCase();
-    if (t === 'DINING') return 'chip-dining';
-    if (t === 'TAKEAWAY') return 'chip-takeaway';
-    return 'chip-walkin';
+    return normalizeOrderType(type) === 'DINING' ? 'chip-dining' : 'chip-takeaway';
   }
 
   formatOrderType(type: string): string {
-    const t = (type || '').toUpperCase();
-    if (t === 'DINING') return 'Dine-In';
-    if (t === 'TAKEAWAY') return 'Takeaway';
-    return 'Walk-In';
+    return orderTypeLabel(type);
   }
 }

@@ -5,7 +5,40 @@ import { PrinterConfig } from '../models';
   providedIn: 'root',
 })
 export class PrinterService {
-  private readonly STORAGE_PRINTER_KEY = 'mandi_pos_printer_config';
+  /**
+   * Whether this bill's tax was already inside the price, rather than added.
+   *
+   * The answer is taken from the bill's own figures, not from today's setting:
+   * a receipt reprinted after the rule was switched has to describe the bill
+   * that was actually taken. Under EXCLUSIVE the total is the discounted
+   * subtotal plus the tax and the charges; under INCLUSIVE the tax is already
+   * counted in the subtotal, so leaving it out is what reconciles.
+   */
+  public static taxIsInsideTotal(bill: any): boolean {
+    const num = (...keys: string[]): number => {
+      for (const k of keys) {
+        const v = Number(bill?.[k]);
+        if (Number.isFinite(v) && v !== 0) return v;
+      }
+      return 0;
+    };
+
+    const tax = num('tax_amount', 'taxAmount');
+    if (tax <= 0) return false;
+
+    const base =
+      num('subtotal') -
+      num('discount_amount', 'discountAmount') -
+      num('coupon_discount', 'couponDiscount') +
+      num('service_charge_amount', 'serviceChargeAmount') +
+      num('surcharge_amount', 'surchargeAmount');
+    const total = num('total_amount', 'totalAmount', 'grandTotal');
+    if (total <= 0) return false;
+
+    return Math.abs(total - base) < Math.abs(total - (base + tax));
+  }
+
+  private readonly STORAGE_PRINTER_KEY = '_pos_printer_config';
 
   public config = signal<PrinterConfig>(this.loadConfig());
 
@@ -15,7 +48,7 @@ export class PrinterService {
       if (raw) {
         return JSON.parse(raw);
       }
-    } catch {}
+    } catch { }
 
     return {
       receiptPrinter: {
@@ -43,7 +76,7 @@ export class PrinterService {
     this.config.set(cfg);
     try {
       localStorage.setItem(this.STORAGE_PRINTER_KEY, JSON.stringify(cfg));
-    } catch {}
+    } catch { }
   }
 
   /**
@@ -95,7 +128,7 @@ export class PrinterService {
   /**
    * Print Thermal Customer Receipt
    */
-  public printThermalReceipt(bill: any, settings: any = { businessName: 'MANDI RESTAURANT', contactPhone: '+91 98765 43210' }): void {
+  public printThermalReceipt(bill: any, settings: any = { businessName: ' RESTAURANT', contactPhone: '+91 98765 43210' }): void {
     const width = this.config().receiptPrinter.paperWidth || '80mm';
     const itemsHtml = (bill.items || []).map((it: any) => `
       <div class="flex" style="margin-bottom: 3px;">
@@ -112,7 +145,7 @@ export class PrinterService {
 
     const html = `
       <div class="text-center border-b">
-        <h2 style="margin: 0; font-size: 16px;">${settings?.businessName || 'MANDI RESTAURANT'}</h2>
+        <h2 style="margin: 0; font-size: 16px;">${settings?.businessName || ' RESTAURANT'}</h2>
         <div style="font-size: 11px;">${settings?.address || ''}</div>
         <div style="font-size: 11px;">Tel: ${settings?.phone || ''}</div>
         ${settings?.gstin ? `<div style="font-size: 11px; font-weight: bold;">GSTIN: ${settings.gstin}</div>` : ''}
@@ -134,7 +167,9 @@ export class PrinterService {
         <div class="flex"><span>Subtotal:</span><span>₹${Number(bill.subtotal || 0).toFixed(0)}</span></div>
         ${Number(bill.discount_amount || bill.discountAmount || 0) > 0 ? `<div class="flex"><span>Discount:</span><span>-₹${Number(bill.discount_amount || bill.discountAmount).toFixed(0)}</span></div>` : ''}
         ${Number(bill.coupon_discount || bill.couponDiscount || 0) > 0 ? `<div class="flex"><span>Coupon (${bill.coupon_code || bill.couponCode}):</span><span>-₹${Number(bill.coupon_discount || bill.couponDiscount).toFixed(0)}</span></div>` : ''}
-        ${Number(bill.tax_amount || bill.taxAmount || 0) > 0 ? `<div class="flex"><span>Tax / GST:</span><span>+₹${Number(bill.tax_amount || bill.taxAmount).toFixed(0)}</span></div>` : ''}
+        ${Number(bill.tax_amount || bill.taxAmount || 0) > 0
+        ? `<div class="flex"><span>Tax / GST${PrinterService.taxIsInsideTotal(bill) ? ' (incl.)' : ''}:</span><span>${PrinterService.taxIsInsideTotal(bill) ? '' : '+'}₹${Number(bill.tax_amount || bill.taxAmount).toFixed(0)}</span></div>`
+        : ''}
         ${Number(bill.service_charge_amount || bill.serviceChargeAmount || 0) > 0 ? `<div class="flex"><span>Service Charge:</span><span>+₹${Number(bill.service_charge_amount || bill.serviceChargeAmount).toFixed(0)}</span></div>` : ''}
         ${Number(bill.surcharge_amount || bill.surchargeAmount || 0) > 0 ? `<div class="flex"><span>Packaging/Surcharge:</span><span>+₹${Number(bill.surcharge_amount || bill.surchargeAmount).toFixed(0)}</span></div>` : ''}
       </div>
@@ -152,7 +187,7 @@ export class PrinterService {
 
       <div class="text-center border-t" style="margin-top: 10px; font-size: 10px;">
         <div>${settings?.footer || 'Thank you for dining with us! Please visit again.'}</div>
-        <div style="margin-top: 4px; color: #666;">Powered by Mandi POS</div>
+        <div style="margin-top: 4px; color: #666;">Powered by  POS</div>
       </div>
     `;
 
@@ -204,12 +239,12 @@ export class PrinterService {
   /**
    * Print End-of-Day Closing (Z-Report)
    */
-  public printDayClosingZReport(closing: any, settings: any = { businessName: 'MANDI RESTAURANT' }): void {
+  public printDayClosingZReport(closing: any, settings: any = { businessName: ' RESTAURANT' }): void {
     const width = '80mm';
     const html = `
       <div class="text-center border-b">
         <h2 style="margin: 0; font-size: 16px;">*** Z-REPORT (DAY CLOSING) ***</h2>
-        <div style="font-size: 12px; font-weight: bold;">${settings?.businessName || 'MANDI RESTAURANT'}</div>
+        <div style="font-size: 12px; font-weight: bold;">${settings?.businessName || ' RESTAURANT'}</div>
         <div style="font-size: 11px;">Ref: <strong>#${closing.closing_number}</strong></div>
       </div>
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DiningTable, ApiResponse, TableStatus, TableReservation, TableWaitlist, TableHistoryItem } from '../models';
+import { DiningTable, ApiResponse, TableStatus, TableReservation, TableHistoryItem } from '../models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -77,22 +77,5 @@ export class DiningService {
 
   public cancelReservation(reservationId: number): Observable<ApiResponse<any>> {
     return this.http.delete<ApiResponse<any>>(`${this.API_URL}/reservations/${reservationId}`);
-  }
-
-  // Waiting List & Queue Tokens
-  public getWaitlist(): Observable<ApiResponse<TableWaitlist[]>> {
-    return this.http.get<ApiResponse<TableWaitlist[]>>(`${this.API_URL}/waitlist`);
-  }
-
-  public addToWaitlist(data: Partial<TableWaitlist>): Observable<ApiResponse<TableWaitlist>> {
-    return this.http.post<ApiResponse<TableWaitlist>>(`${this.API_URL}/waitlist`, data);
-  }
-
-  public seatWaitlistParty(waitlistId: number, tableId: number): Observable<ApiResponse<DiningTable>> {
-    return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/waitlist/${waitlistId}/seat`, { tableId });
-  }
-
-  public updateWaitlistStatus(waitlistId: number, status: 'WAITING' | 'NOTIFIED' | 'CANCELLED'): Observable<ApiResponse<any>> {
-    return this.http.patch<ApiResponse<any>>(`${this.API_URL}/waitlist/${waitlistId}/status`, { status });
   }
 }

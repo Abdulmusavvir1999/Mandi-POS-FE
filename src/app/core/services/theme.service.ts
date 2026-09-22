@@ -18,7 +18,7 @@ export interface ThemePalette {
 
 export const DEFAULT_THEME_PALETTES: Record<string, { name: string; icon: string; palette: ThemePalette }> = {
   purple: {
-    name: 'Royal Purple (Mandi Brand)',
+    name: 'Royal Purple ( Brand)',
     icon: '🟪',
     palette: {
       primary: '#7E22CE',
@@ -110,7 +110,7 @@ export const DEFAULT_THEME_PALETTES: Record<string, { name: string; icon: string
 };
 
 /**
- * The Mandi brand purple, as every page design shipped its brand slots.
+ * The  brand purple, as every page design shipped its brand slots.
  *
  * It is the marker for "this token is the app's brand color", not "this design
  * wants purple": a design that ships some other hue in the same slot — the
@@ -166,8 +166,8 @@ export class ThemeService {
   constructor() {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.removeItem('mandi_pos_ui_theme_palette');
-      } catch (_) {}
+        localStorage.removeItem('_pos_ui_theme_palette');
+      } catch (_) { }
     }
     this.loadInitialTheme();
   }
@@ -186,7 +186,7 @@ export class ThemeService {
       },
       // Same reason: keep the baseline palette rather than letting a failed
       // bootstrap request escape unhandled.
-      error: () => {},
+      error: () => { },
     });
   }
 

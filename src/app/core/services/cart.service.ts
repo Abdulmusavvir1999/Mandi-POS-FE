@@ -1,5 +1,14 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { CartItem, Product, ProductVariant, Customer, DiningTable, OrderType, ProductAddon } from '../models';
+import {
+  CartItem,
+  Product,
+  ProductVariant,
+  Customer,
+  DiningTable,
+  OrderType,
+  ProductAddon,
+  normalizeOrderType,
+} from '../models';
 import { SettingsService } from './settings.service';
 
 @Injectable({
@@ -10,7 +19,7 @@ export class CartService {
   private itemsSignal = signal<CartItem[]>([]);
   public items = this.itemsSignal.asReadonly();
 
-  public orderType = signal<OrderType>('WALK_IN');
+  public orderType = signal<OrderType>('TAKEAWAY');
   public selectedCustomer = signal<Customer | null>(null);
   public selectedTable = signal<DiningTable | null>(null);
 
@@ -24,6 +33,15 @@ export class CartService {
   public orderNotes = signal<string>('');
   public taxRate = signal<number>(0);
   public isTaxEnabled = signal<boolean>(true);
+  /**
+   * True when the menu price already contains the tax.
+   *
+   * Under this rule nothing is added at the till: the guest pays the price on
+   * the card, and the tax line reports the part of it that is tax. The server
+   * recomputes the bill under the same rule, so the two totals match — they
+   * have to, or checkout is rejected for underpayment.
+   */
+  public isTaxInclusive = signal<boolean>(false);
 
   constructor() {
     this.settingsService.loadPublicSettings().subscribe({
@@ -35,6 +53,9 @@ export class CartService {
         }
         if (settings['TAX_ENABLED'] !== undefined) {
           this.isTaxEnabled.set(settings['TAX_ENABLED'] === 'true');
+        }
+        if (settings['TAX_INCLUSIVE'] !== undefined) {
+          this.isTaxInclusive.set(settings['TAX_INCLUSIVE'] === 'true');
         }
       },
       error: () => {},
@@ -68,10 +89,33 @@ export class CartService {
     return Math.max(0, this.subtotal() - totalDiscounts);
   });
 
+  /**
+   * The tax on the bill — added on top, or extracted from what is already
+   * there.
+   *
+   * EXCLUSIVE: the taxable amount is net, so the tax is a percentage of it.
+   * INCLUSIVE: the taxable amount already contains the tax, so the tax is the
+   * part above the net value, i.e. amount - amount / (1 + rate).
+   */
   public taxAmount = computed(() => {
-    if (!this.isTaxEnabled()) return 0;
-    return Math.round(((this.taxableAmount() * this.taxRate()) / 100) * 100) / 100;
+    const rate = this.taxRate();
+    const amount = this.taxableAmount();
+    if (!this.isTaxEnabled() || rate <= 0 || amount <= 0) return 0;
+    if (this.isTaxInclusive()) {
+      const net = amount / (1 + rate / 100);
+      return Math.round((amount - net) * 100) / 100;
+    }
+    return Math.round(((amount * rate) / 100) * 100) / 100;
   });
+
+  /**
+   * The taxable amount with its tax taken out — what the line items are worth
+   * before tax. Equal to the taxable amount under EXCLUSIVE, where the price
+   * was already net.
+   */
+  public netAmount = computed(() =>
+    Math.round((this.taxableAmount() - (this.isTaxInclusive() ? this.taxAmount() : 0)) * 100) / 100
+  );
 
   public serviceChargeAmount = computed(() => {
     const rate = this.serviceChargeRate();
@@ -80,7 +124,10 @@ export class CartService {
   });
 
   public grandTotal = computed(() => {
-    const total = this.taxableAmount() + this.taxAmount() + this.serviceChargeAmount() + this.surchargeAmount();
+    // Under INCLUSIVE the tax is already inside the taxable amount; adding it
+    // again would charge the guest the tax twice.
+    const taxed = this.taxableAmount() + (this.isTaxInclusive() ? 0 : this.taxAmount());
+    const total = taxed + this.serviceChargeAmount() + this.surchargeAmount();
     return Math.round(Math.max(0, total) * 100) / 100;
   });
 
@@ -302,12 +349,12 @@ export class CartService {
     this.orderNotes.set('');
     this.selectedCustomer.set(null);
     this.selectedTable.set(null);
-    this.orderType.set('WALK_IN');
+    this.orderType.set('TAKEAWAY');
   }
 
   public restoreFromDraft(draft: any, allProducts: Product[]): void {
     this.clearCart();
-    this.orderType.set(draft.order_type || 'WALK_IN');
+    this.orderType.set(normalizeOrderType(draft.order_type));
     this.discountType.set(draft.discount_type || 'FIXED');
     this.discountValue.set(draft.discount_value || 0);
     this.orderNotes.set(draft.notes || '');
@@ -379,7 +426,7 @@ export class CartService {
 
   public loadFromBill(bill: any, allProducts: Product[]): void {
     this.clearCart();
-    this.orderType.set(bill.orderType || bill.order_type || 'WALK_IN');
+    this.orderType.set(normalizeOrderType(bill.orderType ?? bill.order_type));
     this.discountType.set(bill.discountType || bill.discount_type || 'FIXED');
     this.discountValue.set(bill.discountValue || bill.discount_value || 0);
     this.orderNotes.set(bill.notes || '');

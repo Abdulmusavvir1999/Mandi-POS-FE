@@ -6,7 +6,7 @@ import { DiningService } from '../../core/services/dining.service';
 import { CartService } from '../../core/services/cart.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { DiningTable, TableStatus, TableReservation, TableWaitlist, TableHistoryItem } from '../../core/models';
+import { DiningTable, TableStatus, TableReservation, TableHistoryItem } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DiningLayoutService } from '../../core/services/dining-layout.service';
@@ -76,17 +76,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         <div class="header-action-buttons">
           <button
             type="button"
-            (click)="openWaitlistDrawer()"
-            class="action-btn btn-outline-purple relative"
-            title="Waiting list & token queue management"
-          >
-            <span class="material-symbols-outlined">queue</span>
-            <span>Waitlist Queue</span>
-            <span *ngIf="waitingCount > 0" class="header-badge-count">{{ waitingCount }}</span>
-          </button>
-
-          <button
-            type="button"
             (click)="openReservationsDrawer()"
             class="action-btn btn-outline-purple relative"
             title="Advance table reservations"
@@ -98,7 +87,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <button
             type="button"
-            (click)="loadTables(); loadWaitlist(); loadReservations();"
+            (click)="loadTables(); loadReservations();"
             [disabled]="isLoading"
             class="action-btn btn-outline-purple"
             title="Refresh the floor map from the server"
@@ -180,19 +169,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div class="kpi-value-row">
             <span class="kpi-number">{{ countStatus('CLEANING') }}</span>
             <span class="kpi-pill pill-cleaning">Bussing</span>
-          </div>
-        </div>
-
-        <div class="kpi-card card-accent-purple" (click)="openWaitlistDrawer()" style="cursor: pointer;">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Waitlist Queue</span>
-            <span class="kpi-icon-bubble bg-purple-tint">
-              <span class="material-symbols-outlined">groups</span>
-            </span>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ waitingCount }}</span>
-            <span class="kpi-pill pill-waitlist">Tokens</span>
           </div>
         </div>
 
@@ -889,118 +865,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 6. WAITLIST QUEUE & TOKEN SYSTEM DRAWER                         -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="drawer-backdrop" *ngIf="showWaitlistDrawer" (click)="showWaitlistDrawer = false">
-        <div class="drawer-panel" (click)="$event.stopPropagation()">
-          <div class="drawer-header">
-            <div class="flex items-center gap-3">
-              <span class="drawer-icon-bubble bg-purple-tint">
-                <span class="material-symbols-outlined text-purple-700 text-xl">queue</span>
-              </span>
-              <div>
-                <h3 class="drawer-title">Waiting List & Queue</h3>
-                <p class="drawer-subtitle">{{ waitlist.length }} parties tracked · {{ waitingCount }} waiting now</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button type="button" (click)="openAddWaitlistModal()" class="action-btn btn-gradient-purple btn-sm">
-                <span class="material-symbols-outlined text-base">person_add</span>
-                <span>Issue Token</span>
-              </button>
-              <button type="button" (click)="showWaitlistDrawer = false" class="modal-close-btn" title="Close">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="drawer-body">
-            <div *ngIf="waitlist.length === 0" class="empty-state-box p-8 text-center">
-              <span class="material-symbols-outlined text-4xl text-purple-300">hourglass_empty</span>
-              <div class="font-bold text-sm text-[#2E1065] mt-2">No Parties in Queue</div>
-              <p class="text-xs text-slate-500 mt-1">Walk-in parties can be issued queue tokens (e.g. W001) anytime.</p>
-              <button type="button" (click)="openAddWaitlistModal()" class="action-btn btn-gradient-purple btn-sm mt-3 inline-flex">
-                <span class="material-symbols-outlined text-base">add</span>
-                <span>Add Walk-In Party</span>
-              </button>
-            </div>
-
-            <div *ngFor="let item of waitlist" class="waitlist-card" [class.is-notified]="item.status === 'NOTIFIED'" [class.is-seated]="item.status === 'SEATED'">
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-2">
-                  <span class="token-badge">{{ item.token_number }}</span>
-                  <div>
-                    <div class="font-bold text-sm text-[#2E1065]">{{ item.customer_name }}</div>
-                    <div class="text-xs text-slate-500">{{ item.customer_phone || 'No phone' }}</div>
-                  </div>
-                </div>
-                <span class="status-chip" [ngClass]="{
-                  'chip-waiting': item.status === 'WAITING',
-                  'chip-notified': item.status === 'NOTIFIED',
-                  'chip-seated': item.status === 'SEATED',
-                  'chip-cancelled': item.status === 'CANCELLED'
-                }">
-                  ● {{ item.status }}
-                </span>
-              </div>
-
-              <div class="waitlist-meta-row mt-2.5">
-                <span class="meta-tag">👥 {{ item.guest_count }} Guests</span>
-                <span class="meta-tag" *ngIf="item.preferred_section">📍 {{ item.preferred_section }}</span>
-                <span class="meta-tag" [ngClass]="(item.elapsed_wait_minutes || 0) > item.estimated_wait_minutes ? 'text-amber-700 font-bold' : ''">
-                  ⏱️ {{ item.elapsed_wait_minutes || 0 }}m / est. {{ item.estimated_wait_minutes }}m
-                </span>
-              </div>
-
-              <!-- Action buttons for active waitlist party -->
-              <div class="waitlist-actions-row mt-3 pt-2.5 border-t border-slate-100" *ngIf="item.status === 'WAITING' || item.status === 'NOTIFIED'">
-                <div class="flex items-center gap-2 flex-1">
-                  <select class="form-control text-xs flex-1 py-1 px-2" [(ngModel)]="item.assigned_table_id">
-                    <option [ngValue]="null" disabled selected>Select Available Table...</option>
-                    <option *ngFor="let t of availableTables" [ngValue]="t.id">
-                      {{ t.table_number }} ({{ t.capacity }} seats) - {{ t.section }}
-                    </option>
-                  </select>
-                  <button
-                    type="button"
-                    (click)="seatWaitlistParty(item.id, item.assigned_table_id!)"
-                    [disabled]="!item.assigned_table_id"
-                    class="action-btn btn-gradient-purple btn-sm"
-                  >
-                    Seat Now
-                  </button>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button
-                    *ngIf="item.status === 'WAITING'"
-                    type="button"
-                    (click)="updateWaitlistStatus(item.id, 'NOTIFIED')"
-                    class="action-btn btn-outline-purple btn-sm"
-                    title="Notify Guest table is preparing"
-                  >
-                    Notify
-                  </button>
-                  <button
-                    type="button"
-                    (click)="updateWaitlistStatus(item.id, 'CANCELLED')"
-                    class="action-btn btn-outline-danger btn-sm"
-                    title="Cancel Queue Token"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              <div class="mt-2 text-xs text-emerald-700 font-medium" *ngIf="item.status === 'SEATED'">
-                ✓ Seated at Table {{ item.table_number }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 7. TABLE RESERVATIONS DRAWER                                    -->
+      <!-- 6. TABLE RESERVATIONS DRAWER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="drawer-backdrop" *ngIf="showReservationDrawer" (click)="showReservationDrawer = false">
         <div class="drawer-panel" (click)="$event.stopPropagation()">
@@ -1092,7 +957,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 8. TABLE DINING HISTORY MODAL                                   -->
+      <!-- 7. TABLE DINING HISTORY MODAL                                   -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showHistoryModal">
         <div class="modal-content p-6 md:p-7 w-full max-w-2xl shadow-2xl">
@@ -1171,7 +1036,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 9. SEAT GUESTS MODAL                                            -->
+      <!-- 8. SEAT GUESTS MODAL                                            -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showSeatModal">
         <div class="modal-content p-6 md:p-7 w-full max-w-md shadow-2xl">
@@ -1195,19 +1060,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <div class="space-y-4">
-            <!-- Optional Quick Pick from Waitlist -->
-            <div *ngIf="waitingCount > 0" class="p-3 bg-purple-50/70 border border-purple-100 rounded-xl">
-              <label class="block text-xs font-bold text-[#2E1065] uppercase tracking-wider mb-1">
-                Seat from Waiting Queue?
-              </label>
-              <select class="form-control text-xs w-full" [(ngModel)]="seatForm.selectedWaitlistId" (change)="onWaitlistSelectionChange()">
-                <option [ngValue]="null">-- Walk-In Party (Not in Waitlist) --</option>
-                <option *ngFor="let w of waitlist" [ngValue]="w.id" [disabled]="w.status !== 'WAITING' && w.status !== 'NOTIFIED'">
-                  Token {{ w.token_number }} - {{ w.customer_name }} ({{ w.guest_count }} guests)
-                </option>
-              </select>
-            </div>
-
             <!-- Guest Count Counter -->
             <div class="form-group mb-0">
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
@@ -1303,7 +1155,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 10. MANAGE OCCUPIED TABLE MODAL                                 -->
+      <!-- 9. MANAGE OCCUPIED TABLE MODAL                                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showManageModal">
         <div class="modal-content p-6 md:p-7 w-full max-w-md shadow-2xl">
@@ -1410,115 +1262,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 11. ADD WAITLIST PARTY MODAL                                    -->
+      <!-- 10. NEW RESERVATION MODAL                                       -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="showAddWaitlistModal">
-        <div class="modal-content p-6 md:p-7 w-full max-w-md shadow-2xl">
-          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined text-2xl text-purple-700">person_add</span>
-              </span>
-              <div>
-                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Add Walk-In Party to Queue</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">Issue next queue token number</p>
-              </div>
-            </div>
-            <button type="button" (click)="showAddWaitlistModal = false" class="modal-close-btn" title="Close">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="saveWaitlistEntry()" class="space-y-3.5">
-            <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                Customer Name *
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="waitlistForm.customer_name"
-                name="w_cust_name"
-                placeholder="e.g. Abdullah"
-                class="form-control text-sm w-full"
-                required
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Customer Phone
-                </label>
-                <input
-                  type="tel"
-                  [(ngModel)]="waitlistForm.customer_phone"
-                  name="w_cust_phone"
-                  placeholder="e.g. +91 98765 43210"
-                  class="form-control text-sm w-full"
-                />
-              </div>
-
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Party Size *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  [(ngModel)]="waitlistForm.guest_count"
-                  name="w_guest_count"
-                  class="form-control font-mono text-sm w-full"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Preferred Section
-                </label>
-                <input
-                  type="text"
-                  [(ngModel)]="waitlistForm.preferred_section"
-                  name="w_pref_section"
-                  placeholder="e.g. Family Cabin"
-                  list="diningSectionOptions"
-                  class="form-control text-sm w-full"
-                />
-              </div>
-
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Estimated Wait (mins)
-                </label>
-                <input
-                  type="number"
-                  min="5"
-                  step="5"
-                  [(ngModel)]="waitlistForm.estimated_wait_minutes"
-                  name="w_est_wait"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-4 border-t border-[#E9D5FF]">
-              <button type="button" (click)="showAddWaitlistModal = false" class="action-btn btn-outline-purple">
-                Cancel
-              </button>
-              <button type="submit" class="action-btn btn-gradient-purple">
-                Issue Queue Token ✓
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 12. NEW RESERVATION MODAL                                       -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="showNewReservationModal">
+      <div class="modal-backdrop modal-over-drawer" *ngIf="showNewReservationModal">
         <div class="modal-content p-6 md:p-7 w-full max-w-lg shadow-2xl">
           <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
             <div class="flex items-center gap-3">
@@ -2530,6 +2276,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         color: #0891B2;
       }
 
+      /* Modals opened from inside a drawer.
+         New Booking / Create Reservation is reached only through the
+         reservations drawer's own buttons, and .modal-backdrop's z-index of
+         1000 puts it behind the drawer that opened it. It goes above the
+         drawer, and below the shared confirmation dialog (100000) so a
+         confirm raised from the form still lands on top. */
+      .modal-over-drawer {
+        z-index: 10000;
+      }
+
       /* Sliding Drawers */
       .drawer-backdrop {
         position: fixed;
@@ -2606,8 +2362,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         font-size: 0.75rem;
       }
 
-      /* Waitlist & Reservation Cards */
-      .waitlist-card, .reservation-card {
+      /* Reservation Cards */
+      .reservation-card {
         background: #ffffff;
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 14px;
@@ -2616,30 +2372,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         transition: all 0.2s ease;
       }
 
-      .waitlist-card:hover, .reservation-card:hover {
+      .reservation-card:hover {
         border-color: #C084FC;
         box-shadow: 0 6px 16px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
       }
 
-      .waitlist-card.is-notified {
-        border-color: #60A5FA;
-        background: var(--bg-app, #F8FAFC);
-      }
-
-      .waitlist-card.is-seated, .reservation-card.is-seated {
+      .reservation-card.is-seated {
         opacity: 0.65;
         background: #F9FAFB;
-      }
-
-      .token-badge {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.78rem;
-        font-weight: 900;
-        color: var(--primary, #7E22CE);
-        background: var(--bg-app, #FAF5FF);
-        border: 1.5px solid #D8B4FE;
-        border-radius: 8px;
-        padding: 0.2rem 0.5rem;
       }
 
       .res-code-badge {
@@ -2662,13 +2402,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         text-transform: uppercase;
       }
 
-      .chip-waiting { background: var(--warning-light, #FFFBEB); color: var(--warning, #D97706); }
-      .chip-notified { background: #EFF6FF; color: #2563EB; }
       .chip-confirmed { background: #EEF2FF; color: #4F46E5; }
       .chip-seated { background: #ECFDF5; color: #059669; }
       .chip-cancelled { background: #FEF2F2; color: var(--danger, #DC2626); }
 
-      .waitlist-meta-row, .reservation-meta-row {
+      .reservation-meta-row {
         display: flex;
         flex-wrap: wrap;
         gap: 0.45rem;
@@ -2704,7 +2442,6 @@ export class DiningComponent implements OnInit, OnDestroy {
   public selectedSection: string | null = null;
 
   public reservations: TableReservation[] = [];
-  public waitlist: TableWaitlist[] = [];
   public tableHistory: TableHistoryItem[] = [];
   public selectedHistoryTable: DiningTable | null = null;
   public selectedManageTable: DiningTable | null = null;
@@ -2712,27 +2449,16 @@ export class DiningComponent implements OnInit, OnDestroy {
 
   public showTableModal = false;
   public editingTableId: number | null = null;
-  public showWaitlistDrawer = false;
   public showReservationDrawer = false;
   public showHistoryModal = false;
   public showSeatModal = false;
   public showManageModal = false;
-  public showAddWaitlistModal = false;
   public showNewReservationModal = false;
 
   public seatForm = {
     guestCount: 2,
     customerName: '',
     customerPhone: '',
-    selectedWaitlistId: null as number | null,
-  };
-
-  public waitlistForm: any = {
-    customer_name: '',
-    customer_phone: '',
-    guest_count: 2,
-    preferred_section: '',
-    estimated_wait_minutes: 15,
   };
 
   public reservationForm: any = {
@@ -2777,7 +2503,6 @@ export class DiningComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadTables();
     this.loadReservations();
-    this.loadWaitlist();
     this.clockTimer = setInterval(() => {
       this.nowMs = Date.now();
     }, 30000);
@@ -2785,10 +2510,6 @@ export class DiningComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.clockTimer) clearInterval(this.clockTimer);
-  }
-
-  public get waitingCount(): number {
-    return this.waitlist.filter((w) => w.status === 'WAITING' || w.status === 'NOTIFIED').length;
   }
 
   public get confirmedReservationsCount(): number {
@@ -3031,15 +2752,6 @@ export class DiningComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadWaitlist(): void {
-    this.diningService.getWaitlist().subscribe({
-      next: (res) => {
-        if (res.success) this.waitlist = res.data;
-      },
-      error: () => {},
-    });
-  }
-
   extractSections(): void {
     const secSet = new Set<string>();
     for (const t of this.tables) {
@@ -3065,20 +2777,8 @@ export class DiningComponent implements OnInit, OnDestroy {
       guestCount: Math.min(table.capacity, 2),
       customerName: '',
       customerPhone: '',
-      selectedWaitlistId: null,
     };
     this.showSeatModal = true;
-  }
-
-  onWaitlistSelectionChange(): void {
-    if (this.seatForm.selectedWaitlistId) {
-      const party = this.waitlist.find((w) => w.id === Number(this.seatForm.selectedWaitlistId));
-      if (party) {
-        this.seatForm.customerName = party.customer_name;
-        this.seatForm.customerPhone = party.customer_phone || '';
-        this.seatForm.guestCount = party.guest_count;
-      }
-    }
   }
 
   confirmSeatTable(startPosOrder: boolean = true): void {
@@ -3086,32 +2786,17 @@ export class DiningComponent implements OnInit, OnDestroy {
     const table = this.tableToSeat;
     const count = Number(this.seatForm.guestCount) || table.capacity;
 
-    if (this.seatForm.selectedWaitlistId) {
-      this.diningService.seatWaitlistParty(Number(this.seatForm.selectedWaitlistId), table.id).subscribe({
-        next: () => {
-          this.notify.success(`Party seated at Table ${table.table_number}`);
-          this.showSeatModal = false;
-          this.loadTables();
-          this.loadWaitlist();
-          if (startPosOrder) {
-            this.startOrderForTable(table, count);
-          }
-        },
-        error: () => {},
-      });
-    } else {
-      this.diningService.seatGuests(table.id, count).subscribe({
-        next: () => {
-          this.notify.success(`Table ${table.table_number} seated with ${count} guests`);
-          this.showSeatModal = false;
-          this.loadTables();
-          if (startPosOrder) {
-            this.startOrderForTable(table, count);
-          }
-        },
-        error: () => {},
-      });
-    }
+    this.diningService.seatGuests(table.id, count).subscribe({
+      next: () => {
+        this.notify.success(`Table ${table.table_number} seated with ${count} guests`);
+        this.showSeatModal = false;
+        this.loadTables();
+        if (startPosOrder) {
+          this.startOrderForTable(table, count);
+        }
+      },
+      error: () => {},
+    });
   }
 
   openManageModal(table: DiningTable): void {
@@ -3177,67 +2862,9 @@ export class DiningComponent implements OnInit, OnDestroy {
     });
   }
 
-  openWaitlistDrawer(): void {
-    this.loadWaitlist();
-    this.showWaitlistDrawer = true;
-  }
-
   openReservationsDrawer(): void {
     this.loadReservations();
     this.showReservationDrawer = true;
-  }
-
-  openAddWaitlistModal(): void {
-    this.waitlistForm = {
-      customer_name: '',
-      customer_phone: '',
-      guest_count: 2,
-      preferred_section: this.selectedSection || '',
-      estimated_wait_minutes: 15,
-    };
-    this.showAddWaitlistModal = true;
-  }
-
-  saveWaitlistEntry(): void {
-    if (!this.waitlistForm.customer_name) {
-      this.notify.error('Customer name is required');
-      return;
-    }
-    this.diningService.addToWaitlist(this.waitlistForm).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.notify.success(`Token ${res.data.token_number} issued for ${res.data.customer_name}`);
-          this.showAddWaitlistModal = false;
-          this.loadWaitlist();
-        }
-      },
-      error: () => {},
-    });
-  }
-
-  seatWaitlistParty(waitlistId: number, tableId: number): void {
-    if (!tableId) {
-      this.notify.error('Please select an available table');
-      return;
-    }
-    this.diningService.seatWaitlistParty(waitlistId, tableId).subscribe({
-      next: () => {
-        this.notify.success('Waitlist party seated successfully!');
-        this.loadTables();
-        this.loadWaitlist();
-      },
-      error: () => {},
-    });
-  }
-
-  updateWaitlistStatus(waitlistId: number, status: 'WAITING' | 'NOTIFIED' | 'CANCELLED'): void {
-    this.diningService.updateWaitlistStatus(waitlistId, status).subscribe({
-      next: () => {
-        this.notify.info(`Waitlist token status updated to ${status}`);
-        this.loadWaitlist();
-      },
-      error: () => {},
-    });
   }
 
   openNewReservationModal(): void {

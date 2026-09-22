@@ -7,7 +7,7 @@ import { NotificationService } from '../../../core/services/notification.service
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="modal-backdrop" *ngIf="notificationService.confirmModal() as modal">
+    <div class="modal-backdrop confirm-dialog-backdrop" *ngIf="notificationService.confirmModal() as modal">
       <div
         class="modal-content p-7 md:p-8 w-full max-w-lg shadow-2xl"
         [style.background]="'var(--card-bg, #ffffff)'"
@@ -43,6 +43,18 @@ import { NotificationService } from '../../../core/services/notification.service
     </div>
   `,
   styles: [`
+    /* This dialog is asked for from anywhere in the app, including from
+       inside a sliding drawer, and it blocks until it is answered — so it has
+       to sit above every panel that could have raised it.
+       .modal-backdrop is z-index 1000, which the dining and vendor drawers
+       (9998 / 9999) sit well above: "Cancel Booking" in the reservations
+       drawer put its confirmation behind the drawer that asked for it.
+       Above the drawers, below the toast stack (999999), so the result of
+       confirming is still visible. */
+    .confirm-dialog-backdrop {
+      z-index: 100000;
+    }
+
     .btn-danger {
       background: linear-gradient(135deg, var(--danger, #EF4444) 0%, var(--danger, #DC2626) 100%) !important;
       color: #FFFFFF !important;

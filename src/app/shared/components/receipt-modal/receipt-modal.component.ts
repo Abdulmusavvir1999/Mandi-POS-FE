@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AppCurrencyPipe } from '../../pipes/app-currency.pipe';
+import { PrinterService } from '../../../core/services/printer.service';
 
 @Component({
   selector: 'app-receipt-modal',
@@ -81,8 +82,8 @@ import { AppCurrencyPipe } from '../../pipes/app-currency.pipe';
                 <span>- {{ printData?.bill?.discount_amount | appCurrency:'1.2-2' }}</span>
               </div>
               <div *ngIf="printData?.receiptSettings?.showTax && printData?.bill?.tax_amount > 0" class="flex justify-between">
-                <span>GST / Tax:</span>
-                <span>{{ printData?.bill?.tax_amount | appCurrency:'1.2-2' }}</span>
+                <span>GST / Tax{{ taxIsInsideTotal ? ' (incl.)' : '' }}:</span>
+                <span>{{ taxIsInsideTotal ? '' : '+ ' }}{{ printData?.bill?.tax_amount | appCurrency:'1.2-2' }}</span>
               </div>
               <div class="flex justify-between text-sm font-extrabold pt-1 border-t border-gray-300 text-gray-900">
                 <span>GRAND TOTAL:</span>
@@ -120,6 +121,15 @@ export class ReceiptModalComponent {
 
   @Input() isOpen = false;
   @Input() printData: any = null;
+
+  /**
+   * True when the tax shown is already part of the total rather than added to
+   * it. Read off the bill's own figures by the same rule the thermal receipt
+   * uses, so the two printouts of one bill never disagree.
+   */
+  public get taxIsInsideTotal(): boolean {
+    return PrinterService.taxIsInsideTotal(this.printData?.bill || {});
+  }
   @Output() close = new EventEmitter<void>();
 
   triggerPrint(): void {

@@ -1,6 +1,15 @@
 export type RoleName = string;
 
-export type OrderType = 'WALK_IN' | 'TAKEAWAY' | 'DINING' | 'PICKUP' | 'COUNTER';
+/**
+ * The two ways an order leaves the counter.
+ *
+ * Walk-in, pickup and counter were separate values once. They described how
+ * the customer arrived rather than how the order is served, and nothing in
+ * the kitchen, the receipt or the reports ever treated them differently, so
+ * they are all TAKEAWAY now. DINING keeps its original spelling because it is
+ * the value already written to every dine-in row in every deployed database.
+ */
+export type OrderType = 'DINING' | 'TAKEAWAY';
 
 export type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
@@ -235,24 +244,6 @@ export interface TableReservation {
   preferred_section?: string;
   special_requests?: string;
   status: 'CONFIRMED' | 'SEATED' | 'CANCELLED' | 'NO_SHOW';
-  created_at?: string;
-}
-
-export interface TableWaitlist {
-  id: number;
-  uuid: string;
-  token_number: string;
-  customer_name: string;
-  customer_phone?: string;
-  guest_count: number;
-  preferred_section?: string;
-  estimated_wait_minutes: number;
-  elapsed_wait_minutes?: number;
-  status: 'WAITING' | 'NOTIFIED' | 'SEATED' | 'CANCELLED';
-  assigned_table_id?: number | null;
-  table_number?: string;
-  table_name?: string;
-  seated_at?: string;
   created_at?: string;
 }
 
@@ -820,3 +811,22 @@ export interface StockAlertItem extends StockItem {
 }
 
 
+
+/**
+ * Coerces whatever arrived into one of the two order types.
+ *
+ * Rows written before walk-in, pickup and counter were folded into TAKEAWAY
+ * still carry those values until the catch-up migration is run, and an offline
+ * cart cached on a till can carry one for as long as it sits there. Everything
+ * that reads an order type off the wire goes through here, so a stale value
+ * shows as Takeaway rather than falling through a chain of equality checks and
+ * rendering as a blank badge.
+ */
+export function normalizeOrderType(value: unknown): OrderType {
+  return String(value ?? '').toUpperCase() === 'DINING' ? 'DINING' : 'TAKEAWAY';
+}
+
+/** Display label for an order type, for badges, chips and receipts. */
+export function orderTypeLabel(value: unknown): string {
+  return normalizeOrderType(value) === 'DINING' ? 'Dine In' : 'Takeaway';
+}

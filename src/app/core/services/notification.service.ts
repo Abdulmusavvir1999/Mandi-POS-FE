@@ -39,7 +39,7 @@ export interface ConfirmDialogOptions {
   onCancel?: () => void;
 }
 
-const TOAST_CONFIG_STORAGE_KEY = 'mandi_pos_toast_config';
+const TOAST_CONFIG_STORAGE_KEY = '_pos_toast_config';
 
 export const DEFAULT_TOAST_CONFIG: ToastConfig = {
   position: 'top-right',
@@ -76,7 +76,7 @@ export class NotificationService {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem(TOAST_CONFIG_STORAGE_KEY);
-      } catch (_) {}
+      } catch (_) { }
     }
   }
 

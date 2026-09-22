@@ -325,11 +325,10 @@
                 class="order-type-tag"
                 [ngClass]="{
                   'type-dining': order.order_type === 'DINING',
-                  'type-takeaway': order.order_type === 'TAKEAWAY',
-                  'type-walkin': order.order_type === 'WALK_IN'
+                  'type-takeaway': order.order_type !== 'DINING'
                 }"
               >
-                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : order.order_type === 'TAKEAWAY' ? '🥡 TAKEAWAY' : '⚡ WALK-IN' }}
+                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : '🥡 TAKEAWAY' }}
               </span>
 
               <!-- Table Badge if exists -->
@@ -471,11 +470,10 @@
                 class="order-type-tag"
                 [ngClass]="{
                   'type-dining': order.order_type === 'DINING',
-                  'type-takeaway': order.order_type === 'TAKEAWAY',
-                  'type-walkin': order.order_type === 'WALK_IN'
+                  'type-takeaway': order.order_type !== 'DINING'
                 }"
               >
-                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : order.order_type === 'TAKEAWAY' ? '🥡 TAKEAWAY' : '⚡ WALK-IN' }}
+                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : '🥡 TAKEAWAY' }}
               </span>
 
               <!-- Table Badge if exists -->
@@ -617,11 +615,10 @@
                 class="order-type-tag"
                 [ngClass]="{
                   'type-dining': order.order_type === 'DINING',
-                  'type-takeaway': order.order_type === 'TAKEAWAY',
-                  'type-walkin': order.order_type === 'WALK_IN'
+                  'type-takeaway': order.order_type !== 'DINING'
                 }"
               >
-                {{ order.order_type }}
+                {{ order.order_type === 'DINING' ? '🍽 DINE IN' : '🥡 TAKEAWAY' }}
               </span>
 
               <!-- Table Badge if exists -->
@@ -707,7 +704,9 @@
             <span class="order-time-text">{{ order.created_at | date:'h:mm a' }}</span>
           </div>
           <div class="header-meta-tags">
-            <span class="order-type-tag type-walkin">{{ order.order_type }}</span>
+            <span class="order-type-tag" [class.type-dining]="order.order_type === 'DINING'" [class.type-takeaway]="order.order_type !== 'DINING'">
+              {{ order.order_type === 'DINING' ? '🍽 DINE IN' : '🥡 TAKEAWAY' }}
+            </span>
             <span *ngIf="order.table_number" class="table-badge">Table {{ order.table_number }}</span>
             <span class="badge badge-danger text-[10px]">CANCELLED</span>
           </div>

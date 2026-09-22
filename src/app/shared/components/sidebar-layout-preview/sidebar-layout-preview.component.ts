@@ -50,7 +50,7 @@ interface PreviewNavSection {
                 <span class="material-symbols-outlined g-icon-md brand-logo-icon">storefront</span>
               </div>
               <div class="brand-meta" *ngIf="!previewCollapsed()">
-                <span class="brand-title">Mandi POS</span>
+                <span class="brand-title"> POS</span>
                 <span class="brand-subtitle">POS Management</span>
               </div>
             </div>

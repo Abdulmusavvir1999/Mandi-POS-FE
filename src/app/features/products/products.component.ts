@@ -565,7 +565,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div *ngIf="filteredCombos.length === 0" class="offers-empty">
             <span class="material-symbols-outlined">lunch_dining</span>
             <h4>No Combo Deals Created</h4>
-            <p>Create delicious bundles like "Duo Mandi Combo" or "Family Pack".</p>
+            <p>Create delicious bundles like "Duo  Combo" or "Family Pack".</p>
           </div>
         </div>
 
@@ -987,11 +987,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <form (ngSubmit)="saveCombo()" class="space-y-3">
             <div>
               <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Deal Name</label>
-              <input type="text" [(ngModel)]="comboForm.name" name="comboName" class="form-control text-sm" placeholder="e.g. Duo Mandi Combo" required />
+              <input type="text" [(ngModel)]="comboForm.name" name="comboName" class="form-control text-sm" placeholder="e.g. Duo  Combo" required />
             </div>
             <div>
               <label class="form-label text-xs font-bold text-gray-700 uppercase">Description</label>
-              <input type="text" [(ngModel)]="comboForm.description" name="comboDesc" class="form-control text-sm" placeholder="e.g. 2 Mandi + 2 Drinks + Salad" />
+              <input type="text" [(ngModel)]="comboForm.description" name="comboDesc" class="form-control text-sm" placeholder="e.g. 2  + 2 Drinks + Salad" />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -1963,7 +1963,7 @@ export class ProductsComponent implements OnInit {
   public combosList: ComboDeal[] = [];
 
   /** Total dishes in the bundle, not the number of distinct lines: a combo of
-   *  2x Mandi + 2x Ayran reads as 4 items on the plate. */
+   *  2x  + 2x Ayran reads as 4 items on the plate. */
   public comboUnitCount(combo: ComboDeal): number {
     return (combo.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
   }
@@ -2172,7 +2172,7 @@ export class ProductsComponent implements OnInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -2205,7 +2205,7 @@ export class ProductsComponent implements OnInit {
           this.addonsList = res.data;
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -2216,7 +2216,7 @@ export class ProductsComponent implements OnInit {
           this.combosList = res.data;
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -2225,12 +2225,12 @@ export class ProductsComponent implements OnInit {
     this.editingAddon = addon || null;
     this.addonForm = addon
       ? {
-          name: addon.name,
-          price: addon.price,
-          is_available: !!addon.is_available,
-          category: addon.category || 'Sides',
-          image_url: addon.image_url || '',
-        }
+        name: addon.name,
+        price: addon.price,
+        is_available: !!addon.is_available,
+        category: addon.category || 'Sides',
+        image_url: addon.image_url || '',
+      }
       : { name: '', price: 20, is_available: true, category: 'Sides', image_url: '' };
     this.showAddonModal = true;
   }
@@ -2276,23 +2276,23 @@ export class ProductsComponent implements OnInit {
     this.editingCombo = combo || null;
     this.comboForm = combo
       ? {
-          name: combo.name,
-          code: combo.code || '',
-          description: combo.description || '',
-          combo_price: combo.combo_price,
-          original_price: combo.original_price || combo.combo_price,
-          image_url: combo.image_url || '',
-          items: combo.items ? [...combo.items] : [],
-        }
+        name: combo.name,
+        code: combo.code || '',
+        description: combo.description || '',
+        combo_price: combo.combo_price,
+        original_price: combo.original_price || combo.combo_price,
+        image_url: combo.image_url || '',
+        items: combo.items ? [...combo.items] : [],
+      }
       : {
-          name: '',
-          code: '',
-          description: '',
-          combo_price: 299,
-          original_price: 350,
-          image_url: '',
-          items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
-        };
+        name: '',
+        code: '',
+        description: '',
+        combo_price: 299,
+        original_price: 350,
+        image_url: '',
+        items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
+      };
     this.showComboModal = true;
   }
 
@@ -2508,7 +2508,7 @@ export class ProductsComponent implements OnInit {
             },
             // Reported by the global error interceptor; present so a failure
             // cannot escape as an unhandled rejection.
-            error: () => {},
+            error: () => { },
           });
         });
       },
@@ -2542,7 +2542,7 @@ export class ProductsComponent implements OnInit {
           },
           // Reported by the global error interceptor; present so a failure
           // cannot escape as an unhandled rejection.
-          error: () => {},
+          error: () => { },
         });
       },
     });
@@ -2601,7 +2601,7 @@ export class ProductsComponent implements OnInit {
 
   getCategoryBadgeStyle(categoryName?: string): { [key: string]: string } {
     const cat = (categoryName || '').toLowerCase();
-    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+    if (cat.includes('') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
       return {
         'background-color': 'var(--warning-light, #FFFBEB)',
         'color': 'var(--warning, #B45309)',
@@ -2652,7 +2652,7 @@ export class ProductsComponent implements OnInit {
 
   getCategoryIcon(categoryName?: string): string {
     const cat = (categoryName || '').toLowerCase();
-    if (cat.includes('mandi') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
+    if (cat.includes('') || cat.includes('madhbi') || cat.includes('madfoon') || cat.includes('rice') || cat.includes('biryani') || cat.includes('kabsa')) {
       return 'rice_bowl';
     }
     if (cat.includes('chicken') || cat.includes('meat') || cat.includes('mutton') || cat.includes('beef') || cat.includes('grill')) {

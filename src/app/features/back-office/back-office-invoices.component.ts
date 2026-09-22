@@ -602,9 +602,8 @@ export class BackOfficeInvoicesComponent implements OnInit {
 
   public orderTypeOptions: DropdownOption[] = [
     { value: '', label: 'All Order Types', icon: 'filter_list' },
-    { value: 'WALK_IN', label: 'Walk-In', icon: 'directions_walk' },
+    { value: 'DINING', label: 'Dine In', icon: 'restaurant' },
     { value: 'TAKEAWAY', label: 'Takeaway', icon: 'takeout_dining' },
-    { value: 'DINING', label: 'Dine-In', icon: 'restaurant' },
   ];
 
   ngOnInit(): void {

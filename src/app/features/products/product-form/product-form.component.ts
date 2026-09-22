@@ -86,7 +86,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
                   type="text"
                   [(ngModel)]="form.name"
                   name="name"
-                  placeholder="e.g. Mutton Mandi Full"
+                  placeholder="e.g. Mutton  Full"
                   class="form-control text-sm w-full"
                   required
                 />
@@ -717,7 +717,7 @@ export class ProductFormComponent implements OnInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 

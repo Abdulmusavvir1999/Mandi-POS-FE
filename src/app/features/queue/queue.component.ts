@@ -217,7 +217,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
               <div>
                 <h3 class="text-sm font-black text-[#EA580C] uppercase tracking-wider">Preparing in Kitchen</h3>
-                <p class="text-xs text-[#6B7280]">Chefs packing Mandi & sides</p>
+                <p class="text-xs text-[#6B7280]">Chefs packing  & sides</p>
               </div>
             </div>
             <span class="status-dot-pill is-warning">
@@ -458,18 +458,18 @@ export class QueueComponent implements OnInit {
     this.loadError = null;
     this.queueService.getQueue().subscribe({
       next: (res) => {
-          this.isLoading = false;
+        this.isLoading = false;
         if (res.success) {
           this.allTokens = res.data;
           this.readyTokens = this.allTokens.filter((t) => t.status === 'COMPLETED');
           this.preparingTokens = this.allTokens.filter((t) => t.status === 'IN_PROGRESS');
         }
       },
-        error: (err) => {
-          this.isLoading = false;
-          this.loadError = err?.error?.message || 'Unable to load data from the server.';
-        },
-      });
+      error: (err) => {
+        this.isLoading = false;
+        this.loadError = err?.error?.message || 'Unable to load data from the server.';
+      },
+    });
   }
 
   /** Mean of the estimates entered when tokens were issued. */
@@ -505,7 +505,7 @@ export class QueueComponent implements OnInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -517,7 +517,7 @@ export class QueueComponent implements OnInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -529,7 +529,7 @@ export class QueueComponent implements OnInit {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -548,7 +548,7 @@ export class QueueComponent implements OnInit {
           },
           // Reported by the global error interceptor; present so a failure
           // cannot escape as an unhandled rejection.
-          error: () => {},
+          error: () => { },
         });
       },
     });

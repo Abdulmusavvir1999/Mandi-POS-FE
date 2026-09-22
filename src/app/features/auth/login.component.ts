@@ -16,7 +16,7 @@ import { SettingsService } from '../../core/services/settings.service';
       <div class="hero-panel">
         <div class="hero-bg-pattern"></div>
         <img
-          [src]="settingsService.loginImageUrl() || 'assets/mandi-hero.jpg'"
+          [src]="settingsService.loginImageUrl() || 'assets/-hero.jpg'"
           [alt]="settingsService.businessName() || 'Restaurant'"
           class="hero-img"
         />

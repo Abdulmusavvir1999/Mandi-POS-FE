@@ -219,6 +219,7 @@ export class SettingsService {
           }
           if (b.taxEnabled !== undefined) flat['TAX_ENABLED'] = String(b.taxEnabled);
           if (b.taxName) flat['TAX_NAME'] = b.taxName;
+          if (b.taxInclusive !== undefined) flat['TAX_INCLUSIVE'] = String(b.taxInclusive);
           if (b.allowNegativeStock !== undefined) flat['POS_ALLOW_NEGATIVE_STOCK'] = String(b.allowNegativeStock);
           if (b.defaultOrderType) flat['POS_DEFAULT_ORDER_TYPE'] = b.defaultOrderType;
         }

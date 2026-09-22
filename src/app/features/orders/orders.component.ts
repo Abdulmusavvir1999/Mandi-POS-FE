@@ -42,7 +42,6 @@ export class OrdersComponent implements OnInit, OnDestroy {
     { value: 'ALL', label: 'All Order Types', icon: 'filter_list' },
     { value: 'DINING', label: 'Dine In Only', icon: 'restaurant' },
     { value: 'TAKEAWAY', label: 'Takeaway Only', icon: 'takeout_dining' },
-    { value: 'WALK_IN', label: 'Walk-In Only', icon: 'directions_walk' },
   ];
 
   public sortOptions: DropdownOption[] = [
@@ -363,7 +362,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
       },
       // Reported by the global error interceptor; present so a failure
       // cannot escape as an unhandled rejection.
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -379,7 +378,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   public printKOT(order: Order, event?: Event): void {
     if (event) event.stopPropagation();
 
-    const businessName = this.settingsService.businessName() || 'Mandi Restaurant';
+    const businessName = this.settingsService.businessName() || ' Restaurant';
     const itemsHtml = (order.items || [])
       .map(
         (item) => `
@@ -468,11 +467,11 @@ export class OrdersComponent implements OnInit, OnDestroy {
 
   public toggleFullscreen(): void {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
       this.isFullscreen = true;
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       }
       this.isFullscreen = false;
     }
@@ -501,6 +500,6 @@ export class OrdersComponent implements OnInit, OnDestroy {
 
       osc.start();
       osc.stop(audioCtx.currentTime + 0.5);
-    } catch (_) {}
+    } catch (_) { }
   }
 }

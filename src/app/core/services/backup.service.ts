@@ -228,7 +228,7 @@ export class BackupService {
     let directory: FsDirectoryHandle;
     try {
       directory = await (window as any).showDirectoryPicker({
-        id: 'mandi-pos-backup',
+        id: '-pos-backup',
         mode: 'readwrite',
         // Reopens where the last backup went, so repeat backups are two clicks.
         startIn: 'documents',

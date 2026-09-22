@@ -138,22 +138,22 @@ export class DishLayoutPreviewComponent {
 
   public readonly dishes: PreviewDish[] = [
     {
-      name: 'Mutton Mandi Full',
+      name: 'Mutton  Full',
       glyph: '🍖',
       price: '450',
       desc: 'Slow-cooked succulent tender lamb over fragrant basmati rice.',
-      category: 'Mutton Mandi',
+      category: 'Mutton ',
       stock: '24',
       portions: '2',
       rating: '4.8',
       sales: '412',
     },
     {
-      name: 'Chicken Mandi Half',
+      name: 'Chicken  Half',
       glyph: '🍗',
       price: '260',
       desc: 'Traditional spiced roast chicken with saffron rice and sauce.',
-      category: 'Chicken Mandi',
+      category: 'Chicken ',
       stock: '38',
       portions: '2',
       rating: '4.6',

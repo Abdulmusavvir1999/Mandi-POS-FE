@@ -214,8 +214,7 @@ interface DraftLine {
                 <span
                   class="badge"
                   [ngClass]="{
-                    'badge-info': order.order_type === 'WALK_IN',
-                    'badge-warning': order.order_type === 'TAKEAWAY',
+                    'badge-warning': order.order_type !== 'DINING',
                     'badge-primary': order.order_type === 'DINING'
                   }"
                 >
@@ -948,7 +947,7 @@ export class BackOfficeOrdersComponent implements OnInit {
   public discountValue: number | null = null;
 
   public showCreateForm = false;
-  public draftOrderType: OrderType = 'WALK_IN';
+  public draftOrderType: OrderType = 'TAKEAWAY';
   public draftPaymentMethod: PaymentMethod = 'CASH';
   public draftCustomerId: number | null = null;
   public draftTableId: number | null = null;
@@ -982,9 +981,8 @@ export class BackOfficeOrdersComponent implements OnInit {
 
   public orderTypeOptions: DropdownOption[] = [
     { value: '', label: 'All Order Types', icon: 'filter_list' },
-    { value: 'WALK_IN', label: 'Walk-In', icon: 'directions_walk' },
+    { value: 'DINING', label: 'Dine In', icon: 'restaurant' },
     { value: 'TAKEAWAY', label: 'Takeaway', icon: 'takeout_dining' },
-    { value: 'DINING', label: 'Dine-In', icon: 'restaurant' },
   ];
 
   public invoiceOptions: DropdownOption[] = [
@@ -994,9 +992,8 @@ export class BackOfficeOrdersComponent implements OnInit {
   ];
 
   public createOrderTypeOptions: DropdownOption[] = [
-    { value: 'WALK_IN', label: 'Walk-In', icon: 'directions_walk' },
+    { value: 'DINING', label: 'Dine In', icon: 'restaurant' },
     { value: 'TAKEAWAY', label: 'Takeaway', icon: 'takeout_dining' },
-    { value: 'DINING', label: 'Dine-In', icon: 'restaurant' },
   ];
 
   public paymentOptions: DropdownOption[] = [
@@ -1233,7 +1230,7 @@ export class BackOfficeOrdersComponent implements OnInit {
   // ── Create order ──────────────────────────────────────────────────────
 
   public openCreateForm(): void {
-    this.draftOrderType = 'WALK_IN';
+    this.draftOrderType = 'TAKEAWAY';
     this.draftPaymentMethod = 'CASH';
     this.draftCustomerId = null;
     this.draftTableId = null;
