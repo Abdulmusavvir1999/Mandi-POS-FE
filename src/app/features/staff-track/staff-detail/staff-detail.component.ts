@@ -41,7 +41,7 @@ import { StaffTrackFiltersComponent } from '../staff-track-filters.component';
       ></app-page-loader>
 
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
+        <span>Operations</span>
         <span class="breadcrumb-separator">›</span>
         <a class="breadcrumb-link" routerLink="/staff-track">Staff Track</a>
         <span class="breadcrumb-separator">›</span>
@@ -430,21 +430,21 @@ import { StaffTrackFiltersComponent } from '../staff-track-filters.component';
 
       .st-report-switch { display: flex; gap: 6px; }
       .st-preset-btn-lg {
-        border: 1px solid var(--card-border, #E9D5FF); background: #FFFFFF; color: var(--primary-variant, #6B21A8);
+        border: 1px solid var(--card-border, #E9D5FF); background: var(--card-bg, #FFFFFF); color: var(--text-main, #6B21A8);
         padding: 6px 13px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer;
       }
       .st-preset-btn-lg.is-active { background: var(--primary, #7E22CE); color: #FFFFFF; border-color: var(--primary, #7E22CE); }
 
       .st-timeline { padding-left: 6px; }
-      .st-timeline-item { position: relative; padding-left: 20px; padding-bottom: 14px; border-left: 2px solid #EDE4F8; }
+      .st-timeline-item { position: relative; padding-left: 20px; padding-bottom: 14px; border-left: 2px solid var(--card-border, #EDE4F8); }
       .st-timeline-item:last-child { border-left-color: transparent; padding-bottom: 0; }
       .st-timeline-dot {
         position: absolute; left: -6px; top: 2px; width: 10px; height: 10px;
-        border-radius: 50%; background: var(--primary, #7E22CE); border: 2px solid #FFFFFF; box-shadow: 0 0 0 2px #EDE4F8;
+        border-radius: 50%; background: var(--primary, #7E22CE); border: 2px solid var(--card-bg, #FFFFFF); box-shadow: 0 0 0 2px var(--card-border, #EDE4F8);
       }
       .st-timeline-top { display: flex; align-items: center; gap: 8px; }
       .st-timeline-time { font-size: 11px; font-weight: 800; color: var(--primary, #7E22CE); font-family: ui-monospace, monospace; }
-      .st-timeline-action { font-size: 12px; color: #374151; margin-top: 2px; font-weight: 600; }
+      .st-timeline-action { font-size: 12px; color: var(--text-main, #374151); margin-top: 2px; font-weight: 600; }
     `,
   ],
 })

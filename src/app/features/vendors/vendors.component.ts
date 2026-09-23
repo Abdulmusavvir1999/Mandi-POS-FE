@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { VendorService } from '../../core/services/vendor.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
@@ -16,7 +16,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 @Component({
   selector: 'app-vendors',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent, CustomDropdownComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent],
   template: `
     <div class="vendors-page-wrapper">
       <app-page-loader
@@ -32,9 +32,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       <!-- 1. BREADCRUMBS & MODULE HEADER                                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Procurement & Supply Chain</span>
+        <span>Procurement</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Vendor Management</span>
       </div>
@@ -92,15 +90,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <span>Export CSV</span>
           </button>
 
-          <button
-            type="button"
-            (click)="openAddModal()"
+          <a
+            routerLink="/vendors/new"
             class="action-btn btn-primary"
             title="Register New Vendor"
           >
             <span class="material-symbols-outlined">add_business</span>
             <span>Add New Vendor</span>
-          </button>
+          </a>
         </div>
       </div>
 
@@ -270,8 +267,9 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         <div *ngFor="let vendor of filteredVendors" class="vendor-card" (click)="openDetailDrawer(vendor)">
           <!-- Card Header -->
           <div class="vc-top-row">
-            <div class="vc-avatar">
-              <span class="material-symbols-outlined text-[26px]">store</span>
+            <div class="vc-avatar" [class.has-img]="!!vendor.image_url">
+              <img *ngIf="vendor.image_url" [src]="settingsService.assetUrl(vendor.image_url)" [alt]="vendor.name" class="w-full h-full object-cover rounded-xl" />
+              <span *ngIf="!vendor.image_url" class="material-symbols-outlined text-[26px]">store</span>
             </div>
             <div class="vc-identity">
               <div class="vc-code-row">
@@ -317,8 +315,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               ></div>
             </div>
             <div class="gauge-footer">
-              <span>Limit: {{ vendor.credit_limit | appCurrency:'1.0-0' }}</span>
-              <span>{{ getCreditUtilizationPercent(vendor) }}% Used</span>
+              <span>Limit: {{ (vendor.credit_limit && vendor.credit_limit > 0) ? (vendor.credit_limit | appCurrency:'1.0-0') : 'No Limit' }}</span>
+              <span>{{ (vendor.credit_limit && vendor.credit_limit > 0) ? (getCreditUtilizationPercent(vendor) + '% Used') : 'Unlimited' }}</span>
             </div>
           </div>
 
@@ -393,8 +391,9 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <tr *ngFor="let vendor of filteredVendors" (click)="openDetailDrawer(vendor)" class="table-row-clickable">
               <td>
                 <div class="vt-vendor-col">
-                  <div class="vt-avatar">
-                    <span class="material-symbols-outlined text-[20px]">store</span>
+                  <div class="vt-avatar" [class.has-img]="!!vendor.image_url">
+                    <img *ngIf="vendor.image_url" [src]="settingsService.assetUrl(vendor.image_url)" [alt]="vendor.name" class="w-full h-full object-cover rounded-lg" />
+                    <span *ngIf="!vendor.image_url" class="material-symbols-outlined text-[20px]">store</span>
                   </div>
                   <div>
                     <div class="font-bold text-slate-800">{{ vendor.name }}</div>
@@ -411,7 +410,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               </td>
               <td>
                 <div class="text-sm font-semibold">{{ formatPaymentTerms(vendor.payment_terms) }}</div>
-                <div class="text-xs text-muted">Limit: {{ vendor.credit_limit | appCurrency:'1.0-0' }}</div>
+                <div class="text-xs text-muted">Limit: {{ (vendor.credit_limit && vendor.credit_limit > 0) ? (vendor.credit_limit | appCurrency:'1.0-0') : 'No Limit' }}</div>
               </td>
               <td>
                 <div class="font-bold" [class.text-rose-600]="vendor.outstanding_balance > 0">
@@ -458,14 +457,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   >
                     <span class="material-symbols-outlined">payments</span>
                   </button>
-                  <button
-                    type="button"
-                    (click)="openEditModal(vendor)"
+                  <a
+                    [routerLink]="['/vendors', vendor.id, 'edit']"
+                    (click)="$event.stopPropagation()"
                     class="table-icon-btn"
                     title="Edit Vendor"
                   >
                     <span class="material-symbols-outlined">edit</span>
-                  </button>
+                  </a>
                 </div>
               </td>
             </tr>
@@ -486,8 +485,9 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
           <!-- Drawer Header -->
           <div class="drawer-header">
             <div class="dh-left">
-              <div class="dh-avatar">
-                <span class="material-symbols-outlined text-[32px]">store</span>
+              <div class="dh-avatar" [class.has-img]="!!selectedVendor.image_url">
+                <img *ngIf="selectedVendor.image_url" [src]="settingsService.assetUrl(selectedVendor.image_url)" [alt]="selectedVendor.name" class="w-full h-full object-cover rounded-2xl" />
+                <span *ngIf="!selectedVendor.image_url" class="material-symbols-outlined text-[32px]">store</span>
               </div>
               <div>
                 <div class="dh-badge-row">
@@ -502,15 +502,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
 
             <div class="dh-right">
-              <button
-                type="button"
-                (click)="openEditModal(selectedVendor)"
+              <a
+                [routerLink]="['/vendors', selectedVendor.id, 'edit']"
                 class="drawer-btn btn-edit"
                 title="Edit Vendor Profile"
               >
                 <span class="material-symbols-outlined">edit</span>
                 <span>Edit</span>
-              </button>
+              </a>
               <button
                 type="button"
                 (click)="closeDetailDrawer()"
@@ -729,10 +728,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                     <span class="info-label">Tax Category</span>
                     <span class="info-val">{{ selectedVendor.tax_category || 'STANDARD (Regular)' }}</span>
                   </div>
-                  <div class="info-item">
-                    <span class="info-label">MSME Registration Number</span>
-                    <span class="info-val">{{ selectedVendor.msme_number || 'Not Registered' }}</span>
-                  </div>
                 </div>
 
                 <div class="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
@@ -799,7 +794,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 <div class="credit-banner">
                   <div class="cb-item">
                     <span class="cb-label">Allocated Credit Limit</span>
-                    <span class="cb-val">{{ selectedVendor.credit_limit | appCurrency:'1.0-0' }}</span>
+                    <span class="cb-val">{{ (selectedVendor.credit_limit && selectedVendor.credit_limit > 0) ? (selectedVendor.credit_limit | appCurrency:'1.0-0') : 'No Limit' }}</span>
                   </div>
                   <div class="cb-item">
                     <span class="cb-label">Utilized Balance</span>
@@ -808,12 +803,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   <div class="cb-item">
                     <span class="cb-label">Available Headroom</span>
                     <span class="cb-val text-emerald-600">
-                      {{ (selectedVendor.credit_limit - selectedVendor.outstanding_balance) | appCurrency:'1.0-0' }}
+                      {{ (selectedVendor.credit_limit && selectedVendor.credit_limit > 0) ? ((selectedVendor.credit_limit - selectedVendor.outstanding_balance) | appCurrency:'1.0-0') : 'Unlimited' }}
                     </span>
-                  </div>
-                  <div class="cb-item">
-                    <span class="cb-label">Credit Term Period</span>
-                    <span class="cb-val font-medium">{{ selectedVendor.credit_period_days || 30 }} Days</span>
                   </div>
                 </div>
 
@@ -1121,201 +1112,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 6. ADD / EDIT VENDOR MODAL                                      -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="isVendorModalOpen" class="modal-backdrop" (click)="closeVendorModal()">
-        <div class="form-modal-panel" (click)="$event.stopPropagation()">
-          <div class="fmp-header">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-purple text-[26px]">
-                {{ isEditing ? 'edit_note' : 'add_business' }}
-              </span>
-              <h2 class="text-xl font-extrabold text-slate-800">
-                {{ isEditing ? 'Edit Vendor Profile' : 'Register New Vendor' }}
-              </h2>
-            </div>
-            <button type="button" (click)="closeVendorModal()" class="drawer-close-btn">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="saveVendor()" class="fmp-form">
-            <!-- Modal Section 1: Profile -->
-            <div class="fmp-section">
-              <h4 class="fmp-section-heading">1. Vendor Profile & Category</h4>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Vendor Code (Auto/Custom)</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="vendorForm.vendor_code"
-                    name="vendor_code"
-                    placeholder="e.g. VND-006 (or leave blank)"
-                    class="form-control font-mono"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Vendor / Company Name *</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="vendorForm.name"
-                    name="name"
-                    required
-                    placeholder="e.g. Al-Watania Poultry"
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Category Group *</label>
-                  <app-custom-dropdown
-                    [options]="categoryOptions"
-                    [(ngModel)]="vendorForm.category"
-                    name="category"
-                    [searchable]="true"
-                    placeholder="Select category group"
-                    minWidth="100%"
-                  ></app-custom-dropdown>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Status</label>
-                  <app-custom-dropdown
-                    [options]="vendorStatusOptions"
-                    [(ngModel)]="vendorForm.status"
-                    name="status"
-                    placeholder="Select status"
-                    minWidth="100%"
-                  ></app-custom-dropdown>
-                </div>
-              </div>
-            </div>
-
-            <!-- Modal Section 2: Contact Info -->
-            <div class="fmp-section">
-              <h4 class="fmp-section-heading">2. Contact Information</h4>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Contact Person</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="vendorForm.contact_person"
-                    name="contact_person"
-                    placeholder="e.g. Sheikh Tariq"
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Phone Number *</label>
-                  <input
-                    type="tel"
-                    [(ngModel)]="vendorForm.phone"
-                    name="phone"
-                    required
-                    placeholder="e.g. +966 50 123 4567"
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Email Address</label>
-                  <input
-                    type="email"
-                    [(ngModel)]="vendorForm.email"
-                    name="email"
-                    placeholder="orders@supplier.com"
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Website</label>
-                  <input
-                    type="url"
-                    [(ngModel)]="vendorForm.website"
-                    name="website"
-                    placeholder="https://..."
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group full-width">
-                  <label class="form-label">Street Address & City</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="vendorForm.address"
-                    name="address"
-                    placeholder="Warehouse District, Gate #4"
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">City</label>
-                  <input type="text" [(ngModel)]="vendorForm.city" name="city" placeholder="Riyadh" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">State / Region</label>
-                  <input type="text" [(ngModel)]="vendorForm.state" name="state" placeholder="Central Region" class="form-control" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Modal Section 3: Tax & Banking -->
-            <div class="fmp-section">
-              <h4 class="fmp-section-heading">3. Tax Details, Payment Terms & Banking</h4>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">GSTIN / VAT Number</label>
-                  <input type="text" [(ngModel)]="vendorForm.tax_id" name="tax_id" placeholder="310123456700003" class="form-control font-mono" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">PAN Number</label>
-                  <input type="text" [(ngModel)]="vendorForm.pan_number" name="pan_number" placeholder="ALWPM9821K" class="form-control font-mono" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Payment Terms</label>
-                  <app-custom-dropdown
-                    [options]="paymentTermsOptions"
-                    [(ngModel)]="vendorForm.payment_terms"
-                    name="payment_terms"
-                    placeholder="Select payment terms"
-                    minWidth="100%"
-                  ></app-custom-dropdown>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Credit Limit ({{ defaultCurrency }})</label>
-                  <input type="number" min="0" [(ngModel)]="vendorForm.credit_limit" name="credit_limit" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Bank Name</label>
-                  <input type="text" [(ngModel)]="vendorForm.bank_name" name="bank_name" placeholder="Al Rajhi Bank" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Account / IBAN Number</label>
-                  <input type="text" [(ngModel)]="vendorForm.account_number" name="account_number" placeholder="SA..." class="form-control font-mono" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">IFSC / Routing Code</label>
-                  <input type="text" [(ngModel)]="vendorForm.ifsc_code" name="ifsc_code" placeholder="RJHISARI" class="form-control font-mono" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">UPI / Settlement ID</label>
-                  <input type="text" [(ngModel)]="vendorForm.upi_id" name="upi_id" placeholder="vendor@upi" class="form-control" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Modal Actions -->
-            <div class="fmp-footer">
-              <button type="button" (click)="closeVendorModal()" class="action-btn btn-outline">
-                Cancel
-              </button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">save</span>
-                <span>{{ isSubmitting ? 'Saving…' : (isEditing ? 'Save Changes' : 'Create Vendor') }}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 7. RECORD PURCHASE INVOICE MODAL                                -->
+      <!-- 6. RECORD PURCHASE INVOICE MODAL                                -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div *ngIf="isPurchaseModalOpen && selectedVendor" class="modal-backdrop" (click)="closePurchaseModal()">
         <div class="compact-modal-panel" (click)="$event.stopPropagation()">
@@ -1532,11 +1330,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       padding: 1.5rem;
       max-width: 1600px;
       margin: 0 auto;
-      /* 60vh, as every other page wrapper uses: enough to hold the page
-         loader up, without being taller than the pane it sits in. Measured
-         against the viewport, 100vh always overflowed <main> — which is a
-         64px header shorter — so this page alone carried a scrollbar with
-         nothing under it to scroll. */
       min-height: 60vh;
       font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
     }
@@ -1563,7 +1356,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       padding: 1.25rem 1.75rem;
@@ -1612,9 +1405,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border-radius: 9999px;
     }
     .status-dot-pill.is-active {
-      background: #F0FDF4;
+      background: rgba(16, 185, 129, 0.12);
       color: var(--success, #16A34A);
-      border: 1px solid var(--success-light, #BBF7D0);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+    }
+    :host-context(.dark-theme) .status-dot-pill.is-active, .dark-theme .status-dot-pill.is-active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6EE7B7;
+      border-color: rgba(16, 185, 129, 0.4);
     }
     .status-dot {
       width: 7px;
@@ -1674,13 +1472,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       transform: translateY(-1px);
     }
     .btn-outline {
-      background: #FFFFFF;
-      color: var(--primary-variant, #6B21A8);
+      background: var(--card-bg, #FFFFFF);
+      color: var(--primary, #6B21A8);
       border-color: var(--card-border, #E9D5FF);
     }
     .btn-outline:hover {
-      background: var(--bg-app, #FAF5FF);
-      border-color: #D8B4FE;
+      background: var(--card-hover, #FAF5FF);
+      border-color: var(--primary-hover, #D8B4FE);
     }
 
     /* KPI Grid */
@@ -1691,7 +1489,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       margin-bottom: 1.5rem;
     }
     .kpi-card {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 14px;
       padding: 1.25rem;
@@ -1725,18 +1523,24 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .kpi-icon-badge .material-symbols-outlined {
       font-size: 20px;
     }
-    .bg-purple-light { background: var(--bg-app, #FAF5FF); }
+    .bg-purple-light { background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.25); }
     .text-purple { color: var(--primary, #7E22CE); }
-    .bg-rose-light { background: #FFF1F2; }
+    .bg-rose-light { background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.25); }
     .text-rose { color: #E11D48; }
-    .bg-indigo-light { background: #EEF2FF; }
+    .bg-indigo-light { background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25); }
     .text-indigo { color: #4F46E5; }
-    .bg-amber-light { background: var(--warning-light, #FFFBEB); }
+    .bg-amber-light { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.25); }
     .text-amber { color: var(--warning, #D97706); }
+
+    :host-context(.dark-theme) .text-purple, .dark-theme .text-purple { color: #C4B5FD; }
+    :host-context(.dark-theme) .text-rose, .dark-theme .text-rose { color: #FDA4AF; }
+    :host-context(.dark-theme) .text-indigo, .dark-theme .text-indigo { color: #A5B4FC; }
+    :host-context(.dark-theme) .text-amber, .dark-theme .text-amber { color: #FCD34D; }
+
     .kpi-value {
       font-size: 1.75rem;
       font-weight: 800;
-      color: #1E1B4B;
+      color: var(--text-main, #1E1B4B);
       letter-spacing: -0.02em;
       margin-bottom: 0.25rem;
     }
@@ -1750,7 +1554,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 12px;
       padding: 0.75rem 1rem;
@@ -1780,7 +1584,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       outline: none;
       width: 100%;
       font-size: 0.8125rem;
-      color: #1E293B;
+      color: var(--text-main, #1E293B);
     }
     .clear-search-btn {
       background: transparent;
@@ -1813,8 +1617,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border-radius: 8px;
       padding: 0.4rem 0.6rem;
       font-size: 0.8125rem;
-      color: #1E293B;
-      background: #FFFFFF;
+      color: var(--text-main, #1E293B);
+      background: var(--card-bg, #FFFFFF);
       outline: none;
     }
     .view-toggle-group {
@@ -1835,7 +1639,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       justify-content: center;
     }
     .view-btn.active {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       color: var(--primary, #7E22CE);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
@@ -1855,17 +1659,17 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       gap: 0.375rem;
       padding: 0.4rem 0.85rem;
       border-radius: 9999px;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E2E8F0);
       font-size: 0.8125rem;
       font-weight: 600;
-      color: #475569;
+      color: var(--text-muted, #475569);
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.15s ease;
     }
     .cat-pill:hover {
-      border-color: #D8B4FE;
+      border-color: var(--primary-hover, #D8B4FE);
       color: var(--primary, #7E22CE);
     }
     .cat-pill.active {
@@ -1877,7 +1681,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.6875rem;
       padding: 0.1rem 0.35rem;
       border-radius: 9999px;
-      background: rgba(0,0,0,0.06);
+      background: var(--card-hover, rgba(0,0,0,0.06));
+      color: var(--text-main);
     }
     .cat-pill.active .cat-count {
       background: rgba(255,255,255,0.25);
@@ -1891,7 +1696,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       gap: 1.25rem;
     }
     .vendor-card {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       padding: 1.25rem;
@@ -1904,7 +1709,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .vendor-card:hover {
       transform: translateY(-3px);
       box-shadow: 0 10px 25px -4px rgba(var(--primary-rgb, 126, 34, 206), 0.12);
-      border-color: #C084FC;
+      border-color: var(--primary, #C084FC);
     }
     .vc-top-row {
       display: flex;
@@ -1922,6 +1727,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+    .vc-avatar.has-img {
+      background: transparent;
+      border: 1.5px solid var(--card-border, #E9D5FF);
     }
     .vc-identity {
       flex: 1;
@@ -1938,14 +1748,14 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.75rem;
       font-weight: 700;
       color: var(--primary, #7E22CE);
-      background: var(--bg-app, #FAF5FF);
+      background: rgba(139, 92, 246, 0.12);
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
     }
     .vc-name {
       font-size: 1.0625rem;
       font-weight: 700;
-      color: #1E1B4B;
+      color: var(--text-main, #1E1B4B);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1956,12 +1766,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       font-size: 0.6875rem;
       font-weight: 600;
       color: var(--text-muted, #4B5563);
-      background: #F3F4F6;
+      background: var(--card-hover, #F3F4F6);
       padding: 0.15rem 0.5rem;
       border-radius: 9999px;
     }
     .vc-contact-box {
       background: var(--bg-app, #F8FAFC);
+      border: 1px solid var(--card-border, #F1F5F9);
       border-radius: 10px;
       padding: 0.625rem 0.75rem;
       margin-bottom: 1rem;
@@ -1974,7 +1785,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.5rem;
       font-size: 0.75rem;
-      color: #475569;
+      color: var(--text-muted, #475569);
     }
     .vc-contact-item .material-symbols-outlined {
       font-size: 15px;
@@ -2000,7 +1811,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .gauge-amount {
       font-size: 0.9375rem;
       font-weight: 800;
-      color: #1E293B;
+      color: var(--text-main, #1E293B);
     }
     .gauge-track {
       width: 100%;
@@ -2040,6 +1851,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.25rem;
       font-size: 0.8125rem;
+      color: var(--text-main);
     }
     .vc-metric {
       display: flex;
@@ -2071,33 +1883,37 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid transparent;
     }
     .btn-view {
-      background: var(--bg-app, #FAF5FF);
+      background: rgba(139, 92, 246, 0.12);
       color: var(--primary, #7E22CE);
-      border-color: var(--card-border, #E9D5FF);
+      border-color: rgba(139, 92, 246, 0.25);
     }
     .btn-view:hover {
-      background: var(--primary-light, #F3E8FF);
+      background: rgba(139, 92, 246, 0.22);
     }
     .btn-purchase {
-      background: #EEF2FF;
+      background: rgba(99, 102, 241, 0.12);
       color: #4F46E5;
-      border-color: #C7D2FE;
+      border-color: rgba(99, 102, 241, 0.25);
     }
     .btn-purchase:hover {
-      background: #E0E7FF;
+      background: rgba(99, 102, 241, 0.22);
     }
     .btn-pay {
-      background: #ECFDF5;
+      background: rgba(16, 185, 129, 0.12);
       color: #059669;
-      border-color: #A7F3D0;
+      border-color: rgba(16, 185, 129, 0.25);
     }
     .btn-pay:hover {
-      background: #D1FAE5;
+      background: rgba(16, 185, 129, 0.22);
     }
+
+    :host-context(.dark-theme) .btn-view, .dark-theme .btn-view { color: #C4B5FD; }
+    :host-context(.dark-theme) .btn-purchase, .dark-theme .btn-purchase { color: #A5B4FC; }
+    :host-context(.dark-theme) .btn-pay, .dark-theme .btn-pay { color: #6EE7B7; }
 
     /* Table View */
     .vendor-table-card {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       overflow-x: auto;
@@ -2111,7 +1927,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .vt-table th {
       background: var(--bg-app, #FAF5FF);
-      color: #581C87;
+      color: var(--text-main, #581C87);
       font-weight: 700;
       padding: 0.875rem 1rem;
       border-bottom: 1px solid var(--card-border, #E9D5FF);
@@ -2120,7 +1936,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .vt-table td {
       padding: 0.875rem 1rem;
       border-bottom: 1px solid var(--card-border, #F1F5F9);
-      color: #334155;
+      color: var(--text-main, #334155);
       vertical-align: middle;
     }
     .table-row-clickable {
@@ -2128,7 +1944,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       transition: background 0.12s ease;
     }
     .table-row-clickable:hover {
-      background: var(--bg-app, #FAF5FF);
+      background: var(--card-hover, #FAF5FF);
     }
     .vt-vendor-col {
       display: flex;
@@ -2139,18 +1955,24 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       width: 38px;
       height: 38px;
       border-radius: 10px;
-      background: var(--primary-light, #F3E8FF);
+      background: rgba(139, 92, 246, 0.12);
       color: var(--primary, #7E22CE);
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .vt-avatar.has-img {
+      background: transparent;
+      border: 1px solid var(--card-border, #E9D5FF);
     }
     .table-icon-btn {
       width: 32px;
       height: 32px;
       border-radius: 8px;
       border: 1px solid var(--card-border, #E2E8F0);
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -2158,7 +1980,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       color: var(--text-muted, #64748B);
     }
     .table-icon-btn:hover {
-      background: var(--bg-app, #F8FAFC);
+      background: var(--card-hover, #F8FAFC);
       border-color: var(--card-border, #CBD5E1);
     }
     .table-icon-btn .material-symbols-outlined {
@@ -2175,12 +1997,18 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    .badge-active { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); }
+    .badge-active { background: rgba(16, 185, 129, 0.14); color: #059669; }
     .badge-inactive { background: var(--card-hover, #F1F5F9); color: var(--text-muted, #64748B); }
-    .badge-blocked { background: var(--danger-light, #FEE2E2); color: var(--danger, #B91C1C); }
-    .badge-paid { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); }
-    .badge-partial { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); }
-    .badge-unpaid { background: var(--danger-light, #FEE2E2); color: var(--danger, #B91C1C); }
+    .badge-blocked { background: rgba(239, 68, 68, 0.14); color: #DC2626; }
+    .badge-paid { background: rgba(16, 185, 129, 0.14); color: #059669; }
+    .badge-partial { background: rgba(245, 158, 11, 0.14); color: #D97706; }
+    .badge-unpaid { background: rgba(239, 68, 68, 0.14); color: #DC2626; }
+
+    :host-context(.dark-theme) .badge-active, .dark-theme .badge-active { color: #6EE7B7; }
+    :host-context(.dark-theme) .badge-blocked, .dark-theme .badge-blocked { color: #FCA5A5; }
+    :host-context(.dark-theme) .badge-paid, .dark-theme .badge-paid { color: #6EE7B7; }
+    :host-context(.dark-theme) .badge-partial, .dark-theme .badge-partial { color: #FCD34D; }
+    :host-context(.dark-theme) .badge-unpaid, .dark-theme .badge-unpaid { color: #FCA5A5; }
 
     /* Modals & Drawers */
     .modal-backdrop {
@@ -2202,7 +2030,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .drawer-panel {
       width: 100%;
       max-width: 860px;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       height: 100%;
       box-shadow: -10px 0 35px rgba(0,0,0,0.2);
       display: flex;
@@ -2235,7 +2063,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
       box-shadow: 0 4px 12px rgba(var(--primary-rgb, 126, 34, 206), 0.3);
+    }
+    .dh-avatar.has-img {
+      background: transparent;
+      border: 2px solid var(--card-border, #E9D5FF);
     }
     .dh-badge-row {
       display: flex;
@@ -2265,18 +2099,18 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid transparent;
     }
     .btn-edit {
-      background: #FFFFFF;
-      border-color: #D8B4FE;
+      background: var(--card-bg, #FFFFFF);
+      border-color: var(--card-border, #D8B4FE);
       color: var(--primary, #7E22CE);
     }
     .btn-edit:hover {
-      background: var(--primary-light, #F3E8FF);
+      background: var(--card-hover, #F3E8FF);
     }
     .drawer-close-btn {
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E2E8F0);
       cursor: pointer;
       display: flex;
@@ -2286,7 +2120,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .drawer-close-btn:hover {
       background: var(--card-hover, #F1F5F9);
-      color: #1E293B;
+      color: var(--text-main, #1E293B);
     }
 
     /* Drawer Tabs */
@@ -2294,7 +2128,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       display: flex;
       align-items: center;
       gap: 0.25rem;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border-bottom: 1px solid var(--card-border, #E2E8F0);
       padding: 0.5rem 1.25rem 0;
       overflow-x: auto;
@@ -2328,8 +2162,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     /* Drawer Body */
     .drawer-body {
       flex: 1;
-      /* A flex item is floored at its content height unless told otherwise,
-         which would make this pane grow instead of scroll. */
       min-height: 0;
       overflow-y: auto;
       padding: 1.5rem 1.75rem;
@@ -2339,7 +2171,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       animation: fadeIn 0.15s ease-out;
     }
     .section-card {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 14px;
       padding: 1.5rem;
@@ -2348,7 +2180,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .section-title {
       font-size: 1.05rem;
       font-weight: 800;
-      color: #1E1B4B;
+      color: var(--text-main, #1E1B4B);
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -2382,7 +2214,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .info-val {
       font-size: 0.875rem;
-      color: #1E293B;
+      color: var(--text-main, #1E293B);
     }
     .notes-box {
       background: var(--bg-app, #FAF5FF);
@@ -2390,7 +2222,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border-radius: 8px;
       padding: 0.75rem;
       font-size: 0.8125rem;
-      color: #4C1D95;
+      color: var(--primary, #4C1D95);
       margin-top: 0.35rem;
     }
     .address-box {
@@ -2402,7 +2234,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
       gap: 0.5rem;
       font-size: 0.8125rem;
-      color: #334155;
+      color: var(--text-main, #334155);
       margin-top: 0.35rem;
     }
 
@@ -2429,7 +2261,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .cb-val {
       font-size: 1.15rem;
       font-weight: 800;
-      color: #1E1B4B;
+      color: var(--text-main, #1E1B4B);
       margin-top: 0.25rem;
     }
     .gauge-track-large {
@@ -2447,8 +2279,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 
     /* Balance Highlight */
     .balance-highlight-card {
-      background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%);
-      border: 1px solid #FECDD3;
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.25);
       border-radius: 12px;
       padding: 1.25rem;
       display: flex;
@@ -2464,8 +2296,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       align-items: center;
     }
     .rating-hero-card {
-      background: var(--warning-light, #FFFBEB);
-      border: 1px solid var(--warning-light, #FDE68A);
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.25);
       border-radius: 14px;
       padding: 1.5rem;
       text-align: center;
@@ -2479,7 +2311,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       gap: 0.125rem;
     }
     .sub-ratings-card {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #F1F5F9);
       border-radius: 12px;
       padding: 1rem;
@@ -2503,7 +2335,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       gap: 1rem;
     }
     .pm-card {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E2E8F0);
       border-radius: 12px;
       padding: 1.25rem;
@@ -2520,6 +2352,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .pm-value {
       font-size: 1.5rem;
       font-weight: 800;
+      color: var(--text-main, #1E1B4B);
       margin-bottom: 0.25rem;
     }
     .pm-label {
@@ -2556,7 +2389,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .compact-modal-panel {
       width: 100%;
       max-width: 520px;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border-radius: 16px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.25);
       margin: auto;
@@ -2572,7 +2405,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .form-modal-panel {
       width: 100%;
       max-width: 780px;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border-radius: 18px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       margin: auto;
@@ -2592,8 +2425,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .fmp-form {
       flex: 1;
-      /* A flex item is floored at its content height unless told otherwise,
-         which would make this pane grow instead of scroll. */
       min-height: 0;
       overflow-y: auto;
       padding: 1.5rem;
@@ -2627,15 +2458,15 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .form-label {
       font-size: 0.75rem;
       font-weight: 700;
-      color: #475569;
+      color: var(--text-muted, #475569);
     }
     .form-control {
       border: 1px solid var(--card-border, #CBD5E1);
       border-radius: 8px;
       padding: 0.5rem 0.75rem;
       font-size: 0.8125rem;
-      color: #1E293B;
-      background: #FFFFFF;
+      color: var(--text-main, #1E293B);
+      background: var(--card-bg, #FFFFFF);
       outline: none;
       transition: border-color 0.15s ease;
     }
@@ -2665,6 +2496,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
   `],
 })
 export class VendorsComponent implements OnInit {
+  private router = inject(Router);
   private vendorService = inject(VendorService);
   private notify = inject(NotificationService);
   public settingsService = inject(SettingsService);
@@ -2901,17 +2733,13 @@ export class VendorsComponent implements OnInit {
     });
   }
 
-  // Modal handlers
+  // Navigation handlers
   public openAddModal(): void {
-    this.isEditing = false;
-    this.vendorForm = this.resetVendorForm();
-    this.isVendorModalOpen = true;
+    this.router.navigate(['/vendors/new']);
   }
 
   public openEditModal(vendor: Vendor): void {
-    this.isEditing = true;
-    this.vendorForm = { ...vendor };
-    this.isVendorModalOpen = true;
+    this.router.navigate(['/vendors', vendor.id, 'edit']);
   }
 
   public closeVendorModal(): void {
@@ -2962,7 +2790,7 @@ export class VendorsComponent implements OnInit {
     this.selectedVendor = vendor;
     const today = new Date().toISOString().split('T')[0];
     const due = new Date();
-    due.setDate(due.getDate() + (vendor.credit_period_days || 30));
+    due.setDate(due.getDate() + 30);
 
     this.purchaseForm = {
       invoice_number: `INV-${vendor.vendor_code}-${Math.floor(100 + Math.random() * 900)}`,
@@ -3142,7 +2970,6 @@ export class VendorsComponent implements OnInit {
       tax_id: '',
       pan_number: '',
       tax_category: 'STANDARD',
-      msme_number: '',
       payment_terms: 'NET_30',
       preferred_payment_method: 'BANK_TRANSFER',
       bank_name: '',
@@ -3151,7 +2978,6 @@ export class VendorsComponent implements OnInit {
       branch_name: '',
       upi_id: '',
       credit_limit: 20000,
-      credit_period_days: 30,
       rating: 5.0,
       delivery_speed_rating: 5.0,
       quality_rating: 5.0,

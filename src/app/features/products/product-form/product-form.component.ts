@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -27,11 +27,9 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
       <!-- 1. BREADCRUMBS                                                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
+        <span>Catalog</span>
         <span class="breadcrumb-separator">›</span>
-        <span>Menu Catalog</span>
-        <span class="breadcrumb-separator">›</span>
-        <a routerLink="/products" class="breadcrumb-link">Dishes & Products</a>
+        <a routerLink="/products" class="breadcrumb-link">Dishes &amp; Products</a>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">{{ isEdit ? 'Edit Dish' : 'Add New Dish' }}</span>
       </div>

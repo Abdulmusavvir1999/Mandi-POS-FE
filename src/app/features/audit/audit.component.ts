@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuditLogService } from '../../core/services/audit.service';
@@ -25,13 +25,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
+        <span>Security</span>
         <span class="breadcrumb-separator">›</span>
-        <span>Security & Compliance</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>System Audit</span>
-        <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">Activity Stream</span>
+        <span class="breadcrumb-current">Audit Trail</span>
       </div>
 
       <div class="audit-header-card">

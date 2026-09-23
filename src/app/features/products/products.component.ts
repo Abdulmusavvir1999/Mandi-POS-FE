@@ -35,13 +35,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
            it, so they live up here instead of among the four dish tabs. -->
       <div class="breadcrumbs-strip">
         <div class="breadcrumbs-row">
-          <span>{{ settingsService.businessName() }}</span>
+          <span>Catalog</span>
           <span class="breadcrumb-separator">›</span>
-          <span>Menu Catalog</span>
-          <span class="breadcrumb-separator">›</span>
-          <span>Dishes & Products</span>
-          <span class="breadcrumb-separator">›</span>
-          <span class="breadcrumb-current">Live Menu</span>
+          <span class="breadcrumb-current">Dishes &amp; Products</span>
         </div>
 
         <div class="aux-tabs-bar">

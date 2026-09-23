@@ -38,11 +38,7 @@ interface ModuleGroup {
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Administration</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Team & Roles</span>
+        <span>Team &amp; Roles</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">{{ activeMainTab === 'users' ? 'Staff Accounts' : 'Dynamic Roles & Permissions' }}</span>
       </div>

@@ -29,9 +29,7 @@ import { PageLoaderComponent } from '../../../shared/components/page-loader/page
       <!-- 1. BREADCRUMBS & NAVIGATION                                     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Inventory & Costing</span>
+        <span>Inventory</span>
         <span class="breadcrumb-separator">›</span>
         <a routerLink="/stock" class="breadcrumb-link">Stock Management</a>
         <span class="breadcrumb-separator">›</span>

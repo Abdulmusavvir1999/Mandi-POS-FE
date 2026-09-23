@@ -82,7 +82,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <span class="kpi-main-number font-mono">
               {{ kpi.todaySales | appCurrency:'1.0-0' }}
             </span>
-            <span class="kpi-trend-pill trend-up">
+            <span class="kpi-trend-pill trend-purple">
               <span class="material-symbols-outlined">trending_up</span>
               <span>Active Shift</span>
             </span>
@@ -90,14 +90,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <div class="kpi-footer-strip">
             <div class="footer-metric">
-              <span class="material-symbols-outlined text-purple-600 text-sm">receipt_long</span>
-              <span class="font-bold text-slate-800">{{ kpi.todayBillsCount }}</span>
-              <span class="text-slate-500">Bills Settled</span>
+              <span class="material-symbols-outlined metric-icon-purple text-sm">receipt_long</span>
+              <span class="font-bold footer-val">{{ kpi.todayBillsCount }}</span>
+              <span class="footer-lbl">Bills Settled</span>
             </div>
             <div class="footer-divider"></div>
             <div class="footer-metric">
-              <span class="text-slate-500">Avg Ticket:</span>
-              <span class="font-bold font-mono text-purple-700">{{ kpi.avgOrderValue | appCurrency:'1.0-0' }}</span>
+              <span class="footer-lbl">Avg Ticket:</span>
+              <span class="font-bold font-mono metric-text-purple">{{ kpi.avgOrderValue | appCurrency:'1.0-0' }}</span>
             </div>
           </div>
         </div>
@@ -115,25 +115,25 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <div class="kpi-value-row">
-            <span class="kpi-main-number font-mono text-emerald-950">
+            <span class="kpi-main-number font-mono">
               {{ kpi.todayOrdersCount }}
             </span>
-            <span class="kpi-sub-total font-mono text-xs text-slate-500 font-semibold">
+            <span class="kpi-sub-total font-mono text-xs font-semibold">
               ({{ kpi.allTimeOrdersCount }} Lifetime)
             </span>
           </div>
 
           <div class="kpi-footer-strip">
             <div class="footer-metric">
-              <span class="status-badge-dot bg-emerald-500"></span>
-              <span class="font-bold text-emerald-700">{{ kpi.completedOrders }}</span>
-              <span class="text-slate-500">Completed</span>
+              <span class="status-badge-dot dot-emerald"></span>
+              <span class="font-bold metric-text-emerald">{{ kpi.completedOrders }}</span>
+              <span class="footer-lbl">Completed</span>
             </div>
             <div class="footer-divider"></div>
             <div class="footer-metric">
-              <span class="status-badge-dot bg-amber-500"></span>
-              <span class="font-bold text-amber-700">{{ kpi.inProgressOrders + kpi.pendingOrders }}</span>
-              <span class="text-slate-500">In Kitchen</span>
+              <span class="status-badge-dot dot-amber"></span>
+              <span class="font-bold metric-text-amber">{{ kpi.inProgressOrders + kpi.pendingOrders }}</span>
+              <span class="footer-lbl">In Kitchen</span>
             </div>
           </div>
         </div>
@@ -152,8 +152,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <div class="kpi-value-row">
             <div class="flex items-baseline gap-1.5 font-mono">
-              <span class="kpi-main-number text-amber-950">{{ kpi.occupiedTables }}</span>
-              <span class="text-lg font-bold text-slate-400">/ {{ kpi.totalTables }}</span>
+              <span class="kpi-main-number">{{ kpi.occupiedTables }}</span>
+              <span class="text-lg font-bold footer-lbl">/ {{ kpi.totalTables }}</span>
             </div>
             <span class="kpi-badge-rate font-mono font-bold" [ngClass]="kpi.occupancyRate > 75 ? 'rate-high' : 'rate-normal'">
               {{ kpi.occupancyRate }}% Occupied
@@ -165,18 +165,18 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <div
               class="occupancy-fill"
               [style.width.%]="kpi.occupancyRate"
-              [ngClass]="kpi.occupancyRate > 75 ? 'bg-amber-600' : 'bg-amber-500'"
+              [ngClass]="kpi.occupancyRate > 75 ? 'fill-amber-high' : 'fill-amber-normal'"
             ></div>
           </div>
 
           <div class="kpi-footer-strip mt-2">
             <div class="footer-metric">
-              <span class="material-symbols-outlined text-emerald-600 text-sm">event_seat</span>
-              <span class="font-bold text-emerald-700">{{ kpi.availableTables }}</span>
-              <span class="text-slate-500">Tables Ready</span>
+              <span class="material-symbols-outlined metric-icon-emerald text-sm">event_seat</span>
+              <span class="font-bold metric-text-emerald">{{ kpi.availableTables }}</span>
+              <span class="footer-lbl">Tables Ready</span>
             </div>
             <div class="footer-divider"></div>
-            <a routerLink="/tables" class="text-xs text-amber-700 hover:underline font-bold flex items-center gap-0.5">
+            <a routerLink="/tables" class="footer-link metric-text-amber hover:underline font-bold flex items-center gap-0.5">
               <span>View Floor Map</span>
               <span class="material-symbols-outlined text-xs">arrow_forward</span>
             </a>
@@ -196,7 +196,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <div class="kpi-value-row">
-            <span class="kpi-main-number font-mono" [ngClass]="kpi.lowStockCount > 0 ? 'text-rose-600' : 'text-slate-800'">
+            <span class="kpi-main-number font-mono" [ngClass]="kpi.lowStockCount > 0 ? 'metric-text-rose' : ''">
               {{ kpi.lowStockCount }}
             </span>
             <span class="kpi-tag-pill" [ngClass]="kpi.lowStockCount > 0 ? 'tag-danger' : 'tag-success'">
@@ -206,11 +206,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <div class="kpi-footer-strip">
             <div class="footer-metric">
-              <span class="font-bold text-slate-800">{{ kpi.totalProducts }}</span>
-              <span class="text-slate-500">Active Delicacies</span>
+              <span class="font-bold footer-val">{{ kpi.totalProducts }}</span>
+              <span class="footer-lbl">Active Delicacies</span>
             </div>
             <div class="footer-divider"></div>
-            <a routerLink="/stock" class="text-xs text-rose-700 hover:underline font-bold flex items-center gap-0.5">
+            <a routerLink="/stock" class="footer-link metric-text-rose hover:underline font-bold flex items-center gap-0.5">
               <span>Stock Center</span>
               <span class="material-symbols-outlined text-xs">arrow_forward</span>
             </a>
@@ -224,52 +224,52 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <div class="secondary-metrics-grid" *ngIf="metrics?.kpis as kpi">
         <!-- Stat Pill 1: Average Order Value -->
         <div class="quick-metric-card">
-          <div class="quick-icon-box bg-blue-50 text-blue-600 border-blue-100">
+          <div class="quick-icon-box icon-box-blue">
             <span class="material-symbols-outlined">receipt</span>
           </div>
           <div class="quick-info">
             <span class="quick-label">Avg Order Value (AOV)</span>
             <div class="quick-value font-mono">{{ kpi.avgOrderValue | appCurrency:'1.0-0' }}</div>
           </div>
-          <div class="quick-chip bg-blue-50 text-blue-700">Per Bill</div>
+          <div class="quick-chip chip-blue">Per Bill</div>
         </div>
 
         <!-- Stat Pill 2: Kitchen & Queue Throughput -->
         <div class="quick-metric-card">
-          <div class="quick-icon-box bg-purple-50 text-purple-600 border-purple-100">
+          <div class="quick-icon-box icon-box-purple">
             <span class="material-symbols-outlined">soup_kitchen</span>
           </div>
           <div class="quick-info">
             <span class="quick-label">Active Kitchen KOTs</span>
-            <div class="quick-value font-mono text-purple-700">{{ kpi.inProgressOrders + kpi.pendingOrders }} Orders</div>
+            <div class="quick-value font-mono metric-text-purple">{{ kpi.inProgressOrders + kpi.pendingOrders }} Orders</div>
           </div>
-          <a routerLink="/queue" class="quick-chip bg-purple-100 text-purple-800 hover:bg-purple-200">
+          <a routerLink="/queue" class="quick-chip chip-purple">
             Live Queue →
           </a>
         </div>
 
         <!-- Stat Pill 3: Tax & Discounts Collected -->
         <div class="quick-metric-card">
-          <div class="quick-icon-box bg-teal-50 text-teal-600 border-teal-100">
+          <div class="quick-icon-box icon-box-teal">
             <span class="material-symbols-outlined">percent</span>
           </div>
           <div class="quick-info">
             <span class="quick-label">Tax & Discount Audit</span>
-            <div class="quick-value font-mono text-teal-800">{{ kpi.todayTax | appCurrency:'1.0-0' }} <span class="text-xs font-normal text-slate-500">GST</span></div>
+            <div class="quick-value font-mono metric-text-teal">{{ kpi.todayTax | appCurrency:'1.0-0' }} <span class="text-xs font-normal footer-lbl">GST</span></div>
           </div>
-          <div class="quick-chip bg-teal-50 text-teal-700 font-mono">-{{ kpi.todayDiscount | appCurrency:'1.0-0' }} Disc</div>
+          <div class="quick-chip chip-teal font-mono">-{{ kpi.todayDiscount | appCurrency:'1.0-0' }} Disc</div>
         </div>
 
         <!-- Stat Pill 4: Customer CRM Base -->
         <div class="quick-metric-card">
-          <div class="quick-icon-box bg-indigo-50 text-indigo-600 border-indigo-100">
+          <div class="quick-icon-box icon-box-indigo">
             <span class="material-symbols-outlined">group</span>
           </div>
           <div class="quick-info">
             <span class="quick-label">Patron Directory</span>
-            <div class="quick-value font-mono text-indigo-900">{{ kpi.totalCustomers }} Customers</div>
+            <div class="quick-value font-mono">{{ kpi.totalCustomers }} Customers</div>
           </div>
-          <a routerLink="/customers" class="quick-chip bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+          <a routerLink="/customers" class="quick-chip chip-indigo">
             CRM Directory →
           </a>
         </div>
@@ -285,7 +285,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div class="dashboard-panel-card">
             <div class="panel-header">
               <div class="flex items-center gap-2.5">
-                <div class="panel-icon-wrap bg-purple-50 text-purple-700">
+                <div class="panel-icon-wrap icon-box-purple">
                   <span class="material-symbols-outlined">category</span>
                 </div>
                 <div>
@@ -297,8 +297,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
 
             <div *ngIf="metrics?.categorySales?.length === 0" class="empty-state-box">
-              <span class="material-symbols-outlined text-3xl text-slate-300">receipt_long</span>
-              <p class="text-xs text-slate-400 mt-1">No sales recorded yet today.</p>
+              <span class="material-symbols-outlined text-3xl empty-icon">receipt_long</span>
+              <p class="text-xs footer-lbl mt-1">No sales recorded yet today.</p>
             </div>
 
             <div class="category-bars-list" *ngIf="metrics?.categorySales?.length > 0">
@@ -329,7 +329,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div class="dashboard-panel-card">
             <div class="panel-header">
               <div class="flex items-center gap-2.5">
-                <div class="panel-icon-wrap bg-amber-50 text-amber-600">
+                <div class="panel-icon-wrap icon-box-amber">
                   <span class="material-symbols-outlined">local_fire_department</span>
                 </div>
                 <div>
@@ -341,8 +341,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
 
             <div *ngIf="metrics?.topProducts?.length === 0" class="empty-state-box">
-              <span class="material-symbols-outlined text-3xl text-slate-300">restaurant_menu</span>
-              <p class="text-xs text-slate-400 mt-1">No delicacy sales recorded yet.</p>
+              <span class="material-symbols-outlined text-3xl empty-icon">restaurant_menu</span>
+              <p class="text-xs footer-lbl mt-1">No delicacy sales recorded yet.</p>
             </div>
 
             <div class="delicacies-grid" *ngIf="metrics?.topProducts?.length > 0">
@@ -381,7 +381,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div class="dashboard-panel-card">
             <div class="panel-header">
               <div class="flex items-center gap-2.5">
-                <div class="panel-icon-wrap bg-emerald-50 text-emerald-600">
+                <div class="panel-icon-wrap icon-box-emerald">
                   <span class="material-symbols-outlined">account_balance_wallet</span>
                 </div>
                 <div>
@@ -395,7 +395,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <div *ngFor="let pm of payments" class="payment-pill-box">
                 <div class="pm-top-row">
                   <div class="flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-sm text-emerald-600">
+                    <span class="material-symbols-outlined text-sm metric-icon-emerald">
                       {{ getPaymentIcon(pm.payment_method) }}
                     </span>
                     <span class="pm-name">{{ pm.payment_method }}</span>
@@ -413,7 +413,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           <div class="dashboard-panel-card">
             <div class="panel-header">
               <div class="flex items-center gap-2.5">
-                <div class="panel-icon-wrap bg-purple-50 text-purple-700">
+                <div class="panel-icon-wrap icon-box-purple">
                   <span class="material-symbols-outlined">schedule</span>
                 </div>
                 <div>
@@ -421,15 +421,15 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   <p class="panel-subtitle">Latest tickets across dine-in & takeaway</p>
                 </div>
               </div>
-              <a routerLink="/orders" class="text-xs text-purple-700 hover:underline font-bold flex items-center gap-0.5">
+              <a routerLink="/orders" class="footer-link metric-text-purple hover:underline font-bold flex items-center gap-0.5">
                 <span>View All</span>
                 <span class="material-symbols-outlined text-xs">arrow_forward</span>
               </a>
             </div>
 
             <div *ngIf="metrics?.recentOrders?.length === 0" class="empty-state-box">
-              <span class="material-symbols-outlined text-3xl text-slate-300">receipt</span>
-              <p class="text-xs text-slate-400 mt-1">No recent orders found.</p>
+              <span class="material-symbols-outlined text-3xl empty-icon">receipt</span>
+              <p class="text-xs footer-lbl mt-1">No recent orders found.</p>
             </div>
 
             <div class="recent-orders-list" *ngIf="metrics?.recentOrders?.length > 0">
@@ -570,9 +570,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-size: 0.65rem;
       font-weight: 800;
       letter-spacing: 0.05em;
-      background: #ECFDF5;
-      color: #065F46;
-      border: 1px solid #A7F3D0;
+      background: rgba(16, 185, 129, 0.12);
+      color: #10B981;
+      border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
     .pulse-dot {
@@ -601,7 +601,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
     .header-subtitle {
       font-size: 0.8rem;
-      color: var(--text-muted, rgba(var(--text-main-rgb, 46, 16, 101), 0.65));
+      color: var(--text-muted, #64748B);
       font-weight: 500;
       margin-top: 0.2rem;
     }
@@ -628,12 +628,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .btn-secondary-white {
-      background: var(--card-bg, #FAF5FF);
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       color: var(--primary, #7E22CE);
     }
     .btn-secondary-white:hover:not(:disabled) {
-      background: var(--bg-app, #F3E8FF);
+      background: var(--card-hover, #F3E8FF);
       border-color: var(--primary, #D8B4FE);
       transform: translateY(-1px);
     }
@@ -642,12 +642,12 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
       color: #FFFFFF;
       border: 1px solid transparent;
-      box-shadow: 0 4px 14px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.25));
+      box-shadow: 0 4px 14px var(--primary-glow, rgba(126, 34, 206, 0.25));
     }
     .btn-primary-gradient:hover {
       background: linear-gradient(135deg, var(--primary-hover, #6B21A8), var(--primary, #7E22CE));
       transform: translateY(-1px);
-      box-shadow: 0 6px 18px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35));
+      box-shadow: 0 6px 18px var(--primary-glow, rgba(126, 34, 206, 0.35));
     }
 
     .spin-icon {
@@ -657,7 +657,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       100% { transform: rotate(360deg); }
     }
 
-    /* 1. PRIMARY HERO KPI GRID */
+    /* ═══════════════════════════════════════════════════════════════ */
+    /* 1. PRIMARY HERO KPI GRID                                        */
+    /* ═══════════════════════════════════════════════════════════════ */
     .primary-kpi-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -684,29 +686,46 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       flex-direction: column;
       justify-content: space-between;
       gap: 0.85rem;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
       box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
     }
     .kpi-hero-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px -4px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.09);
     }
 
+    /* Cohesive card themes with delicate translucent top accents (NO harsh opaque fills) */
     .card-purple {
-      border-top: 4px solid var(--primary, #7E22CE);
-      background: linear-gradient(180deg, var(--bg-app, #FAF5FF) 0%, var(--card-bg, #FFFFFF) 30%);
+      border-top: 3px solid var(--primary, #8B5CF6);
+      background: linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, var(--card-bg, #FFFFFF) 42%);
     }
+    .card-purple:hover {
+      border-top-color: var(--primary-hover, #A78BFA);
+    }
+
     .card-emerald {
-      border-top: 4px solid #10B981;
-      background: linear-gradient(180deg, #ECFDF5 0%, var(--card-bg, #FFFFFF) 30%);
+      border-top: 3px solid #10B981;
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, var(--card-bg, #FFFFFF) 42%);
     }
+    .card-emerald:hover {
+      border-top-color: #34D399;
+    }
+
     .card-amber {
-      border-top: 4px solid #F59E0B;
-      background: linear-gradient(180deg, var(--warning-light, #FFFBEB) 0%, var(--card-bg, #FFFFFF) 30%);
+      border-top: 3px solid #F59E0B;
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--card-bg, #FFFFFF) 42%);
     }
+    .card-amber:hover {
+      border-top-color: #FBBF24;
+    }
+
     .card-rose {
-      border-top: 4px solid #F43F5E;
-      background: linear-gradient(180deg, #FFF1F2 0%, var(--card-bg, #FFFFFF) 30%);
+      border-top: 3px solid #F43F5E;
+      background: linear-gradient(180deg, rgba(244, 63, 94, 0.08) 0%, var(--card-bg, #FFFFFF) 42%);
+    }
+    .card-rose:hover {
+      border-top-color: #FB7185;
     }
 
     .kpi-top-row {
@@ -719,7 +738,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .kpi-label-group {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.35rem;
     }
 
     .kpi-tag-pill {
@@ -728,37 +747,134 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-size: 0.65rem;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.15rem 0.45rem;
-      border-radius: 0.35rem;
+      letter-spacing: 0.05em;
+      padding: 0.18rem 0.55rem;
+      border-radius: 0.45rem;
+      transition: all 0.2s ease;
     }
-    .tag-purple { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); }
-    .tag-emerald { background: #D1FAE5; color: #047857; }
-    .tag-amber { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); }
-    .tag-rose { background: #FFE4E6; color: #BE123C; }
-    .tag-success { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); }
-    .tag-danger { background: var(--danger-light, #FEE2E2); color: var(--danger, #B91C1C); }
+
+    .tag-purple {
+      background: rgba(139, 92, 246, 0.14);
+      color: var(--primary, #9333EA);
+      border: 1px solid rgba(139, 92, 246, 0.28);
+    }
+    .tag-emerald {
+      background: rgba(16, 185, 129, 0.14);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.28);
+    }
+    .tag-amber {
+      background: rgba(245, 158, 11, 0.14);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+    .tag-rose {
+      background: rgba(244, 63, 94, 0.14);
+      color: #E11D48;
+      border: 1px solid rgba(244, 63, 94, 0.28);
+    }
+    .tag-success {
+      background: rgba(16, 185, 129, 0.14);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.28);
+    }
+    .tag-danger {
+      background: rgba(239, 68, 68, 0.14);
+      color: #DC2626;
+      border: 1px solid rgba(239, 68, 68, 0.28);
+    }
+
+    /* Dark theme badge refinements */
+    :host-context(.dark-theme) .tag-purple,
+    :host-context([data-theme="dark"]) .tag-purple,
+    .dark-theme .tag-purple {
+      background: rgba(139, 92, 246, 0.2);
+      color: #C4B5FD;
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+    :host-context(.dark-theme) .tag-emerald,
+    :host-context([data-theme="dark"]) .tag-emerald,
+    .dark-theme .tag-emerald {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6EE7B7;
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    :host-context(.dark-theme) .tag-amber,
+    :host-context([data-theme="dark"]) .tag-amber,
+    .dark-theme .tag-amber {
+      background: rgba(245, 158, 11, 0.2);
+      color: #FCD34D;
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    :host-context(.dark-theme) .tag-rose,
+    :host-context([data-theme="dark"]) .tag-rose,
+    .dark-theme .tag-rose {
+      background: rgba(244, 63, 94, 0.2);
+      color: #FDA4AF;
+      border-color: rgba(244, 63, 94, 0.4);
+    }
+    :host-context(.dark-theme) .tag-success,
+    :host-context([data-theme="dark"]) .tag-success,
+    .dark-theme .tag-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6EE7B7;
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    :host-context(.dark-theme) .tag-danger,
+    :host-context([data-theme="dark"]) .tag-danger,
+    .dark-theme .tag-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #FCA5A5;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
 
     .kpi-hero-label {
-      font-size: 0.85rem;
+      font-size: 0.88rem;
       font-weight: 800;
       color: var(--text-main, #1E293B);
       margin: 0;
+      letter-spacing: -0.01em;
     }
 
     .kpi-icon-bubble {
-      width: 2.6rem;
-      height: 2.6rem;
+      width: 2.75rem;
+      height: 2.75rem;
       border-radius: 0.85rem;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .bubble-purple { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); border: 1px solid var(--card-border, #E9D5FF); }
-    .bubble-emerald { background: #D1FAE5; color: #059669; border: 1px solid #A7F3D0; }
-    .bubble-amber { background: var(--warning-light, #FEF3C7); color: var(--warning, #D97706); border: 1px solid var(--warning-light, #FDE68A); }
-    .bubble-rose { background: #FFE4E6; color: #E11D48; border: 1px solid #FECDD3; }
+    .kpi-hero-card:hover .kpi-icon-bubble {
+      transform: scale(1.05);
+    }
+
+    .bubble-purple {
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--primary, #7E22CE);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+    .bubble-emerald {
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .bubble-amber {
+      background: rgba(245, 158, 11, 0.12);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .bubble-rose {
+      background: rgba(244, 63, 94, 0.12);
+      color: #E11D48;
+      border: 1px solid rgba(244, 63, 94, 0.25);
+    }
+
+    :host-context(.dark-theme) .bubble-purple, .dark-theme .bubble-purple { color: #C4B5FD; background: rgba(139, 92, 246, 0.2); }
+    :host-context(.dark-theme) .bubble-emerald, .dark-theme .bubble-emerald { color: #6EE7B7; background: rgba(16, 185, 129, 0.2); }
+    :host-context(.dark-theme) .bubble-amber, .dark-theme .bubble-amber { color: #FCD34D; background: rgba(245, 158, 11, 0.2); }
+    :host-context(.dark-theme) .bubble-rose, .dark-theme .bubble-rose { color: #FDA4AF; background: rgba(244, 63, 94, 0.2); }
 
     .kpi-value-row {
       display: flex;
@@ -770,46 +886,84 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .kpi-main-number {
-      font-size: 1.75rem;
+      font-size: 1.85rem;
       font-weight: 900;
       color: var(--text-main, #0F172A);
       line-height: 1.1;
       letter-spacing: -0.03em;
     }
 
+    .kpi-sub-total {
+      color: var(--text-muted, #64748B);
+    }
+
     .kpi-trend-pill {
       display: inline-flex;
       align-items: center;
-      gap: 0.2rem;
+      gap: 0.25rem;
       font-size: 0.65rem;
       font-weight: 800;
-      padding: 0.2rem 0.5rem;
+      padding: 0.2rem 0.55rem;
       border-radius: 9999px;
-      background: var(--primary-light, #F3E8FF);
-      color: var(--primary, #7E22CE);
-      border: 1px solid var(--card-border, #E9D5FF);
     }
     .kpi-trend-pill .material-symbols-outlined { font-size: 0.85rem; }
 
+    .trend-purple {
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--primary, #7E22CE);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+    :host-context(.dark-theme) .trend-purple, .dark-theme .trend-purple {
+      background: rgba(139, 92, 246, 0.2);
+      color: #C4B5FD;
+      border-color: rgba(139, 92, 246, 0.35);
+    }
+
     .kpi-badge-rate {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       padding: 0.2rem 0.55rem;
       border-radius: 0.5rem;
     }
-    .rate-normal { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); }
-    .rate-high { background: var(--danger-light, #FEE2E2); color: var(--danger, #DC2626); font-weight: 900; }
+    .rate-normal {
+      background: rgba(245, 158, 11, 0.12);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .rate-high {
+      background: rgba(239, 68, 68, 0.14);
+      color: #DC2626;
+      border: 1px solid rgba(239, 68, 68, 0.28);
+      font-weight: 900;
+    }
+    :host-context(.dark-theme) .rate-normal, .dark-theme .rate-normal {
+      background: rgba(245, 158, 11, 0.2);
+      color: #FCD34D;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    :host-context(.dark-theme) .rate-high, .dark-theme .rate-high {
+      background: rgba(239, 68, 68, 0.2);
+      color: #FCA5A5;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
 
     .occupancy-progress-bar {
       width: 100%;
-      height: 0.4rem;
-      background: var(--card-hover, #F1F5F9);
+      height: 0.45rem;
+      background: var(--card-hover, rgba(0, 0, 0, 0.06));
       border-radius: 9999px;
       overflow: hidden;
+      border: 1px solid var(--card-border, rgba(0, 0, 0, 0.04));
     }
     .occupancy-fill {
       height: 100%;
       border-radius: 9999px;
       transition: width 0.4s ease;
+    }
+    .fill-amber-normal {
+      background: linear-gradient(90deg, #F59E0B, #FBBF24);
+    }
+    .fill-amber-high {
+      background: linear-gradient(90deg, #EF4444, #F87171);
     }
 
     .kpi-footer-strip {
@@ -817,7 +971,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       align-items: center;
       gap: 0.65rem;
       padding-top: 0.65rem;
-      border-top: 1px solid var(--card-border, #F1F5F9);
+      border-top: 1px solid var(--card-border, #E2E8F0);
       font-size: 0.75rem;
     }
 
@@ -827,19 +981,58 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       gap: 0.35rem;
     }
 
+    .footer-val {
+      color: var(--text-main, #0F172A);
+    }
+
+    .footer-lbl {
+      color: var(--text-muted, #64748B);
+    }
+
     .footer-divider {
       width: 1px;
       height: 0.85rem;
       background: var(--card-border, #CBD5E1);
     }
 
+    .footer-link {
+      text-decoration: none;
+      font-size: 0.75rem;
+    }
+
+    .metric-text-purple { color: var(--primary, #7E22CE); }
+    .metric-text-emerald { color: #059669; }
+    .metric-text-amber { color: #D97706; }
+    .metric-text-rose { color: #E11D48; }
+    .metric-text-teal { color: #0D9488; }
+
+    .metric-icon-purple { color: var(--primary, #7E22CE); }
+    .metric-icon-emerald { color: #059669; }
+    .metric-icon-amber { color: #D97706; }
+    .metric-icon-rose { color: #E11D48; }
+
+    :host-context(.dark-theme) .metric-text-purple, .dark-theme .metric-text-purple { color: #C4B5FD; }
+    :host-context(.dark-theme) .metric-text-emerald, .dark-theme .metric-text-emerald { color: #6EE7B7; }
+    :host-context(.dark-theme) .metric-text-amber, .dark-theme .metric-text-amber { color: #FCD34D; }
+    :host-context(.dark-theme) .metric-text-rose, .dark-theme .metric-text-rose { color: #FDA4AF; }
+    :host-context(.dark-theme) .metric-text-teal, .dark-theme .metric-text-teal { color: #5EEAD4; }
+
+    :host-context(.dark-theme) .metric-icon-purple, .dark-theme .metric-icon-purple { color: #C4B5FD; }
+    :host-context(.dark-theme) .metric-icon-emerald, .dark-theme .metric-icon-emerald { color: #6EE7B7; }
+    :host-context(.dark-theme) .metric-icon-amber, .dark-theme .metric-icon-amber { color: #FCD34D; }
+    :host-context(.dark-theme) .metric-icon-rose, .dark-theme .metric-icon-rose { color: #FDA4AF; }
+
     .status-badge-dot {
       width: 0.45rem;
       height: 0.45rem;
       border-radius: 9999px;
     }
+    .dot-emerald { background: #10B981; }
+    .dot-amber { background: #F59E0B; }
 
-    /* 2. SECONDARY INTELLIGENCE GRID */
+    /* ═══════════════════════════════════════════════════════════════ */
+    /* 2. SECONDARY INTELLIGENCE GRID                                  */
+    /* ═══════════════════════════════════════════════════════════════ */
     .secondary-metrics-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -865,23 +1058,62 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       align-items: center;
       gap: 0.75rem;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-      transition: transform 0.15s ease;
+      transition: transform 0.15s ease, border-color 0.15s ease;
     }
     .quick-metric-card:hover {
       transform: translateY(-1px);
+      border-color: var(--primary, #CBD5E1);
     }
 
     .quick-icon-box {
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: 0.65rem;
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 0.7rem;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      border: 1px solid;
+      border: 1px solid transparent;
     }
     .quick-icon-box .material-symbols-outlined { font-size: 1.25rem; }
+
+    .icon-box-blue {
+      background: rgba(59, 130, 246, 0.12);
+      color: #2563EB;
+      border-color: rgba(59, 130, 246, 0.25);
+    }
+    .icon-box-purple {
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--primary, #7E22CE);
+      border-color: rgba(139, 92, 246, 0.25);
+    }
+    .icon-box-teal {
+      background: rgba(20, 184, 166, 0.12);
+      color: #0D9488;
+      border-color: rgba(20, 184, 166, 0.25);
+    }
+    .icon-box-indigo {
+      background: rgba(99, 102, 241, 0.12);
+      color: #4F46E5;
+      border-color: rgba(99, 102, 241, 0.25);
+    }
+    .icon-box-amber {
+      background: rgba(245, 158, 11, 0.12);
+      color: #D97706;
+      border-color: rgba(245, 158, 11, 0.25);
+    }
+    .icon-box-emerald {
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    :host-context(.dark-theme) .icon-box-blue, .dark-theme .icon-box-blue { color: #93C5FD; background: rgba(59, 130, 246, 0.2); }
+    :host-context(.dark-theme) .icon-box-purple, .dark-theme .icon-box-purple { color: #C4B5FD; background: rgba(139, 92, 246, 0.2); }
+    :host-context(.dark-theme) .icon-box-teal, .dark-theme .icon-box-teal { color: #5EEAD4; background: rgba(20, 184, 166, 0.2); }
+    :host-context(.dark-theme) .icon-box-indigo, .dark-theme .icon-box-indigo { color: #A5B4FC; background: rgba(99, 102, 241, 0.2); }
+    :host-context(.dark-theme) .icon-box-amber, .dark-theme .icon-box-amber { color: #FCD34D; background: rgba(245, 158, 11, 0.2); }
+    :host-context(.dark-theme) .icon-box-emerald, .dark-theme .icon-box-emerald { color: #6EE7B7; background: rgba(16, 185, 129, 0.2); }
 
     .quick-info {
       display: flex;
@@ -895,7 +1127,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-weight: 700;
       color: var(--text-muted, #64748B);
       text-transform: uppercase;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
     }
 
     .quick-value {
@@ -910,13 +1142,48 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .quick-chip {
       font-size: 0.65rem;
       font-weight: 800;
-      padding: 0.2rem 0.5rem;
+      padding: 0.22rem 0.55rem;
       border-radius: 0.5rem;
       text-decoration: none;
       white-space: nowrap;
+      transition: all 0.15s ease;
     }
 
-    /* 3. ANALYTICS SPLIT LAYOUT */
+    .chip-blue {
+      background: rgba(59, 130, 246, 0.12);
+      color: #2563EB;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+    .chip-purple {
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--primary, #7E22CE);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+    .chip-purple:hover {
+      background: rgba(139, 92, 246, 0.22);
+    }
+    .chip-teal {
+      background: rgba(20, 184, 166, 0.12);
+      color: #0D9488;
+      border: 1px solid rgba(20, 184, 166, 0.25);
+    }
+    .chip-indigo {
+      background: rgba(99, 102, 241, 0.12);
+      color: #4F46E5;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+    .chip-indigo:hover {
+      background: rgba(99, 102, 241, 0.22);
+    }
+
+    :host-context(.dark-theme) .chip-blue, .dark-theme .chip-blue { color: #93C5FD; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.35); }
+    :host-context(.dark-theme) .chip-purple, .dark-theme .chip-purple { color: #C4B5FD; background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.35); }
+    :host-context(.dark-theme) .chip-teal, .dark-theme .chip-teal { color: #5EEAD4; background: rgba(20, 184, 166, 0.2); border-color: rgba(20, 184, 166, 0.35); }
+    :host-context(.dark-theme) .chip-indigo, .dark-theme .chip-indigo { color: #A5B4FC; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.35); }
+
+    /* ═══════════════════════════════════════════════════════════════ */
+    /* 3. ANALYTICS SPLIT LAYOUT                                       */
+    /* ═══════════════════════════════════════════════════════════════ */
     .analytics-layout-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -956,13 +1223,14 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .panel-icon-wrap {
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: 0.65rem;
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 0.7rem;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      border: 1px solid transparent;
     }
     .panel-icon-wrap .material-symbols-outlined { font-size: 1.25rem; }
 
@@ -980,23 +1248,33 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
 
     .badge-pill-purple {
-      background: var(--bg-app, #FAF5FF);
+      background: rgba(139, 92, 246, 0.12);
       color: var(--primary, #7E22CE);
-      border: 1px solid var(--card-border, #E9D5FF);
+      border: 1px solid rgba(139, 92, 246, 0.25);
       font-size: 0.7rem;
       font-weight: 800;
       padding: 0.2rem 0.55rem;
       border-radius: 9999px;
     }
+    :host-context(.dark-theme) .badge-pill-purple, .dark-theme .badge-pill-purple {
+      background: rgba(139, 92, 246, 0.2);
+      color: #C4B5FD;
+      border-color: rgba(139, 92, 246, 0.35);
+    }
 
     .badge-pill-amber {
-      background: var(--warning-light, #FFFBEB);
-      color: var(--warning, #B45309);
-      border: 1px solid var(--warning-light, #FDE68A);
+      background: rgba(245, 158, 11, 0.12);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.25);
       font-size: 0.7rem;
       font-weight: 800;
       padding: 0.2rem 0.55rem;
       border-radius: 9999px;
+    }
+    :host-context(.dark-theme) .badge-pill-amber, .dark-theme .badge-pill-amber {
+      background: rgba(245, 158, 11, 0.2);
+      color: #FCD34D;
+      border-color: rgba(245, 158, 11, 0.35);
     }
 
     .empty-state-box {
@@ -1006,6 +1284,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       justify-content: center;
       padding: 2rem 1rem;
       text-align: center;
+    }
+    .empty-icon {
+      color: var(--text-dim, #94A3B8);
     }
 
     /* Category Meters */
@@ -1066,7 +1347,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .cat-meter-track {
       width: 100%;
       height: 0.5rem;
-      background: var(--bg-app, #FAF5FF);
+      background: var(--card-hover, #F8FAFC);
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 9999px;
       overflow: hidden;
@@ -1098,7 +1379,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
     .delicacy-card-item:hover {
       border-color: var(--primary, #E9D5FF);
-      background: var(--primary-light, #F5E8FF);
+      background: var(--card-hover, #F5E8FF);
       transform: translateX(2px);
     }
 
@@ -1119,10 +1400,31 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       justify-content: center;
       flex-shrink: 0;
     }
-    .rank-gold { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); border: 1px solid var(--warning-light, #FDE68A); }
-    .rank-silver { background: var(--card-hover, #F1F5F9); color: #475569; border: 1px solid var(--card-border, #CBD5E1); }
-    .rank-bronze { background: #FFEDD5; color: #9A3412; border: 1px solid #FED7AA; }
-    .rank-default { background: var(--primary-light, #F3E8FF); color: var(--primary, #7E22CE); }
+    .rank-gold {
+      background: rgba(245, 158, 11, 0.16);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    .rank-silver {
+      background: rgba(148, 163, 184, 0.16);
+      color: #475569;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .rank-bronze {
+      background: rgba(234, 88, 12, 0.16);
+      color: #C2410C;
+      border: 1px solid rgba(234, 88, 12, 0.35);
+    }
+    .rank-default {
+      background: rgba(139, 92, 246, 0.14);
+      color: var(--primary, #7E22CE);
+      border: 1px solid rgba(139, 92, 246, 0.28);
+    }
+
+    :host-context(.dark-theme) .rank-gold, .dark-theme .rank-gold { color: #FCD34D; }
+    :host-context(.dark-theme) .rank-silver, .dark-theme .rank-silver { color: #CBD5E1; }
+    :host-context(.dark-theme) .rank-bronze, .dark-theme .rank-bronze { color: #FDBA74; }
+    :host-context(.dark-theme) .rank-default, .dark-theme .rank-default { color: #C4B5FD; }
 
     .delicacy-details {
       display: flex;
@@ -1164,7 +1466,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .delicacy-sold-badge {
       font-size: 0.75rem;
       font-weight: 900;
-      color: #059669;
+      color: #10B981;
     }
 
     .delicacy-revenue {
@@ -1233,7 +1535,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       transition: background 0.15s ease;
     }
     .order-feed-item:hover {
-      background: var(--primary-light, #F3E8FF);
+      background: var(--card-hover, #F3E8FF);
     }
 
     .order-feed-info {
@@ -1244,7 +1546,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
     .order-number-tag {
       font-size: 0.75rem;
-      color: var(--text-main, #2E1065);
+      color: var(--primary, #2E1065);
     }
 
     .order-type-chip {
@@ -1254,9 +1556,25 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       border-radius: 0.25rem;
       text-transform: uppercase;
     }
-    .chip-dining { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); }
-    .chip-takeaway { background: #DBEAFE; color: #1E40AF; }
-    .chip-walkin { background: #E0E7FF; color: #3730A3; }
+    .chip-dining {
+      background: rgba(245, 158, 11, 0.14);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+    .chip-takeaway {
+      background: rgba(59, 130, 246, 0.14);
+      color: #2563EB;
+      border: 1px solid rgba(59, 130, 246, 0.28);
+    }
+    .chip-walkin {
+      background: rgba(99, 102, 241, 0.14);
+      color: #4F46E5;
+      border: 1px solid rgba(99, 102, 241, 0.28);
+    }
+
+    :host-context(.dark-theme) .chip-dining, .dark-theme .chip-dining { color: #FCD34D; }
+    :host-context(.dark-theme) .chip-takeaway, .dark-theme .chip-takeaway { color: #93C5FD; }
+    :host-context(.dark-theme) .chip-walkin, .dark-theme .chip-walkin { color: #A5B4FC; }
 
     .order-customer-line {
       display: flex;
@@ -1284,10 +1602,31 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       border-radius: 0.3rem;
       letter-spacing: 0.02em;
     }
-    .status-completed { background: var(--success-light, #DCFCE7); color: var(--success, #15803D); }
-    .status-progress { background: var(--warning-light, #FEF3C7); color: var(--warning, #B45309); }
-    .status-pending { background: #E0F2FE; color: #0369A1; }
-    .status-cancelled { background: var(--danger-light, #FEE2E2); color: var(--danger, #B91C1C); }
+    .status-completed {
+      background: rgba(16, 185, 129, 0.14);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.28);
+    }
+    .status-progress {
+      background: rgba(245, 158, 11, 0.14);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+    .status-pending {
+      background: rgba(14, 165, 233, 0.14);
+      color: #0284C7;
+      border: 1px solid rgba(14, 165, 233, 0.28);
+    }
+    .status-cancelled {
+      background: rgba(239, 68, 68, 0.14);
+      color: #DC2626;
+      border: 1px solid rgba(239, 68, 68, 0.28);
+    }
+
+    :host-context(.dark-theme) .status-completed, .dark-theme .status-completed { color: #6EE7B7; }
+    :host-context(.dark-theme) .status-progress, .dark-theme .status-progress { color: #FCD34D; }
+    :host-context(.dark-theme) .status-pending, .dark-theme .status-pending { color: #7DD3FC; }
+    :host-context(.dark-theme) .status-cancelled, .dark-theme .status-cancelled { color: #FCA5A5; }
 
     .order-amount {
       font-size: 0.8rem;
@@ -1297,7 +1636,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
     /* Quick Ops Shortcuts */
     .quick-ops-card {
-      background: linear-gradient(135deg, var(--bg-app, #FAF5FF), var(--primary-light, #F3E8FF));
+      background: var(--card-bg, #FFFFFF);
       border-color: var(--card-border, #E9D5FF);
     }
 
@@ -1329,17 +1668,49 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     }
     .ops-shortcut-btn .material-symbols-outlined { font-size: 1.1rem; }
 
-    .btn-ops-purple { background: var(--primary, #7E22CE); color: #FFFFFF; }
-    .btn-ops-purple:hover { background: var(--primary-variant, #6B21A8); }
+    .btn-ops-purple {
+      background: var(--primary, #7E22CE);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px var(--primary-glow, rgba(126, 34, 206, 0.2));
+    }
+    .btn-ops-purple:hover {
+      background: var(--primary-hover, #6B21A8);
+      transform: translateY(-1px);
+    }
 
-    .btn-ops-amber { background: var(--card-bg, #FFFFFF); color: var(--warning, #B45309); border: 1px solid var(--warning-light, #FDE68A); }
-    .btn-ops-amber:hover { background: var(--warning-light, #FFFBEB); }
+    .btn-ops-amber {
+      background: rgba(245, 158, 11, 0.12);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .btn-ops-amber:hover {
+      background: rgba(245, 158, 11, 0.22);
+      transform: translateY(-1px);
+    }
 
-    .btn-ops-emerald { background: var(--card-bg, #FFFFFF); color: #047857; border: 1px solid #A7F3D0; }
-    .btn-ops-emerald:hover { background: #ECFDF5; }
+    .btn-ops-emerald {
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .btn-ops-emerald:hover {
+      background: rgba(16, 185, 129, 0.22);
+      transform: translateY(-1px);
+    }
 
-    .btn-ops-blue { background: var(--card-bg, #FFFFFF); color: #1D4ED8; border: 1px solid #BFDBFE; }
-    .btn-ops-blue:hover { background: #EFF6FF; }
+    .btn-ops-blue {
+      background: rgba(59, 130, 246, 0.12);
+      color: #2563EB;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+    .btn-ops-blue:hover {
+      background: rgba(59, 130, 246, 0.22);
+      transform: translateY(-1px);
+    }
+
+    :host-context(.dark-theme) .btn-ops-amber, .dark-theme .btn-ops-amber { color: #FCD34D; background: rgba(245, 158, 11, 0.2); }
+    :host-context(.dark-theme) .btn-ops-emerald, .dark-theme .btn-ops-emerald { color: #6EE7B7; background: rgba(16, 185, 129, 0.2); }
+    :host-context(.dark-theme) .btn-ops-blue, .dark-theme .btn-ops-blue { color: #93C5FD; background: rgba(59, 130, 246, 0.2); }
   `],
 })
 export class DashboardComponent implements OnInit {

@@ -628,7 +628,7 @@ export interface ApiResponse<T = any> {
 
 export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 export type PaymentTermsType = 'COD' | 'ADVANCE' | 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'NET_60';
-export type PreferredPaymentMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'UPI' | 'CASH';
+export type PreferredPaymentMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'UPI' | 'CASH' | 'PAY_LATER' | 'CREDIT_TERMS';
 export type PurchasePaymentStatus = 'PAID' | 'PARTIAL' | 'UNPAID' | 'OVERDUE';
 export type PurchaseDeliveryStatus = 'RECEIVED' | 'PENDING' | 'CANCELLED';
 
@@ -656,7 +656,6 @@ export interface Vendor {
   tax_id?: string | null;
   pan_number?: string | null;
   tax_category?: string;
-  msme_number?: string | null;
 
   // Payment Terms & Banking
   payment_terms: PaymentTermsType | string;
@@ -669,7 +668,6 @@ export interface Vendor {
 
   // Credit Limit & Balances
   credit_limit: number;
-  credit_period_days: number;
   outstanding_balance: number;
   total_purchases_amount: number;
   total_purchases_count: number;

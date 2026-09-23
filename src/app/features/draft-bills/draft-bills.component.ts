@@ -40,11 +40,7 @@ import {
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
         <span>Point of Sale</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Parked Carts</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Draft &amp; Held Bills</span>
       </div>

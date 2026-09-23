@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { CustomizationService } from './customization.service';
+import { ThemeService } from './theme.service';
 
 export type CustomerDesignKey = 'vipcard' | 'clean' | 'compact' | 'list' | 'card';
 
@@ -262,6 +263,7 @@ interface StoredCustomerLayout {
 export class CustomerLayoutService {
   private settingsService = inject(SettingsService);
   private customization = inject(CustomizationService);
+  private themeService = inject(ThemeService);
 
   private readonly layoutKeySignal = signal<CustomerDesignKey>(DEFAULT_CUSTOMER_DESIGN);
   private readonly overridesSignal = signal<StoredCustomerLayout['overrides']>({});
@@ -329,23 +331,64 @@ export class CustomerLayoutService {
   }
 
   private varsFrom(tokens: CustomerTokens): Record<string, string> {
+    const isDark = this.themeService.isDarkMode() || this.themeService.mode() === 'dark';
+    const activeP = this.themeService.currentPalette();
+
+    let canvasBg = tokens.canvasBg;
+    let cardBg = tokens.cardBg;
+    let cardBorder = tokens.cardBorder;
+    let textColor = tokens.textColor;
+    let textMuted = tokens.textMuted;
+    let accentColor = tokens.accentColor;
+    let vipBadgeBg = tokens.vipBadgeBg;
+    let vipBadgeColor = tokens.vipBadgeColor;
+    let buttonBg = tokens.buttonBg;
+
+    if (isDark) {
+      if (!this.themeService.isDarkColor(canvasBg)) {
+        canvasBg = activeP.bgApp;
+      }
+      if (!this.themeService.isDarkColor(cardBg)) {
+        cardBg = activeP.cardBg;
+      }
+      if (this.themeService.isDarkColor(textColor)) {
+        textColor = activeP.textMain || '#F9FAFB';
+      }
+      if (!this.themeService.isDarkColor(cardBorder) && (cardBorder === '#E9D5FF' || cardBorder === '#E5E7EB' || cardBorder === '#E2E8F0')) {
+        cardBorder = activeP.cardBorder;
+      }
+      if (textMuted === '#6B7280' || textMuted === '#64748B') {
+        textMuted = 'rgba(226, 232, 240, 0.78)';
+      }
+      if (vipBadgeBg === '#FEF3C7' || vipBadgeBg === '#EFF6FF') {
+        vipBadgeBg = 'rgba(245, 158, 11, 0.2)';
+        vipBadgeColor = '#FBBF24';
+      }
+      if (accentColor === '#7E22CE' || accentColor === '#2563EB') {
+        accentColor = activeP.primary;
+      }
+      if (buttonBg === '#7E22CE' || buttonBg === '#2563EB') {
+        buttonBg = activeP.primary;
+      }
+    }
+
     const vars: Record<string, string> = {};
 
-    vars['--cust-canvas-bg'] = tokens.canvasBg;
-    vars['--cust-card-bg'] = tokens.cardBg;
-    vars['--cust-card-border'] = tokens.cardBorder;
-    vars['--cust-text-color'] = tokens.textColor;
-    vars['--cust-text-muted'] = tokens.textMuted;
-    vars['--cust-accent-color'] = tokens.accentColor;
-    vars['--cust-vip-badge-bg'] = tokens.vipBadgeBg;
-    vars['--cust-vip-badge-color'] = tokens.vipBadgeColor;
+    vars['--cust-canvas-bg'] = canvasBg;
+    vars['--cust-card-bg'] = cardBg;
+    vars['--cust-card-border'] = cardBorder;
+    vars['--cust-text-color'] = textColor;
+    vars['--cust-text-muted'] = textMuted;
+    vars['--cust-accent-color'] = accentColor;
+    vars['--cust-vip-badge-bg'] = vipBadgeBg;
+    vars['--cust-vip-badge-color'] = vipBadgeColor;
     vars['--cust-spend-color'] = tokens.spendColor;
     vars['--cust-card-scale'] = String(tokens.cardScale / 100);
     vars['--cust-card-radius'] = tokens.cardRadius + 'px';
     vars['--cust-padding'] = tokens.padding + 'px';
     vars['--cust-grid-gap'] = tokens.gridGap + 'px';
     vars['--cust-font-size'] = tokens.fontSize + 'px';
-    vars['--cust-button-bg'] = tokens.buttonBg;
+    vars['--cust-button-bg'] = buttonBg;
     vars['--cust-button-color'] = tokens.buttonColor;
 
     return vars;

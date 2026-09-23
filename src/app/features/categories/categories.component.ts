@@ -31,13 +31,9 @@ import { RouterLink } from '@angular/router';
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
+        <span>Catalog</span>
         <span class="breadcrumb-separator">›</span>
-        <span>Menu & Catalog</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Dishes & Products</span>
-        <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">Category Directory</span>
+        <span class="breadcrumb-current">Categories</span>
       </div>
 
       <div class="module-header-card">

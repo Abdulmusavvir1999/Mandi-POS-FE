@@ -10,8 +10,6 @@ import {
   OnInit,
   OnDestroy,
   forwardRef,
-  computed,
-  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
@@ -55,18 +53,37 @@ export interface DropdownOption {
         [disabled]="disabled"
       >
         <div class="trigger-left">
-          <span *ngIf="selectedOption?.icon" class="material-symbols-outlined trigger-icon">
+          <!-- Single Select Icon -->
+          <span *ngIf="!multiple && selectedOption?.icon" class="material-symbols-outlined trigger-icon">
             {{ selectedOption?.icon }}
           </span>
-          <span class="trigger-label">
-            {{ selectedOption?.label || placeholder }}
+
+          <!-- Multi Select Mode with chips or label -->
+          <ng-container *ngIf="multiple">
+            <span *ngIf="selectedOptions.length === 1 && selectedOptions[0].icon" class="material-symbols-outlined trigger-icon">
+              {{ selectedOptions[0].icon }}
+            </span>
+            <span *ngIf="selectedOptions.length > 1" class="material-symbols-outlined trigger-icon">
+              checklist
+            </span>
+          </ng-container>
+
+          <span class="trigger-label" [class.is-placeholder]="isPlaceholderVisible">
+            {{ displayLabel }}
           </span>
         </div>
 
         <div class="trigger-right">
-          <span *ngIf="selectedOption?.badge" class="trigger-badge">
+          <!-- Multi Select Count Badge -->
+          <span *ngIf="multiple && selectedOptions.length > 1" class="trigger-multi-badge">
+            {{ selectedOptions.length }}
+          </span>
+
+          <!-- Single Select Badge -->
+          <span *ngIf="!multiple && selectedOption?.badge" class="trigger-badge">
             {{ selectedOption?.badge }}
           </span>
+
           <span class="material-symbols-outlined chevron-icon" [class.rotated]="isOpen">
             expand_more
           </span>
@@ -81,16 +98,17 @@ export interface DropdownOption {
         [class.is-positioned]="isPositioned"
         [class.is-flipped]="isFlipped"
       >
-        <!-- Optional Search Bar inside dropdown for quick filtering -->
-        <div *ngIf="searchable || options.length > 7" class="dropdown-search-wrapper" (click)="$event.stopPropagation()">
-          <span class="material-symbols-outlined search-icon">search</span>
+        <!-- Search / Custom Value Input inside dropdown -->
+        <div *ngIf="searchable || allowCustom || options.length > 6" class="dropdown-search-wrapper" (click)="$event.stopPropagation()">
+          <span class="material-symbols-outlined search-icon">{{ allowCustom ? 'edit_note' : 'search' }}</span>
           <input
-            title="Search options"
+            title="Search or enter custom option"
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="onOptionSearchChange()"
+            (keydown.enter)="onSearchEnter($event)"
             (click)="$event.stopPropagation()"
-            placeholder="Search options..."
+            [placeholder]="allowCustom ? 'Search or type new custom value...' : 'Search options...'"
             class="dropdown-search-input"
             autofocus
           />
@@ -104,19 +122,60 @@ export interface DropdownOption {
           </button>
         </div>
 
+        <!-- Multi-Select Action Header Bar -->
+        <div *ngIf="multiple" class="multi-actions-header" (click)="$event.stopPropagation()">
+          <span class="multi-selected-text">
+            {{ selectedOptions.length }} of {{ options.length }} selected
+          </span>
+          <div class="multi-header-btns">
+            <button type="button" class="multi-header-btn" (click)="selectAll($event)">
+              Select All
+            </button>
+            <span class="multi-dot-sep">•</span>
+            <button type="button" class="multi-header-btn" (click)="clearAll($event)">
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Add Custom Value Action Item (when allowCustom is true & input is typed) -->
+        <div *ngIf="allowCustom && searchQuery.trim() && !hasExactMatch" class="custom-add-container" (click)="$event.stopPropagation()">
+          <button
+            type="button"
+            class="custom-add-btn"
+            (click)="addCustomOption(searchQuery.trim(), $event)"
+          >
+            <span class="material-symbols-outlined custom-add-icon">add_circle</span>
+            <div class="custom-add-text">
+              <span class="custom-add-label">Add "<strong>{{ searchQuery.trim() }}</strong>"</span>
+              <span class="custom-add-sub">Create & select new custom value</span>
+            </div>
+            <span class="custom-add-pill">NEW</span>
+          </button>
+        </div>
+
         <!-- Options List -->
         <div class="options-list-scroll">
           <button
             *ngFor="let opt of filteredOptions"
             type="button"
             class="option-item"
-            [class.is-selected]="opt.value === innerValue"
+            [class.is-selected]="isOptionSelected(opt)"
+            [class.is-multi-item]="multiple"
             (click)="selectOption(opt, $event)"
           >
             <div class="option-left">
+              <!-- Multi-select Checkbox Square -->
+              <div *ngIf="multiple" class="multi-chk-box" [class.is-checked]="isOptionSelected(opt)">
+                <span class="material-symbols-outlined multi-chk-tick">check</span>
+              </div>
+
+              <!-- Option Icon -->
               <span *ngIf="opt.icon" class="material-symbols-outlined option-icon">
                 {{ opt.icon }}
               </span>
+
+              <!-- Label & Description -->
               <div class="option-text-group">
                 <span class="option-label">{{ opt.label }}</span>
                 <span *ngIf="opt.description" class="option-desc">{{ opt.description }}</span>
@@ -125,16 +184,17 @@ export interface DropdownOption {
 
             <div class="option-right">
               <span *ngIf="opt.badge" class="option-badge">{{ opt.badge }}</span>
-              <span *ngIf="opt.value === innerValue" class="material-symbols-outlined check-icon">
+              <!-- Single Select Right Checkmark -->
+              <span *ngIf="!multiple && isOptionSelected(opt)" class="material-symbols-outlined check-icon">
                 check
               </span>
             </div>
           </button>
 
-          <!-- Empty State if no matching search -->
-          <div *ngIf="filteredOptions.length === 0" class="empty-options">
+          <!-- Empty State if no matching search and not custom -->
+          <div *ngIf="filteredOptions.length === 0 && (!allowCustom || !searchQuery.trim())" class="empty-options">
             <span class="material-symbols-outlined empty-icon">filter_alt_off</span>
-            <span>No options found</span>
+            <span>No matching options found</span>
           </div>
         </div>
       </div>
@@ -212,6 +272,8 @@ export interface DropdownOption {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex: 1;
+        min-width: 0;
       }
 
       .trigger-icon {
@@ -224,6 +286,10 @@ export interface DropdownOption {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .trigger-label.is-placeholder {
+        color: var(--text-muted, #94A3B8);
+        font-weight: 500;
       }
 
       .trigger-right {
@@ -242,6 +308,15 @@ export interface DropdownOption {
         color: var(--primary, #7E22CE);
       }
 
+      .trigger-multi-badge {
+        font-size: 0.6875rem;
+        font-weight: 800;
+        padding: 0.12rem 0.5rem;
+        border-radius: 9999px;
+        background: var(--primary, #7E22CE);
+        color: #FFFFFF;
+      }
+
       .chevron-icon {
         font-size: 19px;
         color: var(--text-muted, #6B7280);
@@ -254,11 +329,6 @@ export interface DropdownOption {
       }
 
       /* Floating Dropdown Panel */
-      /* Fixed, not absolute. An absolutely positioned panel is part of its
-         scroll container's content, so opening it inside a modal that has
-         overflow-y: auto both grew the modal's scrollbar and clipped the list
-         at the modal's edge. Fixed leaves that box entirely; the exact top/left
-         are measured and written by positionPanel(). */
       .dropdown-menu-panel {
         position: fixed;
         top: 0;
@@ -271,8 +341,6 @@ export interface DropdownOption {
         padding: 0.4rem;
         z-index: 2000;
         box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16), 0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
-        /* Hidden for the one frame between being rendered and being measured,
-           so it never flashes at the top-left corner. */
         visibility: hidden;
       }
 
@@ -321,7 +389,7 @@ export interface DropdownOption {
         position: absolute;
         left: 0.85rem;
         font-size: 16px;
-        color: var(--text-dim, #94A3B8);
+        color: var(--primary, #7E22CE);
         pointer-events: none;
       }
 
@@ -359,6 +427,118 @@ export interface DropdownOption {
         font-size: 14px;
       }
 
+      /* Custom Add Item Button */
+      .custom-add-container {
+        padding: 0.25rem 0.35rem;
+        margin-bottom: 0.35rem;
+        border-bottom: 1px dashed var(--card-border, #E2E8F0);
+      }
+
+      .custom-add-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 10px;
+        border: 1.5px dashed var(--primary, #7E22CE);
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.08);
+        color: var(--primary, #7E22CE);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        text-align: left;
+      }
+
+      .custom-add-btn:hover {
+        background: var(--primary, #7E22CE);
+        color: #FFFFFF;
+        border-style: solid;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
+      }
+
+      .custom-add-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .custom-add-text {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .custom-add-label {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .custom-add-sub {
+        font-size: 0.6875rem;
+        opacity: 0.85;
+      }
+
+      .custom-add-pill {
+        font-size: 0.625rem;
+        font-weight: 800;
+        padding: 0.1rem 0.4rem;
+        border-radius: 9999px;
+        background: var(--primary, #7E22CE);
+        color: #FFFFFF;
+      }
+      .custom-add-btn:hover .custom-add-pill {
+        background: #FFFFFF;
+        color: var(--primary, #7E22CE);
+      }
+
+      /* Multi-select Header Bar */
+      .multi-actions-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.4rem 0.6rem;
+        margin-bottom: 0.25rem;
+        border-bottom: 1px solid var(--card-border, #E2E8F0);
+        background: var(--bg-app, #F8FAFC);
+        border-radius: 8px;
+      }
+
+      .multi-selected-text {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--primary, #7E22CE);
+      }
+
+      .multi-header-btns {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .multi-header-btn {
+        background: none;
+        border: none;
+        padding: 0.15rem 0.35rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--text-muted, #64748B);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+      }
+      .multi-header-btn:hover {
+        color: var(--primary, #7E22CE);
+        background: var(--primary-light, #F3E8FF);
+      }
+      .multi-dot-sep {
+        font-size: 0.6875rem;
+        color: var(--card-border, #CBD5E1);
+      }
+
       /* Options Scroll Area */
       .options-list-scroll {
         max-height: 280px;
@@ -366,8 +546,6 @@ export interface DropdownOption {
         min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
-        /* Reaching the end of this list must not start scrolling the modal
-           underneath it. */
         overscroll-behavior: contain;
         display: flex;
         flex-direction: column;
@@ -421,6 +599,40 @@ export interface DropdownOption {
         align-items: center;
         gap: 0.55rem;
         overflow: hidden;
+        flex: 1;
+      }
+
+      /* Multi-select Checkbox Icon Box */
+      .multi-chk-box {
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        border-radius: 5px;
+        border: 1.5px solid var(--card-border, #CBD5E1);
+        background: var(--card-bg, #FFFFFF);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+      }
+
+      .multi-chk-box.is-checked {
+        background: var(--primary, #7E22CE);
+        border-color: var(--primary, #7E22CE);
+      }
+
+      .multi-chk-tick {
+        font-size: 13px;
+        font-weight: 900;
+        color: #FFFFFF;
+        opacity: 0;
+        transform: scale(0.6);
+        transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .multi-chk-box.is-checked .multi-chk-tick {
+        opacity: 1;
+        transform: scale(1);
       }
 
       .option-icon {
@@ -439,6 +651,7 @@ export interface DropdownOption {
         display: flex;
         flex-direction: column;
         gap: 0.1rem;
+        min-width: 0;
       }
 
       .option-label {
@@ -450,6 +663,9 @@ export interface DropdownOption {
       .option-desc {
         font-size: 0.6875rem;
         color: var(--text-muted, #64748B);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .option-right {
@@ -499,6 +715,8 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   @Input() minWidth = '160px';
   @Input() searchable = false;
   @Input() disabled = false;
+  @Input() multiple = false;
+  @Input() allowCustom = false;
 
   @HostBinding('class.w-full')
   get isFullWidth(): boolean {
@@ -506,6 +724,7 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   }
 
   @Output() valueChange = new EventEmitter<any>();
+  @Output() optionCreated = new EventEmitter<DropdownOption>();
 
   public isOpen = false;
   public searchQuery = '';
@@ -530,8 +749,6 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
 
   ngOnInit(): void {
     window.addEventListener('resize', this.reposition);
-    // Capture phase: a scroll inside the modal body does not bubble to window,
-    // so this is the only way to follow the trigger when the modal scrolls.
     document.addEventListener('scroll', this.reposition, true);
   }
 
@@ -541,7 +758,6 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     releaseFloatingPanel(this);
   }
 
-  /** Closes the panel and forgets any in-panel option search. */
   public close(): void {
     this.isOpen = false;
     this.isPositioned = false;
@@ -549,15 +765,6 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     releaseFloatingPanel(this);
   }
 
-  /**
-   * Anchors the fixed panel under (or over) the trigger.
-   *
-   * A filtered or transformed ancestor becomes the containing block for
-   * position: fixed — the modal backdrop's backdrop-filter does exactly that —
-   * so the panel's origin is not reliably the viewport. Rather than assume, the
-   * panel is parked at 0,0 and measured: wherever that lands IS the origin, and
-   * everything else is expressed relative to it. Correct in both cases.
-   */
   private positionPanel(): void {
     const trigger = this.triggerRef?.nativeElement;
     const panel = this.panelRef?.nativeElement;
@@ -577,14 +784,12 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     const spaceBelow = window.innerHeight - rect.bottom - GAP - MARGIN;
     const spaceAbove = rect.top - GAP - MARGIN;
 
-    // Only flip when below genuinely cannot hold a usable panel and above is roomier.
     this.isFlipped = spaceBelow < Math.min(naturalHeight, MIN_PANEL) && spaceAbove > spaceBelow;
 
     const available = Math.max(MIN_PANEL, this.isFlipped ? spaceAbove : spaceBelow);
     const height = Math.min(naturalHeight, available);
     const top = this.isFlipped ? rect.top - GAP - height : rect.bottom + GAP;
 
-    // Keep the panel inside the viewport horizontally.
     let left = rect.left;
     const overflowRight = left + rect.width + MARGIN - window.innerWidth;
     if (overflowRight > 0) left -= overflowRight;
@@ -610,13 +815,81 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     if (this.isOpen) this.close();
   }
 
-  /** The option list just changed length, so the panel needs re-measuring. */
   onOptionSearchChange(): void {
     setTimeout(() => this.positionPanel());
   }
 
+  onSearchEnter(event: Event): void {
+    event.preventDefault();
+    if (this.allowCustom && this.searchQuery.trim() && !this.hasExactMatch) {
+      this.addCustomOption(this.searchQuery.trim(), event as MouseEvent);
+    }
+  }
+
+  get hasExactMatch(): boolean {
+    if (!this.searchQuery.trim()) return false;
+    const q = this.searchQuery.trim().toLowerCase();
+    return this.options.some(
+      (opt) =>
+        opt.label.toLowerCase() === q ||
+        String(opt.value).toLowerCase() === q
+    );
+  }
+
   get selectedOption(): DropdownOption | undefined {
-    return this.options.find((opt) => opt.value === this.innerValue);
+    let opt = this.options.find((o) => o.value === this.innerValue);
+    if (!opt && this.innerValue !== null && this.innerValue !== undefined && this.innerValue !== '') {
+      // Ensure custom or newly bound values still render cleanly
+      opt = { value: this.innerValue, label: String(this.innerValue), icon: 'edit_note' };
+    }
+    return opt;
+  }
+
+  private getSelectedValuesArray(): any[] {
+    if (Array.isArray(this.innerValue)) {
+      return this.innerValue;
+    }
+    if (typeof this.innerValue === 'string' && this.innerValue.trim()) {
+      return this.innerValue.split(',').map((s) => s.trim());
+    }
+    return [];
+  }
+
+  get selectedOptions(): DropdownOption[] {
+    if (!this.multiple) {
+      const opt = this.selectedOption;
+      return opt ? [opt] : [];
+    }
+    const currentValues = this.getSelectedValuesArray();
+    return this.options.filter(
+      (opt) => currentValues.includes(opt.value) || currentValues.includes(String(opt.value))
+    );
+  }
+
+  get isPlaceholderVisible(): boolean {
+    if (this.multiple) {
+      return this.selectedOptions.length === 0;
+    }
+    return !this.selectedOption;
+  }
+
+  get displayLabel(): string {
+    if (!this.multiple) {
+      return this.selectedOption?.label || this.placeholder;
+    }
+    const selected = this.selectedOptions;
+    if (selected.length === 0) return this.placeholder;
+    if (selected.length === 1) return selected[0].label;
+    if (selected.length === 2) return `${selected[0].label}, ${selected[1].label}`;
+    return `${selected[0].label}, ${selected[1].label} (+${selected.length - 2} more)`;
+  }
+
+  isOptionSelected(opt: DropdownOption): boolean {
+    if (!this.multiple) {
+      return opt.value === this.innerValue || String(opt.value) === String(this.innerValue);
+    }
+    const currentValues = this.getSelectedValuesArray();
+    return currentValues.includes(opt.value) || currentValues.includes(String(opt.value));
   }
 
   get filteredOptions(): DropdownOption[] {
@@ -642,22 +915,106 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     this.isOpen = true;
     this.searchQuery = '';
     this.isPositioned = false;
-    // The panel has to exist in the DOM before it can be measured.
     setTimeout(() => this.positionPanel());
   }
 
-  selectOption(opt: DropdownOption, event: MouseEvent): void {
-    event.stopPropagation();
-    this.innerValue = opt.value;
+  selectOption(opt: DropdownOption, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    if (!this.multiple) {
+      this.innerValue = opt.value;
+      this.onChange(this.innerValue);
+      this.onTouched();
+      this.valueChange.emit(this.innerValue);
+      this.close();
+      return;
+    }
+
+    // Multi-select toggle logic
+    let currentValues = this.getSelectedValuesArray();
+    const isAlreadySelected =
+      currentValues.includes(opt.value) || currentValues.includes(String(opt.value));
+
+    if (isAlreadySelected) {
+      currentValues = currentValues.filter((v) => v !== opt.value && v !== String(opt.value));
+    } else {
+      currentValues.push(opt.value);
+    }
+
+    if (Array.isArray(this.innerValue)) {
+      this.innerValue = currentValues;
+    } else if (typeof this.innerValue === 'string') {
+      this.innerValue = currentValues.join(',');
+    } else {
+      this.innerValue = currentValues;
+    }
+
     this.onChange(this.innerValue);
     this.onTouched();
     this.valueChange.emit(this.innerValue);
-    this.close();
+  }
+
+  addCustomOption(customText: string, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    const trimmed = customText.trim();
+    if (!trimmed) return;
+
+    // Check if already in options
+    let existing = this.options.find(
+      (o) => o.label.toLowerCase() === trimmed.toLowerCase() || String(o.value).toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (!existing) {
+      existing = {
+        value: trimmed,
+        label: trimmed,
+        icon: 'edit_calendar',
+        description: 'Custom added term',
+        badge: 'Custom',
+      };
+      this.options.unshift(existing);
+      this.optionCreated.emit(existing);
+    }
+
+    this.selectOption(existing, event);
+    this.searchQuery = '';
+  }
+
+  selectAll(event: MouseEvent): void {
+    event.stopPropagation();
+    const allValues = this.options.map((o) => o.value);
+    if (typeof this.innerValue === 'string') {
+      this.innerValue = allValues.join(',');
+    } else {
+      this.innerValue = allValues;
+    }
+    this.onChange(this.innerValue);
+    this.onTouched();
+    this.valueChange.emit(this.innerValue);
+  }
+
+  clearAll(event: MouseEvent): void {
+    event.stopPropagation();
+    this.innerValue = typeof this.innerValue === 'string' ? '' : [];
+    this.onChange(this.innerValue);
+    this.onTouched();
+    this.valueChange.emit(this.innerValue);
   }
 
   // ControlValueAccessor methods
   writeValue(val: any): void {
     this.innerValue = val;
+    if (val && this.allowCustom && !Array.isArray(val)) {
+      const match = this.options.find((o) => o.value === val || String(o.value) === String(val));
+      if (!match && typeof val === 'string' && val.trim()) {
+        this.options.push({
+          value: val,
+          label: val,
+          icon: 'edit_calendar',
+          description: 'Custom terms',
+          badge: 'Custom',
+        });
+      }
+    }
   }
 
   registerOnChange(fn: any): void {

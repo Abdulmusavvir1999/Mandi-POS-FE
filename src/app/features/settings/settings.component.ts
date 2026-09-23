@@ -6,7 +6,14 @@ import { SettingsService } from '../../core/services/settings.service';
 import { BackupService, BackupInfo, FolderCheck, BrowseResult } from '../../core/services/backup.service';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { NotificationService, ToastPosition } from '../../core/services/notification.service';
-import { ThemeService, DEFAULT_THEME_PALETTES, ThemePalette } from '../../core/services/theme.service';
+import {
+  ThemeService,
+  DEFAULT_THEME_PALETTES,
+  DEFAULT_LIGHT_PALETTES,
+  DEFAULT_DARK_PALETTES,
+  ThemePalette,
+  ThemeMode,
+} from '../../core/services/theme.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DragScrollDirective } from '../../shared/directives/drag-scroll.directive';
 import { PosDesignPreviewComponent } from '../../shared/components/pos-design-preview/pos-design-preview.component';
@@ -2421,77 +2428,182 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       <!-- TAB 1: BRAND THEME & UI PALETTE                                 -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'theme'" class="tab-content-pane">
-        <!-- Preset Palettes -->
+
+        <!-- 1. LIGHT MODE VS DARK MODE CONFIGURATION SELECTOR -->
+        <div class="setting-card theme-mode-banner-card">
+          <div class="card-header-bar theme-mode-header-bar">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined icon-purple">palette</span>
+                <h2 class="card-title">Theme Customization Mode</h2>
+              </div>
+              <p class="card-subtitle">
+                Customize colors independently for <strong>Light Mode</strong> and <strong>Dark Mode</strong>. Switch between the tabs below to configure designer presets or fine-tune individual color tokens for each mode.
+              </p>
+            </div>
+
+            <!-- Mode Segment Buttons -->
+            <div class="theme-mode-segmented-control">
+              <button
+                type="button"
+                (click)="selectThemeModeTab('light')"
+                class="mode-segment-btn"
+                [class.is-active]="activeThemeModeTab === 'light'"
+              >
+                <span class="material-symbols-outlined segment-icon">light_mode</span>
+                <span class="segment-label">Light Mode Config</span>
+                <span *ngIf="activeThemeModeTab === 'light'" class="active-pill">Editing</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="selectThemeModeTab('dark')"
+                class="mode-segment-btn"
+                [class.is-active]="activeThemeModeTab === 'dark'"
+              >
+                <span class="material-symbols-outlined segment-icon">dark_mode</span>
+                <span class="segment-label">Dark Mode Config</span>
+                <span *ngIf="activeThemeModeTab === 'dark'" class="active-pill">Editing</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Mode Indicator Bar -->
+          <div class="theme-mode-info-stripe" [class.is-dark-stripe]="activeThemeModeTab === 'dark'">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">
+                {{ activeThemeModeTab === 'dark' ? 'nights_stay' : 'wb_sunny' }}
+              </span>
+              <span class="text-xs font-bold">
+                Currently customizing: <strong>{{ activeThemeModeTab === 'dark' ? 'Dark Mode (Night Canvas)' : 'Light Mode (Day Canvas)' }}</strong>
+              </span>
+            </div>
+            <span class="text-[11px] opacity-80">
+              Active Preset: <strong>{{ getActivePresetName() }}</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. DARK MODE HEADER TOGGLE BUTTON SETTING CARD -->
+        <div class="setting-card dark-toggle-setting-card">
+          <div class="card-header-bar">
+            <div class="flex items-center gap-3">
+              <div class="dark-toggle-icon-box" [class.is-active]="themeService.darkModeToggleEnabled()">
+                <span class="material-symbols-outlined">
+                  {{ themeService.darkModeToggleEnabled() ? 'toggle_on' : 'toggle_off' }}
+                </span>
+              </div>
+              <div>
+                <h3 class="card-title text-sm font-bold flex items-center gap-2">
+                  <span>Header Dark Mode Toggle Button</span>
+                  <span
+                    class="badge-pill"
+                    [class.badge-pill-success]="themeService.darkModeToggleEnabled()"
+                    [class.badge-pill-muted]="!themeService.darkModeToggleEnabled()"
+                  >
+                    <span class="badge-dot"></span>
+                    <span>{{ themeService.darkModeToggleEnabled() ? 'ENABLED (VISIBLE)' : 'DISABLED (HIDDEN)' }}</span>
+                  </span>
+                </h3>
+                <p class="card-subtitle text-xs">
+                  Controls whether the quick Dark / Light mode toggle button is visible in the top header bar for staff and cashier users.
+                </p>
+              </div>
+            </div>
+
+            <label class="switch-row" title="Enable or disable the Dark Mode toggle button in the header">
+              <input
+                type="checkbox"
+                [checked]="themeService.darkModeToggleEnabled()"
+                (change)="toggleDarkModeHeaderSetting($event)"
+              />
+              <span class="switch-track">
+                <span class="switch-knob"></span>
+              </span>
+              <span class="switch-label">
+                {{ themeService.darkModeToggleEnabled() ? 'Show in Header' : 'Hide from Header' }}
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. PRESET PALETTES FOR ACTIVE MODE -->
         <div class="setting-card">
           <div class="card-header-bar">
             <div>
               <h2 class="card-title">
                 <span class="material-symbols-outlined icon-purple">auto_fix_high</span>
-                <span>Curated Luxury Theme Presets</span>
+                <span>Curated {{ activeThemeModeTab === 'dark' ? 'Dark' : 'Light' }} Luxury Theme Presets</span>
               </h2>
-              <p class="card-subtitle">Select a designer palette or fine-tune individual tokens below.</p>
+              <p class="card-subtitle">
+                Select a designer {{ activeThemeModeTab }} palette or fine-tune individual tokens below.
+              </p>
             </div>
             <span class="active-preset-tag">
-              Active: <strong>{{ activePresetKey | uppercase }}</strong>
+              {{ activeThemeModeTab | uppercase }} Active: <strong>{{ activeModePresetKey | uppercase }}</strong>
             </span>
           </div>
 
           <div class="presets-grid">
             <button
               type="button"
-              *ngFor="let key of presetKeys"
+              *ngFor="let key of currentModePresetKeys"
               (click)="selectPreset(key)"
               class="preset-item-card"
-              [class.is-selected]="activePresetKey === key && !showCustomFields"
+              [class.is-selected]="activeModePresetKey === key && !showCustomFields"
             >
               <div class="preset-header">
-                <span class="preset-emoji">{{ presets[key].icon }}</span>
-                <span *ngIf="activePresetKey === key && !showCustomFields" class="material-symbols-outlined check-badge">check_circle</span>
+                <span class="preset-emoji">{{ currentModePresets[key].icon }}</span>
+                <span *ngIf="activeModePresetKey === key && !showCustomFields" class="material-symbols-outlined check-badge">check_circle</span>
               </div>
-              <div class="preset-name">{{ presets[key].name }}</div>
+              <div class="preset-name">{{ currentModePresets[key].name }}</div>
               
               <!-- Color swatch strip -->
               <div class="preset-swatch-row">
-                <span class="swatch-dot" [style.background-color]="presets[key].palette.primary"></span>
-                <span class="swatch-dot" [style.background-color]="presets[key].palette.sidebarBg"></span>
-                <span class="swatch-dot" [style.background-color]="presets[key].palette.bgApp"></span>
-                <span class="swatch-dot" [style.background-color]="presets[key].palette.success"></span>
+                <span class="swatch-dot" [style.background-color]="currentModePresets[key].palette.primary" title="Primary Accent"></span>
+                <span class="swatch-dot" [style.background-color]="currentModePresets[key].palette.sidebarActiveAccent" title="Active Nav Highlight"></span>
+                <span class="swatch-dot" [style.background-color]="currentModePresets[key].palette.sidebarBg" title="Sidebar Surface"></span>
+                <span class="swatch-dot" [style.background-color]="currentModePresets[key].palette.success" title="Success State"></span>
               </div>
             </button>
 
-            <!-- 6th Custom Palette Card -->
+            <!-- Custom Palette Card -->
             <button
               type="button"
               (click)="openCustomThemeCard()"
               class="preset-item-card preset-custom-card"
-              [class.is-selected]="activePresetKey === 'custom' || showCustomFields"
+              [class.is-selected]="activeModePresetKey === 'custom' || showCustomFields"
             >
               <div class="preset-header">
                 <span class="preset-emoji">🎨</span>
-                <span *ngIf="activePresetKey === 'custom' || showCustomFields" class="material-symbols-outlined check-badge">tune</span>
+                <span *ngIf="activeModePresetKey === 'custom' || showCustomFields" class="material-symbols-outlined check-badge">tune</span>
               </div>
-              <div class="preset-name">Custom Palette</div>
+              <div class="preset-name">Custom {{ activeThemeModeTab === 'dark' ? 'Dark' : 'Light' }} Palette</div>
               
               <!-- Dynamic Color Swatches -->
               <div class="preset-swatch-row">
-                <span class="swatch-dot" [style.background-color]="settingsMap['THEME_PRIMARY_COLOR']"></span>
-                <span class="swatch-dot" [style.background-color]="settingsMap['THEME_SIDEBAR_BG']"></span>
-                <span class="swatch-dot" [style.background-color]="settingsMap['THEME_SUCCESS_COLOR']"></span>
-                <span class="swatch-dot" [style.background-color]="settingsMap['THEME_WARNING_COLOR']"></span>
+                <span class="swatch-dot" [style.background-color]="activeModePalette.primary" title="Primary Accent"></span>
+                <span class="swatch-dot" [style.background-color]="activeModePalette.sidebarActiveAccent" title="Active Nav Highlight"></span>
+                <span class="swatch-dot" [style.background-color]="activeModePalette.sidebarBg" title="Sidebar Surface"></span>
+                <span class="swatch-dot" [style.background-color]="activeModePalette.success" title="Success State"></span>
               </div>
             </button>
           </div>
         </div>
 
-        <!-- Preset Active Clean Notice (Shown when a preset is active and custom fields are hidden) -->
-        <div *ngIf="!showCustomFields && activePresetKey !== 'custom'" class="preset-active-banner">
+        <!-- Preset Active Clean Notice -->
+        <div *ngIf="!showCustomFields && activeModePresetKey !== 'custom'" class="preset-active-banner">
           <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0" style="background: var(--primary-light); border: 1px solid var(--card-border); color: var(--primary);">
               <span class="material-symbols-outlined">palette</span>
             </div>
             <div>
-              <div class="font-bold text-xs" style="color: var(--text-main)">Active Theme Preset: <strong>{{ getActivePresetName() }}</strong></div>
-              <p class="text-[11px]" style="color: var(--text-muted)">Designer theme palette is applied across the app. Click the <strong>Custom Palette</strong> card above or click <strong>Fine-Tune Colors</strong> to customize individual color tokens.</p>
+              <div class="font-bold text-xs" style="color: var(--text-main)">
+                Active {{ activeThemeModeTab === 'dark' ? 'Dark' : 'Light' }} Preset: <strong>{{ getActivePresetName() }}</strong>
+              </div>
+              <p class="text-[11px]" style="color: var(--text-muted)">
+                Designer {{ activeThemeModeTab }} palette is applied. Click the <strong>Custom Palette</strong> card above or click <strong>Fine-Tune Colors</strong> to customize individual color tokens.
+              </p>
             </div>
           </div>
           <button
@@ -2504,22 +2616,15 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           </button>
         </div>
 
-        <!-- Detailed Color Token Groups (Only visible when Custom Palette is active or clicked) -->
-        <div *ngIf="showCustomFields || activePresetKey === 'custom'" class="custom-tokens-section">
+        <!-- Detailed Color Token Groups -->
+        <div *ngIf="showCustomFields || activeModePresetKey === 'custom'" class="custom-tokens-section">
           <div class="flex items-center justify-between pb-2 mb-3" style="border-bottom: 1.5px solid var(--card-border);">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined" style="color: var(--primary)">tune</span>
-              <h3 class="text-xs font-black uppercase tracking-wider" style="color: var(--text-main)">Custom Color Tokens & Pickers</h3>
+              <h3 class="text-xs font-black uppercase tracking-wider" style="color: var(--text-main)">
+                Custom {{ activeThemeModeTab === 'dark' ? 'Dark Mode' : 'Light Mode' }} Color Tokens & Pickers
+              </h3>
             </div>
-            <button
-              type="button"
-              (click)="showCustomFields = false"
-              class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-              title="Hide the individual colour tokens"
-            >
-              <span class="material-symbols-outlined" style="font-size: 16px;">expand_less</span>
-              <span>Collapse Custom Fields</span>
-            </button>
           </div>
 
           <div class="three-col-grid">
@@ -2534,20 +2639,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Primary Brand Color</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_PRIMARY_COLOR'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.primary }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Primary Brand Color"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_PRIMARY_COLOR']"
+                    [ngModel]="activeModePalette.primary"
                     (ngModelChange)="onColorChanged('primary', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Primary Brand Color"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_PRIMARY_COLOR']"
+                    [ngModel]="activeModePalette.primary"
                     (ngModelChange)="onColorChanged('primary', $event)"
                     class="hex-text-input"
                   />
@@ -2558,20 +2663,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Primary Hover State</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_PRIMARY_HOVER'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.primaryHover }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Primary Hover State"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_PRIMARY_HOVER']"
+                    [ngModel]="activeModePalette.primaryHover"
                     (ngModelChange)="onColorChanged('primaryHover', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Primary Hover State"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_PRIMARY_HOVER']"
+                    [ngModel]="activeModePalette.primaryHover"
                     (ngModelChange)="onColorChanged('primaryHover', $event)"
                     class="hex-text-input"
                   />
@@ -2582,20 +2687,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Active Nav Highlight</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_SIDEBAR_ACCENT'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.sidebarActiveAccent }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Active Nav Highlight"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_SIDEBAR_ACCENT']"
+                    [ngModel]="activeModePalette.sidebarActiveAccent"
                     (ngModelChange)="onColorChanged('sidebarActiveAccent', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Active Nav Highlight"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_SIDEBAR_ACCENT']"
+                    [ngModel]="activeModePalette.sidebarActiveAccent"
                     (ngModelChange)="onColorChanged('sidebarActiveAccent', $event)"
                     class="hex-text-input"
                   />
@@ -2614,20 +2719,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Sidebar & Nav Background</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_SIDEBAR_BG'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.sidebarBg }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Sidebar & Nav Background"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_SIDEBAR_BG']"
+                    [ngModel]="activeModePalette.sidebarBg"
                     (ngModelChange)="onColorChanged('sidebarBg', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Sidebar & Nav Background"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_SIDEBAR_BG']"
+                    [ngModel]="activeModePalette.sidebarBg"
                     (ngModelChange)="onColorChanged('sidebarBg', $event)"
                     class="hex-text-input"
                   />
@@ -2638,20 +2743,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Sidebar Text & Icons</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_SIDEBAR_TEXT'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.sidebarText }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Sidebar Text & Icons"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_SIDEBAR_TEXT']"
+                    [ngModel]="activeModePalette.sidebarText"
                     (ngModelChange)="onColorChanged('sidebarText', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Sidebar Text & Icons"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_SIDEBAR_TEXT']"
+                    [ngModel]="activeModePalette.sidebarText"
                     (ngModelChange)="onColorChanged('sidebarText', $event)"
                     class="hex-text-input"
                   />
@@ -2662,20 +2767,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Application Canvas Background</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_APP_BG'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.bgApp }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Application Canvas Background"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_APP_BG']"
+                    [ngModel]="activeModePalette.bgApp"
                     (ngModelChange)="onColorChanged('bgApp', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Application Canvas Background"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_APP_BG']"
+                    [ngModel]="activeModePalette.bgApp"
                     (ngModelChange)="onColorChanged('bgApp', $event)"
                     class="hex-text-input"
                   />
@@ -2694,20 +2799,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Success / Available</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_SUCCESS_COLOR'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.success }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Success / Available"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_SUCCESS_COLOR']"
+                    [ngModel]="activeModePalette.success"
                     (ngModelChange)="onColorChanged('success', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Success / Available"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_SUCCESS_COLOR']"
+                    [ngModel]="activeModePalette.success"
                     (ngModelChange)="onColorChanged('success', $event)"
                     class="hex-text-input"
                   />
@@ -2718,20 +2823,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Warning / In-Progress</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_WARNING_COLOR'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.warning }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Warning / In-Progress"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_WARNING_COLOR']"
+                    [ngModel]="activeModePalette.warning"
                     (ngModelChange)="onColorChanged('warning', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Warning / In-Progress"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_WARNING_COLOR']"
+                    [ngModel]="activeModePalette.warning"
                     (ngModelChange)="onColorChanged('warning', $event)"
                     class="hex-text-input"
                   />
@@ -2742,20 +2847,20 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
               <div class="token-input-box">
                 <div class="token-label-row">
                   <label class="token-label">Danger / Stock Alert</label>
-                  <span class="hex-badge">{{ settingsMap['THEME_DANGER_COLOR'] }}</span>
+                  <span class="hex-badge">{{ activeModePalette.danger }}</span>
                 </div>
                 <div class="token-controls">
                   <input
                     title="Danger / Stock Alert"
                     type="color"
-                    [(ngModel)]="settingsMap['THEME_DANGER_COLOR']"
+                    [ngModel]="activeModePalette.danger"
                     (ngModelChange)="onColorChanged('danger', $event)"
                     class="color-picker-input"
                   />
                   <input
                     title="Danger / Stock Alert"
                     type="text"
-                    [(ngModel)]="settingsMap['THEME_DANGER_COLOR']"
+                    [ngModel]="activeModePalette.danger"
                     (ngModelChange)="onColorChanged('danger', $event)"
                     class="hex-text-input"
                   />
@@ -2770,40 +2875,40 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
           <div class="card-header-bar">
             <div class="flex-align-center gap-2">
               <span class="material-symbols-outlined icon-purple">preview</span>
-              <h3 class="card-title-sm">Live Component Preview Sandbox</h3>
+              <h3 class="card-title-sm">Live {{ activeThemeModeTab === 'dark' ? 'Dark' : 'Light' }} Component Preview Sandbox</h3>
             </div>
-            <span class="info-note">Changes apply immediately across all screens</span>
+            <span class="info-note">Reflects current {{ activeThemeModeTab }} mode color configuration</span>
           </div>
 
-          <div class="sandbox-container" [style.background-color]="settingsMap['THEME_APP_BG']">
+          <div class="sandbox-container" [style.background-color]="activeModePalette.bgApp">
             <!-- Mock Sidebar -->
-            <div class="mock-sidebar-card" [style.background-color]="settingsMap['THEME_SIDEBAR_BG']" [style.color]="settingsMap['THEME_SIDEBAR_TEXT']">
+            <div class="mock-sidebar-card" [style.background-color]="activeModePalette.sidebarBg" [style.color]="activeModePalette.sidebarText">
               <div class="flex-align-center gap-2">
-                <span class="material-symbols-outlined" [style.color]="settingsMap['THEME_SIDEBAR_ACCENT']">storefront</span>
+                <span class="material-symbols-outlined" [style.color]="activeModePalette.sidebarActiveAccent">storefront</span>
                 <span class="mock-logo-text">{{ settingsService.businessName() }}</span>
               </div>
-              <span class="mock-hotkey-badge" [style.background-color]="settingsMap['THEME_PRIMARY_COLOR']" [style.color]="'#FFFFFF'">ACTIVE</span>
+              <span class="mock-hotkey-badge" [style.background-color]="activeModePalette.primary" [style.color]="'#FFFFFF'">ACTIVE</span>
             </div>
 
             <!-- Mock Actions -->
-            <div class="mock-action-card" [style.border-color]="settingsMap['THEME_CARD_BORDER']">
-              <button class="custom-btn btn-sm text-white" [style.background]="'linear-gradient(135deg, ' + settingsMap['THEME_PRIMARY_COLOR'] + ', ' + settingsMap['THEME_PRIMARY_HOVER'] + ')'">
+            <div class="mock-action-card" [style.border-color]="activeModePalette.cardBorder" [style.background-color]="activeModePalette.cardBg">
+              <button class="custom-btn btn-sm text-white" [style.background]="'linear-gradient(135deg, ' + activeModePalette.primary + ', ' + activeModePalette.primaryHover + ')'">
                 Primary Action
               </button>
-              <button class="custom-btn btn-sm btn-outline-purple" [style.border-color]="settingsMap['THEME_CARD_BORDER']" [style.color]="settingsMap['THEME_TEXT_MAIN']">
+              <button class="custom-btn btn-sm btn-outline-purple" [style.border-color]="activeModePalette.cardBorder" [style.color]="activeModePalette.textMain">
                 Secondary
               </button>
             </div>
 
             <!-- Mock Badges -->
-            <div class="mock-badges-card" [style.border-color]="settingsMap['THEME_CARD_BORDER']">
-              <span class="mini-status-badge" [style.background-color]="settingsMap['THEME_SUCCESS_COLOR'] + '25'" [style.color]="settingsMap['THEME_SUCCESS_COLOR']">
+            <div class="mock-badges-card" [style.border-color]="activeModePalette.cardBorder" [style.background-color]="activeModePalette.cardBg">
+              <span class="mini-status-badge" [style.background-color]="activeModePalette.success + '25'" [style.color]="activeModePalette.success">
                 ● Available
               </span>
-              <span class="mini-status-badge" [style.background-color]="settingsMap['THEME_WARNING_COLOR'] + '25'" [style.color]="settingsMap['THEME_WARNING_COLOR']">
+              <span class="mini-status-badge" [style.background-color]="activeModePalette.warning + '25'" [style.color]="activeModePalette.warning">
                 ● Cooking
               </span>
-              <span class="mini-status-badge" [style.background-color]="settingsMap['THEME_DANGER_COLOR'] + '25'" [style.color]="settingsMap['THEME_DANGER_COLOR']">
+              <span class="mini-status-badge" [style.background-color]="activeModePalette.danger + '25'" [style.color]="activeModePalette.danger">
                 ● Alert
               </span>
             </div>
@@ -4685,6 +4790,18 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         border-color: var(--primary, #A855F7);
         color: var(--primary, #7E22CE);
         box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
+      }
+
+      /* styles.css gives every .action-btn a "bloom": a primary-coloured
+         gradient that fades in behind the label on hover, with the label turned
+         white to sit on it. The rule above then puts the label back to primary,
+         and because a component stylesheet is injected after the global one it
+         wins — leaving primary text on a primary bloom, so the label vanishes
+         on hover. Only .custom-btn needs that rule; it gets no bloom. */
+      .action-btn.btn-outline-purple:hover:not(:disabled),
+      .action-btn.btn-outline-purple:hover:not(:disabled) span,
+      .action-btn.btn-outline-purple:hover:not(:disabled) .material-symbols-outlined {
+        color: #FFFFFF;
       }
 
       .btn-sm {
@@ -7321,6 +7438,178 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       }
 
       /* ═══════════════════════════════════════════════════════════════ */
+      /* THEME MODE SEGMENTED CONTROL & TOGGLE CARDS                     */
+      /* ═══════════════════════════════════════════════════════════════ */
+      .theme-mode-banner-card {
+        border-left: 4px solid var(--primary, #7E22CE);
+        background: var(--card-bg, #ffffff);
+      }
+
+      .theme-mode-header-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding-bottom: 0.875rem;
+        border-bottom: 1.5px solid var(--card-border, #F3E8FF);
+      }
+
+      @media (min-width: 768px) {
+        .theme-mode-header-bar {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+      }
+
+      .theme-mode-segmented-control {
+        display: inline-flex;
+        align-items: center;
+        background: var(--bg-app, #FAF5FF);
+        padding: 0.35rem;
+        border-radius: 16px;
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        gap: 0.35rem;
+      }
+
+      .mode-segment-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1rem;
+        border-radius: 12px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: var(--text-muted, #6B7280);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        user-select: none;
+      }
+
+      .mode-segment-btn:hover {
+        color: var(--text-main, #2E1065);
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.08);
+      }
+
+      .mode-segment-btn.is-active {
+        background: var(--card-bg, #ffffff);
+        color: var(--primary, #7E22CE);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .mode-segment-btn .segment-icon {
+        font-size: 18px;
+        transition: transform 0.2s ease;
+      }
+
+      .mode-segment-btn.is-active .segment-icon {
+        color: var(--primary, #7E22CE);
+        transform: scale(1.1);
+      }
+
+      .active-pill {
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        background: var(--primary-light, #F3E8FF);
+        color: var(--primary, #7E22CE);
+        padding: 0.15rem 0.45rem;
+        border-radius: 9999px;
+        border: 1px solid var(--primary, #7E22CE);
+      }
+
+      .theme-mode-info-stripe {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.65rem 1rem;
+        border-radius: 12px;
+        background: var(--primary-subtle, rgba(var(--primary-rgb, 126, 34, 206), 0.06));
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--text-main, #2E1065);
+      }
+
+      .theme-mode-info-stripe.is-dark-stripe {
+        background: rgba(15, 23, 42, 0.08);
+      }
+
+      .dark-toggle-setting-card {
+        border-left: 4px solid var(--sidebar-active-accent, #C084FC);
+      }
+
+      .dark-toggle-icon-box {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-light, #F3E8FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+        color: var(--primary, #7E22CE);
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+      }
+
+      .dark-toggle-icon-box.is-active {
+        background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+        color: #ffffff;
+        box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
+      }
+
+      .dark-toggle-icon-box .material-symbols-outlined {
+        font-size: 26px;
+      }
+
+      .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 1;
+        transition: all 0.2s ease;
+        user-select: none;
+      }
+
+      .badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        flex-shrink: 0;
+        display: inline-block;
+      }
+
+      .badge-pill.badge-pill-success {
+        background: var(--success-light, rgba(22, 163, 74, 0.12));
+        color: var(--success, #16A34A);
+        border: 1.5px solid color-mix(in srgb, var(--success, #16A34A) 35%, transparent);
+        box-shadow: 0 1px 4px rgba(22, 163, 74, 0.12);
+      }
+
+      .badge-pill.badge-pill-success .badge-dot {
+        background-color: var(--success, #16A34A);
+        box-shadow: 0 0 6px var(--success, #16A34A);
+      }
+
+      .badge-pill.badge-pill-muted {
+        background: rgba(107, 114, 128, 0.12);
+        color: var(--text-muted, #6B7280);
+        border: 1.5px solid rgba(107, 114, 128, 0.25);
+      }
+
+      .badge-pill.badge-pill-muted .badge-dot {
+        background-color: var(--text-muted, #9CA3AF);
+      }
+
+      /* ═══════════════════════════════════════════════════════════════ */
       /* PRESET PALETTES GRID                                            */
       /* ═══════════════════════════════════════════════════════════════ */
       .presets-grid {
@@ -7343,7 +7632,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
 
       .preset-item-card {
         padding: 1rem;
-        border-radius: 14px;
+        border-radius: 16px;
         border: 1.5px solid var(--card-border, #E9D5FF);
         background: var(--card-bg, #ffffff);
         text-align: left;
@@ -7351,8 +7640,10 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        position: relative;
+        overflow: hidden;
       }
 
       .preset-custom-card {
@@ -7369,46 +7660,14 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         border-color: var(--primary, #C084FC);
         background: var(--bg-app, #FAF5FF);
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.1));
+        box-shadow: 0 8px 20px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
       }
 
       .preset-item-card.is-selected {
         border-color: var(--primary, #7E22CE);
         background: var(--primary-light, #F3E8FF);
-        box-shadow: 0 0 0 2px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.25)), 0 6px 16px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
-      }
-
-      .preset-active-banner {
-        background: linear-gradient(135deg, var(--bg-app, #FAF5FF) 0%, var(--primary-light, #F3E8FF) 100%);
-        border: 1.5px solid var(--card-border, #E9D5FF);
-        border-left: 4px solid var(--primary, #7E22CE);
-        border-radius: 16px;
-        padding: 1rem 1.25rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        animation: bannerFadeIn 0.25s ease-out;
-      }
-
-      @media (min-width: 640px) {
-        .preset-active-banner {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-        }
-      }
-
-      @keyframes bannerFadeIn {
-        from { opacity: 0; transform: translateY(-4px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .custom-tokens-section {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        animation: paneFadeIn 0.25s ease-out;
+        box-shadow: 0 0 0 2px var(--primary, #7E22CE), 0 8px 24px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.22));
+        transform: translateY(-1px);
       }
 
       .preset-header {
@@ -7419,7 +7678,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       }
 
       .preset-emoji {
-        font-size: 1.25rem;
+        font-size: 1.35rem;
       }
 
       .check-badge {
@@ -7428,26 +7687,33 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       }
 
       .preset-name {
-        font-size: 0.8rem;
+        font-size: 0.8125rem;
         font-weight: 800;
         color: var(--text-main, #2E1065);
+        line-height: 1.25;
       }
 
       .preset-swatch-row {
         display: flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.4rem;
         margin-top: 0.75rem;
-        padding-top: 0.5rem;
+        padding-top: 0.55rem;
         border-top: 1px solid var(--card-border, rgba(233, 213, 255, 0.7));
       }
 
       .swatch-dot {
-        width: 14px;
-        height: 14px;
+        width: 16px;
+        height: 16px;
         border-radius: 9999px;
-        border: 1px solid rgba(0, 0, 0, 0.15);
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        border: 1.5px solid rgba(255, 255, 255, 0.35);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+        transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: inline-block;
+      }
+
+      .preset-item-card:hover .swatch-dot {
+        transform: scale(1.15);
       }
 
       /* ═══════════════════════════════════════════════════════════════ */
@@ -9234,10 +9500,62 @@ export class SettingsComponent implements OnInit {
   public isSaving = false;
   public isLoading = false;
   public loadError: string | null = null;
+  public activeThemeModeTab: ThemeMode = 'light';
+  public lightPresets = DEFAULT_LIGHT_PALETTES;
+  public lightPresetKeys = Object.keys(DEFAULT_LIGHT_PALETTES);
+  public darkPresets = DEFAULT_DARK_PALETTES;
+  public darkPresetKeys = Object.keys(DEFAULT_DARK_PALETTES);
   public presets = DEFAULT_THEME_PALETTES;
   public presetKeys = Object.keys(DEFAULT_THEME_PALETTES);
   public activePresetKey = 'purple';
   public showCustomFields = false;
+
+  public get currentModePresets(): Record<string, { name: string; icon: string; palette: ThemePalette }> {
+    return this.activeThemeModeTab === 'dark' ? this.darkPresets : this.lightPresets;
+  }
+
+  public get currentModePresetKeys(): string[] {
+    return this.activeThemeModeTab === 'dark' ? this.darkPresetKeys : this.lightPresetKeys;
+  }
+
+  public get activeModePresetKey(): string {
+    return this.activeThemeModeTab === 'dark'
+      ? this.themeService.darkPresetKey()
+      : this.themeService.lightPresetKey();
+  }
+
+  public get activeModePalette(): ThemePalette {
+    return this.activeThemeModeTab === 'dark'
+      ? this.themeService.darkPalette()
+      : this.themeService.lightPalette();
+  }
+
+  public getActivePresetName(): string {
+    const key = this.activeModePresetKey;
+    const presets = this.currentModePresets;
+    if (presets[key]) return presets[key].name;
+    if (key === 'custom') return 'Custom Palette';
+    return key.toUpperCase();
+  }
+
+  public selectThemeModeTab(mode: ThemeMode): void {
+    this.activeThemeModeTab = mode;
+    this.themeService.setMode(mode);
+    this.activePresetKey = this.activeModePresetKey;
+    this.showCustomFields = (this.activePresetKey === 'custom');
+  }
+
+  public toggleDarkModeHeaderSetting(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.themeService.setDarkModeToggleEnabled(checked);
+    this.settingsMap['DARK_MODE_TOGGLE_ENABLED'] = String(checked);
+    this.settingsMap['THEME_DARK_MODE_TOGGLE'] = String(checked);
+    this.themeService.exportToSettingsMap(this.settingsMap);
+  }
+
+  public openCustomThemeCard(): void {
+    this.showCustomFields = true;
+  }
 
   // Custom Dropdown Option Arrays
   public readonly toastMaxVisibleOptions: DropdownOption[] = [
@@ -9995,18 +10313,6 @@ export class SettingsComponent implements OnInit {
     this.notify.info(`${slot.title} reset to the built-in image — save the configuration to apply it.`);
   }
 
-
-  getActivePresetName(): string {
-    if (this.activePresetKey === 'custom') return 'Custom Dynamic Palette';
-    return this.presets[this.activePresetKey]?.name || 'Curated Palette';
-  }
-
-  openCustomThemeCard(): void {
-    this.activePresetKey = 'custom';
-    this.showCustomFields = true;
-    this.notify.info('Custom Theme Editor active. Adjust color tokens below.');
-  }
-
   ngOnInit(): void {
     this.loadSettings();
 
@@ -10546,7 +10852,8 @@ export class SettingsComponent implements OnInit {
           this.themeService.syncFromSettingsMap(this.settingsMap);
           // Then ensure settingsMap has updated values
           this.themeService.exportToSettingsMap(this.settingsMap);
-          this.activePresetKey = this.themeService.activePresetKey();
+          this.activeThemeModeTab = this.themeService.mode();
+          this.activePresetKey = this.activeModePresetKey;
           this.showCustomFields = (this.activePresetKey === 'custom');
           this.notify.syncFromSettingsMap(this.settingsMap);
         }
@@ -10559,7 +10866,8 @@ export class SettingsComponent implements OnInit {
         this.loadError =
           err?.error?.message || 'Unable to load saved settings. Showing the currently applied values.';
         this.themeService.exportToSettingsMap(this.settingsMap);
-        this.activePresetKey = this.themeService.activePresetKey();
+        this.activeThemeModeTab = this.themeService.mode();
+        this.activePresetKey = this.activeModePresetKey;
         this.notify.exportToSettingsMap(this.settingsMap);
       },
     });
@@ -10568,27 +10876,37 @@ export class SettingsComponent implements OnInit {
   selectPreset(presetKey: string): void {
     this.activePresetKey = presetKey;
     this.showCustomFields = false;
-    const preset = this.presets[presetKey];
+    const presets = this.currentModePresets;
+    const preset = presets[presetKey];
     if (preset) {
-      this.themeService.applyPreset(presetKey);
+      this.themeService.applyPreset(presetKey, this.activeThemeModeTab);
       this.themeService.exportToSettingsMap(this.settingsMap);
-      this.notify.info(`Switched to ${preset.name}`);
+      this.notify.info(`Switched ${this.activeThemeModeTab === 'dark' ? 'Dark' : 'Light'} Mode to ${preset.name}`);
     }
   }
 
   onColorChanged(key: keyof ThemePalette, hexValue: string): void {
     if (!hexValue) return;
-    this.settingsMap['THEME_PRIMARY_COLOR'] = this.themeService.currentPalette().primary;
-    this.themeService.updateSettingColor(key, hexValue);
+    this.themeService.updateSettingColor(key, hexValue, this.activeThemeModeTab);
     this.themeService.exportToSettingsMap(this.settingsMap);
     this.activePresetKey = 'custom';
     this.showCustomFields = true;
   }
 
   resetToDefaultTheme(): void {
-    this.selectPreset('purple');
-    this.showCustomFields = false;
-    this.notify.success('Restored default Royal Purple palette!');
+    if (this.activeThemeModeTab === 'dark') {
+      this.themeService.applyPreset('midnight', 'dark');
+      this.themeService.exportToSettingsMap(this.settingsMap);
+      this.activePresetKey = 'midnight';
+      this.showCustomFields = false;
+      this.notify.success('Restored default Midnight Dark palette!');
+    } else {
+      this.themeService.applyPreset('purple', 'light');
+      this.themeService.exportToSettingsMap(this.settingsMap);
+      this.activePresetKey = 'purple';
+      this.showCustomFields = false;
+      this.notify.success('Restored default Royal Purple Light palette!');
+    }
   }
 
   setToastPosition(pos: ToastPosition): void {
@@ -10657,11 +10975,25 @@ export class SettingsComponent implements OnInit {
     if (tab === 'customization') {
       Object.assign(payload, this.customization.toPayload());
     } else if (tab === 'theme') {
-      const palette = this.themeService.currentPalette();
       const activeKey = this.themeService.activePresetKey();
+      const palette = this.themeService.currentPalette();
+      const lp = this.themeService.lightPalette();
+      const dp = this.themeService.darkPalette();
       const themePayload = {
         activePresetKey: activeKey,
         theme: activeKey,
+        mode: this.themeService.mode(),
+        darkModeToggleEnabled: this.themeService.darkModeToggleEnabled(),
+        lightTheme: {
+          activePresetKey: this.themeService.lightPresetKey(),
+          theme: this.themeService.lightPresetKey(),
+          ...lp,
+        },
+        darkTheme: {
+          activePresetKey: this.themeService.darkPresetKey(),
+          theme: this.themeService.darkPresetKey(),
+          ...dp,
+        },
         primaryColor: palette.primary,
         primaryHover: palette.primaryHover,
         background: palette.bgApp,
@@ -10675,6 +11007,8 @@ export class SettingsComponent implements OnInit {
         ...palette,
       };
       payload['system_theme'] = JSON.stringify(themePayload);
+      payload['DARK_MODE_TOGGLE_ENABLED'] = String(this.themeService.darkModeToggleEnabled());
+      payload['THEME_DARK_MODE_TOGGLE'] = String(this.themeService.darkModeToggleEnabled());
     } else if (tab === 'posdesign') {
       Object.assign(payload, this.posDesign.toPayload());
     } else if (tab === 'dishpage') {

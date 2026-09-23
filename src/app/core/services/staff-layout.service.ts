@@ -1,6 +1,7 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal, effect } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { CustomizationService } from './customization.service';
+import { ThemeService } from './theme.service';
 
 export type StaffDesignKey = 'idcard' | 'darkneon' | 'roster' | 'list' | 'bento' | 'glassmorphism' | 'retrobrutalist' | 'metro' | 'timeline' | 'compactpill' | 'radialhud';
 
@@ -434,6 +435,7 @@ interface StoredStaffLayout {
 export class StaffLayoutService {
   private readonly settingsService = inject(SettingsService);
   private readonly customization = inject(CustomizationService);
+  private readonly themeService = inject(ThemeService);
 
   private readonly layoutKeySignal = signal<StaffDesignKey>(DEFAULT_STAFF_DESIGN);
   private readonly overridesSignal = signal<Partial<Record<StaffDesignKey, Partial<StaffTokens>>>>({});
@@ -480,6 +482,15 @@ export class StaffLayoutService {
 
   constructor() {
     this.loadFromSettings();
+
+    // Reactively reapply CSS variables whenever theme mode or active palette changes
+    effect(() => {
+      // Track theme reactive signals
+      this.themeService.mode();
+      this.themeService.currentPalette();
+      this.activeTokens();
+      this.applyLayout();
+    });
   }
 
   public designFor(key: StaffDesignKey): StaffDesignOption {
@@ -504,22 +515,63 @@ export class StaffLayoutService {
   }
 
   public tokensToCssVars(tokens: StaffTokens): Record<string, string> {
+    const isDark = this.themeService.isDarkMode() || this.themeService.mode() === 'dark';
+    const activeP = this.themeService.currentPalette();
+
+    let canvasBg = tokens.canvasBg;
+    let cardBg = tokens.cardBg;
+    let cardBorder = tokens.cardBorder;
+    let textColor = tokens.textColor;
+    let textMuted = tokens.textMuted;
+    let roleBadgeBg = tokens.roleBadgeBg;
+    let roleBadgeColor = tokens.roleBadgeColor;
+    let accentColor = tokens.accentColor;
+    let btnBg = tokens.buttonBg;
+
+    if (isDark) {
+      if (!this.themeService.isDarkColor(canvasBg)) {
+        canvasBg = activeP.bgApp;
+      }
+      if (!this.themeService.isDarkColor(cardBg)) {
+        cardBg = activeP.cardBg;
+      }
+      if (this.themeService.isDarkColor(textColor)) {
+        textColor = activeP.textMain || '#F9FAFB';
+      }
+      if (!this.themeService.isDarkColor(cardBorder) && (cardBorder === '#CBD5E1' || cardBorder === '#E2E8F0' || cardBorder === '#E5E7EB' || cardBorder === '#FECDD3')) {
+        cardBorder = activeP.cardBorder;
+      }
+      if (textMuted === '#64748B' || textMuted === '#6B7280' || textMuted === '#475569') {
+        textMuted = 'rgba(226, 232, 240, 0.78)';
+      }
+      if (roleBadgeBg === '#EEF2FF' || roleBadgeBg === '#CCFBF1' || roleBadgeBg === '#FEF3C7') {
+        roleBadgeBg = 'rgba(99, 102, 241, 0.22)';
+        roleBadgeColor = activeP.primaryHover || '#818CF8';
+      }
+      if (accentColor === '#4F46E5') {
+        accentColor = activeP.primary;
+      }
+      if (btnBg === '#4F46E5') {
+        btnBg = activeP.primary;
+      }
+    }
+
     return {
-      '--staff-canvas-bg': tokens.canvasBg,
-      '--staff-card-bg': tokens.cardBg,
-      '--staff-card-border': tokens.cardBorder,
-      '--staff-text-color': tokens.textColor,
-      '--staff-text-muted': tokens.textMuted,
-      '--staff-accent-color': tokens.accentColor,
-      '--staff-role-badge-bg': tokens.roleBadgeBg,
-      '--staff-role-badge-color': tokens.roleBadgeColor,
+      '--staff-canvas-bg': canvasBg,
+      '--staff-card-bg': cardBg,
+      '--staff-card-border': cardBorder,
+      '--staff-text-color': textColor,
+      '--staff-text-muted': textMuted,
+      '--staff-accent-color': accentColor,
+      '--staff-role-badge-bg': roleBadgeBg,
+      '--staff-role-badge-color': roleBadgeColor,
       '--staff-status-active-color': tokens.statusActiveColor,
       '--staff-card-scale': `${tokens.cardScale / 100}`,
       '--staff-card-radius': `${tokens.cardRadius}px`,
       '--staff-padding': `${tokens.padding}px`,
       '--staff-grid-gap': `${tokens.gridGap}px`,
       '--staff-font-size': `${tokens.fontSize}px`,
-      '--staff-btn-bg': tokens.buttonBg,
+      '--staff-btn-bg': btnBg,
       '--staff-btn-color': tokens.buttonColor,
     };
   }

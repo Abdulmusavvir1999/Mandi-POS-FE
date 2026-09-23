@@ -3679,46 +3679,372 @@ button:focus-visible {
   border-color: rgba(var(--danger-rgb, 220, 38, 38), 0.22);
 }
 
-/* Checkbox inside a permission tile. */
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 106.3 LUXURY CUSTOM CHECKBOX DESIGN SYSTEM (GLOBAL APP-WIDE)        */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only),
 .custom-checkbox {
-  appearance: none;
   -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   flex-shrink: 0;
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
   margin: 0;
-  border: 1.5px solid #C4B5FD;
+  border: 1.5px solid var(--card-border, #CBD5E1);
   border-radius: 5px;
-  background: #FFFFFF;
+  background-color: var(--card-bg, #FFFFFF);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  vertical-align: middle;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.custom-checkbox:hover {
+/* Hover state */
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):hover:not(:disabled),
+.custom-checkbox:hover:not(:disabled) {
   border-color: var(--primary, #7E22CE);
+  background-color: var(--card-hover, #F8FAFC);
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
 }
 
+/* Checked state */
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):checked,
 .custom-checkbox:checked {
-  background: var(--primary, #7E22CE);
-  border-color: var(--primary, #7E22CE);
+  background-color: var(--primary, #7E22CE) !important;
+  border-color: var(--primary, #7E22CE) !important;
+  box-shadow: 0 2px 8px var(--primary-light, rgba(126, 34, 206, 0.35));
 }
 
+/* Checkmark check icon */
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):checked::after,
 .custom-checkbox:checked::after {
   content: '';
-  position: absolute;
-  left: 5px;
-  top: 1.5px;
-  width: 4px;
+  display: block;
+  width: 5px;
   height: 9px;
   border: solid #FFFFFF;
   border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  transform: rotate(45deg) scale(1) translate(-0.5px, -0.5px);
+  transform-origin: center center;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* Indeterminate state */
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):indeterminate,
+.custom-checkbox:indeterminate {
+  background-color: var(--primary, #7E22CE) !important;
+  border-color: var(--primary, #7E22CE) !important;
+  box-shadow: 0 2px 8px var(--primary-light, rgba(126, 34, 206, 0.35));
+}
+
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):indeterminate::after,
+.custom-checkbox:indeterminate::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 2px;
+  background-color: #FFFFFF;
+  border: none;
+  border-radius: 1px;
+}
+
+/* Focus Visible state */
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):focus-visible,
 .custom-checkbox:focus-visible {
-  outline: 2px solid var(--primary, #7E22CE);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--primary, #7E22CE);
+  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.3));
+}
+
+/* Disabled state */
+input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):disabled,
+.custom-checkbox:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: var(--card-hover, #F1F5F9) !important;
+  border-color: var(--card-border, #E2E8F0) !important;
+  box-shadow: none !important;
+}
+
+/* Dark Theme Specific Overrides */
+.dark-theme input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only),
+.dark input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only),
+:root[data-theme="dark"] input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only),
+.dark-theme .custom-checkbox,
+.dark .custom-checkbox,
+:root[data-theme="dark"] .custom-checkbox {
+  border-color: var(--card-border, rgba(255, 255, 255, 0.2));
+  background-color: var(--card-bg, #18181B);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):hover:not(:disabled),
+.dark input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):hover:not(:disabled),
+:root[data-theme="dark"] input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):hover:not(:disabled),
+.dark-theme .custom-checkbox:hover:not(:disabled),
+.dark .custom-checkbox:hover:not(:disabled),
+:root[data-theme="dark"] .custom-checkbox:hover:not(:disabled) {
+  border-color: var(--primary-hover, #A855F7);
+  background-color: var(--card-hover, #27272A);
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(168, 85, 247, 0.25));
+}
+
+.dark-theme input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):checked,
+.dark input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):checked,
+:root[data-theme="dark"] input[type="checkbox"]:not(.switch-row input):not(.custom-switch-input):not(.toggle-input):not(.sr-only):checked,
+.dark-theme .custom-checkbox:checked,
+.dark .custom-checkbox:checked,
+:root[data-theme="dark"] .custom-checkbox:checked {
+  background-color: var(--primary, #8B5CF6) !important;
+  border-color: var(--primary, #8B5CF6) !important;
+  box-shadow: 0 0 12px var(--primary-glow, rgba(139, 92, 246, 0.45));
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 106.4 LUXURY CUSTOM RADIO BUTTON DESIGN SYSTEM (GLOBAL APP-WIDE)    */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+input[type="radio"]:not(.sr-only),
+.custom-radio {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--card-border, #CBD5E1);
+  background-color: var(--card-bg, #FFFFFF);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  vertical-align: middle;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Hover state */
+input[type="radio"]:not(.sr-only):hover:not(:disabled),
+.custom-radio:hover:not(:disabled) {
+  border-color: var(--primary, #7E22CE);
+  background-color: var(--card-hover, #F8FAFC);
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+}
+
+/* Checked state */
+input[type="radio"]:not(.sr-only):checked,
+.custom-radio:checked {
+  background-color: var(--primary, #7E22CE) !important;
+  border-color: var(--primary, #7E22CE) !important;
+  box-shadow: 0 2px 8px var(--primary-light, rgba(126, 34, 206, 0.35));
+}
+
+/* Concentric Radio Dot */
+input[type="radio"]:not(.sr-only)::after,
+.custom-radio::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  transform: scale(0);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+input[type="radio"]:not(.sr-only):checked::after,
+.custom-radio:checked::after {
+  transform: scale(1);
+}
+
+/* Focus Visible state */
+input[type="radio"]:not(.sr-only):focus-visible,
+.custom-radio:focus-visible {
+  outline: none;
+  border-color: var(--primary, #7E22CE);
+  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.3));
+}
+
+/* Disabled state */
+input[type="radio"]:not(.sr-only):disabled,
+.custom-radio:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: var(--card-hover, #F1F5F9) !important;
+  border-color: var(--card-border, #E2E8F0) !important;
+  box-shadow: none !important;
+}
+
+/* Dark Theme Specific Overrides for Radios */
+.dark-theme input[type="radio"]:not(.sr-only),
+.dark input[type="radio"]:not(.sr-only),
+:root[data-theme="dark"] input[type="radio"]:not(.sr-only),
+.dark-theme .custom-radio,
+.dark .custom-radio,
+:root[data-theme="dark"] .custom-radio {
+  border-color: var(--card-border, rgba(255, 255, 255, 0.2));
+  background-color: var(--card-bg, #18181B);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme input[type="radio"]:not(.sr-only):hover:not(:disabled),
+.dark input[type="radio"]:not(.sr-only):hover:not(:disabled),
+:root[data-theme="dark"] input[type="radio"]:not(.sr-only):hover:not(:disabled),
+.dark-theme .custom-radio:hover:not(:disabled),
+.dark .custom-radio:hover:not(:disabled),
+:root[data-theme="dark"] .custom-radio:hover:not(:disabled) {
+  border-color: var(--primary-hover, #A855F7);
+  background-color: var(--card-hover, #27272A);
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(168, 85, 247, 0.25));
+}
+
+.dark-theme input[type="radio"]:not(.sr-only):checked,
+.dark input[type="radio"]:not(.sr-only):checked,
+:root[data-theme="dark"] input[type="radio"]:not(.sr-only):checked,
+.dark-theme .custom-radio:checked,
+.dark .custom-radio:checked,
+:root[data-theme="dark"] .custom-radio:checked {
+  background-color: var(--primary, #8B5CF6) !important;
+  border-color: var(--primary, #8B5CF6) !important;
+  box-shadow: 0 0 12px var(--primary-glow, rgba(139, 92, 246, 0.45));
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 106.5 LUXURY TOGGLE SWITCH DESIGN SYSTEM (GLOBAL APP-WIDE)          */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.switch-row,
+.custom-switch-label,
+.toggle-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main, #0F172A);
+}
+
+.switch-row input,
+.custom-switch-label input,
+.toggle-switch-wrap input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.switch-track,
+.custom-switch-track {
+  position: relative;
+  width: 2.75rem;
+  height: 1.45rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--card-border, #CBD5E1);
+  background: var(--card-hover, var(--bg-app, #E2E8F0));
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.switch-knob,
+.custom-switch-knob {
+  position: absolute;
+  top: 50%;
+  left: 0.16rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.3), 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s ease, background-color 0.2s ease;
+}
+
+/* Hover on switch */
+.switch-row:hover:not([aria-disabled="true"]) .switch-track,
+.custom-switch-label:hover:not([aria-disabled="true"]) .custom-switch-track {
+  border-color: var(--primary, #7E22CE);
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.15));
+}
+
+/* Checked switch state */
+.switch-row input:checked + .switch-track,
+.custom-switch-label input:checked + .custom-switch-track,
+.switch-track.is-checked {
+  background: var(--primary, #7E22CE);
+  border-color: var(--primary, #7E22CE);
+  box-shadow: 0 2px 8px var(--primary-light, rgba(126, 34, 206, 0.35));
+}
+
+.switch-row input:checked + .switch-track .switch-knob,
+.custom-switch-label input:checked + .custom-switch-track .custom-switch-knob,
+.switch-track.is-checked .switch-knob {
+  left: 1.38rem;
+  background: #FFFFFF;
+}
+
+/* Focus visible on switch */
+.switch-row input:focus-visible + .switch-track,
+.custom-switch-label input:focus-visible + .custom-switch-track {
+  box-shadow: 0 0 0 3.5px var(--primary-light, rgba(126, 34, 206, 0.35));
+}
+
+/* Disabled switch */
+.switch-row input:disabled + .switch-track,
+.custom-switch-label input:disabled + .custom-switch-track,
+.switch-row[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dark Theme Specific Overrides for Switches */
+.dark-theme .switch-track,
+.dark .switch-track,
+:root[data-theme="dark"] .switch-track,
+.dark-theme .custom-switch-track,
+.dark .custom-switch-track,
+:root[data-theme="dark"] .custom-switch-track {
+  border-color: var(--card-border, rgba(255, 255, 255, 0.2));
+  background: var(--card-bg, #18181B);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .switch-row:hover:not([aria-disabled="true"]) .switch-track,
+.dark .switch-row:hover:not([aria-disabled="true"]) .switch-track,
+:root[data-theme="dark"] .switch-row:hover:not([aria-disabled="true"]) .switch-track {
+  border-color: var(--primary-hover, #A855F7);
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(168, 85, 247, 0.25));
+}
+
+.dark-theme .switch-row input:checked + .switch-track,
+.dark .switch-row input:checked + .switch-track,
+:root[data-theme="dark"] .switch-row input:checked + .switch-track {
+  background: var(--primary, #8B5CF6);
+  border-color: var(--primary, #8B5CF6);
+  box-shadow: 0 0 14px var(--primary-glow, rgba(139, 92, 246, 0.5));
+}
+
+.dark-theme .switch-knob,
+.dark .switch-knob,
+:root[data-theme="dark"] .switch-knob {
+  background: #F8FAFC;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */

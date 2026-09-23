@@ -420,7 +420,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background: #FFFFFF;
+    background: var(--card-bg, #FFFFFF);
     border: 2px solid var(--cust-accent-color, #7E22CE);
     display: flex;
     align-items: center;
@@ -468,20 +468,6 @@ export const CUSTOMER_LAYOUT_CSS = `
   /* ═══════════════════════════════════════════════════════════════ */
   /* ROW ACTIONS — a different button character per design           */
   /* ═══════════════════════════════════════════════════════════════ */
-  /* These were plain Tailwind utility classes (w-7 h-7 hover:bg-…),
-     which this project has no Tailwind build to resolve, so three of
-     the five designs rendered as default grey boxes. Each design now
-     gets a button whose shape and motion match its own character:
-
-       VIP      lifting pill, fills with the accent
-       Clean    borderless glyph with a sliding underline
-       Compact  dense tinted tile that presses inward
-       List     one segmented bar with hairline dividers
-       Card     floating circle that scales up
-
-     Colour comes from the design's own tokens, so recolouring a
-     template in Settings recolours its buttons with it. */
-
   /* Geometry and transitions only — all character lives per design. */
   .cust-act {
     display: inline-flex;
@@ -523,7 +509,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     width: 34px;
     height: 34px;
     border-radius: 999px;
-    background: #FFFFFF;
+    background: var(--card-bg, #FFFFFF);
     color: var(--cust-text-color, #2E1065);
     border: 1px solid var(--cust-card-border, #E9D5FF);
     box-shadow: 0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
@@ -588,7 +574,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     width: 26px;
     height: 26px;
     border-radius: 7px;
-    background: color-mix(in srgb, var(--cust-button-bg, #7E22CE) 10%, #FFFFFF);
+    background: color-mix(in srgb, var(--cust-button-bg, #7E22CE) 15%, var(--card-bg, #FFFFFF));
     color: var(--cust-button-bg, #7E22CE);
     box-shadow: inset 0 0 0 1px
       color-mix(in srgb, var(--cust-button-bg, #7E22CE) 18%, transparent);
@@ -619,7 +605,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     overflow: hidden;
     border: 1px solid var(--cust-card-border, #E2E8F0);
     border-radius: 8px;
-    background: #FFFFFF;
+    background: var(--card-bg, #FFFFFF);
   }
   .cust-act.is-list {
     width: 34px;
@@ -634,7 +620,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     font-size: 16px;
   }
   .cust-act.is-list:hover {
-    background: color-mix(in srgb, var(--cust-button-bg, #7E22CE) 12%, #FFFFFF);
+    background: color-mix(in srgb, var(--cust-button-bg, #7E22CE) 12%, var(--card-bg, #FFFFFF));
     color: var(--cust-button-bg, #7E22CE);
   }
   .cust-act.is-list.is-delete:hover {
@@ -652,7 +638,7 @@ export const CUSTOMER_LAYOUT_CSS = `
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #FFFFFF;
+    background: var(--card-bg, #FFFFFF);
     color: var(--cust-text-muted, #64748B);
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14);
   }

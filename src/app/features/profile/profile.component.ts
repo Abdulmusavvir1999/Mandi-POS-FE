@@ -18,8 +18,6 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
         <span>Account</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">My Profile</span>
@@ -830,8 +828,8 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       height: 2.75rem;
       padding: 0 0.85rem 0 2.5rem;
       border-radius: 0.75rem;
-      border: 1px solid #D8B4FE;
-      background: #FFFFFF;
+      border: 1px solid var(--card-border, #D8B4FE);
+      background: var(--card-bg, #FFFFFF);
       font-size: 0.875rem;
       color: var(--text-main, #1F2937);
       transition: all 0.2s ease;
@@ -844,8 +842,8 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
     }
 
     .form-input.is-readonly-input {
-      background: #F9FAFB;
-      border-color: #E5E7EB;
+      background: var(--bg-app, #F9FAFB);
+      border-color: var(--card-border, #E5E7EB);
       color: var(--text-muted, #4B5563);
       cursor: not-allowed;
     }
@@ -1000,7 +998,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
     }
 
     .btn-outline-purple {
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--card-border, #E9D5FF);
       color: var(--primary, #7E22CE);
     }

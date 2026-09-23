@@ -38,11 +38,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
         <span>Floor Operations</span>
         <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">Dining & Seating Map</span>
+        <span class="breadcrumb-current">Dining &amp; Seating Map</span>
       </div>
 
       <div class="module-header-card">

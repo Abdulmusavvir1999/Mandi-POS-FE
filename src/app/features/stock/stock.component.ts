@@ -33,13 +33,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
+        <span>Inventory</span>
         <span class="breadcrumb-separator">›</span>
-        <span>Inventory & Costing</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Stock Management</span>
-        <span class="breadcrumb-separator">›</span>
-        <span class="breadcrumb-current">3-Tier Stock Architecture</span>
+        <span class="breadcrumb-current">Stock Management</span>
       </div>
 
       <div class="module-header-card">

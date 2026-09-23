@@ -27,11 +27,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Analytics & BI</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Financial Intelligence</span>
+        <span>Analytics</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Executive Dashboard</span>
       </div>

@@ -2,6 +2,7 @@ import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -62,7 +63,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         </a>
       </div>
 
-      <!-- Right: Live Real-Time Clock & User Profile Bar -->
+      <!-- Right: Live Real-Time Clock, Dark Mode Switcher & User Profile Bar -->
       <div class="flex items-center gap-2 sm:gap-3" *ngIf="authService.currentUser() as user">
         <!-- Digital Live Clock (≥ 768px) -->
         <div class="clock-badge">
@@ -72,6 +73,26 @@ import { AuthService } from '../../../core/auth/services/auth.service';
             <div class="clock-date">{{ currentDate }}</div>
           </div>
         </div>
+
+        <!-- Dark Mode Toggle Button (Visibility controlled by Theme Service Dark Mode setting) -->
+        <button
+          *ngIf="themeService.darkModeToggleEnabled()"
+          type="button"
+          (click)="themeService.toggleMode()"
+          class="theme-toggle-btn"
+          [class.is-dark]="themeService.isDarkMode()"
+          [attr.aria-label]="themeService.isDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          [title]="themeService.isDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+        >
+          <div class="toggle-icon-wrap">
+            <span class="material-symbols-outlined toggle-icon">
+              {{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}
+            </span>
+          </div>
+          <span class="toggle-text">
+            {{ themeService.isDarkMode() ? 'Light' : 'Dark' }}
+          </span>
+        </button>
 
         <!-- User Profile Card (Clickable to open Profile page) -->
         <a
@@ -232,6 +253,69 @@ import { AuthService } from '../../../core/auth/services/auth.service';
         margin-top: 0.125rem;
       }
 
+      /* Dark Mode Toggle Button */
+      .theme-toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        background: var(--sidebar-surface, #3B0764);
+        border: 1px solid var(--sidebar-border, #581C87);
+        padding: 0.35rem 0.65rem;
+        border-radius: 0.75rem;
+        color: var(--sidebar-text, #FAF5FF);
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 700;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+      }
+      .theme-toggle-btn:hover {
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.45);
+        border-color: var(--sidebar-active-accent, #C084FC);
+        box-shadow: 0 4px 14px rgba(var(--primary-rgb, 126, 34, 206), 0.35);
+        transform: translateY(-1px);
+      }
+      .theme-toggle-btn:active {
+        transform: translateY(0);
+      }
+      .toggle-icon-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .theme-toggle-btn .toggle-icon {
+        font-size: 17px !important;
+        transition: transform 0.35s ease, color 0.2s ease;
+      }
+      .theme-toggle-btn:hover .toggle-icon {
+        transform: rotate(20deg) scale(1.1);
+      }
+      .theme-toggle-btn.is-dark .toggle-icon-wrap {
+        background: rgba(245, 158, 11, 0.2);
+        color: #FBBF24;
+      }
+      .theme-toggle-btn.is-dark:hover .toggle-icon-wrap {
+        background: rgba(245, 158, 11, 0.35);
+        color: #FDE68A;
+      }
+      .theme-toggle-btn:not(.is-dark) .toggle-icon-wrap {
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.25);
+        color: var(--sidebar-active-accent, #C084FC);
+      }
+      .toggle-text {
+        display: none;
+        letter-spacing: 0.02em;
+      }
+      @media (min-width: 640px) {
+        .toggle-text {
+          display: inline-block;
+        }
+      }
+
       .user-card {
         display: flex;
         align-items: center;
@@ -350,6 +434,7 @@ export class HeaderComponent {
   @Output() toggleMobileSidebar = new EventEmitter<void>();
 
   public authService = inject(AuthService);
+  public themeService = inject(ThemeService);
   public currentTime = '';
   public currentDate = '';
 

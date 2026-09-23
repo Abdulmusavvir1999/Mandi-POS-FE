@@ -18,7 +18,7 @@ export const STAFF_LAYOUT_CSS = `
   /* ═══════════════════════════════════════════════════════════════════════ */
 
   .staff-stage {
-    background-color: var(--staff-canvas-bg, #F8FAFC);
+    background-color: var(--staff-canvas-bg, var(--bg-app, #F8FAFC));
     border-radius: 16px;
     padding: var(--staff-grid-gap, 20px);
     transition: background-color 0.25s ease, padding 0.25s ease;
@@ -37,11 +37,11 @@ export const STAFF_LAYOUT_CSS = `
   }
 
   .staff-id-card {
-    background: var(--staff-card-bg, #FFFFFF);
-    border: 2px solid var(--staff-card-border, #CBD5E1);
+    background: var(--staff-card-bg, var(--card-bg, #FFFFFF));
+    border: 2px solid var(--staff-card-border, var(--card-border, #CBD5E1));
     border-radius: var(--staff-card-radius, 20px);
     padding: 0;
-    box-shadow: 0 14px 30px -6px rgba(15, 23, 42, 0.1), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 14px 30px -6px rgba(0, 0, 0, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -52,12 +52,13 @@ export const STAFF_LAYOUT_CSS = `
   }
   .staff-id-card:hover {
     transform: scale(calc(var(--staff-card-scale, 1) * 1.02)) translateY(-4px);
-    box-shadow: 0 22px 42px -6px rgba(79, 70, 229, 0.18);
-    border-color: var(--staff-accent-color, #4F46E5);
+    box-shadow: 0 22px 42px -6px rgba(79, 70, 229, 0.25);
+    border-color: var(--staff-accent-color, var(--primary, #4F46E5));
   }
 
   .staff-id-top-strap {
-    background: var(--text-main, #0F172A);
+    background: var(--card-bg, #0F172A);
+    border-bottom: 1px solid var(--card-border, rgba(255, 255, 255, 0.1));
     padding: 8px 12px 6px;
     display: flex;
     flex-direction: column;
@@ -68,8 +69,8 @@ export const STAFF_LAYOUT_CSS = `
     width: 36px;
     height: 7px;
     border-radius: 999px;
-    background: var(--text-muted, #475569);
-    border: 1.5px solid var(--text-main, #1E293B);
+    background: var(--card-border, #475569);
+    border: 1.5px solid var(--bg-app, #1E293B);
     margin-bottom: 4px;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
@@ -104,15 +105,15 @@ export const STAFF_LAYOUT_CSS = `
     height: 72px;
     border-radius: 50%;
     background: var(--card-hover, #F1F5F9);
-    border: 3px solid var(--staff-accent-color, #4F46E5);
+    border: 3px solid var(--staff-accent-color, var(--primary, #4F46E5));
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
     font-size: 24px;
-    color: var(--staff-accent-color, #4F46E5);
+    color: var(--staff-accent-color, var(--primary, #4F46E5));
     overflow: hidden;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
   }
   .staff-id-avatar-img-box img {
     width: 100%;
@@ -127,7 +128,7 @@ export const STAFF_LAYOUT_CSS = `
     height: 14px;
     border-radius: 50%;
     background-color: var(--staff-status-active-color, #10B981);
-    border: 2.5px solid #FFFFFF;
+    border: 2.5px solid var(--card-bg, #FFFFFF);
   }
   .staff-id-active-pulse.is-inactive {
     background-color: var(--danger, #EF4444);
@@ -136,13 +137,13 @@ export const STAFF_LAYOUT_CSS = `
   .staff-id-title-name {
     font-size: var(--staff-font-size, 16px);
     font-weight: 800;
-    color: var(--staff-text-color, #0F172A);
+    color: var(--staff-text-color, var(--text-main, #0F172A));
     margin: 0;
     line-height: 1.25;
   }
   .staff-id-handle-tag {
     font-size: 12px;
-    color: var(--staff-text-muted, #64748B);
+    color: var(--staff-text-muted, var(--text-muted, #64748B));
     font-family: monospace;
     margin: 2px 0 8px;
   }
@@ -157,9 +158,9 @@ export const STAFF_LAYOUT_CSS = `
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background-color: var(--staff-role-badge-bg, #EEF2FF);
-    color: var(--staff-role-badge-color, #4338CA);
-    border: 1px solid rgba(79, 70, 229, 0.2);
+    background-color: var(--staff-role-badge-bg, rgba(79, 70, 229, 0.15));
+    color: var(--staff-role-badge-color, var(--primary-hover, #4338CA));
+    border: 1px solid rgba(79, 70, 229, 0.25);
     margin-bottom: 12px;
   }
 
@@ -173,7 +174,7 @@ export const STAFF_LAYOUT_CSS = `
     border-radius: 8px;
     border: 1px solid var(--card-border, #E2E8F0);
     font-size: 11px;
-    color: var(--staff-text-muted, #64748B);
+    color: var(--staff-text-muted, var(--text-muted, #64748B));
     margin-bottom: 12px;
     text-align: left;
   }
@@ -189,7 +190,7 @@ export const STAFF_LAYOUT_CSS = `
   /* Barcode Strip at Bottom of ID */
   .staff-id-barcode-footer {
     width: 100%;
-    background: #FAFAFA;
+    background: var(--bg-app, #FAFAFA);
     border-top: 1px solid var(--card-border, #E2E8F0);
     padding: 8px 14px;
     display: flex;
@@ -663,9 +664,9 @@ export const STAFF_LAYOUT_CSS = `
     width: 68px;
     height: 68px;
     border-radius: 50%;
-    background: #FFFFFF;
-    border: 3.5px solid #FFFFFF;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    background: var(--card-bg, #FFFFFF);
+    border: 3.5px solid var(--card-bg, #FFFFFF);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -684,12 +685,12 @@ export const STAFF_LAYOUT_CSS = `
   .staff-bento-name {
     font-size: var(--staff-font-size, 16px);
     font-weight: 800;
-    color: var(--staff-text-color, #1E1B4B);
+    color: var(--staff-text-color, var(--text-main, #1E1B4B));
     margin: 0;
   }
   .staff-bento-handle {
     font-size: 12px;
-    color: var(--staff-text-muted, #6B7280);
+    color: var(--staff-text-muted, var(--text-muted, #6B7280));
     margin-bottom: 6px;
   }
   .staff-bento-role-chip {
@@ -735,11 +736,11 @@ export const STAFF_LAYOUT_CSS = `
 
   .staff-bento-contacts {
     width: 100%;
-    background: var(--bg-app, #FAF5FF);
+    background: var(--card-hover, var(--bg-app, #FAF5FF));
     border-radius: 12px;
     padding: 8px 12px;
     font-size: 11px;
-    color: var(--staff-text-muted, #6B7280);
+    color: var(--staff-text-muted, var(--text-muted, #6B7280));
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -749,7 +750,7 @@ export const STAFF_LAYOUT_CSS = `
 
   .staff-bento-footer {
     padding: 12px var(--staff-padding, 20px);
-    background: #FAFAFA;
+    background: var(--card-hover, var(--bg-app, #FAFAFA));
     border-top: 1px solid var(--card-border, #F1F5F9);
     display: flex;
     align-items: center;

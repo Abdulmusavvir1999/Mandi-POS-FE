@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -52,10 +52,8 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
 
       <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BREADCRUMBS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">â€º</span>
         <span>Operations</span>
-        <span class="breadcrumb-separator">â€º</span>
+        <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Staff Track</span>
       </div>
 
@@ -1240,7 +1238,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
       .st-live-bar {
         display: flex; align-items: center; justify-content: space-between;
         gap: 14px; flex-wrap: wrap;
-        background: #FFFFFF; border: 1px solid #EDE4F8; border-radius: 16px;
+        background: var(--card-bg, #FFFFFF); border: 1px solid var(--card-border, #EDE4F8); border-radius: 16px;
         padding: 12px 16px; margin-bottom: 16px;
       }
       .st-live-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1249,18 +1247,18 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
 
       .st-live-chip {
         display: inline-block; margin-left: 5px; padding: 1px 7px; border-radius: 999px;
-        background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;
+        background: rgba(16, 185, 129, 0.12); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.28);
         font-size: 9px; font-weight: 800;
       }
 
       .st-activity-cell { display: flex; flex-direction: column; gap: 2px; }
-      .st-activity-label { font-size: 11px; font-weight: 700; color: #4C1D95; }
+      .st-activity-label { font-size: 11px; font-weight: 700; color: var(--primary, #4C1D95); }
       .st-activity-time { font-size: 10px; color: var(--text-muted, #6B7280); }
 
       .st-inline-error {
         display: flex; align-items: center; gap: 12px;
-        background: #FEF2F2; border: 1px solid var(--danger-light, #FECACA); border-radius: 14px;
-        padding: 14px 16px; margin-bottom: 16px; color: #991B1B;
+        background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 14px;
+        padding: 14px 16px; margin-bottom: 16px; color: var(--danger, #DC2626);
       }
       .st-inline-error-title { font-weight: 800; font-size: 13px; }
       .st-inline-error-desc { font-size: 11px; opacity: 0.9; }
@@ -1268,34 +1266,34 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
 
       .st-report-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
       .st-preset-btn-lg {
-        border: 1px solid var(--card-border, #E9D5FF); background: #FFFFFF; color: var(--primary-variant, #6B21A8);
+        border: 1px solid var(--card-border, #E9D5FF); background: var(--card-bg, #FFFFFF); color: var(--primary, #6B21A8);
         padding: 8px 16px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer;
       }
       .st-preset-btn-lg.is-active { background: var(--primary, #7E22CE); color: #FFFFFF; border-color: var(--primary, #7E22CE); }
 
-      .st-modal { max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto; }
+      .st-modal { max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto; background: var(--card-bg, #FFFFFF); }
 
       .st-attr-grid {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
       }
-      .st-attr-item { background: #FAF7FE; border: 1px solid #EDE4F8; border-radius: 12px; padding: 11px 13px; }
+      .st-attr-item { background: var(--bg-app, #FAF7FE); border: 1px solid var(--card-border, #EDE4F8); border-radius: 12px; padding: 11px 13px; }
       .st-attr-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--primary, #7E22CE); }
       .st-attr-value { font-size: 13px; font-weight: 700; color: var(--text-main, #2E1065); margin-top: 4px; }
       .st-attr-empty { color: var(--text-dim, #9CA3AF); font-weight: 500; font-style: italic; font-size: 11px; }
       .st-attr-time { font-size: 10px; color: var(--text-muted, #6B7280); margin-top: 2px; }
 
       .st-timeline { margin-top: 12px; padding-left: 6px; }
-      .st-timeline-item { position: relative; padding-left: 20px; padding-bottom: 14px; border-left: 2px solid #EDE4F8; }
+      .st-timeline-item { position: relative; padding-left: 20px; padding-bottom: 14px; border-left: 2px solid var(--card-border, #EDE4F8); }
       .st-timeline-item:last-child { border-left-color: transparent; padding-bottom: 0; }
       .st-timeline-dot {
         position: absolute; left: -6px; top: 2px; width: 10px; height: 10px;
-        border-radius: 50%; background: var(--primary, #7E22CE); border: 2px solid #FFFFFF;
-        box-shadow: 0 0 0 2px #EDE4F8;
+        border-radius: 50%; background: var(--primary, #7E22CE); border: 2px solid var(--card-bg, #FFFFFF);
+        box-shadow: 0 0 0 2px var(--card-border, #EDE4F8);
       }
       .st-timeline-top { display: flex; align-items: center; gap: 8px; }
       .st-timeline-time { font-size: 11px; font-weight: 800; color: var(--primary, #7E22CE); font-family: ui-monospace, monospace; }
       .st-timeline-actor { font-size: 11px; font-weight: 700; color: var(--text-main, #2E1065); }
-      .st-timeline-action { font-size: 12px; color: #374151; margin-top: 1px; }
+      .st-timeline-action { font-size: 12px; color: var(--text-main, #374151); margin-top: 1px; }
     `,
   ],
 })

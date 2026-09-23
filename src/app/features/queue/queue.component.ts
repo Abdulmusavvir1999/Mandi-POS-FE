@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QueueService } from '../../core/services/queue.service';
@@ -25,11 +25,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Kitchen & Counter</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Takeaway Dispatch</span>
+        <span>Kitchen &amp; Counter</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Live Token Board</span>
       </div>

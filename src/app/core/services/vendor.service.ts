@@ -42,6 +42,11 @@ export class VendorService {
     return this.http.get<ApiResponse<Vendor>>(`${this.API_URL}/${id}`);
   }
 
+  /** Uploads a vendor logo/image as a data URL and returns its stored path. */
+  public uploadVendorImage(dataUrl: string): Observable<ApiResponse<{ url: string; fileName: string; bytes: number }>> {
+    return this.http.post<ApiResponse<{ url: string; fileName: string; bytes: number }>>(`${this.API_URL}/image`, { dataUrl });
+  }
+
   public createVendor(data: Partial<Vendor>): Observable<ApiResponse<Vendor>> {
     return this.http.post<ApiResponse<Vendor>>(this.API_URL, data);
   }

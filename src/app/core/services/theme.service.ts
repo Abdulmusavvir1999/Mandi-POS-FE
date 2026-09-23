@@ -1,5 +1,7 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { SettingsService } from './settings.service';
+
+export type ThemeMode = 'light' | 'dark';
 
 export interface ThemePalette {
   primary: string;
@@ -16,9 +18,9 @@ export interface ThemePalette {
   warning: string;
 }
 
-export const DEFAULT_THEME_PALETTES: Record<string, { name: string; icon: string; palette: ThemePalette }> = {
+export const DEFAULT_LIGHT_PALETTES: Record<string, { name: string; icon: string; palette: ThemePalette }> = {
   purple: {
-    name: 'Royal Purple ( Brand)',
+    name: 'Royal Purple (Brand)',
     icon: '🟪',
     palette: {
       primary: '#7E22CE',
@@ -89,51 +91,149 @@ export const DEFAULT_THEME_PALETTES: Record<string, { name: string; icon: string
       warning: '#EA580C',
     },
   },
+  rose: {
+    name: 'Rose & Crimson Luxury',
+    icon: '🌹',
+    palette: {
+      primary: '#E11D48',
+      primaryHover: '#F43F5E',
+      sidebarBg: '#4C0519',
+      sidebarText: '#FFF1F2',
+      sidebarActiveAccent: '#FB7185',
+      bgApp: '#FFF1F2',
+      cardBg: '#FFFFFF',
+      cardBorder: '#FECDD3',
+      textMain: '#4C0519',
+      success: '#16A34A',
+      danger: '#DC2626',
+      warning: '#EA580C',
+    },
+  },
+};
+
+export const DEFAULT_DARK_PALETTES: Record<string, { name: string; icon: string; palette: ThemePalette }> = {
   midnight: {
     name: 'Midnight Dark Mode',
     icon: '🌑',
     palette: {
-      primary: '#9333EA',
-      primaryHover: '#A855F7',
-      sidebarBg: '#0B0F19',
+      primary: '#8B5CF6',
+      primaryHover: '#A78BFA',
+      sidebarBg: '#111827',
+      sidebarText: '#F9FAFB',
+      sidebarActiveAccent: '#A78BFA',
+      bgApp: '#0B0F19',
+      cardBg: '#1F2937',
+      cardBorder: '#374151',
+      textMain: '#F9FAFB',
+      success: '#10B981',
+      danger: '#EF4444',
+      warning: '#F59E0B',
+    },
+  },
+  obsidian: {
+    name: 'Obsidian Amber',
+    icon: '🔥',
+    palette: {
+      primary: '#F59E0B',
+      primaryHover: '#FBBF24',
+      sidebarBg: '#18181B',
+      sidebarText: '#FAFAFA',
+      sidebarActiveAccent: '#FBBF24',
+      bgApp: '#09090B',
+      cardBg: '#27272A',
+      cardBorder: '#3F3F46',
+      textMain: '#FAFAFA',
+      success: '#10B981',
+      danger: '#EF4444',
+      warning: '#F59E0B',
+    },
+  },
+  emeraldDark: {
+    name: 'Emerald Cyber',
+    icon: '🌲',
+    palette: {
+      primary: '#10B981',
+      primaryHover: '#34D399',
+      sidebarBg: '#06281E',
+      sidebarText: '#ECFDF5',
+      sidebarActiveAccent: '#34D399',
+      bgApp: '#02140F',
+      cardBg: '#0C3B2E',
+      cardBorder: '#14532D',
+      textMain: '#ECFDF5',
+      success: '#10B981',
+      danger: '#EF4444',
+      warning: '#F59E0B',
+    },
+  },
+  deepOcean: {
+    name: 'Abyssal Ocean',
+    icon: '🌊',
+    palette: {
+      primary: '#3B82F6',
+      primaryHover: '#60A5FA',
+      sidebarBg: '#0F172A',
       sidebarText: '#F8FAFC',
-      sidebarActiveAccent: '#C084FC',
-      bgApp: '#0F172A',
+      sidebarActiveAccent: '#60A5FA',
+      bgApp: '#020617',
       cardBg: '#1E293B',
       cardBorder: '#334155',
       textMain: '#F8FAFC',
-      success: '#22C55E',
+      success: '#10B981',
+      danger: '#EF4444',
+      warning: '#F59E0B',
+    },
+  },
+  carbon: {
+    name: 'Carbon Monochrome',
+    icon: '⚡',
+    palette: {
+      primary: '#94A3B8',
+      primaryHover: '#CBD5E1',
+      sidebarBg: '#18181B',
+      sidebarText: '#F4F4F5',
+      sidebarActiveAccent: '#E4E4E7',
+      bgApp: '#09090B',
+      cardBg: '#27272A',
+      cardBorder: '#3F3F46',
+      textMain: '#F4F4F5',
+      success: '#10B981',
+      danger: '#EF4444',
+      warning: '#F59E0B',
+    },
+  },
+  rubyDark: {
+    name: 'Crimson Ruby',
+    icon: '🌹',
+    palette: {
+      primary: '#E11D48',
+      primaryHover: '#FB7185',
+      sidebarBg: '#24060E',
+      sidebarText: '#FFF1F2',
+      sidebarActiveAccent: '#FB7185',
+      bgApp: '#120207',
+      cardBg: '#2A0A13',
+      cardBorder: '#5E1228',
+      textMain: '#FFF1F2',
+      success: '#10B981',
       danger: '#EF4444',
       warning: '#F59E0B',
     },
   },
 };
 
+export const DEFAULT_THEME_PALETTES: Record<string, { name: string; icon: string; palette: ThemePalette }> = {
+  ...DEFAULT_LIGHT_PALETTES,
+  midnight: DEFAULT_DARK_PALETTES['midnight'],
+};
+
 /**
- * The  brand purple, as every page design shipped its brand slots.
- *
- * It is the marker for "this token is the app's brand color", not "this design
- * wants purple": a design that ships some other hue in the same slot — the
- * checkered floor's red runner, the minimalist table's near-black button —
- * chose that hue deliberately and keeps it whatever the theme is.
+ * The brand purple, as every page design shipped its brand slots.
  */
 export const BRAND_ACCENT_HEX = '#7E22CE';
 
 /**
  * Point a design's brand-colored slots at the active theme.
- *
- * Page designs store their colors as fixed hexes, so an accent or a filled
- * button shipped as the brand purple stayed purple after the theme was
- * switched to Ocean Blue or Emerald, while the sidebar, the page headers and
- * the design thumbnails in Settings — all of which read `--primary` — had
- * already moved.
- *
- * A slot is redirected to `primary` only when BOTH hold:
- *   - the design's stock value for it is the brand purple, and
- *   - the admin has not picked a color for it in Customize.
- *
- * So a recolored page keeps the color its admin chose, and "Reset to defaults"
- * is what puts that page back on the theme.
  */
 export function applyThemeBrand<T extends Record<string, any>>(
   tokens: T,
@@ -160,13 +260,42 @@ export function applyThemeBrand<T extends Record<string, any>>(
 })
 export class ThemeService {
   private settingsService = inject(SettingsService);
-  public currentPalette = signal<ThemePalette>(DEFAULT_THEME_PALETTES['purple'].palette);
-  public activePresetKey = signal<string>('purple');
+
+  /** Active mode: 'light' | 'dark' */
+  public mode = signal<ThemeMode>('light');
+
+  /** Light mode configuration */
+  public lightPalette = signal<ThemePalette>(DEFAULT_LIGHT_PALETTES['purple'].palette);
+  public lightPresetKey = signal<string>('purple');
+
+  /** Dark mode configuration */
+  public darkPalette = signal<ThemePalette>(DEFAULT_DARK_PALETTES['midnight'].palette);
+  public darkPresetKey = signal<string>('midnight');
+
+  /** Visibility of the Header Dark Mode Toggle button */
+  public darkModeToggleEnabled = signal<boolean>(true);
+
+  /** Active palette based on current mode */
+  public currentPalette = computed<ThemePalette>(() =>
+    this.mode() === 'dark' ? this.darkPalette() : this.lightPalette()
+  );
+
+  /** Active preset key based on current mode */
+  public activePresetKey = computed<string>(() =>
+    this.mode() === 'dark' ? this.darkPresetKey() : this.lightPresetKey()
+  );
+
+  /** Convenience boolean for dark mode */
+  public isDarkMode = computed<boolean>(() => this.mode() === 'dark');
 
   constructor() {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('_pos_ui_theme_palette');
+        const storedMode = localStorage.getItem('_pos_active_theme_mode');
+        if (storedMode === 'light' || storedMode === 'dark') {
+          this.mode.set(storedMode);
+        }
       } catch (_) { }
     }
     this.loadInitialTheme();
@@ -174,7 +303,7 @@ export class ThemeService {
 
   public loadInitialTheme(): void {
     // 1. Set baseline default
-    this.applyPalette(DEFAULT_THEME_PALETTES['purple'].palette);
+    this.injectCssVariables(this.currentPalette());
 
     // 2. Read the palette from the database via the shared public-settings store
     this.settingsService.loadPublicSettings().subscribe({
@@ -182,45 +311,119 @@ export class ThemeService {
         if (settings && Object.keys(settings).length) {
           this.syncFromSettingsMap(settings);
         }
-        // Otherwise keep the baseline default (e.g. API still starting up)
       },
-      // Same reason: keep the baseline palette rather than letting a failed
-      // bootstrap request escape unhandled.
       error: () => { },
     });
   }
 
-  public applyPreset(presetKey: string): void {
-    this.activePresetKey.set(presetKey);
-    const preset = DEFAULT_THEME_PALETTES[presetKey];
+  public toggleMode(): void {
+    const nextMode: ThemeMode = this.mode() === 'light' ? 'dark' : 'light';
+    this.setMode(nextMode);
+  }
+
+  public setMode(newMode: ThemeMode): void {
+    this.mode.set(newMode);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('_pos_active_theme_mode', newMode);
+      } catch (_) { }
+    }
+    this.injectCssVariables(this.currentPalette());
+  }
+
+  public setDarkModeToggleEnabled(enabled: boolean): void {
+    this.darkModeToggleEnabled.set(enabled);
+  }
+
+  public applyPreset(presetKey: string, targetMode?: ThemeMode): void {
+    const m = targetMode || this.mode();
+    const presets = m === 'dark' ? DEFAULT_DARK_PALETTES : DEFAULT_LIGHT_PALETTES;
+    const preset = presets[presetKey] || DEFAULT_THEME_PALETTES[presetKey];
     if (preset) {
-      this.applyPalette(preset.palette);
+      if (m === 'dark') {
+        this.darkPresetKey.set(presetKey);
+        this.darkPalette.set({
+          ...DEFAULT_DARK_PALETTES['midnight'].palette,
+          ...preset.palette,
+        });
+      } else {
+        this.lightPresetKey.set(presetKey);
+        this.lightPalette.set({
+          ...DEFAULT_LIGHT_PALETTES['purple'].palette,
+          ...preset.palette,
+        });
+      }
+      if (this.mode() === m) {
+        this.injectCssVariables(this.currentPalette());
+      }
     }
   }
 
-  public applyPalette(palette: ThemePalette): void {
-    const safePalette: ThemePalette = {
-      ...DEFAULT_THEME_PALETTES['purple'].palette,
-      ...palette,
-    };
+  public applyPalette(palette: ThemePalette, targetMode?: ThemeMode): void {
+    const m = targetMode || this.mode();
+    if (m === 'dark') {
+      const safePalette: ThemePalette = {
+        ...DEFAULT_DARK_PALETTES['midnight'].palette,
+        ...palette,
+      };
+      this.darkPalette.set(safePalette);
+    } else {
+      const safePalette: ThemePalette = {
+        ...DEFAULT_LIGHT_PALETTES['purple'].palette,
+        ...palette,
+      };
+      this.lightPalette.set(safePalette);
+    }
 
-    this.currentPalette.set(safePalette);
-    this.injectCssVariables(safePalette);
+    if (this.mode() === m) {
+      this.injectCssVariables(this.currentPalette());
+    }
   }
 
-  public updateSettingColor(key: keyof ThemePalette, colorHex: string): void {
-    this.activePresetKey.set('custom');
-    const updated = {
-      ...this.currentPalette(),
-      [key]: colorHex,
-    };
-    this.applyPalette(updated);
+  public updateSettingColor(key: keyof ThemePalette, colorHex: string, targetMode?: ThemeMode): void {
+    const m = targetMode || this.mode();
+    if (m === 'dark') {
+      this.darkPresetKey.set('custom');
+      const updated = {
+        ...this.darkPalette(),
+        [key]: colorHex,
+      };
+      this.applyPalette(updated, 'dark');
+    } else {
+      this.lightPresetKey.set('custom');
+      const updated = {
+        ...this.lightPalette(),
+        [key]: colorHex,
+      };
+      this.applyPalette(updated, 'light');
+    }
   }
 
   public syncFromSettingsMap(settingsMap: Record<string, string>): void {
     if (!settingsMap) return;
 
-    // Check if system_theme or SYSTEM_THEME JSON key is present
+    // Header Dark Mode Toggle setting visibility
+    if (settingsMap['DARK_MODE_TOGGLE_ENABLED'] !== undefined) {
+      this.darkModeToggleEnabled.set(
+        settingsMap['DARK_MODE_TOGGLE_ENABLED'] === 'true' || settingsMap['DARK_MODE_TOGGLE_ENABLED'] === '1'
+      );
+    } else if (settingsMap['THEME_DARK_MODE_TOGGLE'] !== undefined) {
+      this.darkModeToggleEnabled.set(
+        settingsMap['THEME_DARK_MODE_TOGGLE'] === 'true' || settingsMap['THEME_DARK_MODE_TOGGLE'] === '1'
+      );
+    }
+
+    // Saved user mode preference from localStorage takes precedence for display
+    let savedUserMode: ThemeMode | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('_pos_active_theme_mode');
+        if (stored === 'light' || stored === 'dark') {
+          savedUserMode = stored;
+        }
+      } catch (_) { }
+    }
+
     const rawSystemTheme = settingsMap['system_theme'] || settingsMap['SYSTEM_THEME'];
     if (rawSystemTheme) {
       try {
@@ -228,16 +431,54 @@ export class ThemeService {
           ? JSON.parse(rawSystemTheme)
           : rawSystemTheme;
         if (parsed && typeof parsed === 'object') {
-          if (parsed.activePresetKey) {
-            this.activePresetKey.set(parsed.activePresetKey);
-          } else {
-            // auto-detect preset key
-            const matchedKey = Object.keys(DEFAULT_THEME_PALETTES).find(
-              (k) => DEFAULT_THEME_PALETTES[k].palette.primary.toLowerCase() === parsed.primary?.toLowerCase()
-            );
-            this.activePresetKey.set(matchedKey || 'custom');
+          if (parsed.darkModeToggleEnabled !== undefined) {
+            this.darkModeToggleEnabled.set(Boolean(parsed.darkModeToggleEnabled));
           }
-          this.applyPalette(parsed);
+
+          // Unpack explicit lightTheme
+          if (parsed.lightTheme && typeof parsed.lightTheme === 'object') {
+            this.lightPresetKey.set(parsed.lightTheme.activePresetKey || parsed.lightTheme.theme || 'purple');
+            this.lightPalette.set({
+              ...DEFAULT_LIGHT_PALETTES['purple'].palette,
+              ...parsed.lightTheme,
+            });
+          }
+
+          // Unpack explicit darkTheme
+          if (parsed.darkTheme && typeof parsed.darkTheme === 'object') {
+            this.darkPresetKey.set(parsed.darkTheme.activePresetKey || parsed.darkTheme.theme || 'midnight');
+            this.darkPalette.set({
+              ...DEFAULT_DARK_PALETTES['midnight'].palette,
+              ...parsed.darkTheme,
+            });
+          }
+
+          // Single palette legacy fallback
+          if (!parsed.lightTheme && !parsed.darkTheme) {
+            const isDark = this.isDarkColor(parsed.bgApp || parsed.background || '') ||
+              this.isDarkColor(parsed.cardBg || parsed.surface || '');
+            if (isDark) {
+              this.darkPresetKey.set(parsed.activePresetKey || 'custom');
+              this.darkPalette.set({
+                ...DEFAULT_DARK_PALETTES['midnight'].palette,
+                ...parsed,
+              });
+            } else {
+              this.lightPresetKey.set(parsed.activePresetKey || 'custom');
+              this.lightPalette.set({
+                ...DEFAULT_LIGHT_PALETTES['purple'].palette,
+                ...parsed,
+              });
+            }
+          }
+
+          if (savedUserMode) {
+            this.mode.set(savedUserMode);
+          } else if (parsed.mode === 'light' || parsed.mode === 'dark') {
+            this.mode.set(parsed.mode);
+          }
+
+          this.injectCssVariables(this.currentPalette());
           this.exportToSettingsMap(settingsMap);
           return;
         }
@@ -246,72 +487,103 @@ export class ThemeService {
       }
     }
 
-    // Also support camelCase / individual settings keys
-    const palette: ThemePalette = {
-      primary: settingsMap['primaryColor'] || settingsMap['THEME_PRIMARY_COLOR'] || this.currentPalette().primary,
-      primaryHover: settingsMap['primaryHover'] || settingsMap['THEME_PRIMARY_HOVER'] || this.currentPalette().primaryHover,
-      sidebarBg: settingsMap['sidebarBg'] || settingsMap['THEME_SIDEBAR_BG'] || this.currentPalette().sidebarBg,
-      sidebarText: settingsMap['secondaryText'] || settingsMap['sidebarText'] || settingsMap['THEME_SIDEBAR_TEXT'] || this.currentPalette().sidebarText,
-      sidebarActiveAccent: settingsMap['icon'] || settingsMap['sidebarActiveAccent'] || settingsMap['THEME_SIDEBAR_ACCENT'] || this.currentPalette().sidebarActiveAccent,
-      bgApp: settingsMap['background'] || settingsMap['bgApp'] || settingsMap['THEME_APP_BG'] || this.currentPalette().bgApp,
-      cardBg: settingsMap['surface'] || settingsMap['cardBg'] || settingsMap['THEME_CARD_BG'] || this.currentPalette().cardBg,
-      cardBorder: settingsMap['border'] || settingsMap['cardBorder'] || settingsMap['THEME_CARD_BORDER'] || this.currentPalette().cardBorder,
-      textMain: settingsMap['text'] || settingsMap['textMain'] || settingsMap['THEME_TEXT_MAIN'] || this.currentPalette().textMain,
-      success: settingsMap['success'] || settingsMap['THEME_SUCCESS_COLOR'] || this.currentPalette().success,
-      danger: settingsMap['danger'] || settingsMap['THEME_DANGER_COLOR'] || this.currentPalette().danger,
-      warning: settingsMap['warning'] || settingsMap['THEME_WARNING_COLOR'] || this.currentPalette().warning,
-    };
+    // Flat compatibility fallback
+    if (settingsMap['THEME_PRIMARY_COLOR'] || settingsMap['primaryColor']) {
+      const p: Partial<ThemePalette> = {
+        primary: settingsMap['primaryColor'] || settingsMap['THEME_PRIMARY_COLOR'] || this.currentPalette().primary,
+        primaryHover: settingsMap['primaryHover'] || settingsMap['THEME_PRIMARY_HOVER'] || this.currentPalette().primaryHover,
+        sidebarBg: settingsMap['sidebarBg'] || settingsMap['THEME_SIDEBAR_BG'] || this.currentPalette().sidebarBg,
+        sidebarText: settingsMap['secondaryText'] || settingsMap['sidebarText'] || settingsMap['THEME_SIDEBAR_TEXT'] || this.currentPalette().sidebarText,
+        sidebarActiveAccent: settingsMap['icon'] || settingsMap['sidebarActiveAccent'] || settingsMap['THEME_SIDEBAR_ACCENT'] || this.currentPalette().sidebarActiveAccent,
+        bgApp: settingsMap['background'] || settingsMap['bgApp'] || settingsMap['THEME_APP_BG'] || this.currentPalette().bgApp,
+        cardBg: settingsMap['surface'] || settingsMap['cardBg'] || settingsMap['THEME_CARD_BG'] || this.currentPalette().cardBg,
+        cardBorder: settingsMap['border'] || settingsMap['cardBorder'] || settingsMap['THEME_CARD_BORDER'] || this.currentPalette().cardBorder,
+        textMain: settingsMap['text'] || settingsMap['textMain'] || settingsMap['THEME_TEXT_MAIN'] || this.currentPalette().textMain,
+        success: settingsMap['success'] || settingsMap['THEME_SUCCESS_COLOR'] || this.currentPalette().success,
+        danger: settingsMap['danger'] || settingsMap['THEME_DANGER_COLOR'] || this.currentPalette().danger,
+        warning: settingsMap['warning'] || settingsMap['THEME_WARNING_COLOR'] || this.currentPalette().warning,
+      };
 
-    if (settingsMap['theme']) {
-      this.activePresetKey.set(settingsMap['theme']);
+      const isDark = this.isDarkColor(p.bgApp || '') || this.isDarkColor(p.cardBg || '');
+      if (isDark) {
+        this.darkPalette.set({ ...this.darkPalette(), ...(p as ThemePalette) });
+        if (settingsMap['theme']) this.darkPresetKey.set(settingsMap['theme']);
+      } else {
+        this.lightPalette.set({ ...this.lightPalette(), ...(p as ThemePalette) });
+        if (settingsMap['theme']) this.lightPresetKey.set(settingsMap['theme']);
+      }
     }
 
-    this.applyPalette(palette);
+    if (savedUserMode) {
+      this.mode.set(savedUserMode);
+    }
+    this.injectCssVariables(this.currentPalette());
     this.exportToSettingsMap(settingsMap);
   }
 
   public exportToSettingsMap(settingsMap: Record<string, string>): void {
-    const p = this.currentPalette();
-    const systemThemePayload = {
-      activePresetKey: this.activePresetKey(),
-      theme: this.activePresetKey(),
-      primaryColor: p.primary,
-      primaryHover: p.primaryHover,
-      background: p.bgApp,
-      surface: p.cardBg,
-      text: p.textMain,
-      secondaryText: p.sidebarText,
-      border: p.cardBorder,
-      icon: p.sidebarActiveAccent,
-      ...p,
-    };
-    settingsMap['system_theme'] = JSON.stringify(systemThemePayload);
-    // Populate both alias styles for full compatibility
-    settingsMap['theme'] = this.activePresetKey();
-    settingsMap['primaryColor'] = p.primary;
-    settingsMap['primaryHover'] = p.primaryHover;
-    settingsMap['background'] = p.bgApp;
-    settingsMap['surface'] = p.cardBg;
-    settingsMap['text'] = p.textMain;
-    settingsMap['secondaryText'] = p.sidebarText;
-    settingsMap['border'] = p.cardBorder;
-    settingsMap['icon'] = p.sidebarActiveAccent;
+    const lp = this.lightPalette();
+    const dp = this.darkPalette();
+    const activeP = this.currentPalette();
+    const activeKey = this.activePresetKey();
 
-    settingsMap['THEME_PRIMARY_COLOR'] = p.primary;
-    settingsMap['THEME_PRIMARY_HOVER'] = p.primaryHover;
-    settingsMap['THEME_SIDEBAR_BG'] = p.sidebarBg;
-    settingsMap['THEME_SIDEBAR_TEXT'] = p.sidebarText;
-    settingsMap['THEME_SIDEBAR_ACCENT'] = p.sidebarActiveAccent;
-    settingsMap['THEME_APP_BG'] = p.bgApp;
-    settingsMap['THEME_CARD_BG'] = p.cardBg;
-    settingsMap['THEME_CARD_BORDER'] = p.cardBorder;
-    settingsMap['THEME_TEXT_MAIN'] = p.textMain;
-    settingsMap['THEME_SUCCESS_COLOR'] = p.success;
-    settingsMap['THEME_DANGER_COLOR'] = p.danger;
-    settingsMap['THEME_WARNING_COLOR'] = p.warning;
+    const systemThemePayload = {
+      activePresetKey: activeKey,
+      theme: activeKey,
+      mode: this.mode(),
+      darkModeToggleEnabled: this.darkModeToggleEnabled(),
+      lightTheme: {
+        activePresetKey: this.lightPresetKey(),
+        theme: this.lightPresetKey(),
+        ...lp,
+      },
+      darkTheme: {
+        activePresetKey: this.darkPresetKey(),
+        theme: this.darkPresetKey(),
+        ...dp,
+      },
+      // Top-level aliases for backwards compatibility with active theme
+      primaryColor: activeP.primary,
+      primaryHover: activeP.primaryHover,
+      background: activeP.bgApp,
+      surface: activeP.cardBg,
+      text: activeP.textMain,
+      secondaryText: activeP.sidebarText,
+      border: activeP.cardBorder,
+      icon: activeP.sidebarActiveAccent,
+      ...activeP,
+    };
+
+    settingsMap['system_theme'] = JSON.stringify(systemThemePayload);
+    settingsMap['DARK_MODE_TOGGLE_ENABLED'] = String(this.darkModeToggleEnabled());
+    settingsMap['THEME_DARK_MODE_TOGGLE'] = String(this.darkModeToggleEnabled());
+
+    // Active theme flat compatibility keys
+    settingsMap['theme'] = activeKey;
+    settingsMap['primaryColor'] = activeP.primary;
+    settingsMap['primaryHover'] = activeP.primaryHover;
+    settingsMap['background'] = activeP.bgApp;
+    settingsMap['surface'] = activeP.cardBg;
+    settingsMap['text'] = activeP.textMain;
+    settingsMap['secondaryText'] = activeP.sidebarText;
+    settingsMap['border'] = activeP.cardBorder;
+    settingsMap['icon'] = activeP.sidebarActiveAccent;
+
+    settingsMap['THEME_PRIMARY_COLOR'] = activeP.primary;
+    settingsMap['THEME_PRIMARY_HOVER'] = activeP.primaryHover;
+    settingsMap['THEME_SIDEBAR_BG'] = activeP.sidebarBg;
+    settingsMap['THEME_SIDEBAR_TEXT'] = activeP.sidebarText;
+    settingsMap['THEME_SIDEBAR_ACCENT'] = activeP.sidebarActiveAccent;
+    settingsMap['THEME_APP_BG'] = activeP.bgApp;
+    settingsMap['THEME_CARD_BG'] = activeP.cardBg;
+    settingsMap['THEME_CARD_BORDER'] = activeP.cardBorder;
+    settingsMap['THEME_TEXT_MAIN'] = activeP.textMain;
+    settingsMap['THEME_SUCCESS_COLOR'] = activeP.success;
+    settingsMap['THEME_DANGER_COLOR'] = activeP.danger;
+    settingsMap['THEME_WARNING_COLOR'] = activeP.warning;
   }
 
-  private isDarkColor(hex: string): boolean {
+  public isDarkColor(hex: string): boolean {
     if (!hex || !hex.startsWith('#')) return false;
     const cleanHex = hex.replace('#', '');
     let r = 0, g = 0, b = 0;
@@ -332,7 +604,7 @@ export class ThemeService {
     if (typeof document === 'undefined') return;
 
     const root = document.documentElement;
-    const isDark = this.isDarkColor(p.bgApp) || this.isDarkColor(p.cardBg);
+    const isDark = this.isDarkColor(p.bgApp) || this.isDarkColor(p.cardBg) || this.mode() === 'dark';
 
     if (isDark) {
       root.classList.add('dark-theme');
@@ -383,24 +655,12 @@ export class ThemeService {
     root.style.setProperty('--error', p.danger);
     root.style.setProperty('--warning', p.warning);
 
-    // The tinted backgrounds that pair with them — status pills, callout boxes,
-    // selected rows. These were declared once in styles.css :root and never
-    // re-derived here, so a re-themed palette changed the status colour but
-    // left every tint behind it the stock green/red/amber. Derived from the
-    // palette's own status colours so the two always agree, and lifted in dark
-    // mode where a 12% wash over a dark surface is invisible.
     const tint = isDark ? 0.24 : 0.12;
     root.style.setProperty('--success-light', this.adjustColorOpacity(p.success, tint));
     root.style.setProperty('--danger-light', this.adjustColorOpacity(p.danger, tint));
     root.style.setProperty('--error-light', this.adjustColorOpacity(p.danger, tint));
     root.style.setProperty('--warning-light', this.adjustColorOpacity(p.warning, tint));
 
-    // Raw channels, for the places that need an arbitrary alpha.
-    //
-    // The POS glass design layers the brand colour at a dozen different
-    // opacities — card gradients, the ambient wash, every shadow — and a fixed
-    // `--primary-light` cannot express that. These let CSS write
-    // `rgba(var(--primary-rgb), 0.58)` and still follow the palette.
     root.style.setProperty('--primary-rgb', this.hexToChannels(p.primary));
     root.style.setProperty('--primary-variant-rgb', this.hexToChannels(p.primary));
     root.style.setProperty('--text-main-rgb', this.hexToChannels(mainTextColor));
@@ -444,9 +704,12 @@ export class ThemeService {
     const cleanHex = hex.replace('#', '');
     let r = 0, g = 0, b = 0;
     if (cleanHex.length === 3) {
-      r = parseInt(cleanHex[0] + cleanHex[0], 16);
-      g = parseInt(cleanHex[1] + cleanHex[1], 16);
-      b = parseInt(cleanHex[2] + cleanHex[2], 16);
+      const rHex = cleanHex[0] + cleanHex[0];
+      const gHex = cleanHex[1] + cleanHex[1];
+      const bHex = cleanHex[2] + cleanHex[2];
+      r = parseInt(rHex, 16);
+      g = parseInt(gHex, 16);
+      b = parseInt(bHex, 16);
     } else if (cleanHex.length === 6) {
       r = parseInt(cleanHex.substring(0, 2), 16);
       g = parseInt(cleanHex.substring(2, 4), 16);

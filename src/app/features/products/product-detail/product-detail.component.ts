@@ -24,9 +24,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
       <!-- 1. BREADCRUMBS                                                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Menu Catalog</span>
+        <span>Catalog</span>
         <span class="breadcrumb-separator">›</span>
         <a routerLink="/products" class="breadcrumb-link">Dishes &amp; Products</a>
         <span class="breadcrumb-separator">›</span>

@@ -29,11 +29,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       <!-- 1. BREADCRUMBS & PAGE HEADER                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="breadcrumbs-row">
-        <span>{{ settingsService.businessName() }}</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Point of Sale</span>
-        <span class="breadcrumb-separator">›</span>
-        <span>Invoices & Billing</span>
+        <span>Invoices &amp; Billing</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Sales Register</span>
       </div>
