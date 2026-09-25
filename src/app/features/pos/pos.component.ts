@@ -361,20 +361,48 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <!-- Empty State -->
           <div *ngIf="filteredProducts.length === 0" class="empty-dishes-box">
-            <span class="material-symbols-outlined text-5xl text-slate-300">restaurant</span>
-            <p class="text-sm font-semibold text-slate-500 mt-2">No active dishes found matching your selection.</p>
-            <!-- Without this the counter sees an empty grid and no reason for
-                 it, when the switch above is the whole explanation. -->
-            <button
-              type="button"
-              *ngIf="!showOutOfStock && hiddenOutOfStockCount > 0"
-              class="empty-oos-hint"
-              (click)="setShowOutOfStock(true)"
-            >
-              {{ hiddenOutOfStockCount }} out-of-stock
-              {{ hiddenOutOfStockCount === 1 ? 'dish is' : 'dishes are' }} hidden — show
-              {{ hiddenOutOfStockCount === 1 ? 'it' : 'them' }}
-            </button>
+            <div class="empty-dishes-illustration">
+              <span class="material-symbols-outlined empty-dishes-icon">restaurant_menu</span>
+              <div class="empty-dishes-glow"></div>
+            </div>
+            <h3 class="empty-dishes-title">
+              {{ searchQuery ? 'No Matching Dishes Found' : selectedCategoryId ? 'No Dishes in this Category' : 'No Menu Dishes Available' }}
+            </h3>
+            <p class="empty-dishes-desc">
+              {{ searchQuery 
+                ? 'We could not find any dishes matching "' + searchQuery + '". Check your spelling or try another keyword.' 
+                : selectedCategoryId 
+                  ? 'There are no active dishes listed under this category yet.' 
+                  : 'No active dishes are currently available for instant billing.' }}
+            </p>
+            <div class="empty-dishes-actions">
+              <button
+                type="button"
+                *ngIf="searchQuery || selectedCategoryId"
+                class="empty-action-btn btn-clear-filter"
+                (click)="searchQuery = ''; selectCategory(null)"
+              >
+                <span class="material-symbols-outlined text-sm">filter_alt_off</span>
+                <span>Clear Filters &amp; Search</span>
+              </button>
+              <button
+                type="button"
+                *ngIf="!showOutOfStock && hiddenOutOfStockCount > 0"
+                class="empty-action-btn btn-show-oos"
+                (click)="setShowOutOfStock(true)"
+              >
+                <span class="material-symbols-outlined text-sm">visibility</span>
+                <span>Show {{ hiddenOutOfStockCount }} Out of Stock Dish{{ hiddenOutOfStockCount === 1 ? '' : 'es' }}</span>
+              </button>
+              <button
+                type="button"
+                class="empty-action-btn btn-reload-menu"
+                (click)="loadProducts()"
+              >
+                <span class="material-symbols-outlined text-sm">refresh</span>
+                <span>Reload Menu</span>
+              </button>
+            </div>
           </div>
 
           <!-- Grid of Popular Dish Cards -->
@@ -487,8 +515,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <div *ngIf="combosList.length === 0" class="empty-dishes-box">
-            <span class="material-symbols-outlined text-5xl text-slate-300">lunch_dining</span>
-            <p class="text-sm font-semibold text-slate-500 mt-2">No combo meals currently available.</p>
+            <div class="empty-dishes-illustration">
+              <span class="material-symbols-outlined empty-dishes-icon">lunch_dining</span>
+              <div class="empty-dishes-glow"></div>
+            </div>
+            <h3 class="empty-dishes-title">No Combo Meals Available</h3>
+            <p class="empty-dishes-desc">There are no bundled value combos configured yet.</p>
+            <button type="button" class="empty-action-btn btn-reload-menu" (click)="loadCombos()">
+              <span class="material-symbols-outlined text-sm">refresh</span>
+              <span>Reload Combos</span>
+            </button>
           </div>
 
           <!-- Combo cards carry the dish card's markup contract part for part
@@ -590,8 +626,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
 
           <div *ngIf="addonsList.length === 0" class="empty-dishes-box">
-            <span class="material-symbols-outlined text-5xl text-slate-300">add_circle</span>
-            <p class="text-sm font-semibold text-slate-500 mt-2">No add-ons are currently available.</p>
+            <div class="empty-dishes-illustration">
+              <span class="material-symbols-outlined empty-dishes-icon">add_circle</span>
+              <div class="empty-dishes-glow"></div>
+            </div>
+            <h3 class="empty-dishes-title">No Add-ons Available</h3>
+            <p class="empty-dishes-desc">There are no standalone side extras or add-ons configured yet.</p>
+            <button type="button" class="empty-action-btn btn-reload-menu" (click)="loadAddons()">
+              <span class="material-symbols-outlined text-sm">refresh</span>
+              <span>Reload Add-ons</span>
+            </button>
           </div>
 
           <!-- Same markup contract as the dish card - grid, decos, flag,
@@ -4725,6 +4769,119 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
       }
+    }
+
+    .empty-dishes-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3.5rem 1.5rem;
+      min-height: 380px;
+      width: 100%;
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--card-bg, #ffffff) 92%, transparent);
+      border: 1.5px dashed var(--card-border, rgba(148, 163, 184, 0.25));
+      margin: 1rem 0;
+      box-sizing: border-box;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .empty-dishes-illustration {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 88px;
+      height: 88px;
+      border-radius: 26px;
+      background: color-mix(in srgb, var(--primary, #7E22CE) 12%, var(--card-bg, #ffffff));
+      border: 1.5px solid color-mix(in srgb, var(--primary, #7E22CE) 25%, transparent);
+      margin-bottom: 1.25rem;
+      box-shadow: 0 12px 32px -8px rgba(var(--primary-rgb, 126, 34, 206), 0.25);
+    }
+
+    .empty-dishes-icon {
+      font-size: 44px;
+      color: var(--primary, #7E22CE);
+      z-index: 1;
+    }
+
+    .empty-dishes-glow {
+      position: absolute;
+      inset: -12px;
+      border-radius: 32px;
+      background: radial-gradient(circle, rgba(var(--primary-rgb, 126, 34, 206), 0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .empty-dishes-title {
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-main, #0F172A);
+      margin: 0 0 0.45rem 0;
+    }
+
+    .empty-dishes-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted, #64748B);
+      max-width: 440px;
+      line-height: 1.5;
+      margin: 0 0 1.5rem 0;
+    }
+
+    .empty-dishes-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .empty-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .empty-action-btn.btn-clear-filter {
+      background: color-mix(in srgb, var(--primary, #7E22CE) 15%, transparent);
+      color: var(--primary, #7E22CE);
+      border: 1px solid color-mix(in srgb, var(--primary, #7E22CE) 35%, transparent);
+    }
+    .empty-action-btn.btn-clear-filter:hover {
+      background: var(--primary, #7E22CE);
+      color: #ffffff;
+    }
+
+    .empty-action-btn.btn-show-oos {
+      background: rgba(245, 158, 11, 0.12);
+      color: #D97706;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .empty-action-btn.btn-show-oos:hover {
+      background: #D97706;
+      color: #ffffff;
+    }
+
+    .empty-action-btn.btn-reload-menu {
+      background: var(--primary, #7E22CE);
+      color: #ffffff;
+      border: 1px solid transparent;
+      box-shadow: 0 4px 14px rgba(var(--primary-rgb, 126, 34, 206), 0.3);
+    }
+    .empty-action-btn.btn-reload-menu:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
     }
   `, POS_DESIGN_CSS],
 })

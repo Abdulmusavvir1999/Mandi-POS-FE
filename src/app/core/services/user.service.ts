@@ -47,41 +47,41 @@ export class UserService {
   // Dynamic Roles
   // -------------------------------------------------------------------------
   public getRoles(): Observable<ApiResponse<Role[]>> {
-    return this.http.get<ApiResponse<Role[]>>(this.ROLES_URL);
+    return this.http.post<ApiResponse<Role[]>>(`${this.ROLES_URL}/list`, {});
   }
 
   public getRoleById(id: number): Observable<ApiResponse<Role>> {
-    return this.http.get<ApiResponse<Role>>(`${this.ROLES_URL}/${id}`);
+    return this.http.post<ApiResponse<Role>>(`${this.ROLES_URL}/get`, { id });
   }
 
   public createRole(data: { name: string; description?: string; permissionIds?: number[] }): Observable<ApiResponse<Role>> {
-    return this.http.post<ApiResponse<Role>>(this.ROLES_URL, data);
+    return this.http.post<ApiResponse<Role>>(`${this.ROLES_URL}/create`, data);
   }
 
   public updateRole(id: number, data: { name?: string; description?: string; permissionIds?: number[] }): Observable<ApiResponse<Role>> {
-    return this.http.put<ApiResponse<Role>>(`${this.ROLES_URL}/${id}`, data);
+    return this.http.post<ApiResponse<Role>>(`${this.ROLES_URL}/update`, { id, ...data });
   }
 
   public deleteRole(id: number): Observable<ApiResponse<any>> {
-    return this.http.delete<ApiResponse<any>>(`${this.ROLES_URL}/${id}`);
+    return this.http.post<ApiResponse<any>>(`${this.ROLES_URL}/delete`, { id });
   }
 
   public updateRolePermissions(roleId: number, permissionIds: number[]): Observable<ApiResponse<any>> {
-    return this.http.put<ApiResponse<any>>(`${this.ROLES_URL}/${roleId}/permissions`, { permissionIds });
+    return this.http.post<ApiResponse<any>>(`${this.ROLES_URL}/permissions/update`, { id: roleId, permissionIds });
   }
 
   // -------------------------------------------------------------------------
   // Dynamic Permissions
   // -------------------------------------------------------------------------
   public getPermissions(): Observable<ApiResponse<Permission[]>> {
-    return this.http.get<ApiResponse<Permission[]>>(this.PERMISSIONS_URL);
+    return this.http.post<ApiResponse<Permission[]>>(`${this.PERMISSIONS_URL}/list`, {});
   }
 
   public createPermission(data: { code: string; module: string; description?: string }): Observable<ApiResponse<Permission>> {
-    return this.http.post<ApiResponse<Permission>>(this.PERMISSIONS_URL, data);
+    return this.http.post<ApiResponse<Permission>>(`${this.PERMISSIONS_URL}/create`, data);
   }
 
   public deletePermission(id: number): Observable<ApiResponse<any>> {
-    return this.http.delete<ApiResponse<any>>(`${this.PERMISSIONS_URL}/${id}`);
+    return this.http.post<ApiResponse<any>>(`${this.PERMISSIONS_URL}/delete`, { id });
   }
 }
