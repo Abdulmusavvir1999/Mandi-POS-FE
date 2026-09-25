@@ -16,7 +16,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 @Component({
   selector: 'app-vendors',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent, CustomDropdownComponent],
   template: `
     <div class="vendors-page-wrapper">
       <app-page-loader
@@ -192,24 +192,25 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
           <!-- Status Dropdown -->
           <div class="filter-dropdown-wrapper">
             <label class="filter-label">Status:</label>
-            <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="filter-select">
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="BLOCKED">Blocked</option>
-            </select>
+            <app-custom-dropdown
+              [options]="filterStatusOptions"
+              [(ngModel)]="statusFilter"
+              (ngModelChange)="onFilterChange()"
+              placeholder="All Statuses"
+              minWidth="140px"
+            ></app-custom-dropdown>
           </div>
 
           <!-- Sort Dropdown -->
           <div class="filter-dropdown-wrapper">
             <label class="filter-label">Sort:</label>
-            <select [(ngModel)]="sortBy" (change)="onFilterChange()" class="filter-select">
-              <option value="name">Vendor Name</option>
-              <option value="vendor_code">Vendor Code</option>
-              <option value="outstanding_balance">Outstanding Balance</option>
-              <option value="total_purchases_amount">Spend Volume</option>
-              <option value="rating">Rating</option>
-            </select>
+            <app-custom-dropdown
+              [options]="filterSortOptions"
+              [(ngModel)]="sortBy"
+              (ngModelChange)="onFilterChange()"
+              placeholder="Sort By"
+              minWidth="160px"
+            ></app-custom-dropdown>
           </div>
 
           <!-- View Toggle (Grid / Table) -->
@@ -477,10 +478,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         </table>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 5. COMPREHENSIVE VENDOR DETAIL DRAWER / MODAL (9 DIMENSIONS)   -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="selectedVendor" class="modal-backdrop" (click)="closeDetailDrawer()">
+      <div *ngIf="false" class="modal-backdrop" (click)="closeDetailDrawer()">
         <div class="drawer-panel" (click)="$event.stopPropagation()">
           <!-- Drawer Header -->
           <div class="drawer-header">
@@ -1217,12 +1215,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               </div>
               <div class="form-group">
                 <label class="form-label">Payment Method *</label>
-                <select [(ngModel)]="paymentForm.payment_method" name="payment_method" class="form-control">
-                  <option value="BANK_TRANSFER">Bank Transfer (NEFT/RTGS/Wire)</option>
-                  <option value="CHEQUE">Cheque / Demand Draft</option>
-                  <option value="UPI">UPI / Instant Online</option>
-                  <option value="CASH">Cash Voucher</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="modalPaymentMethodOptions"
+                  [(ngModel)]="paymentForm.payment_method"
+                  name="payment_method"
+                  placeholder="Select payment method"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
             </div>
             <div class="form-group">
@@ -2560,13 +2559,36 @@ export class VendorsComponent implements OnInit {
   ];
 
   public paymentTermsOptions: DropdownOption[] = [
-    { value: 'NET_7', label: 'Net 7 Days', icon: 'schedule', description: 'Payment due 7 days after invoice' },
+    { value: 'NET_30', label: 'Net 30 Days (Standard)', icon: 'schedule', description: 'Payment due 30 days after invoice' },
     { value: 'NET_15', label: 'Net 15 Days', icon: 'schedule', description: 'Payment due 15 days after invoice' },
-    { value: 'NET_30', label: 'Net 30 Days', icon: 'schedule', description: 'Payment due 30 days after invoice' },
-    { value: 'NET_45', label: 'Net 45 Days', icon: 'schedule', description: 'Payment due 45 days after invoice' },
+    { value: 'NET_7', label: 'Net 7 Days', icon: 'schedule', description: 'Payment due 7 days after invoice' },
+    { value: 'DUE_ON_RECEIPT', label: 'Due on Receipt (Immediate)', icon: 'receipt', description: 'Immediate payment upon invoice delivery' },
+    { value: 'PAY_ANYTIME', label: 'Pay Anytime (Flexible Terms)', icon: 'all_inclusive', description: 'Open deferred payment with no fixed due date' },
+    { value: 'ADVANCE', label: 'Advance Required', icon: 'account_balance_wallet', description: 'Paid in full before dispatch' },
     { value: 'NET_60', label: 'Net 60 Days', icon: 'schedule', description: 'Payment due 60 days after invoice' },
     { value: 'COD', label: 'Cash On Delivery', icon: 'payments', description: 'Settled at the point of delivery' },
-    { value: 'ADVANCE', label: 'Advance Required', icon: 'account_balance_wallet', description: 'Paid in full before dispatch' },
+  ];
+
+  public modalPaymentMethodOptions: DropdownOption[] = [
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer (NEFT/RTGS/Wire)', icon: 'account_balance', description: 'Direct bank settlement' },
+    { value: 'UPI', label: 'UPI / Instant Online', icon: 'qr_code', description: 'Instant UPI or QR settlement' },
+    { value: 'CHEQUE', label: 'Cheque / Demand Draft', icon: 'fact_check', description: 'Current or post-dated cheque' },
+    { value: 'CASH', label: 'Cash Voucher', icon: 'attach_money', description: 'Cash register disbursement' },
+  ];
+
+  public filterStatusOptions: DropdownOption[] = [
+    { value: 'ALL', label: 'All Statuses', icon: 'filter_list' },
+    { value: 'ACTIVE', label: 'Active', icon: 'check_circle', badge: 'Active' },
+    { value: 'INACTIVE', label: 'Inactive', icon: 'pause_circle', badge: 'Inactive' },
+    { value: 'BLOCKED', label: 'Blocked', icon: 'block', badge: 'Blocked' },
+  ];
+
+  public filterSortOptions: DropdownOption[] = [
+    { value: 'name', label: 'Vendor Name', icon: 'sort_by_alpha' },
+    { value: 'vendor_code', label: 'Vendor Code', icon: 'tag' },
+    { value: 'outstanding_balance', label: 'Outstanding Balance', icon: 'account_balance_wallet' },
+    { value: 'total_purchases_amount', label: 'Spend Volume', icon: 'shopping_bag' },
+    { value: 'rating', label: 'Rating', icon: 'star' },
   ];
 
   // Form states
@@ -2705,14 +2727,14 @@ export class VendorsComponent implements OnInit {
 
   public formatPaymentTerms(terms: string): string {
     if (!terms) return 'Net 30';
-    return terms.replace('_', ' ');
+    if (terms === 'PAY_ANYTIME') return 'Pay Anytime';
+    if (terms === 'DUE_ON_RECEIPT') return 'Due on Receipt';
+    return terms.replace(/_/g, ' ');
   }
 
-  // Drawer handlers
+  // Drawer / View handlers
   public openDetailDrawer(vendor: Vendor, tab: ActiveTab = 'profile'): void {
-    this.selectedVendor = vendor;
-    this.activeTab = tab;
-    this.loadVendorSubCollections(vendor.id);
+    this.router.navigate(['/vendors', vendor.id]);
   }
 
   public closeDetailDrawer(): void {

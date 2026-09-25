@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { CustomizationService } from './customization.service';
+import { ThemeService } from './theme.service';
 
 export type StockDesignKey = 'warehouse' | 'financial' | 'kanban' | 'list' | 'card';
 
@@ -243,6 +244,7 @@ export interface StockPersistedConfig {
 export class StockLayoutService {
   private settingsService = inject(SettingsService);
   private customization = inject(CustomizationService);
+  private theme = inject(ThemeService);
 
   private _activeKey = signal<StockDesignKey>('warehouse');
   private _overrides = signal<Partial<Record<StockDesignKey, Partial<StockTokens>>>>({});
@@ -261,7 +263,7 @@ export class StockLayoutService {
     this.enabled() ? this._activeKey() : BASELINE_STOCK_DESIGN
   );
 
-  public readonly rootClass = computed<string>(() => 'stock-layout-' + this.effectiveKey());
+  public readonly rootClass = computed<string>(() => (this.enabled() ? 'stock-layout-' + this.effectiveKey() : ''));
 
   public readonly tokens = computed<StockTokens>(() => {
     const key = this._activeKey();
@@ -272,21 +274,56 @@ export class StockLayoutService {
 
   public readonly cssVars = computed<Record<string, string>>(() => this.varsFrom(this.tokens()));
 
-  /** Variables the page renders with — stock defaults while off. */
+  /** Variables the page renders with; none while off so it seamlessly inherits the active theme palette. */
   public readonly pageCssVars = computed<Record<string, string>>(() =>
-    this.enabled()
-      ? this.varsFrom(this.tokens())
-      : this.varsFrom({ ...STOCK_DEFAULT_TOKENS[BASELINE_STOCK_DESIGN] })
+    this.enabled() ? this.varsFrom(this.tokens()) : {}
   );
 
   private varsFrom(t: StockTokens): Record<string, string> {
+    const isDark = this.theme.isDarkMode() || this.theme.mode() === 'dark';
+    const activeP = this.theme.currentPalette();
+
+    let canvasBg = t.canvasBg;
+    let cardBg = t.cardBg;
+    let cardBorder = t.cardBorder;
+    let textColor = t.textColor;
+    let textMuted = t.textMuted;
+    let accentColor = t.accentColor;
+    let buttonBg = t.buttonBg;
+    let buttonColor = t.buttonColor;
+
+    if (isDark) {
+      if (!this.theme.isDarkColor(canvasBg)) {
+        canvasBg = 'transparent';
+      }
+      if (!this.theme.isDarkColor(cardBg)) {
+        cardBg = activeP.cardBg;
+      }
+      if (this.theme.isDarkColor(textColor)) {
+        textColor = activeP.textMain || '#F9FAFB';
+      }
+      if (!this.theme.isDarkColor(cardBorder)) {
+        cardBorder = activeP.cardBorder;
+      }
+      if (textMuted === '#64748B' || textMuted === '#6B7280') {
+        textMuted = 'rgba(226, 232, 240, 0.75)';
+      }
+      if (accentColor === '#2563EB' || accentColor === '#7E22CE' || accentColor === '#0F766E') {
+        accentColor = activeP.primary;
+      }
+      if (!this.theme.isDarkColor(buttonBg)) {
+        buttonBg = 'rgba(255, 255, 255, 0.08)';
+        buttonColor = activeP.textMain || '#F9FAFB';
+      }
+    }
+
     return {
-      '--stock-canvas-bg': t.canvasBg,
-      '--stock-card-bg': t.cardBg,
-      '--stock-card-border': t.cardBorder,
-      '--stock-text-color': t.textColor,
-      '--stock-text-muted': t.textMuted,
-      '--stock-accent-color': t.accentColor,
+      '--stock-canvas-bg': canvasBg,
+      '--stock-card-bg': cardBg,
+      '--stock-card-border': cardBorder,
+      '--stock-text-color': textColor,
+      '--stock-text-muted': textMuted,
+      '--stock-accent-color': accentColor,
       '--stock-healthy-color': t.statusHealthyColor,
       '--stock-warning-color': t.statusWarningColor,
       '--stock-critical-color': t.statusCriticalColor,
@@ -296,8 +333,8 @@ export class StockLayoutService {
       '--stock-padding': `${t.padding}px`,
       '--stock-grid-gap': `${t.gridGap}px`,
       '--stock-font-size': `${t.fontSize}px`,
-      '--stock-btn-bg': t.buttonBg,
-      '--stock-btn-color': t.buttonColor,
+      '--stock-btn-bg': buttonBg,
+      '--stock-btn-color': buttonColor,
     };
   }
 

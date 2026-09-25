@@ -59,7 +59,6 @@ export interface Category {
   id: number;
   name: string;
   description?: string;
-  icon?: string;
   image_url?: string;
   display_order: number;
   status: 'ACTIVE' | 'INACTIVE';
@@ -129,8 +128,6 @@ export interface Customer {
   email?: string;
   address?: string;
   image_url?: string;
-  notes?: string;
-  tier?: string;
   loyalty_points?: number;
   status: 'ACTIVE' | 'INACTIVE';
   total_visits: number;
@@ -627,7 +624,7 @@ export interface ApiResponse<T = any> {
 }
 
 export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
-export type PaymentTermsType = 'COD' | 'ADVANCE' | 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'NET_60';
+export type PaymentTermsType = 'COD' | 'ADVANCE' | 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'NET_60' | 'DUE_ON_RECEIPT' | 'PAY_ANYTIME';
 export type PreferredPaymentMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'UPI' | 'CASH' | 'PAY_LATER' | 'CREDIT_TERMS';
 export type PurchasePaymentStatus = 'PAID' | 'PARTIAL' | 'UNPAID' | 'OVERDUE';
 export type PurchaseDeliveryStatus = 'RECEIVED' | 'PENDING' | 'CANCELLED';
@@ -642,51 +639,52 @@ export interface Vendor {
   image_url?: string | null;
   notes?: string | null;
 
-  // Contact Information
+  // Contact Information & Location
   contact_person?: string | null;
   phone: string;
   email?: string | null;
+  website?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;
   postal_code?: string | null;
-  website?: string | null;
 
   // Tax Details
   tax_id?: string | null;
   pan_number?: string | null;
-  tax_category?: string;
 
-  // Payment Terms & Banking
-  payment_terms: PaymentTermsType | string;
+  // Financial & Balances
+  outstanding_balance: number;
+
+  // Banking & Electronic Settlement
   preferred_payment_method: PreferredPaymentMethod | string;
   bank_name?: string | null;
   account_number?: string | null;
   ifsc_code?: string | null;
-  branch_name?: string | null;
   upi_id?: string | null;
 
-  // Credit Limit & Balances
-  credit_limit: number;
-  outstanding_balance: number;
-  total_purchases_amount: number;
-  total_purchases_count: number;
+  // Optional legacy fields
+  credit_limit?: number;
+  payment_terms?: PaymentTermsType | string;
+  tax_category?: string;
+  branch_name?: string | null;
+  total_purchases_amount?: number;
+  total_purchases_count?: number;
   last_purchase_date?: string | null;
   last_payment_date?: string | null;
-
-  // Vendor Rating & Performance
-  rating: number;
-  delivery_speed_rating: number;
-  quality_rating: number;
-  pricing_rating: number;
-  on_time_delivery_rate: number;
-  quality_score: number;
-  fulfillment_rate: number;
+  rating?: number;
+  delivery_speed_rating?: number;
+  quality_rating?: number;
+  pricing_rating?: number;
+  on_time_delivery_rate?: number;
+  quality_score?: number;
+  fulfillment_rate?: number;
   performance_notes?: string | null;
 
   created_by?: number | null;
   created_at?: string;
   updated_at?: string;
+  is_deleted?: number | boolean;
 
   purchases?: VendorPurchase[];
   payments?: VendorPayment[];

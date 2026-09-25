@@ -10874,12 +10874,13 @@ export class SettingsComponent implements OnInit {
   }
 
   selectPreset(presetKey: string): void {
-    this.activePresetKey = presetKey;
     this.showCustomFields = false;
     const presets = this.currentModePresets;
     const preset = presets[presetKey];
     if (preset) {
+      this.themeService.setMode(this.activeThemeModeTab);
       this.themeService.applyPreset(presetKey, this.activeThemeModeTab);
+      this.activePresetKey = presetKey;
       this.themeService.exportToSettingsMap(this.settingsMap);
       this.notify.info(`Switched ${this.activeThemeModeTab === 'dark' ? 'Dark' : 'Light'} Mode to ${preset.name}`);
     }
@@ -10887,6 +10888,7 @@ export class SettingsComponent implements OnInit {
 
   onColorChanged(key: keyof ThemePalette, hexValue: string): void {
     if (!hexValue) return;
+    this.themeService.setMode(this.activeThemeModeTab);
     this.themeService.updateSettingColor(key, hexValue, this.activeThemeModeTab);
     this.themeService.exportToSettingsMap(this.settingsMap);
     this.activePresetKey = 'custom';
@@ -10895,12 +10897,14 @@ export class SettingsComponent implements OnInit {
 
   resetToDefaultTheme(): void {
     if (this.activeThemeModeTab === 'dark') {
+      this.themeService.setMode('dark');
       this.themeService.applyPreset('midnight', 'dark');
       this.themeService.exportToSettingsMap(this.settingsMap);
       this.activePresetKey = 'midnight';
       this.showCustomFields = false;
       this.notify.success('Restored default Midnight Dark palette!');
     } else {
+      this.themeService.setMode('light');
       this.themeService.applyPreset('purple', 'light');
       this.themeService.exportToSettingsMap(this.settingsMap);
       this.activePresetKey = 'purple';

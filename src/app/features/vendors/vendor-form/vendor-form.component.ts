@@ -332,15 +332,15 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
             </div>
           </section>
 
-          <!-- Section 3: Tax, Commercial & Credit Terms -->
+          <!-- Section 3: Tax & Financial Details -->
           <section class="form-card">
             <div class="form-card-header">
               <div class="card-header-icon bg-amber-soft">
                 <span class="material-symbols-outlined">receipt_long</span>
               </div>
               <div>
-                <h2 class="form-card-title">3. Tax, Commercial Terms & Credit</h2>
-                <p class="form-card-desc">Tax compliance numbers, credit facility, and invoice payment cycles</p>
+                <h2 class="form-card-title">3. Tax & Financial Details</h2>
+                <p class="form-card-desc">Tax compliance identifiers and vendor opening/outstanding balance</p>
               </div>
             </div>
 
@@ -373,67 +373,21 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
                 </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Payment Terms Agreement (Select or Enter Custom)</label>
-                <app-custom-dropdown
-                  [options]="paymentTermsOptions"
-                  [(ngModel)]="form.payment_terms"
-                  name="payment_terms"
-                  [allowCustom]="true"
-                  [searchable]="true"
-                  placeholder="Select or type custom payment terms..."
-                  minWidth="100%"
-                ></app-custom-dropdown>
-              </div>
-
-              <div class="form-group">
-                <div class="limit-label-row">
-                  <label class="form-label mb-0">Credit Limit ({{ defaultCurrency }})</label>
-                  <div class="limit-mode-toggle" role="group" aria-label="Credit limit mode">
-                    <button
-                      type="button"
-                      class="limit-mode-btn"
-                      [class.is-active]="!isNoLimit"
-                      (click)="setLimitMode(false)"
-                      title="Set specific credit amount"
-                    >
-                      <span class="material-symbols-outlined">pin</span>
-                      <span>Limit</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="limit-mode-btn"
-                      [class.is-active]="isNoLimit"
-                      (click)="setLimitMode(true)"
-                      title="No credit limit restriction"
-                    >
-                      <span class="material-symbols-outlined">all_inclusive</span>
-                      <span>No Limit</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div *ngIf="!isNoLimit" class="input-with-icon">
+              <div class="form-group full-width">
+                <label class="form-label">Outstanding Amount ({{ defaultCurrency }})</label>
+                <div class="input-with-icon">
                   <span class="material-symbols-outlined input-icon">account_balance_wallet</span>
                   <input
                     type="number"
                     min="0"
-                    [(ngModel)]="form.credit_limit"
-                    name="credit_limit"
-                    placeholder="e.g. 50000"
+                    step="0.01"
+                    [(ngModel)]="form.outstanding_balance"
+                    name="outstanding_balance"
+                    placeholder="0.00"
                     class="form-control font-mono"
                   />
                 </div>
-
-                <div *ngIf="isNoLimit" class="no-limit-banner">
-                  <div class="no-limit-icon-box">
-                    <span class="material-symbols-outlined">all_inclusive</span>
-                  </div>
-                  <div class="no-limit-text-col">
-                    <span class="no-limit-title">No Limit</span>
-                    <span class="no-limit-sub">Unlimited Credit Approved</span>
-                  </div>
-                </div>
+                <span class="field-help-text">Pending payable balance or opening balance with this supplier.</span>
               </div>
             </div>
           </section>
@@ -557,8 +511,8 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
                   <span>{{ form.city ? form.city + ', ' + (form.state || '') : 'Location not set' }}</span>
                 </div>
                 <div class="preview-meta-row">
-                  <span class="material-symbols-outlined">payments</span>
-                  <span>Credit Limit: <strong>{{ isNoLimit || !form.credit_limit ? 'No Limit' : (form.credit_limit | appCurrency) }}</strong></span>
+                  <span class="material-symbols-outlined">account_balance_wallet</span>
+                  <span>Outstanding: <strong>{{ (form.outstanding_balance || 0) | appCurrency }}</strong></span>
                 </div>
               </div>
             </div>
@@ -1314,9 +1268,8 @@ export class VendorFormComponent implements OnInit {
     postal_code: '',
     tax_id: '',
     pan_number: '',
-    payment_terms: 'NET_30',
+    outstanding_balance: 0,
     preferred_payment_method: 'BANK_TRANSFER',
-    credit_limit: 50000,
     bank_name: '',
     account_number: '',
     ifsc_code: '',
@@ -1348,6 +1301,7 @@ export class VendorFormComponent implements OnInit {
     { value: 'NET_15', label: 'Net 15 Days (Semi-Monthly)', icon: 'date_range' },
     { value: 'NET_7', label: 'Net 7 Days (Weekly)', icon: 'event' },
     { value: 'DUE_ON_RECEIPT', label: 'Due on Receipt (Immediate)', icon: 'receipt' },
+    { value: 'PAY_ANYTIME', label: 'Pay Anytime (Flexible Terms)', icon: 'all_inclusive' },
     { value: 'ADVANCE', label: '100% Advance Payment', icon: 'payments' },
     { value: 'NET_60', label: 'Net 60 Days (Extended)', icon: 'schedule' },
   ];

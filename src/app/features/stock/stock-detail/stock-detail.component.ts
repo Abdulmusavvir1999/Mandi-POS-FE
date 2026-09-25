@@ -958,9 +958,9 @@ export class StockDetailComponent implements OnInit {
   public showAdjustModal = false;
 
   public purchaseForm: any = {
-    quantity: 5,
-    multiplier: 4,
-    totalPrice: 2000,
+    quantity: null,
+    multiplier: 1,
+    totalPrice: null,
     supplier: '',
     invoiceNumber: '',
     notes: '',
@@ -1161,9 +1161,9 @@ export class StockDetailComponent implements OnInit {
   // ── Actions ─────────────────────────────────────────────────────────
   openPurchaseModal(): void {
     this.purchaseForm = {
-      quantity: 5,
-      multiplier: 4,
-      totalPrice: 2000,
+      quantity: null,
+      multiplier: 1,
+      totalPrice: null,
       supplier: '',
       invoiceNumber: '',
       notes: '',

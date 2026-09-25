@@ -348,7 +348,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         [ngStyle]="stockLayout.pageCssVars()"
       >
         <!-- Empty State -->
-        <div *ngIf="filteredMasterItems.length === 0" class="empty-state-cell w-full py-12">
+        <div *ngIf="filteredMasterItems.length === 0" class="empty-state-card w-full py-12">
           <div class="empty-state-box">
             <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'warehouse' }}</span>
             <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Stock Master Items Found' }}</div>
@@ -709,8 +709,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <tr *ngFor="let entry of paginatedStockEntries">
                 <!-- Entry # & Date -->
                 <td>
-                  <div class="font-mono text-xs font-bold text-[#2E1065]">{{ entry.entry_number }}</div>
-                  <div class="text-[10px] text-[#6B7280] font-mono">{{ entry.entry_date | date:'dd/MM/yyyy HH:mm' }}</div>
+                  <div class="font-mono text-xs font-bold text-[var(--text-main)]">{{ entry.entry_number }}</div>
+                  <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ entry.entry_date | date:'dd/MM/yyyy HH:mm' }}</div>
                 </td>
 
                 <!-- Stock Item Name -->
@@ -721,7 +721,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
                 <!-- Qty x Multiplier -->
                 <td>
-                  <div class="font-mono text-xs text-[#2E1065]">
+                  <div class="font-mono text-xs text-[var(--text-main)]">
                     <strong>{{ entry.quantity }}</strong> × {{ entry.multiplier }}
                   </div>
                   <div class="text-[10px] text-[var(--text-muted)]">Base Qty × Multiplier</div>
@@ -729,21 +729,21 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
                 <!-- Total Qty -->
                 <td>
-                  <span class="font-mono font-black text-xs text-[#16A34A] bg-[#DCFCE7] px-2 py-0.5 rounded border border-[#BBF7D0]">
+                  <span class="font-mono font-black text-xs text-[#16A34A] bg-[#DCFCE7] dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded border border-[#BBF7D0] dark:border-emerald-800/40">
                     {{ entry.total_quantity | number:'1.0-3' }} {{ entry.unit_type }}s
                   </span>
                 </td>
 
                 <!-- Total Price -->
                 <td>
-                  <span class="font-mono font-bold text-xs text-purple-900">
+                  <span class="font-mono font-bold text-xs text-[var(--text-main)]">
                     {{ entry.total_price | appCurrency:'1.0-2' }}
                   </span>
                 </td>
 
                 <!-- Unit Price -->
                 <td>
-                  <span class="font-mono font-bold text-xs text-[#2E1065]">
+                  <span class="font-mono font-bold text-xs text-[var(--text-main)]">
                     {{ entry.unit_price | appCurrency:'1.0-4' }}
                   </span>
                 </td>
@@ -801,13 +801,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             <tbody>
               <tr *ngFor="let move of paginatedStockMovements">
                 <!-- Timestamp -->
-                <td class="text-xs text-[#6B7280] font-mono">
+                <td class="text-xs text-[var(--text-muted)] font-mono">
                   {{ move.movement_date | date:'dd/MM/yyyy HH:mm:ss' }}
                 </td>
 
                 <!-- Stock Item Name & Code -->
                 <td>
-                  <div class="font-bold text-xs text-[#2E1065]">{{ move.stock_item_name }}</div>
+                  <div class="font-bold text-xs text-[var(--text-main)]">{{ move.stock_item_name }}</div>
                   <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ move.reference_type }} • {{ move.reference_id || 'Direct' }}</div>
                 </td>
 
@@ -841,16 +841,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
                 <!-- Balance After Movement -->
                 <td>
-                  <div class="font-mono text-xs font-black text-purple-950">
+                  <div class="font-mono text-xs font-black text-[var(--text-main)]">
                     {{ move.balance_quantity | number:'1.0-3' }} {{ move.unit_type }}
                   </div>
-                  <div class="text-[10px] text-purple-700 font-mono font-medium">
+                  <div class="text-[10px] text-[var(--primary)] font-mono font-medium">
                     Total Val: {{ move.balance_value | appCurrency:'1.0-2' }}
                   </div>
                 </td>
 
                 <!-- Author -->
-                <td style="text-align: right;" class="text-xs font-semibold text-[#2E1065]">
+                <td style="text-align: right;" class="text-xs font-semibold text-[var(--text-main)]">
                   {{ move.created_by_name || 'System Auto' }}
                 </td>
               </tr>
@@ -872,16 +872,16 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- ── TAB 4: INVENTORY ALERTS CENTER ──────────────────────────── -->
       <div class="table-container-card" *ngIf="activeTab === 'LOW_STOCK'">
         <!-- Alert Category Pills Bar -->
-        <div class="flex items-center gap-2 p-3 bg-[#FAF5FF] border-b border-[#E9D5FF] overflow-x-auto">
+        <div class="flex items-center gap-2 p-3 bg-[var(--card-bg)] border-b border-[var(--card-border)] overflow-x-auto">
           <button
             type="button"
             (click)="setAlertFilter('all')"
             class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
-            [ngClass]="selectedAlertFilter === 'all' ? 'bg-[#7E22CE] text-white shadow-sm' : 'bg-white text-[#4B5563] border border-[#E5E7EB] hover:bg-gray-50'"
+            [ngClass]="selectedAlertFilter === 'all' ? 'bg-[var(--primary)] text-white shadow-sm' : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)] hover:opacity-80'"
           >
             <span class="material-symbols-outlined text-sm">notifications_active</span>
             <span>All Alerts</span>
-            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'">
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="selectedAlertFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'">
               {{ alertSummary.totalAlerts }}
             </span>
           </button>
@@ -1678,74 +1678,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               />
             </div>
 
-            <!-- Reorder Level & Quantity Grid -->
-            <div class="grid grid-cols-2 gap-4 items-start pt-1">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Reorder Level
-                </label>
-                <input
-                  title="Reorder Level"
-                  type="number"
-                  min="0"
-                  step="any"
-                  [(ngModel)]="masterForm.reorderLevel"
-                  name="reorderLevel"
-                  class="form-control font-mono text-sm w-full"
-                  placeholder="10"
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Standard Reorder Qty
-                </label>
-                <input
-                  title="Standard Reorder Qty"
-                  type="number"
-                  min="0"
-                  step="any"
-                  [(ngModel)]="masterForm.reorderQuantity"
-                  name="reorderQuantity"
-                  class="form-control font-mono text-sm w-full"
-                  placeholder="20"
-                />
-              </div>
-            </div>
-
-            <!-- Max Stock Threshold & Shelf Life Days -->
-            <div class="grid grid-cols-2 gap-4 items-start pt-1">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Max Stock Threshold (Overstock)
-                </label>
-                <input
-                  title="Max Stock Threshold"
-                  type="number"
-                  min="0"
-                  step="any"
-                  [(ngModel)]="masterForm.maxStockThreshold"
-                  name="maxStockThreshold"
-                  class="form-control font-mono text-sm w-full"
-                  placeholder="100"
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Shelf Life (Days)
-                </label>
-                <input
-                  title="Shelf Life (Days)"
-                  type="number"
-                  min="0"
-                  step="1"
-                  [(ngModel)]="masterForm.shelfLifeDays"
-                  name="shelfLifeDays"
-                  class="form-control font-mono text-sm w-full"
-                  placeholder="e.g. 30"
-                />
-              </div>
-            </div>
-
             <!-- Row 4: Opening Balance Section Header & Divider -->
             <div class="pt-3.5 border-t border-[#E9D5FF] space-y-3">
               <div class="flex items-center justify-between pb-1.5">
@@ -2131,10 +2063,10 @@ export class StockComponent implements OnInit {
 
   // Forms
   public purchaseForm: any = {
-    stockItemId: 1,
-    quantity: 5,
-    multiplier: 4,
-    totalPrice: 2000,
+    stockItemId: null,
+    quantity: null,
+    multiplier: 1,
+    totalPrice: null,
     // 0 = one-off supplier, and `supplier` carries the typed name instead.
     vendorId: 0,
     supplier: '',
@@ -2146,7 +2078,7 @@ export class StockComponent implements OnInit {
   };
 
   public adjustForm: any = {
-    stockItemId: 1,
+    stockItemId: null,
     adjustmentType: 'adjustment',
     quantity: 1,
     multiplier: 1,
@@ -2191,10 +2123,6 @@ export class StockComponent implements OnInit {
     stockCode: '',
     unitType: 'piece',
     minStockAlert: 10,
-    reorderLevel: 10,
-    reorderQuantity: 20,
-    maxStockThreshold: 100,
-    shelfLifeDays: null,
     initialQuantity: 0,
     multiplier: 1,
     initialTotalPrice: 0,
@@ -2269,10 +2197,6 @@ export class StockComponent implements OnInit {
         this.isLoading = false;
         if (res.success) {
           this.stockItems = res.data;
-          if (this.stockItems.length > 0 && !this.purchaseForm.stockItemId) {
-            this.purchaseForm.stockItemId = this.stockItems[0].id;
-            this.adjustForm.stockItemId = this.stockItems[0].id;
-          }
         }
       },
       error: (err) => {
@@ -2535,21 +2459,50 @@ export class StockComponent implements OnInit {
 
   // ── Modals Trigger Actions ──────────────────────────────────────────
   openPurchaseModal(): void {
-    if (this.stockItems.length > 0 && !this.purchaseForm.stockItemId) {
-      this.purchaseForm.stockItemId = this.stockItems[0].id;
-    }
+    this.purchaseForm = {
+      stockItemId: null,
+      quantity: null,
+      multiplier: 1,
+      totalPrice: null,
+      vendorId: 0,
+      supplier: '',
+      invoiceNumber: '',
+      batchNumber: '',
+      expiryDate: '',
+      notes: '',
+      entryDate: new Date().toISOString().split('T')[0],
+    };
     this.showPurchaseModal = true;
   }
 
   quickPurchaseEntry(item: StockItem): void {
-    this.purchaseForm.stockItemId = item.id;
+    this.purchaseForm = {
+      stockItemId: item.id,
+      quantity: null,
+      multiplier: 1,
+      totalPrice: null,
+      vendorId: 0,
+      supplier: '',
+      invoiceNumber: '',
+      batchNumber: '',
+      expiryDate: '',
+      notes: '',
+      entryDate: new Date().toISOString().split('T')[0],
+    };
     this.showPurchaseModal = true;
   }
 
   openAdjustModal(): void {
-    if (this.stockItems.length > 0 && !this.adjustForm.stockItemId) {
-      this.adjustForm.stockItemId = this.stockItems[0].id;
-    }
+    this.adjustForm = {
+      stockItemId: null,
+      adjustmentType: 'adjustment',
+      quantity: 1,
+      multiplier: 1,
+      totalPrice: 0,
+      unitPrice: 0,
+      reason: '',
+      notes: '',
+    };
     this.showAdjustModal = true;
   }
 
@@ -2573,10 +2526,6 @@ export class StockComponent implements OnInit {
       stockCode: '',
       unitType: 'piece',
       minStockAlert: 10,
-      reorderLevel: 10,
-      reorderQuantity: 20,
-      maxStockThreshold: 100,
-      shelfLifeDays: null,
       initialQuantity: 0,
       multiplier: 1,
       initialTotalPrice: 0,
@@ -2591,11 +2540,15 @@ export class StockComponent implements OnInit {
 
   // ── Form Submissions ────────────────────────────────────────────────
   submitPurchaseEntry(): void {
+    if (!this.purchaseForm.stockItemId) {
+      this.notify.error('Please select a stock item master');
+      return;
+    }
     if (!this.purchaseForm.quantity || this.purchaseForm.quantity <= 0) {
       this.notify.error('Please enter a valid base quantity');
       return;
     }
-    if (this.purchaseForm.totalPrice < 0 || this.purchaseForm.totalPrice === undefined) {
+    if (this.purchaseForm.totalPrice === null || this.purchaseForm.totalPrice === undefined || this.purchaseForm.totalPrice < 0) {
       this.notify.error('Please enter a valid total purchase price');
       return;
     }
@@ -2628,6 +2581,10 @@ export class StockComponent implements OnInit {
   }
 
   submitAdjust(): void {
+    if (!this.adjustForm.stockItemId) {
+      this.notify.error('Please select a stock item master');
+      return;
+    }
     if (!this.adjustForm.reason) {
       this.notify.error('Please provide an adjustment reason');
       return;

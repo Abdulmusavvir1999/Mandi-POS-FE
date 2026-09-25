@@ -349,14 +349,51 @@ export class CategoryLayoutService {
   }
 
   private varsFrom(tokens: CategoryTokens): Record<string, string> {
+    const isDark = this.theme.isDarkMode() || this.theme.mode() === 'dark';
+    const activeP = this.theme.currentPalette();
+
+    let canvasBg = tokens.canvasBg;
+    let cardBg = tokens.cardBg;
+    let cardBorder = tokens.cardBorder;
+    let textColor = tokens.textColor;
+    let textMuted = tokens.textMuted;
+    let accentColor = tokens.accentColor;
+    let buttonBg = tokens.buttonBg;
+    let buttonColor = tokens.buttonColor;
+
+    if (isDark) {
+      if (!this.theme.isDarkColor(canvasBg)) {
+        canvasBg = 'transparent';
+      }
+      if (!this.theme.isDarkColor(cardBg)) {
+        cardBg = activeP.cardBg;
+      }
+      if (this.theme.isDarkColor(textColor)) {
+        textColor = activeP.textMain || '#F9FAFB';
+      }
+      if (!this.theme.isDarkColor(cardBorder)) {
+        cardBorder = activeP.cardBorder;
+      }
+      if (textMuted === '#64748B' || textMuted === '#6B7280') {
+        textMuted = 'rgba(226, 232, 240, 0.75)';
+      }
+      if (accentColor === '#7E22CE' || accentColor === '#2563EB') {
+        accentColor = activeP.primary;
+      }
+      if (!this.theme.isDarkColor(buttonBg)) {
+        buttonBg = 'rgba(255, 255, 255, 0.08)';
+        buttonColor = activeP.textMain || '#F9FAFB';
+      }
+    }
+
     const vars: Record<string, string> = {};
 
-    vars['--cat-canvas-bg'] = tokens.canvasBg;
-    vars['--cat-card-bg'] = tokens.cardBg;
-    vars['--cat-card-border'] = tokens.cardBorder;
-    vars['--cat-text-color'] = tokens.textColor;
-    vars['--cat-text-muted'] = tokens.textMuted;
-    vars['--cat-accent-color'] = tokens.accentColor;
+    vars['--cat-canvas-bg'] = canvasBg;
+    vars['--cat-card-bg'] = cardBg;
+    vars['--cat-card-border'] = cardBorder;
+    vars['--cat-text-color'] = textColor;
+    vars['--cat-text-muted'] = textMuted;
+    vars['--cat-accent-color'] = accentColor;
     vars['--cat-status-active'] = tokens.statusActiveColor;
     vars['--cat-status-draft'] = tokens.statusDraftColor;
     vars['--cat-card-scale'] = String(tokens.cardScale / 100);
@@ -364,8 +401,8 @@ export class CategoryLayoutService {
     vars['--cat-padding'] = tokens.padding + 'px';
     vars['--cat-grid-gap'] = tokens.gridGap + 'px';
     vars['--cat-font-size'] = tokens.fontSize + 'px';
-    vars['--cat-button-bg'] = tokens.buttonBg;
-    vars['--cat-button-color'] = tokens.buttonColor;
+    vars['--cat-button-bg'] = buttonBg;
+    vars['--cat-button-color'] = buttonColor;
 
     return vars;
   }

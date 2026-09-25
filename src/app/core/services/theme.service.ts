@@ -37,6 +37,24 @@ export const DEFAULT_LIGHT_PALETTES: Record<string, { name: string; icon: string
       warning: '#EA580C',
     },
   },
+  gold: {
+    name: 'Champagne & Imperial Gold',
+    icon: '👑',
+    palette: {
+      primary: '#B4833E',
+      primaryHover: '#D4A359',
+      sidebarBg: '#1C160C',
+      sidebarText: '#FDFCF7',
+      sidebarActiveAccent: '#F5C869',
+      bgApp: '#FAF8F2',
+      cardBg: '#FFFFFF',
+      cardBorder: '#EFE7D5',
+      textMain: '#2A1F10',
+      success: '#15803D',
+      danger: '#DC2626',
+      warning: '#D97706',
+    },
+  },
   amber: {
     name: 'Warm Amber & Stone',
     icon: '🟧',
@@ -74,7 +92,7 @@ export const DEFAULT_LIGHT_PALETTES: Record<string, { name: string; icon: string
     },
   },
   ocean: {
-    name: 'Ocean Blue & Slate',
+    name: 'Ocean Sapphire & Slate',
     icon: '🟦',
     palette: {
       primary: '#2563EB',
@@ -353,9 +371,7 @@ export class ThemeService {
           ...preset.palette,
         });
       }
-      if (this.mode() === m) {
-        this.injectCssVariables(this.currentPalette());
-      }
+      this.setMode(m);
     }
   }
 
@@ -375,9 +391,7 @@ export class ThemeService {
       this.lightPalette.set(safePalette);
     }
 
-    if (this.mode() === m) {
-      this.injectCssVariables(this.currentPalette());
-    }
+    this.setMode(m);
   }
 
   public updateSettingColor(key: keyof ThemePalette, colorHex: string, targetMode?: ThemeMode): void {
@@ -437,18 +451,22 @@ export class ThemeService {
 
           // Unpack explicit lightTheme
           if (parsed.lightTheme && typeof parsed.lightTheme === 'object') {
-            this.lightPresetKey.set(parsed.lightTheme.activePresetKey || parsed.lightTheme.theme || 'purple');
+            const lKey = parsed.lightTheme.activePresetKey || parsed.lightTheme.theme || 'purple';
+            const baseLight = DEFAULT_LIGHT_PALETTES[lKey]?.palette || DEFAULT_LIGHT_PALETTES['purple'].palette;
+            this.lightPresetKey.set(lKey);
             this.lightPalette.set({
-              ...DEFAULT_LIGHT_PALETTES['purple'].palette,
+              ...baseLight,
               ...parsed.lightTheme,
             });
           }
 
           // Unpack explicit darkTheme
           if (parsed.darkTheme && typeof parsed.darkTheme === 'object') {
-            this.darkPresetKey.set(parsed.darkTheme.activePresetKey || parsed.darkTheme.theme || 'midnight');
+            const dKey = parsed.darkTheme.activePresetKey || parsed.darkTheme.theme || 'midnight';
+            const baseDark = DEFAULT_DARK_PALETTES[dKey]?.palette || DEFAULT_DARK_PALETTES['midnight'].palette;
+            this.darkPresetKey.set(dKey);
             this.darkPalette.set({
-              ...DEFAULT_DARK_PALETTES['midnight'].palette,
+              ...baseDark,
               ...parsed.darkTheme,
             });
           }
@@ -608,8 +626,12 @@ export class ThemeService {
 
     if (isDark) {
       root.classList.add('dark-theme');
+      root.setAttribute('data-theme', 'dark');
+      root.style.colorScheme = 'dark';
     } else {
       root.classList.remove('dark-theme');
+      root.setAttribute('data-theme', 'light');
+      root.style.colorScheme = 'light';
     }
 
     // Primary Brand

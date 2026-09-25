@@ -18,9 +18,9 @@ export const STOCK_LAYOUT_CSS = `
   /* ═══════════════════════════════════════════════════════════════════════ */
 
   .stock-stage {
-    background-color: var(--stock-canvas-bg, #F8FAFC);
+    background-color: var(--stock-canvas-bg, transparent);
     border-radius: 16px;
-    padding: var(--stock-grid-gap, 18px);
+    padding: 0;
     transition: background-color 0.25s ease, padding 0.25s ease;
     width: 100%;
     box-sizing: border-box;
@@ -37,8 +37,8 @@ export const STOCK_LAYOUT_CSS = `
   }
 
   .stock-wh-card {
-    background: var(--stock-card-bg, #FFFFFF);
-    border: 1.5px solid var(--stock-card-border, #CBD5E1);
+    background: var(--stock-card-bg, var(--card-bg, #FFFFFF));
+    border: 1.5px solid var(--stock-card-border, var(--card-border, #CBD5E1));
     border-radius: var(--stock-card-radius, 14px);
     padding: var(--stock-padding, 18px);
     box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);

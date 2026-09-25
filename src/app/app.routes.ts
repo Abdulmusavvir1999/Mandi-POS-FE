@@ -172,6 +172,11 @@ export const routes: Routes = [
           import('./features/vendors/vendor-form/vendor-form.component').then((m) => m.VendorFormComponent),
       },
       {
+        path: 'vendors/:id',
+        loadComponent: () =>
+          import('./features/vendors/vendor-detail/vendor-detail.component').then((m) => m.VendorDetailComponent),
+      },
+      {
         path: 'reports',
         loadComponent: () =>
           import('./features/reports/reports.component').then((m) => m.ReportsComponent),

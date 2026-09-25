@@ -837,9 +837,14 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   }
 
   get selectedOption(): DropdownOption | undefined {
-    let opt = this.options.find((o) => o.value === this.innerValue);
-    if (!opt && this.innerValue !== null && this.innerValue !== undefined && this.innerValue !== '') {
-      // Ensure custom or newly bound values still render cleanly
+    if (this.innerValue === null || this.innerValue === undefined || this.innerValue === '') {
+      return undefined;
+    }
+    let opt = this.options.find(
+      (o) => o.value === this.innerValue || (o.value !== null && o.value !== undefined && String(o.value) === String(this.innerValue))
+    );
+    if (!opt && this.allowCustom) {
+      // Ensure custom or newly bound values only render if allowCustom is enabled
       opt = { value: this.innerValue, label: String(this.innerValue), icon: 'edit_note' };
     }
     return opt;

@@ -72,163 +72,11 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
           <!-- Identity -->
           <section class="form-card">
             <h2 class="form-card-title">
-              <span class="material-symbols-outlined">badge</span>
-              <span>Dish Identity</span>
-            </h2>
-
-            <div class="grid grid-cols-2 gap-3.5 items-start">
-              <div class="form-group mb-0">
-                <label class="form-label">Dish Name</label>
-                <input
-                  title="Dish Name"
-                  type="text"
-                  [(ngModel)]="form.name"
-                  name="name"
-                  placeholder="e.g. Mutton  Full"
-                  class="form-control text-sm w-full"
-                  required
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label">SKU / Item Code</label>
-                <input
-                  title="SKU / Item Code"
-                  type="text"
-                  [(ngModel)]="form.sku"
-                  name="sku"
-                  placeholder="e.g. MND-MUT-F"
-                  class="form-control font-mono text-sm w-full"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3.5 items-start">
-              <div class="form-group mb-0">
-                <label class="form-label">Category</label>
-                <app-custom-dropdown
-                  [options]="categoryOptions"
-                  [(ngModel)]="form.categoryId"
-                  name="categoryId"
-                  [searchable]="true"
-                  placeholder="Select Category"
-                  minWidth="100%"
-                ></app-custom-dropdown>
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label">Status</label>
-                <app-custom-dropdown
-                  [options]="statusOptions"
-                  [(ngModel)]="form.status"
-                  name="status"
-                  placeholder="Select Status"
-                  minWidth="100%"
-                ></app-custom-dropdown>
-              </div>
-            </div>
-
-            <div class="form-group mb-0">
-              <label class="form-label">Description</label>
-              <textarea
-                title="Description"
-                [(ngModel)]="form.description"
-                name="description"
-                rows="3"
-                placeholder="Fragrant basmati rice served with roasted spiced meat…"
-                class="form-control text-sm w-full"
-              ></textarea>
-            </div>
-          </section>
-        </div>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- RIGHT COLUMN                                                -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <div class="form-column">
-          <!-- Image -->
-          <section class="form-card">
-            <h2 class="form-card-title">
-              <span class="material-symbols-outlined">image</span>
-              <span>Dish Image</span>
-            </h2>
-
-            <div class="image-upload-row">
-              <div class="image-upload-preview" [class.is-empty]="!form.imageUrl">
-                <img *ngIf="form.imageUrl" [src]="settingsService.assetUrl(form.imageUrl)" alt="Dish image preview" />
-                <span *ngIf="!form.imageUrl" class="material-symbols-outlined">add_photo_alternate</span>
-              </div>
-              <div class="image-upload-actions">
-                <input
-                  type="file"
-                  hidden
-                  #dishPicker
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  (change)="onImageFile($event, dishPicker)"
-                  title="Choose dish image"
-                />
-                <div class="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                    [disabled]="isUploadingImage"
-                    (click)="dishPicker.click()"
-                  >
-                    <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
-                    <span>{{ isUploadingImage ? 'Uploading…' : (form.imageUrl ? 'Replace' : 'Choose Image') }}</span>
-                  </button>
-                  <button
-                    *ngIf="form.imageUrl && !isUploadingImage"
-                    type="button"
-                    class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                    (click)="form.imageUrl = ''"
-                  >
-                    <span class="material-symbols-outlined">delete</span>
-                    <span>Remove</span>
-                  </button>
-                </div>
-                <p class="form-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
-              </div>
-            </div>
-          </section>
-
-          <!-- Pricing -->
-          <section class="form-card">
-            <h2 class="form-card-title">
               <span class="material-symbols-outlined">payments</span>
               <span>Pricing &amp; Tax</span>
             </h2>
 
-            <div class="grid grid-cols-3 gap-3.5 items-start">
-              <!-- Price is set per portion once the dish has any, so these two
-                   drop out rather than sit there as a second answer to the
-                   same question. They come back if every portion is removed,
-                   because a single-item dish has nothing else to price it. -->
-              <ng-container *ngIf="form.variants.length === 0">
-                <div class="form-group mb-0">
-                  <label class="form-label">Selling Price ({{ settingsService.currencySymbol() }})</label>
-                  <input
-                    title="Selling Price"
-                    type="number"
-                    min="0"
-                    step="any"
-                    [(ngModel)]="form.sellingPrice"
-                    name="sellingPrice"
-                    class="form-control font-mono font-bold text-sm w-full"
-                  />
-                </div>
-                <div class="form-group mb-0">
-                  <label class="form-label">Cost Price ({{ settingsService.currencySymbol() }})</label>
-                  <input
-                    title="Cost Price"
-                    type="number"
-                    min="0"
-                    step="any"
-                    [(ngModel)]="form.costPrice"
-                    name="costPrice"
-                    class="form-control font-mono text-sm w-full"
-                  />
-                </div>
-              </ng-container>
+            <div class="grid grid-cols-1 gap-3.5 items-start">
               <div class="form-group mb-0">
                 <label class="form-label">Tax Rate (%)</label>
                 <input
@@ -242,15 +90,6 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
                 />
               </div>
             </div>
-
-            <p class="form-note" *ngIf="form.variants.length > 0">
-              <span class="material-symbols-outlined">info</span>
-              <span>
-                This dish is priced by its portions — set each price under
-                <strong>Dish Variants</strong> below. The dish price shown elsewhere in the app
-                is the cheapest portion.
-              </span>
-            </p>
           </section>
         </div>
 
@@ -636,8 +475,6 @@ export class ProductFormComponent implements OnInit {
     categoryId: 1,
     description: '',
     imageUrl: '',
-    sellingPrice: 0,
-    costPrice: 0,
     taxRate: 5,
     status: 'ACTIVE',
     stockItemId: null as number | null,
@@ -748,8 +585,6 @@ export class ProductFormComponent implements OnInit {
           categoryId: p.category_id,
           description: p.description || '',
           imageUrl: p.image_url || '',
-          sellingPrice: p.selling_price,
-          costPrice: p.cost_price,
           taxRate: p.tax_rate,
           status: p.status,
           stockItemId: p.stock_item_id ?? p.resolved_stock_item_id ?? null,

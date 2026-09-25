@@ -369,17 +369,54 @@ export class DiningLayoutService {
   }
 
   private varsFrom(tokens: DiningTokens): Record<string, string> {
+    const isDark = this.theme.isDarkMode() || this.theme.mode() === 'dark';
+    const activeP = this.theme.currentPalette();
+
+    let canvasBg = tokens.canvasBg;
+    let tableBg = tokens.tableBg;
+    let tableBorder = tokens.tableBorder;
+    let textColor = tokens.textColor;
+    let textMuted = tokens.textMuted;
+    let accentColor = tokens.accentColor;
+    let buttonBg = tokens.buttonBg;
+    let buttonColor = tokens.buttonColor;
+
+    if (isDark) {
+      if (!this.theme.isDarkColor(canvasBg)) {
+        canvasBg = 'transparent';
+      }
+      if (!this.theme.isDarkColor(tableBg)) {
+        tableBg = activeP.cardBg;
+      }
+      if (this.theme.isDarkColor(textColor)) {
+        textColor = activeP.textMain || '#F9FAFB';
+      }
+      if (!this.theme.isDarkColor(tableBorder)) {
+        tableBorder = activeP.cardBorder;
+      }
+      if (textMuted === '#64748B' || textMuted === '#6B7280') {
+        textMuted = 'rgba(226, 232, 240, 0.75)';
+      }
+      if (accentColor === '#7E22CE' || accentColor === '#2563EB') {
+        accentColor = activeP.primary;
+      }
+      if (!this.theme.isDarkColor(buttonBg)) {
+        buttonBg = 'rgba(255, 255, 255, 0.08)';
+        buttonColor = activeP.textMain || '#F9FAFB';
+      }
+    }
+
     const vars: Record<string, string> = {};
 
-    vars['--dining-canvas-bg'] = tokens.canvasBg;
-    vars['--dining-table-bg'] = tokens.tableBg;
-    vars['--dining-table-border'] = tokens.tableBorder;
-    vars['--dining-text-color'] = tokens.textColor;
-    vars['--dining-text-muted'] = tokens.textMuted;
+    vars['--dining-canvas-bg'] = canvasBg;
+    vars['--dining-table-bg'] = tableBg;
+    vars['--dining-table-border'] = tableBorder;
+    vars['--dining-text-color'] = textColor;
+    vars['--dining-text-muted'] = textMuted;
     vars['--dining-color-free'] = tokens.colorFree;
     vars['--dining-color-occupied'] = tokens.colorOccupied;
     vars['--dining-color-blocked'] = tokens.colorBlocked;
-    vars['--dining-accent-color'] = tokens.accentColor;
+    vars['--dining-accent-color'] = accentColor;
     vars['--dining-chair-color'] = tokens.chairColor;
     vars['--dining-chair-occupied'] = tokens.chairOccupiedColor;
     vars['--dining-table-scale'] = String(tokens.tableScale / 100);
@@ -388,8 +425,8 @@ export class DiningLayoutService {
     vars['--dining-grid-gap'] = tokens.gridGap + 'px';
     vars['--dining-padding'] = tokens.padding + 'px';
     vars['--dining-font-size'] = tokens.fontSize + 'px';
-    vars['--dining-button-bg'] = tokens.buttonBg;
-    vars['--dining-button-color'] = tokens.buttonColor;
+    vars['--dining-button-bg'] = buttonBg;
+    vars['--dining-button-color'] = buttonColor;
 
     return vars;
   }

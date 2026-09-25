@@ -77,6 +77,18 @@ html, body {
   line-height: 1.5;
 }
 
+/* === UNIVERSAL FORM AUTOFILL STYLING & COLOR NORMALIZATION === */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text-main, currentColor) !important;
+  transition: background-color 50000s ease-in-out 0s, color 50000s ease-in-out 0s;
+  caret-color: currentColor;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   letter-spacing: -0.02em;
@@ -2008,6 +2020,16 @@ app-custom-dropdown.w-full {
 }
 
 /* Empty State */
+.empty-state-card {
+  background: var(--card-bg, #FFFFFF);
+  border: 1px solid var(--card-border, #E9D5FF);
+  border-radius: 16px;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+}
+
 .empty-state-cell {
   padding: 3.5rem 1.5rem !important;
   text-align: center;
@@ -4970,3 +4992,26 @@ html {
     height: 10px;
   }
 }
+
+/* === UNIVERSAL SELECT & OPTION LUXURY THEME ADAPTATION === */
+select, select.form-control, .filter-select {
+  color-scheme: light dark;
+  background-color: var(--card-bg, #ffffff) !important;
+  color: var(--text-main, #0f172a) !important;
+  border: 1.5px solid var(--card-border, #e2e8f0);
+}
+
+select option {
+  background-color: var(--card-bg, #ffffff) !important;
+  color: var(--text-main, #0f172a) !important;
+  padding: 8px 12px;
+}
+
+:host-context(.dark-theme) select,
+.dark-theme select,
+:host-context(.dark-theme) select option,
+.dark-theme select option {
+  background-color: #1e1b4b !important;
+  color: #f8fafc !important;
+}
+

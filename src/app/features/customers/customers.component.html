@@ -1396,30 +1396,17 @@
 
           <div class="form-group mb-0">
             <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-              VIP Tier
+              Email (Optional)
             </label>
-            <app-custom-dropdown
-              [options]="tierOptions"
-              [(ngModel)]="form.tier"
-              name="tier"
-              placeholder="Select Tier"
-              minWidth="100%"
-            ></app-custom-dropdown>
+            <input
+              title="Email (Optional)"
+              type="email"
+              [(ngModel)]="form.email"
+              name="email"
+              placeholder="guest@example.com"
+              class="form-control text-sm w-full"
+            />
           </div>
-        </div>
-
-        <div class="form-group mb-0">
-          <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-            Email (Optional)
-          </label>
-          <input
-            title="Email (Optional)"
-            type="email"
-            [(ngModel)]="form.email"
-            name="email"
-            placeholder="guest@example.com"
-            class="form-control text-sm w-full"
-          />
         </div>
 
         <div class="form-group mb-0">

@@ -54,14 +54,6 @@ export class CustomersComponent implements OnInit {
     { value: 'recency', label: 'Sort: Recent Visits', icon: 'schedule' },
   ];
 
-  public tierOptions: DropdownOption[] = [
-    { value: 'REGULAR', label: 'Regular Diner' },
-    { value: 'VIP_SILVER', label: 'VIP Silver' },
-    { value: 'VIP_GOLD', label: 'VIP Gold' },
-    { value: 'VIP_PLATINUM', label: 'VIP Platinum' },
-    { value: 'VIP', label: 'VIP Member' },
-  ];
-
   public noteTypeOptions: DropdownOption[] = [
     { value: 'GENERAL', label: 'General Note', icon: 'notes' },
     { value: 'PREFERENCE', label: 'Preference', icon: 'favorite' },
@@ -82,9 +74,7 @@ export class CustomersComponent implements OnInit {
     phone: '',
     email: '',
     address: '',
-    tier: 'REGULAR',
     image_url: '',
-    notes: '',
   };
   public isUploadingImage = false;
 
@@ -145,7 +135,7 @@ export class CustomersComponent implements OnInit {
   // --- KPI & Tier Helpers ---
 
   get vipCount(): number {
-    return this.crmSummary?.vip_customers ?? this.customers.filter((c) => (c.total_spent || 0) >= 2500 || c.tier === 'VIP' || c.tier === 'VIP_GOLD' || c.tier === 'VIP_PLATINUM').length;
+    return this.crmSummary?.vip_customers ?? this.customers.filter((c) => (c.total_spent || 0) >= 2500).length;
   }
 
   get frequentCount(): number {
@@ -181,10 +171,10 @@ export class CustomersComponent implements OnInit {
   }
 
   getTier(c: Customer): string {
-    if (c.tier === 'VIP_PLATINUM' || (c.total_spent || 0) >= 15000) return 'VIP Platinum';
-    if (c.tier === 'VIP_GOLD' || (c.total_spent || 0) >= 5000) return 'VIP Gold';
-    if (c.tier === 'VIP_SILVER' || (c.total_spent || 0) >= 2500) return 'VIP Silver';
-    if (c.tier === 'VIP') return 'VIP Member';
+    const spent = c.total_spent || 0;
+    if (spent >= 15000) return 'VIP Platinum';
+    if (spent >= 5000) return 'VIP Gold';
+    if (spent >= 2500) return 'VIP Silver';
     if ((c.total_visits || 0) >= 5) return 'Regular';
     return 'New Guest';
   }
@@ -231,7 +221,7 @@ export class CustomersComponent implements OnInit {
 
     // Segment tab filtering
     if (this.activeNavTab === 'vip') {
-      list = list.filter((c) => (c.total_spent || 0) >= 2500 || c.tier === 'VIP' || c.tier === 'VIP_GOLD' || c.tier === 'VIP_PLATINUM');
+      list = list.filter((c) => (c.total_spent || 0) >= 2500);
     } else if (this.activeNavTab === 'frequent') {
       list = list.filter((c) => (c.total_visits || 0) >= 5 || c.activity_status === 'FREQUENT');
     } else if (this.activeNavTab === 'at_risk') {
@@ -457,9 +447,7 @@ export class CustomersComponent implements OnInit {
       phone: '',
       email: '',
       address: '',
-      tier: 'REGULAR',
       image_url: '',
-      notes: '',
     };
     this.isUploadingImage = false;
     this.showModal = true;
@@ -473,9 +461,7 @@ export class CustomersComponent implements OnInit {
       phone: c.phone,
       email: c.email || '',
       address: c.address || '',
-      tier: c.tier || 'REGULAR',
       image_url: c.image_url || '',
-      notes: c.notes || '',
     };
     this.isUploadingImage = false;
     this.showModal = true;

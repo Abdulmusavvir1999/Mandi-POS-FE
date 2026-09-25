@@ -447,7 +447,7 @@ import { SettingsService } from '../../core/services/settings.service';
       .input-wrapper.is-focused {
         background: var(--card-bg, #FFFFFF);
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
       }
 
       .field-icon {
@@ -462,19 +462,46 @@ import { SettingsService } from '../../core/services/settings.service';
       }
 
       .text-input {
+        flex: 1;
         width: 100%;
-        background: transparent;
-        border: none;
-        outline: none;
-        font-size: 0.92rem;
-        color: var(--text-main, #2E1065);
+        min-width: 0;
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        font-size: 0.95rem;
+        color: var(--text-main, #2E1065) !important;
         font-family: inherit;
         font-weight: 600;
+        padding: 0;
+        margin: 0;
+        line-height: 1.5;
       }
 
       .text-input::placeholder {
         color: var(--text-dim, #C084FC);
         font-weight: 400;
+        opacity: 0.7;
+      }
+
+      /* Seamless WebKit / Chrome / Edge autofill override to eliminate white box */
+      .text-input:-webkit-autofill,
+      .text-input:-webkit-autofill:hover,
+      .text-input:-webkit-autofill:focus,
+      .text-input:-webkit-autofill:active {
+        -webkit-text-fill-color: var(--text-main, #2E1065) !important;
+        -webkit-box-shadow: 0 0 0 1000px var(--card-bg, #FAF5FF) inset !important;
+        box-shadow: 0 0 0 1000px var(--card-bg, #FAF5FF) inset !important;
+        transition: background-color 50000s ease-in-out 0s, color 50000s ease-in-out 0s;
+        caret-color: var(--text-main, #2E1065);
+        font-family: inherit !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+      }
+
+      .input-wrapper.is-focused .text-input:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 1000px var(--card-bg, #FFFFFF) inset !important;
+        box-shadow: 0 0 0 1000px var(--card-bg, #FFFFFF) inset !important;
       }
 
       .password-toggle-btn {

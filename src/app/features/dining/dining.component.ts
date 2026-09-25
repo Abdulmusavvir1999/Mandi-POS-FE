@@ -1555,41 +1555,38 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         position: relative;
         isolation: isolate;
         overflow: hidden;
-        /* The wash was four fixed lavenders, which stayed lavender under an
-           Ocean Blue or Emerald theme. Same tint strengths, mixed off the
-           active primary instead, so the panel tints with the palette. */
         background:
           linear-gradient(
             160deg,
-            color-mix(in srgb, var(--primary, #7E22CE) 11%, #FFFFFF) 0%,
-            color-mix(in srgb, var(--primary, #7E22CE) 4%, #FFFFFF) 42%,
-            color-mix(in srgb, var(--primary, #7E22CE) 8%, #FFFFFF) 74%,
-            color-mix(in srgb, var(--primary, #7E22CE) 10%, #FFFFFF) 100%
+            color-mix(in srgb, var(--primary, #7E22CE) 8%, var(--card-bg, #ffffff)) 0%,
+            color-mix(in srgb, var(--primary, #7E22CE) 3%, var(--card-bg, #ffffff)) 42%,
+            color-mix(in srgb, var(--primary, #7E22CE) 6%, var(--card-bg, #ffffff)) 74%,
+            color-mix(in srgb, var(--primary, #7E22CE) 7%, var(--card-bg, #ffffff)) 100%
           );
-        border: 1.5px solid var(--card-border, #E9D5FF);
+        border: 1.5px solid var(--card-border, rgba(126, 34, 206, 0.2));
         border-radius: 22px;
         padding: 1.25rem 1.35rem 1.6rem;
-        box-shadow: 0 10px 34px -10px rgba(var(--text-main-rgb, 46, 16, 101), 0.16);
+        box-shadow: 0 10px 34px -10px rgba(0, 0, 0, 0.2);
         display: flex;
         flex-direction: column;
         gap: 1.15rem;
       }
 
-      /* Ambient colour pools - the only thing the tiles have to blur. */
+      /* Ambient colour pools - subtle background glow */
       .floor-panel::before {
         content: '';
         position: absolute;
         inset: -30%;
         z-index: -1;
         background:
-          radial-gradient(26% 30% at 12% 16%, var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.35)) 0%, transparent 72%),
-          radial-gradient(24% 28% at 38% 8%, rgba(29, 78, 216, 0.3) 0%, transparent 72%),
-          radial-gradient(26% 30% at 64% 20%, rgba(14, 116, 144, 0.32) 0%, transparent 72%),
-          radial-gradient(24% 28% at 90% 12%, rgba(134, 25, 143, 0.28) 0%, transparent 72%),
-          radial-gradient(28% 32% at 22% 74%, rgba(4, 120, 87, 0.26) 0%, transparent 72%),
-          radial-gradient(26% 30% at 54% 88%, rgba(190, 24, 93, 0.26) 0%, transparent 72%),
-          radial-gradient(26% 30% at 86% 76%, rgba(180, 83, 9, 0.24) 0%, transparent 72%);
-        opacity: 0.85;
+          radial-gradient(26% 30% at 12% 16%, var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.2)) 0%, transparent 72%),
+          radial-gradient(24% 28% at 38% 8%, rgba(29, 78, 216, 0.15) 0%, transparent 72%),
+          radial-gradient(26% 30% at 64% 20%, rgba(14, 116, 144, 0.16) 0%, transparent 72%),
+          radial-gradient(24% 28% at 90% 12%, rgba(134, 25, 143, 0.14) 0%, transparent 72%),
+          radial-gradient(28% 32% at 22% 74%, rgba(4, 120, 87, 0.14) 0%, transparent 72%),
+          radial-gradient(26% 30% at 54% 88%, rgba(190, 24, 93, 0.14) 0%, transparent 72%),
+          radial-gradient(26% 30% at 86% 76%, rgba(180, 83, 9, 0.12) 0%, transparent 72%);
+        opacity: 0.35;
         animation: floorDrift 26s ease-in-out infinite alternate;
         pointer-events: none;
       }
@@ -1608,8 +1605,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         flex-direction: column;
         gap: 0.75rem;
         padding-bottom: 0.9rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.7);
-        box-shadow: 0 1px 0 var(--card-border, #F3E8FF);
+        border-bottom: 1px solid var(--card-border, rgba(255, 255, 255, 0.1));
+        box-shadow: 0 1px 0 var(--card-border, rgba(255, 255, 255, 0.04));
       }
 
       @media (min-width: 768px) {
@@ -1642,8 +1639,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         gap: 0.5rem;
         padding: 0.35rem 0.6rem;
         border-radius: 9999px;
-        background: rgba(255, 255, 255, 0.55);
-        border: 1px solid rgba(255, 255, 255, 0.8);
+        background: color-mix(in srgb, var(--card-bg, #ffffff) 85%, transparent);
+        border: 1px solid var(--card-border, rgba(255, 255, 255, 0.12));
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       }
@@ -1654,7 +1651,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         gap: 0.35rem;
         font-size: 0.68rem;
         font-weight: 700;
-        color: var(--text-muted, #6B7280);
+        color: var(--text-main, #6B7280);
         padding: 0 0.25rem;
       }
 
@@ -1674,10 +1671,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       .floor-empty {
         padding: 2.5rem 1rem;
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.55);
-        border: 1px solid rgba(255, 255, 255, 0.8);
+        background: color-mix(in srgb, var(--card-bg, #ffffff) 90%, transparent);
+        border: 1px solid var(--card-border, rgba(255, 255, 255, 0.12));
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
       }
 
       .floor-grid {
@@ -1716,17 +1714,17 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
            the status tint entering from the top-right, and the section colour
            running down through the glass. */
         background:
-          radial-gradient(85% 58% at 6% -6%, rgba(255, 255, 255, 0.8) 0%, transparent 62%),
+          radial-gradient(85% 58% at 6% -6%, rgba(255, 255, 255, 0.25) 0%, transparent 62%),
           radial-gradient(118% 88% at 100% 0%, var(--status-wash, transparent) 0%, transparent 58%),
           linear-gradient(
             152deg,
             var(--zone-wash, rgba(var(--primary-rgb, 126, 34, 206), 0.14)) 0%,
-            rgba(255, 255, 255, 0.5) 46%,
-            rgba(255, 255, 255, 0.32) 100%
+            color-mix(in srgb, var(--card-bg, #ffffff) 85%, transparent) 46%,
+            color-mix(in srgb, var(--card-bg, #ffffff) 65%, transparent) 100%
           );
         backdrop-filter: blur(26px) saturate(190%) brightness(1.04);
         -webkit-backdrop-filter: blur(26px) saturate(190%) brightness(1.04);
-        border: 1px solid rgba(255, 255, 255, 0.7);
+        border: 1px solid var(--card-border, rgba(255, 255, 255, 0.25));
         /* Bevelled edge: light catches the top and left, the bottom edge sits
            in its own shadow, which is what gives the pane thickness. */
         box-shadow:
