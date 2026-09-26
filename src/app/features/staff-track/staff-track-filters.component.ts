@@ -156,8 +156,13 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         gap: 2px;
         padding: 3px;
         border-radius: 12px;
-        background: #F5F3FF;
+        background: var(--bg-app, #F5F3FF);
         border: 1px solid var(--card-border, #E9D5FF);
+      }
+      :host-context(.dark-theme) .st-preset-group,
+      .dark-theme .st-preset-group {
+        background: rgba(139, 92, 246, 0.1) !important;
+        border-color: rgba(139, 92, 246, 0.25) !important;
       }
       .st-preset-btn {
         border: 0;
@@ -171,12 +176,16 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         white-space: nowrap;
         transition: background 0.15s ease, color 0.15s ease;
       }
+      :host-context(.dark-theme) .st-preset-btn,
+      .dark-theme .st-preset-btn {
+        color: #C4B5FD;
+      }
       .st-preset-btn:hover {
-        background: #EDE9FE;
+        background: rgba(139, 92, 246, 0.15);
       }
       .st-preset-btn.is-active {
-        background: var(--primary, #7E22CE);
-        color: #FFFFFF;
+        background: var(--primary, #7E22CE) !important;
+        color: #FFFFFF !important;
       }
       .st-filter-count {
         font-size: 11px;
@@ -187,6 +196,12 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
         padding: 5px 10px;
         border-radius: 999px;
         white-space: nowrap;
+      }
+      :host-context(.dark-theme) .st-filter-count,
+      .dark-theme .st-filter-count {
+        background: rgba(139, 92, 246, 0.16) !important;
+        border-color: rgba(139, 92, 246, 0.35) !important;
+        color: #C4B5FD !important;
       }
     `,
   ],

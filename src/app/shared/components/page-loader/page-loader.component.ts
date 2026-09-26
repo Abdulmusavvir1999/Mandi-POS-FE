@@ -126,8 +126,8 @@ import { CommonModule } from '@angular/common';
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #e9d5ff);
         border-radius: 18px;
-        box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16),
-          0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
+        box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.16),
+          0 6px 12px -2px rgba(0, 0, 0, 0.08);
         text-align: center;
         font-family: 'Plus Jakarta Sans', sans-serif;
       }

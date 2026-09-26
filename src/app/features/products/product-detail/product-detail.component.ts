@@ -384,7 +384,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         border-radius: 16px;
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
-        box-shadow: 0 2px 10px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.1);
+        box-shadow: 0 2px 10px -4px rgba(0, 0, 0, 0.1);
       }
 
       .detail-metric.is-warning { border-color: #FCA5A5; background: #FEF2F2; }

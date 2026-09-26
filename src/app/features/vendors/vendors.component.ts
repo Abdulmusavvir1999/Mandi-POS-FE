@@ -1359,7 +1359,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       padding: 1.25rem 1.75rem;
-      box-shadow: 0 4px 20px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
       margin-bottom: 1.5rem;
       flex-wrap: wrap;
       gap: 1rem;
@@ -1492,7 +1492,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 14px;
       padding: 1.25rem;
-      box-shadow: 0 2px 10px -1px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
+      box-shadow: 0 2px 10px -1px rgba(0, 0, 0, 0.04);
       transition: transform 0.15s ease;
     }
     .kpi-card:hover {
@@ -1699,7 +1699,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       padding: 1.25rem;
-      box-shadow: 0 2px 10px -1px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
+      box-shadow: 0 2px 10px -1px rgba(0, 0, 0, 0.04);
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
@@ -1916,7 +1916,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 16px;
       overflow-x: auto;
-      box-shadow: 0 4px 20px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
     }
     .vt-table {
       width: 100%;

@@ -1439,7 +1439,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         border-radius: 9999px;
         border: 1.5px solid var(--card-border, #E9D5FF);
         background: color-mix(in srgb, var(--primary, #7E22CE) 5%, #FFFFFF);
-        box-shadow: inset 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
       }
 
       .guest-stepper-btn {
@@ -1686,6 +1686,13 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         gap: 1.1rem;
       }
 
+      @media (max-width: 600px) {
+        .floor-grid {
+          grid-template-columns: 1fr;
+          gap: 0.75rem;
+        }
+      }
+
       /* ─── Section identity ───
          Eight jewel hues, assigned to a section by name hash, so any section the
          kitchen invents still gets a stable colour. The hue only ever tints the
@@ -1731,9 +1738,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           inset 0 1px 0 rgba(255, 255, 255, 0.95),
           inset 1px 0 0 rgba(255, 255, 255, 0.55),
           inset -1px 0 0 rgba(255, 255, 255, 0.25),
-          inset 0 -1px 0 rgba(var(--text-main-rgb, 46, 16, 101), 0.07),
-          0 2px 6px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.12),
-          0 16px 36px -18px var(--tile-shadow, rgba(var(--text-main-rgb, 46, 16, 101), 0.35));
+          inset 0 -1px 0 rgba(0, 0, 0, 0.07),
+          0 2px 6px -2px rgba(0, 0, 0, 0.12),
+          0 16px 36px -18px var(--tile-shadow, rgba(0, 0, 0, 0.35));
         cursor: pointer;
         transition:
           transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1788,9 +1795,9 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           inset 0 1px 0 rgba(255, 255, 255, 1),
           inset 1px 0 0 rgba(255, 255, 255, 0.7),
           inset -1px 0 0 rgba(255, 255, 255, 0.3),
-          inset 0 -1px 0 rgba(var(--text-main-rgb, 46, 16, 101), 0.07),
-          0 4px 10px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.14),
-          0 26px 50px -20px var(--tile-shadow, rgba(var(--text-main-rgb, 46, 16, 101), 0.45));
+          inset 0 -1px 0 rgba(0, 0, 0, 0.07),
+          0 4px 10px -4px rgba(0, 0, 0, 0.14),
+          0 26px 50px -20px var(--tile-shadow, rgba(0, 0, 0, 0.45));
       }
 
       .table-tile:hover::after {
@@ -1976,7 +1983,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       /* Hairline etched into glass: a dark line with a light one under it. */
       .tile-rule {
         height: 1px;
-        background: rgba(var(--text-main-rgb, 46, 16, 101), 0.09);
+        background: rgba(0, 0, 0, 0.09);
         box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
       }
 
@@ -2029,7 +2036,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         flex: 1;
         height: 5px;
         border-radius: 3px;
-        background: rgba(var(--text-main-rgb, 46, 16, 101), 0.1);
+        background: rgba(0, 0, 0, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.7);
       }
 
@@ -2065,7 +2072,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         -webkit-backdrop-filter: blur(8px) saturate(140%);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.9),
-          inset 0 -1px 0 rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
+          inset 0 -1px 0 rgba(0, 0, 0, 0.05);
       }
 
       .tile-cells > div {
@@ -2078,7 +2085,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       }
 
       .tile-cells > div + div {
-        border-left: 1px solid rgba(var(--text-main-rgb, 46, 16, 101), 0.07);
+        border-left: 1px solid rgba(0, 0, 0, 0.07);
       }
 
       .tile-cells span {
@@ -2364,7 +2371,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-radius: 14px;
         padding: 0.85rem 1rem;
-        box-shadow: 0 2px 6px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         transition: all 0.2s ease;
       }
 

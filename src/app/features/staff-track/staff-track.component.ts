@@ -44,20 +44,20 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
       <app-page-loader
         [loading]="isBootLoading"
         [error]="bootError"
-        message="Loading staff trackâ€¦"
+        message="Loading staff track..."
         subMessage="Gathering staff activity, orders and revenue."
         icon="groups"
         (retry)="reloadAll()"
       ></app-page-loader>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BREADCRUMBS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── BREADCRUMBS ──────────────────────────────────── -->
       <div class="breadcrumbs-row">
         <span>Operations</span>
         <span class="breadcrumb-separator">›</span>
         <span class="breadcrumb-current">Staff Track</span>
       </div>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• HEADER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── HEADER ──────────────────────────────────── -->
       <div class="audit-header-card">
         <div class="header-left">
           <div class="header-icon-box">
@@ -72,12 +72,12 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                 <span class="material-symbols-outlined meta-icon">person</span>
                 <span>Staff: <strong>{{ overview?.totalUsers || 0 }}</strong></span>
               </span>
-              <span class="meta-dot">â€¢</span>
+              <span class="meta-dot">•</span>
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon">receipt_long</span>
                 <span>Orders: <strong>{{ overview?.ordersTaken || 0 }}</strong></span>
               </span>
-              <span class="meta-dot">â€¢</span>
+              <span class="meta-dot">•</span>
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon">payments</span>
                 <span>Revenue: <strong>{{ overview?.revenue || 0 | appCurrency }}</strong></span>
@@ -98,7 +98,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </div>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• TABS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── TABS ──────────────────────────────────── -->
       <div class="module-tabs-bar">
         <button
           type="button"
@@ -113,7 +113,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </button>
       </div>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• FILTERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── FILTERS ──────────────────────────────────── -->
       <app-staff-track-filters
         *ngIf="activeTab !== 'live'"
         [filters]="filters"
@@ -132,7 +132,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         than a boundary.
       -->
       <div class="st-scope-note" *ngIf="selfScoped">
-        <span class="material-symbols-rounded">person</span>
+        <span class="material-symbols-outlined">person</span>
         <span>Showing your own activity only. Viewing the full team requires the Staff Track permission.</span>
       </div>
 
@@ -142,7 +142,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
           <span class="pulse-dot"></span>
           <span class="st-live-label">Current activity</span>
           <span class="st-live-sub" *ngIf="live">
-            Captured {{ live.capturedAt | date : 'HH:mm:ss' }} Â· staff active in the last
+            Captured {{ live.capturedAt | date : 'HH:mm:ss' }} · staff active in the last
             {{ live.activeWindowMinutes }} min
           </span>
         </div>
@@ -173,7 +173,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </button>
       </div>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 1. OVERVIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 1. OVERVIEW ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'overview' && !tabError">
         <div class="kpi-cards-grid" *ngIf="overview">
           <div class="kpi-card card-accent-purple">
@@ -196,7 +196,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
               <span class="kpi-number">{{ overview.recentlyActiveStaff }}</span>
               <span class="kpi-pill pill-teal">last {{ overview.activeWindowMinutes }} min</span>
             </div>
-            <div class="st-card-note">Based on recorded activity â€” this system has no shift or attendance data.</div>
+            <div class="st-card-note">Based on recorded activity — this system has no shift or attendance data.</div>
           </div>
 
           <div class="kpi-card card-accent-blue st-clickable" (click)="setTab('orders')">
@@ -338,7 +338,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 2. LIVE ACTIVITY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 2. LIVE ACTIVITY ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'live' && !tabError">
         <div class="st-grid-2">
           <!-- Current tables -->
@@ -380,11 +380,11 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                     </td>
                     <td>
                       <span class="font-mono font-bold text-xs" *ngIf="t.order">{{ t.order.orderNumber }}</span>
-                      <span class="st-muted" *ngIf="!t.order">â€”</span>
+                      <span class="st-muted" *ngIf="!t.order">—</span>
                     </td>
-                    <td style="text-align: right;">{{ t.order ? (t.order.totalAmount | appCurrency) : 'â€”' }}</td>
+                    <td style="text-align: right;">{{ t.order ? (t.order.totalAmount | appCurrency) : '—' }}</td>
                     <td><span class="badge" [ngClass]="orderStatusClass(t.order?.status)">{{ t.order ? humanise(t.order.status) : humanise(t.status) }}</span></td>
-                    <td class="st-muted">{{ t.order ? (t.order.lastActivityAt | date : 'HH:mm') : 'â€”' }}</td>
+                    <td class="st-muted">{{ t.order ? (t.order.lastActivityAt | date : 'HH:mm') : '—' }}</td>
                   </tr>
                   <tr *ngIf="!isTabLoading && (live?.currentTables?.length || 0) === 0">
                     <td colspan="6" class="empty-state-cell">
@@ -481,7 +481,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
               <tbody>
                 <tr *ngFor="let o of live?.openOrders || []" class="st-row-link" tabindex="0" [attr.aria-label]="'Open order ' + o.orderNumber" (click)="openOrder(o.orderId)" (keydown.enter)="openOrder(o.orderId)">
                   <td><span class="font-mono font-bold text-xs">{{ o.orderNumber }}</span></td>
-                  <td>{{ o.table ? o.table.tableNumber : 'â€”' }}</td>
+                  <td>{{ o.table ? o.table.tableNumber : '—' }}</td>
                   <td>{{ o.customerName || 'Walk-In' }}</td>
                   <td>{{ o.createdBy ? o.createdBy.name : 'Not recorded' }}</td>
                   <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ humanise(o.status) }}</span></td>
@@ -509,7 +509,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 3. STAFF PERFORMANCE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 3. STAFF PERFORMANCE ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'performance' && !tabError">
         <div class="saas-table-card">
           <div class="st-section-head">
@@ -570,7 +570,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 4. ORDERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 4. ORDERS ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'orders' && !tabError">
         <div class="saas-table-card">
           <div class="st-section-head">
@@ -601,8 +601,8 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                 <tr *ngFor="let o of orders" class="st-row-link" tabindex="0" [attr.aria-label]="'Open order ' + o.orderNumber" (click)="openOrder(o.orderId)" (keydown.enter)="openOrder(o.orderId)">
                   <td><span class="font-mono font-bold text-xs">{{ o.orderNumber }}</span></td>
                   <td>{{ o.createdBy ? o.createdBy.name : 'Not recorded' }}</td>
-                  <td>{{ o.settledBy ? o.settledBy.name : 'â€”' }}</td>
-                  <td>{{ o.table ? o.table.tableNumber : 'â€”' }}</td>
+                  <td>{{ o.settledBy ? o.settledBy.name : '—' }}</td>
+                  <td>{{ o.table ? o.table.tableNumber : '—' }}</td>
                   <td>{{ o.customerName || 'Walk-In' }}</td>
                   <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ humanise(o.status) }}</span></td>
                   <td><span class="badge" [ngClass]="paymentBadgeClass(o.paymentStatus)">{{ humanise(o.paymentStatus) }}</span></td>
@@ -631,7 +631,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
           <div class="pagination-footer-bar" *ngIf="ordersPagination && ordersPagination.total > 0">
             <div class="pagination-info">
               Page <strong>{{ ordersPagination.page }}</strong> of <strong>{{ ordersPagination.totalPages }}</strong>
-              Â· <strong>{{ ordersPagination.total }}</strong> orders
+              · <strong>{{ ordersPagination.total }}</strong> orders
             </div>
             <div class="pagination-controls">
               <button type="button" class="page-nav-btn" [disabled]="ordersPage <= 1" (click)="changeOrdersPage(ordersPage - 1)" title="Previous page">
@@ -645,7 +645,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 5. REVENUE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 5. REVENUE ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'revenue' && !tabError">
         <div class="kpi-cards-grid" *ngIf="revenue?.totals as tot">
           <div class="kpi-card card-accent-blue">
@@ -681,7 +681,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
           <div class="st-section-head">
             <div>
               <div class="st-section-title">Revenue by Staff</div>
-              <div class="st-section-sub">Summed from the bill each staff member settled â€” the same figures as Reports.</div>
+              <div class="st-section-sub">Summed from the bill each staff member settled — the same figures as Reports.</div>
             </div>
           </div>
           <div class="table-responsive-wrapper">
@@ -734,14 +734,14 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 6. TABLES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 6. TABLES ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'tables' && !tabError">
         <div class="saas-table-card">
           <div class="st-section-head">
             <div>
               <div class="st-section-title">Current Tables</div>
               <div class="st-section-sub">
-                Attending staff is derived from the table's open order â€” this system stores no table-to-staff assignment.
+                Attending staff is derived from the table's open order — this system stores no table-to-staff assignment.
               </div>
             </div>
           </div>
@@ -767,11 +767,11 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                   </td>
                   <td class="st-muted">{{ t.section }}</td>
                   <td><span class="badge" [ngClass]="tableStatusClass(t.status)">{{ humanise(t.status) }}</span></td>
-                  <td>{{ t.attendingStaff ? t.attendingStaff.name : 'â€”' }}</td>
-                  <td><span class="font-mono text-xs" *ngIf="t.order">{{ t.order.orderNumber }}</span><span *ngIf="!t.order">â€”</span></td>
-                  <td style="text-align: right;">{{ t.order ? (t.order.totalAmount | appCurrency) : 'â€”' }}</td>
-                  <td style="text-align: center;">{{ t.itemCount || 'â€”' }}</td>
-                  <td style="text-align: right;">{{ t.order ? duration(t.order.openSeconds) : 'â€”' }}</td>
+                  <td>{{ t.attendingStaff ? t.attendingStaff.name : '—' }}</td>
+                  <td><span class="font-mono text-xs" *ngIf="t.order">{{ t.order.orderNumber }}</span><span *ngIf="!t.order">—</span></td>
+                  <td style="text-align: right;">{{ t.order ? (t.order.totalAmount | appCurrency) : '—' }}</td>
+                  <td style="text-align: center;">{{ t.itemCount || '—' }}</td>
+                  <td style="text-align: right;">{{ t.order ? duration(t.order.openSeconds) : '—' }}</td>
                 </tr>
                 <tr *ngIf="!isTabLoading && (tables?.currentTables?.length || 0) === 0">
                   <td colspan="8" class="empty-state-cell">
@@ -836,7 +836,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 7. ACTIVITY HISTORY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 7. ACTIVITY HISTORY ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'activity' && !tabError">
         <div class="saas-table-card">
           <div class="st-section-head">
@@ -886,9 +886,9 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                   <td>
                     <span class="font-mono text-xs" *ngIf="a.orderNumber || a.billNumber">{{ a.orderNumber || a.billNumber }}</span>
                     <span class="record-id-badge" *ngIf="!a.orderNumber && !a.billNumber && a.recordId">#{{ a.recordId }}</span>
-                    <span class="st-muted" *ngIf="!a.orderNumber && !a.billNumber && !a.recordId">â€”</span>
+                    <span class="st-muted" *ngIf="!a.orderNumber && !a.billNumber && !a.recordId">—</span>
                   </td>
-                  <td style="text-align: right;">{{ a.amount !== null && a.amount !== undefined ? (a.amount | appCurrency) : 'â€”' }}</td>
+                  <td style="text-align: right;">{{ a.amount !== null && a.amount !== undefined ? (a.amount | appCurrency) : '—' }}</td>
                 </tr>
                 <tr *ngIf="!isTabLoading && activity.length === 0">
                   <td colspan="6" class="empty-state-cell">
@@ -906,7 +906,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
           <div class="pagination-footer-bar" *ngIf="activityPagination && activityPagination.total > 0">
             <div class="pagination-info">
               Page <strong>{{ activityPagination.page }}</strong> of <strong>{{ activityPagination.totalPages }}</strong>
-              Â· <strong>{{ activityPagination.total }}</strong> events
+              · <strong>{{ activityPagination.total }}</strong> events
             </div>
             <div class="pagination-controls">
               <button type="button" class="page-nav-btn" [disabled]="activityPage <= 1" (click)="changeActivityPage(activityPage - 1)" title="Previous page">
@@ -920,7 +920,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 8. REPORTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── 8. REPORTS ──────────────────────────────────── -->
       <ng-container *ngIf="activeTab === 'reports' && !tabError">
         <div class="st-report-switch">
           <button
@@ -1140,7 +1140,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
         </div>
       </ng-container>
 
-      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ORDER ATTRIBUTION MODAL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ──────────────────────────────────── ORDER ATTRIBUTION MODAL ──────────────────────────────────── -->
       <div class="modal-backdrop" *ngIf="orderDetail" (click)="closeOrder()">
         <div class="modal-content st-modal" (click)="$event.stopPropagation()">
           <div class="modal-header-bar">
@@ -1228,12 +1228,22 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
       @media (max-width: 1100px) { .st-grid-2 { grid-template-columns: 1fr; } }
 
       .st-scope-note {
-        display: flex; align-items: center; gap: 8px;
-        background: #F5F3FF; border: 1px solid #DDD6FE; border-radius: 16px;
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 14px;
         padding: 10px 16px; margin-bottom: 16px;
-        font-size: 12px; font-weight: 600; color: #4C1D95;
+        font-size: 12px; font-weight: 600; color: var(--primary, #7E22CE);
       }
-      .st-scope-note .material-symbols-rounded { font-size: 18px; }
+      .st-scope-note .material-symbols-outlined { font-size: 18px; color: var(--primary, #7E22CE); }
+      :host-context(.dark-theme) .st-scope-note,
+      .dark-theme .st-scope-note {
+        background: rgba(139, 92, 246, 0.16) !important;
+        border-color: rgba(139, 92, 246, 0.35) !important;
+        color: #C4B5FD !important;
+      }
+      :host-context(.dark-theme) .st-scope-note .material-symbols-outlined,
+      .dark-theme .st-scope-note .material-symbols-outlined {
+        color: #C4B5FD !important;
+      }
 
       .st-live-bar {
         display: flex; align-items: center; justify-content: space-between;
@@ -1708,20 +1718,20 @@ export class StaffTrackComponent implements OnInit {
   }
 
   searchPlaceholder(): string {
-    if (this.activeTab === 'orders') return 'Search order # or staffâ€¦';
-    if (this.activeTab === 'activity') return 'Search staff or actionâ€¦';
-    return 'Search staffâ€¦';
+    if (this.activeTab === 'orders') return 'Search order # or staff...';
+    if (this.activeTab === 'activity') return 'Search staff or action...';
+    return 'Search staff...';
   }
 
   perTable(r: any): string {
-    if (!r.tablesAttended) return 'â€”';
+    if (!r.tablesAttended) return '—';
     return (r.tableOrders / r.tablesAttended).toFixed(1);
   }
 
   // â”€â”€ Display helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   humanise(value?: string | null): string {
-    if (!value) return 'â€”';
+    if (!value) return '—';
     return value
       .replace(/_/g, ' ')
       .toLowerCase()
@@ -1745,7 +1755,7 @@ export class StaffTrackComponent implements OnInit {
 
   /** Seconds to a compact human duration; null means the POS never recorded it. */
   duration(seconds: number | null | undefined): string {
-    if (seconds === null || seconds === undefined) return 'â€”';
+    if (seconds === null || seconds === undefined) return '—';
     if (seconds < 60) return `${seconds}s`;
     const m = Math.floor(seconds / 60);
     if (m < 60) return `${m}m`;

@@ -554,7 +554,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       align-items: center;
       justify-content: space-between;
       gap: 1.5rem;
-      box-shadow: 0 4px 20px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
+      box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
       flex-wrap: wrap;
     }
 
@@ -679,7 +679,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 1rem;
       padding: 0.375rem;
-      box-shadow: 0 2px 10px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
+      box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.05);
       overflow-x: auto;
     }
 
@@ -716,7 +716,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
       border: 1px solid var(--card-border, #E9D5FF);
       border-radius: 1.25rem;
       padding: 1.75rem;
-      box-shadow: 0 4px 20px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
+      box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
       display: flex;
       flex-direction: column;
       gap: 1.5rem;

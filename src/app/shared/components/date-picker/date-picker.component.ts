@@ -217,7 +217,7 @@ interface DayCell {
         outline: none;
         box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       }
 
       .date-trigger:hover:not(:disabled) {
@@ -233,7 +233,7 @@ interface DayCell {
       .date-picker-container.is-open .date-trigger {
         border-color: var(--primary, #7e22ce);
         box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15)),
-          0 4px 12px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
+          0 4px 12px rgba(0, 0, 0, 0.06);
       }
 
       .trigger-icon {
@@ -296,8 +296,8 @@ interface DayCell {
         border: 1.5px solid var(--card-border, #e9d5ff);
         border-radius: 16px;
         z-index: 2000;
-        box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16),
-          0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
+        box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.16),
+          0 6px 12px -2px rgba(0, 0, 0, 0.08);
         visibility: hidden;
       }
 

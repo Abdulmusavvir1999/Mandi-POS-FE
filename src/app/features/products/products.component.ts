@@ -1281,7 +1281,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         border: 1px solid var(--card-border, #E9D5FF);
         border-radius: var(--radius-lg, 16px);
         background: var(--card-bg, #ffffff);
-        box-shadow: 0 1px 2px rgba(var(--text-main-rgb, 46, 16, 101), 0.05);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
         position: relative;
         overflow: hidden;
@@ -1705,7 +1705,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       .offer-hero .offer-state {
         background: rgba(255, 255, 255, 0.93);
         border-color: rgba(255, 255, 255, 0.85);
-        box-shadow: 0 1px 4px rgba(var(--text-main-rgb, 46, 16, 101), 0.22);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
       }
 
       /* The type spine has to stay legible across the picture. */

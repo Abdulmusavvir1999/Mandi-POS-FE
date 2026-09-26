@@ -251,7 +251,7 @@ export interface DropdownOption {
         outline: none;
         box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 1px 3px rgba(var(--text-main-rgb, 46, 16, 101), 0.04);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       }
 
       .dropdown-trigger:hover:not(:disabled) {
@@ -262,7 +262,7 @@ export interface DropdownOption {
 
       .custom-dropdown-container.is-open .dropdown-trigger {
         border-color: var(--primary, #7E22CE);
-        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15)), 0 4px 12px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15)), 0 4px 12px rgba(0, 0, 0, 0.06);
       }
 
       .trigger-left {
@@ -340,7 +340,7 @@ export interface DropdownOption {
         border-radius: 14px;
         padding: 0.4rem;
         z-index: 2000;
-        box-shadow: 0 16px 36px -4px rgba(var(--text-main-rgb, 46, 16, 101), 0.16), 0 6px 12px -2px rgba(var(--text-main-rgb, 46, 16, 101), 0.08);
+        box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.16), 0 6px 12px -2px rgba(0, 0, 0, 0.08);
         visibility: hidden;
       }
 

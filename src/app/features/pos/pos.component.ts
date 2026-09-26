@@ -105,7 +105,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               [title]="offlinePos.isOnline() ? 'System is Online' : 'Offline Mode: Click to sync pending bills'"
             >
               <span class="status-dot-pulse" [class.is-offline]="!offlinePos.isOnline()"></span>
-              <span class="font-bold text-xs">{{ offlinePos.isOnline() ? 'ONLINE' : 'OFFLINE' }}</span>
+              <span class="tool-status-text font-bold text-xs">{{ offlinePos.isOnline() ? 'ONLINE' : 'OFFLINE' }}</span>
               <span *ngIf="offlinePos.pendingOrders().length > 0" class="draft-badge !bg-amber-500 !text-white">
                 {{ offlinePos.pendingOrders().length }} sync
               </span>
@@ -118,7 +118,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               title="Held / Draft Bills (F4)"
             >
               <span class="material-symbols-outlined text-[18px]">drafts</span>
-              <span>Drafts</span>
+              <span class="tool-label">Drafts</span>
               <span *ngIf="draftCount > 0" class="draft-badge">{{ draftCount }}</span>
             </button>
 
@@ -130,7 +130,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               title="Transaction History & Ledger"
             >
               <span class="material-symbols-outlined text-[18px]">receipt_long</span>
-              <span>Ledger</span>
+              <span class="tool-label">Ledger</span>
             </button>
 
             <!-- End-of-Day Shift Closing (Z-Report) -->
@@ -141,7 +141,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               title="End-of-Day Shift Closing & Z-Report"
             >
               <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-              <span>Z-Report</span>
+              <span class="tool-label">Z-Report</span>
             </button>
 
             <!-- Printer Routing Settings -->
@@ -152,7 +152,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               title="Printer Routing & ESC/POS Settings"
             >
               <span class="material-symbols-outlined text-[18px]">print</span>
-              <span>Printers</span>
+              <span class="tool-label">Printers</span>
             </button>
 
             <button
@@ -171,7 +171,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               title="Back to Admin Dashboard"
             >
               <span class="material-symbols-outlined text-[18px]">dashboard</span>
-              <span>Dashboard</span>
+              <span class="tool-label">Dashboard</span>
             </a>
           </div>
         </div>
@@ -986,21 +986,56 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
           </div>
         </div>
 
-        <!-- PROMOTION CODE / COUPON INPUT -->
-        <div class="promo-code-box">
-          <input
-            title="Promotion Code"
-            type="text"
-            [(ngModel)]="promoCode"
-            placeholder="Coupon (e.g. SAVE50, WELCOME10)"
-            class="promo-input"
-          />
+        <!-- DIRECT DISCOUNT INPUT -->
+        <div class="cart-discount-box">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-purple-200/70 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-purple-300">percent</span>
+              <span>Discount</span>
+            </span>
+
+            <div class="discount-type-pill-group">
+              <button
+                type="button"
+                (click)="setCartDiscountType('FIXED')"
+                class="discount-type-pill"
+                [class.is-active]="cartService.discountType() === 'FIXED'"
+                title="Fixed Amount (₹)"
+              >
+                ₹
+              </button>
+              <button
+                type="button"
+                (click)="setCartDiscountType('PERCENTAGE')"
+                class="discount-type-pill"
+                [class.is-active]="cartService.discountType() === 'PERCENTAGE'"
+                title="Percentage (%)"
+              >
+                %
+              </button>
+            </div>
+
+            <div class="relative flex-1 min-w-[80px]">
+              <input
+                type="number"
+                min="0"
+                [max]="cartService.discountType() === 'PERCENTAGE' ? 100 : cartService.subtotal()"
+                [ngModel]="cartService.discountValue() > 0 ? cartService.discountValue() : null"
+                (ngModelChange)="onDiscountInputChange($event)"
+                [placeholder]="cartService.discountType() === 'FIXED' ? 'Amount (₹)' : 'Rate (%)'"
+                class="cart-discount-input font-mono"
+              />
+            </div>
+          </div>
+
           <button
+            *ngIf="cartService.discountValue() > 0"
             type="button"
-            (click)="applyPromoCode()"
-            class="promo-apply-btn"
+            (click)="clearCartDiscount()"
+            class="discount-clear-btn"
+            title="Clear discount"
           >
-            {{ isPromoApplied ? 'APPLIED ✓' : 'APPLY' }}
+            <span class="material-symbols-outlined text-[14px]">close</span>
           </button>
         </div>
 
@@ -1045,7 +1080,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
           <div class="totals-row is-credit" *ngIf="cartService.discountAmount() > 0">
             <span class="totals-label">
-              Discount <span *ngIf="cartService.couponCode()">({{ cartService.couponCode() }})</span>
+              Discount <span *ngIf="cartService.discountType() === 'PERCENTAGE'" class="text-[10px] opacity-75 font-normal">({{ cartService.discountValue() }}%)</span>
             </span>
             <span class="totals-value">- {{ cartService.discountAmount() | appCurrency:'1.2-2' }}</span>
           </div>
@@ -1614,165 +1649,163 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     <!-- 7. TRANSACTION HISTORY & AUDIT LEDGER MODAL                     -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showHistoryModal">
-      <div class="modal-content p-6 md:p-8 w-full max-w-5xl shadow-2xl max-h-[90vh] flex flex-col">
-        <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF] flex-shrink-0">
-          <div class="flex items-center gap-3.5">
+      <div class="modal-content hist-modal" role="dialog" aria-modal="true" aria-labelledby="hist-title">
+        <header class="hist-header">
+          <div class="hist-heading">
             <span class="modal-icon-badge is-teal">
-              <span class="material-symbols-outlined text-2xl">receipt_long</span>
+              <span class="material-symbols-outlined">receipt_long</span>
             </span>
-            <div>
-              <h3 class="text-xl font-black text-[#2E1065] leading-tight">POS Transaction History & Ledger</h3>
-              <p class="text-xs text-[var(--text-muted)] mt-0.5">Lookup settled bills, reprint thermal receipts & KOTs, void or duplicate orders</p>
+            <div class="hist-heading-text">
+              <h3 id="hist-title" class="hist-title">POS Transaction History &amp; Ledger</h3>
+              <p class="hist-subtitle">Look up settled bills, reprint thermal receipts &amp; KOTs, reopen, duplicate or void an order</p>
             </div>
           </div>
-          <button (click)="showHistoryModal = false" class="modal-close-btn" title="Close" aria-label="Close">
+          <button type="button" (click)="showHistoryModal = false" class="modal-close-btn" title="Close" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
-        </div>
+        </header>
 
-        <!-- Filter / Search Toolbar -->
-        <div class="flex items-center gap-3 mb-4 flex-shrink-0 flex-wrap">
-          <div class="relative flex-1 min-w-[200px]">
-            <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
+        <!-- Search, status filter and refresh -->
+        <div class="hist-toolbar">
+          <div class="hist-search">
+            <span class="material-symbols-outlined hist-search-icon" aria-hidden="true">search</span>
             <input
               type="text"
               [(ngModel)]="historySearch"
-              placeholder="Search by Bill # or Customer Name..."
-              class="form-control pl-9 text-xs w-full"
+              placeholder="Search bill #, customer or payment reference"
+              class="hist-search-input"
+              aria-label="Search transactions"
             />
-          </div>
-          <div class="flex items-center gap-1.5">
             <button
-              *ngFor="let st of ['ALL', 'PAID', 'VOIDED', 'REOPENED']"
+              *ngIf="historySearch"
               type="button"
-              (click)="historyStatusFilter = st"
-              class="py-1.5 px-3 rounded-lg text-xs font-bold border transition-colors"
-              [ngClass]="historyStatusFilter === st ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
+              class="hist-search-clear"
+              (click)="historySearch = ''"
+              title="Clear search"
+              aria-label="Clear search"
             >
-              {{ st }}
+              <span class="material-symbols-outlined">close</span>
             </button>
           </div>
-          <button (click)="loadHistoryBills()" class="action-btn btn-outline-purple !py-1.5 !px-3 text-xs flex items-center gap-1" title="Refresh list">
-            <span class="material-symbols-outlined text-[15px]">refresh</span>
-            <span>Refresh</span>
+
+          <div class="hist-segment" role="tablist" aria-label="Filter by status">
+            <button
+              *ngFor="let f of historyFilters"
+              type="button"
+              role="tab"
+              class="hist-segment-btn"
+              [class.is-active]="historyStatusFilter === f.key"
+              [attr.aria-selected]="historyStatusFilter === f.key"
+              (click)="historyStatusFilter = f.key"
+            >
+              <span>{{ f.label }}</span>
+              <span class="hist-segment-count">{{ historyStatusCount(f.key) }}</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            (click)="loadHistoryBills()"
+            class="hist-refresh"
+            [disabled]="isLoadingHistory"
+            title="Reload the latest bills"
+          >
+            <span class="material-symbols-outlined" [class.hist-spin]="isLoadingHistory">refresh</span>
+            <span class="hist-refresh-label">Refresh</span>
           </button>
         </div>
 
-        <!-- Bills Ledger Table -->
-        <div class="flex-1 overflow-y-auto border border-[#E9D5FF] rounded-xl">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead class="bg-[#FAF5FF] border-b border-[#E9D5FF] text-[#2E1065] uppercase text-[10px] font-black sticky top-0 z-10">
+        <!-- Bills ledger -->
+        <div class="hist-table-wrap">
+          <table class="hist-table">
+            <thead>
               <tr>
-                <th class="p-3">Bill #</th>
-                <th class="p-3">Date / Time</th>
-                <th class="p-3">Type</th>
-                <th class="p-3">Payment</th>
-                <th class="p-3 text-right">Total (₹)</th>
-                <th class="p-3 text-center">Status</th>
-                <th class="p-3 text-right">Actions</th>
+                <th>Bill #</th>
+                <th>Date / Time</th>
+                <th>Type</th>
+                <th>Payment</th>
+                <th class="is-num">Total</th>
+                <th class="is-center">Status</th>
+                <th class="is-end">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-[#E9D5FF] font-medium">
-              <tr *ngIf="filterHistoryBills().length === 0">
-                <td colspan="7" class="p-8 text-center text-gray-400">
-                  <span class="material-symbols-outlined text-3xl block mb-1">receipt</span>
-                  No transactions found matching criteria.
+            <tbody>
+              <tr *ngIf="isLoadingHistory && historyBills.length === 0" class="hist-state-row">
+                <td colspan="7">
+                  <div class="hist-state">
+                    <span class="hist-spinner" aria-hidden="true"></span>
+                    <p class="hist-state-title">Loading transactions…</p>
+                  </div>
                 </td>
               </tr>
-              <tr *ngFor="let bill of filterHistoryBills()" class="hover:bg-purple-50/40 transition-colors">
-                <td class="p-3 font-mono font-bold text-[#6B21A8]">
-                  #{{ bill.bill_number }}
-                  <div *ngIf="bill.offline_sync_id" class="text-[9px] font-mono text-amber-600">
-                    ⚡ Offline Sync
+
+              <tr *ngIf="!(isLoadingHistory && historyBills.length === 0) && filterHistoryBills().length === 0" class="hist-state-row">
+                <td colspan="7">
+                  <div class="hist-state">
+                    <span class="hist-state-icon">
+                      <span class="material-symbols-outlined">{{ historyBills.length ? 'search_off' : 'receipt_long' }}</span>
+                    </span>
+                    <p class="hist-state-title">{{ historyBills.length ? 'No bills match these filters' : 'No transactions yet' }}</p>
+                    <p class="hist-state-hint">
+                      {{ historyBills.length ? 'Try a different search term or status.' : 'Settled bills will appear here once a sale is completed.' }}
+                    </p>
+                    <button
+                      *ngIf="historyBills.length && (historySearch || historyStatusFilter !== 'ALL')"
+                      type="button"
+                      class="hist-state-btn"
+                      (click)="clearHistoryFilters()"
+                    >
+                      Clear filters
+                    </button>
                   </div>
                 </td>
-                <td class="p-3 text-gray-600">
-                  {{ bill.created_at | date:'shortTime' }}
-                  <span class="text-[10px] text-gray-400 block">{{ bill.created_at | date:'dd MMM yyyy' }}</span>
-                </td>
-                <td class="p-3">
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-[#6B21A8]">
-                    {{ orderTypeLabel(bill.order_type) }}
+              </tr>
+
+              <tr *ngFor="let bill of filterHistoryBills()">
+                <td>
+                  <span class="hist-bill-no">#{{ bill.bill_number }}</span>
+                  <span *ngIf="bill.customer_name" class="hist-secondary">{{ bill.customer_name }}</span>
+                  <span *ngIf="bill.offline_sync_id" class="hist-offline">
+                    <span class="material-symbols-outlined">bolt</span>Offline sync
                   </span>
                 </td>
-                <td class="p-3">
-                  <span class="font-bold text-gray-700">{{ bill.payment_method }}</span>
-                  <div *ngIf="bill.payment_reference" class="text-[10px] font-mono text-gray-400 truncate max-w-[100px]">
+                <td>
+                  <span class="hist-primary">{{ bill.created_at | date:'shortTime' }}</span>
+                  <span class="hist-secondary">{{ bill.created_at | date:'dd MMM yyyy' }}</span>
+                </td>
+                <td>
+                  <span class="hist-type">{{ orderTypeLabel(bill.order_type) }}</span>
+                </td>
+                <td>
+                  <span class="hist-primary">{{ bill.payment_method }}</span>
+                  <span *ngIf="bill.payment_reference" class="hist-secondary is-mono" [title]="bill.payment_reference">
                     {{ bill.payment_reference }}
-                  </div>
-                </td>
-                <td class="p-3 text-right font-mono font-extrabold text-[#2E1065]">
-                  {{ bill.total_amount | appCurrency:'1.2-2' }}
-                </td>
-                <td class="p-3 text-center">
-                  <span
-                    *ngIf="bill.is_voided"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700"
-                    [title]="'Voided: ' + (bill.void_reason || 'N/A')"
-                  >
-                    VOIDED
-                  </span>
-                  <span
-                    *ngIf="!bill.is_voided && bill.is_reopened"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700"
-                  >
-                    REOPENED
-                  </span>
-                  <span
-                    *ngIf="!bill.is_voided && !bill.is_reopened"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700"
-                  >
-                    PAID
                   </span>
                 </td>
-                <td class="p-3 text-right">
-                  <div class="flex items-center justify-end gap-1.5">
-                    <!-- Print Thermal Receipt -->
-                    <button
-                      type="button"
-                      (click)="printReceiptFromHistory(bill)"
-                      class="p-1 rounded hover:bg-purple-100 text-purple-700"
-                      title="Print 80mm Thermal Receipt"
-                    >
-                      <span class="material-symbols-outlined text-[16px]">receipt</span>
+                <td class="is-num">
+                  <span class="hist-amount">{{ bill.total_amount | appCurrency:'1.2-2' }}</span>
+                </td>
+                <td class="is-center">
+                  <span *ngIf="bill.is_voided" class="hist-pill is-voided" [title]="'Voided: ' + (bill.void_reason || 'N/A')">Voided</span>
+                  <span *ngIf="!bill.is_voided && bill.is_reopened" class="hist-pill is-reopened">Reopened</span>
+                  <span *ngIf="!bill.is_voided && !bill.is_reopened" class="hist-pill is-paid">Paid</span>
+                </td>
+                <td class="is-end">
+                  <div class="hist-actions">
+                    <button type="button" (click)="printReceiptFromHistory(bill)" class="hist-act" title="Print 80mm Thermal Receipt" aria-label="Print receipt">
+                      <span class="material-symbols-outlined">receipt</span>
                     </button>
-                    <!-- Print Kitchen KOT -->
-                    <button
-                      type="button"
-                      (click)="printKotFromHistory(bill)"
-                      class="p-1 rounded hover:bg-teal-100 text-teal-700"
-                      title="Print Kitchen Order Ticket (KOT)"
-                    >
-                      <span class="material-symbols-outlined text-[16px]">soup_kitchen</span>
+                    <button type="button" (click)="printKotFromHistory(bill)" class="hist-act is-kot" title="Print Kitchen Order Ticket (KOT)" aria-label="Print KOT">
+                      <span class="material-symbols-outlined">soup_kitchen</span>
                     </button>
-                    <!-- Duplicate Order to Cart -->
-                    <button
-                      type="button"
-                      (click)="duplicateBill(bill)"
-                      class="p-1 rounded hover:bg-blue-100 text-blue-700"
-                      title="Duplicate Items to Current Cart"
-                    >
-                      <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                    <button type="button" (click)="duplicateBill(bill)" class="hist-act is-copy" title="Duplicate Items to Current Cart" aria-label="Duplicate to cart">
+                      <span class="material-symbols-outlined">content_copy</span>
                     </button>
-                    <!-- Reopen Bill -->
-                    <button
-                      *ngIf="!bill.is_voided"
-                      type="button"
-                      (click)="reopenBill(bill)"
-                      class="p-1 rounded hover:bg-amber-100 text-amber-700"
-                      title="Reopen Order for Edits"
-                    >
-                      <span class="material-symbols-outlined text-[16px]">lock_open</span>
+                    <button *ngIf="!bill.is_voided" type="button" (click)="reopenBill(bill)" class="hist-act is-reopen" title="Reopen Order for Edits" aria-label="Reopen bill">
+                      <span class="material-symbols-outlined">lock_open</span>
                     </button>
-                    <!-- Void Bill -->
-                    <button
-                      *ngIf="!bill.is_voided"
-                      type="button"
-                      (click)="promptVoidBill(bill)"
-                      class="p-1 rounded hover:bg-rose-100 text-rose-700"
-                      title="Void Bill (Restock & Audit)"
-                    >
-                      <span class="material-symbols-outlined text-[16px]">cancel</span>
+                    <button *ngIf="!bill.is_voided" type="button" (click)="promptVoidBill(bill)" class="hist-act is-void" title="Void Bill (Restock & Audit)" aria-label="Void bill">
+                      <span class="material-symbols-outlined">block</span>
                     </button>
                   </div>
                 </td>
@@ -1780,6 +1813,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </tbody>
           </table>
         </div>
+
+        <footer class="hist-footer" *ngIf="historyBills.length">
+          <span>Showing <strong>{{ filterHistoryBills().length }}</strong> of <strong>{{ historyBills.length }}</strong> recent bills</span>
+        </footer>
       </div>
     </div>
 
@@ -1867,23 +1904,34 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
 
         <!-- Shift View Tabs -->
-        <div class="flex items-center gap-2 mb-4 flex-shrink-0">
-          <button
-            type="button"
-            (click)="closingTab = 'current'"
-            class="py-1.5 px-4 rounded-xl font-bold text-xs border transition-colors"
-            [ngClass]="closingTab === 'current' ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
-          >
-            Current Shift Reconciliation
-          </button>
-          <button
-            type="button"
-            (click)="closingTab = 'history'; loadPastClosings()"
-            class="py-1.5 px-4 rounded-xl font-bold text-xs border transition-colors"
-            [ngClass]="closingTab === 'history' ? 'bg-[#7E22CE] text-white border-transparent' : 'bg-white text-gray-700 border-[#DDD6FE] hover:bg-[#F3E8FF]'"
-          >
-            Past Z-Report Records
-          </button>
+        <div class="mb-5 flex-shrink-0">
+          <div class="inline-flex p-1.5 rounded-2xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/50 gap-1.5 shadow-inner">
+            <button
+              type="button"
+              (click)="closingTab = 'current'"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200"
+              [ngClass]="closingTab === 'current' 
+                ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-md shadow-purple-900/20' 
+                : 'text-gray-600 dark:text-gray-300 hover:text-purple-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-purple-900/30'"
+            >
+              <span class="material-symbols-outlined text-[17px]" [ngClass]="closingTab === 'current' ? 'text-purple-200' : 'text-gray-400'">query_stats</span>
+              <span>Current Shift Reconciliation</span>
+              <span *ngIf="closingTab === 'current'" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-white/20 text-white uppercase tracking-wider">Live</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="closingTab = 'history'; loadPastClosings()"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200"
+              [ngClass]="closingTab === 'history' 
+                ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-md shadow-purple-900/20' 
+                : 'text-gray-600 dark:text-gray-300 hover:text-purple-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-purple-900/30'"
+            >
+              <span class="material-symbols-outlined text-[17px]" [ngClass]="closingTab === 'history' ? 'text-purple-200' : 'text-gray-400'">history_edu</span>
+              <span>Past Z-Report Records</span>
+              <span *ngIf="pastClosings.length > 0" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold" [ngClass]="closingTab === 'history' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'">{{ pastClosings.length }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- Tab 1: Current Shift Reconciliation -->
@@ -2155,21 +2203,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </button>
             </div>
           </div>
-
-          <!-- Bar Beverage Printer -->
-          <div class="p-4 rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] space-y-2">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-700">local_bar</span>
-                <span class="text-sm font-bold text-[#2E1065]">Bar & Beverage Printer</span>
-              </div>
-              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-amber-900">
-                <input type="checkbox" [(ngModel)]="printerSettings.barPrinter.enabled" class="accent-amber-700" />
-                <span>Enabled</span>
-              </label>
-            </div>
-            <p class="text-[11px] text-gray-500">Route drinks and beverage items to the bar terminal printer automatically.</p>
-          </div>
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-4 mt-4 border-t border-[#E9D5FF]">
@@ -2286,6 +2319,529 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     </div>
   `,
   styles: [`
+    /* ─── Transaction history & ledger modal ───
+       Built only on theme variables so the same rules serve the light and
+       dark palettes. --hist-accent pulls the primary toward the text colour:
+       darker on a light card, lighter on a dark one, so accent text stays
+       readable whichever primary the theme picks. */
+    .hist-modal {
+      --hist-accent: color-mix(in srgb, var(--primary, #7E22CE) 72%, var(--text-main, #2E1065));
+      --hist-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      width: min(94vw, 1080px);
+      max-width: 1080px;
+      min-width: 0;
+      max-height: min(88vh, 820px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 1.5rem 1.75rem !important;
+    }
+
+    .hist-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 1.1rem;
+      margin-bottom: 1.1rem;
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
+      flex-shrink: 0;
+    }
+
+    .hist-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      min-width: 0;
+    }
+
+    .hist-heading-text { min-width: 0; }
+
+    .hist-title {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      color: var(--text-main, #2E1065);
+    }
+
+    .hist-subtitle {
+      margin: 0.2rem 0 0;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--text-muted, #6B7280);
+    }
+
+    /* Toolbar */
+    .hist-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+    }
+
+    .hist-search {
+      position: relative;
+      flex: 1 1 260px;
+      min-width: 0;
+    }
+
+    .hist-search-icon {
+      position: absolute;
+      left: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.15rem !important;
+      color: var(--text-muted, #6B7280);
+      pointer-events: none;
+    }
+
+    .hist-search-input {
+      width: 100%;
+      height: 2.625rem;
+      padding: 0 2.4rem 0 2.5rem;
+      border-radius: 12px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: var(--bg-app, #FAF5FF);
+      color: var(--text-main, #2E1065);
+      font: inherit;
+      font-size: 0.85rem;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+    }
+
+    .hist-search-input::placeholder {
+      color: var(--text-muted, #6B7280);
+      opacity: 0.75;
+    }
+
+    .hist-search-input:focus {
+      border-color: var(--primary, #7E22CE);
+      background: var(--card-bg, #FFFFFF);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #7E22CE) 18%, transparent);
+    }
+
+    .hist-search-clear {
+      position: absolute;
+      right: 0.45rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.75rem;
+      height: 1.75rem;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted, #6B7280);
+      cursor: pointer;
+    }
+
+    .hist-search-clear:hover {
+      background: color-mix(in srgb, var(--text-main, #2E1065) 8%, transparent);
+      color: var(--text-main, #2E1065);
+    }
+
+    .hist-search-clear .material-symbols-outlined { font-size: 1rem; }
+
+    .hist-segment {
+      display: inline-flex;
+      gap: 0.2rem;
+      padding: 0.25rem;
+      border-radius: 12px;
+      background: var(--bg-app, #FAF5FF);
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      box-sizing: border-box;
+    }
+
+    .hist-segment-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      height: 2rem;
+      padding: 0 0.75rem;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--text-muted, #6B7280);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+
+    .hist-segment-btn:hover {
+      color: var(--text-main, #2E1065);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 8%, transparent);
+    }
+
+    .hist-segment-btn.is-active {
+      background: var(--primary, #7E22CE);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px -4px var(--primary-glow, rgba(126, 34, 206, 0.45));
+    }
+
+    .hist-segment-count {
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.35rem;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      background: color-mix(in srgb, var(--text-main, #2E1065) 10%, transparent);
+      box-sizing: border-box;
+    }
+
+    .hist-segment-btn.is-active .hist-segment-count {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .hist-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      height: 2.625rem;
+      padding: 0 1rem;
+      border-radius: 12px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: var(--card-bg, #FFFFFF);
+      color: var(--text-main, #2E1065);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .hist-refresh:hover:not(:disabled) {
+      border-color: var(--primary, #7E22CE);
+      color: var(--hist-accent);
+    }
+
+    .hist-refresh:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+
+    .hist-refresh .material-symbols-outlined { font-size: 1.1rem; }
+
+    .hist-spin { animation: hist-spin 0.8s linear infinite; }
+
+    @keyframes hist-spin { to { transform: rotate(360deg); } }
+
+    /* Table */
+    .hist-table-wrap {
+      container-type: inline-size;
+      flex: 1 1 auto;
+      min-height: 12rem;
+      overflow: auto;
+      border: 1px solid var(--card-border, #E9D5FF);
+      border-radius: 14px;
+      background: var(--card-bg, #FFFFFF);
+    }
+
+    .hist-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.82rem;
+    }
+
+    .hist-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 0.7rem 1rem;
+      text-align: left;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--text-muted, #6B7280);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 6%, var(--card-bg, #FFFFFF));
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
+    }
+
+    .hist-table tbody td {
+      padding: 0.75rem 1rem;
+      vertical-align: middle;
+      color: var(--text-main, #2E1065);
+      border-bottom: 1px solid var(--card-border, #E9D5FF);
+    }
+
+    .hist-table tbody tr:last-child td { border-bottom: 0; }
+
+    .hist-table tbody tr:not(.hist-state-row):hover td {
+      background: color-mix(in srgb, var(--primary, #7E22CE) 5%, transparent);
+    }
+
+    /* th and td both, and specific enough to beat the thead th rule above. */
+    .hist-table thead th.is-num,
+    .hist-table thead th.is-end,
+    .hist-table tbody td.is-num,
+    .hist-table tbody td.is-end { text-align: right; }
+
+    .hist-table thead th.is-center,
+    .hist-table tbody td.is-center { text-align: center; }
+
+    /* The table keeps a min-width and scrolls sideways on a phone; the
+       loading and empty messages are pinned to the visible width of the
+       scroll box instead of centring across the whole table. */
+    .hist-table tbody tr.hist-state-row td { padding: 0; }
+
+    .hist-bill-no {
+      display: block;
+      font-family: var(--hist-mono);
+      font-weight: 700;
+      color: var(--hist-accent);
+    }
+
+    .hist-primary {
+      display: block;
+      font-weight: 600;
+      color: var(--text-main, #2E1065);
+    }
+
+    .hist-secondary {
+      display: block;
+      max-width: 11rem;
+      margin-top: 0.15rem;
+      font-size: 0.72rem;
+      color: var(--text-muted, #6B7280);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hist-secondary.is-mono { font-family: var(--hist-mono); }
+
+    .hist-offline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      margin-top: 0.25rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--warning, #EA580C);
+    }
+
+    .hist-offline .material-symbols-outlined { font-size: 0.85rem; }
+
+    .hist-type {
+      display: inline-flex;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      background: color-mix(in srgb, var(--primary, #7E22CE) 12%, transparent);
+      color: var(--hist-accent);
+    }
+
+    .hist-amount {
+      font-family: var(--hist-mono);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      color: var(--text-main, #2E1065);
+    }
+
+    .hist-pill {
+      --tone: var(--success, #16A34A);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      background: color-mix(in srgb, var(--tone) 14%, transparent);
+      color: color-mix(in srgb, var(--tone) 78%, var(--text-main, #2E1065));
+    }
+
+    .hist-pill::before {
+      content: '';
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .hist-pill.is-voided { --tone: var(--danger, #DC2626); }
+    .hist-pill.is-reopened { --tone: var(--warning, #EA580C); }
+
+    .hist-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.3rem;
+    }
+
+    .hist-act {
+      --tone: var(--primary, #7E22CE);
+      width: 2rem;
+      height: 2rem;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border-radius: 9px;
+      border: 1px solid var(--card-border, #E9D5FF);
+      background: var(--card-bg, #FFFFFF);
+      color: var(--text-muted, #6B7280);
+      cursor: pointer;
+      transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .hist-act .material-symbols-outlined { font-size: 1.05rem; }
+
+    .hist-act:hover,
+    .hist-act:focus-visible {
+      outline: none;
+      color: color-mix(in srgb, var(--tone) 80%, var(--text-main, #2E1065));
+      border-color: color-mix(in srgb, var(--tone) 45%, transparent);
+      background: color-mix(in srgb, var(--tone) 12%, transparent);
+    }
+
+    .hist-act.is-kot { --tone: #0D9488; }
+    .hist-act.is-copy { --tone: #2563EB; }
+    .hist-act.is-reopen { --tone: var(--warning, #EA580C); }
+    .hist-act.is-void { --tone: var(--danger, #DC2626); }
+
+    /* Loading and empty states */
+    .hist-state {
+      position: sticky;
+      left: 0;
+      width: 100cqw;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 3rem 1rem;
+      text-align: center;
+    }
+
+    .hist-state-icon {
+      width: 3.25rem;
+      height: 3.25rem;
+      display: grid;
+      place-items: center;
+      margin-bottom: 0.4rem;
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--primary, #7E22CE) 10%, transparent);
+      color: var(--hist-accent);
+    }
+
+    .hist-state-icon .material-symbols-outlined { font-size: 1.6rem; }
+
+    .hist-state-title {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-main, #2E1065);
+    }
+
+    .hist-state-hint {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .hist-state-btn {
+      margin-top: 0.6rem;
+      height: 2.25rem;
+      padding: 0 1rem;
+      border-radius: 10px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: transparent;
+      color: var(--hist-accent);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .hist-state-btn:hover {
+      border-color: var(--primary, #7E22CE);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 8%, transparent);
+    }
+
+    .hist-spinner {
+      width: 1.75rem;
+      height: 1.75rem;
+      margin-bottom: 0.4rem;
+      border-radius: 50%;
+      border: 3px solid color-mix(in srgb, var(--primary, #7E22CE) 20%, transparent);
+      border-top-color: var(--primary, #7E22CE);
+      animation: hist-spin 0.8s linear infinite;
+    }
+
+    .hist-footer {
+      flex-shrink: 0;
+      padding-top: 0.85rem;
+      font-size: 0.75rem;
+      color: var(--text-muted, #6B7280);
+    }
+
+    .hist-footer strong {
+      font-weight: 700;
+      color: var(--text-main, #2E1065);
+    }
+
+    @media (max-width: 640px) {
+      .hist-modal {
+        max-height: 92vh;
+        padding: 1.1rem 1rem !important;
+      }
+
+      /* Search and an icon-only refresh share the first row; the status
+         filter takes the full second row. */
+      .hist-search { flex: 1 1 0; }
+
+      .hist-refresh {
+        order: 2;
+        width: 2.625rem;
+        padding: 0;
+        justify-content: center;
+      }
+
+      .hist-refresh-label { display: none; }
+
+      .hist-segment {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      .hist-segment-btn {
+        flex: 1 0 auto;
+        justify-content: center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hist-spin,
+      .hist-spinner { animation-duration: 2.4s; }
+    }
+
+
     /* ─── Dish variant (portion) chooser ─── */
     .variant-available-strip {
       display: flex;
@@ -2428,19 +2984,27 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 0.75rem;
+      flex-wrap: nowrap;
+      width: 100%;
+      min-width: 0;
     }
 
     .pos-search-pill {
-      flex: 1;
-      max-width: 650px;
+      flex: 1 1 auto;
+      min-width: 160px;
+      max-width: 520px;
+      height: 2.625rem;
+      min-height: 2.625rem;
+      max-height: 2.625rem;
+      box-sizing: border-box;
       position: relative;
       display: flex;
       align-items: center;
       background: var(--card-bg, #FFFFFF);
       border: 1.5px solid var(--card-border, #CBD5E1);
       border-radius: 9999px;
-      padding: 0.35rem 1.25rem;
+      padding: 0 1rem;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
@@ -2451,69 +3015,102 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 
     .search-input-field {
       width: 100%;
+      height: 100%;
       border: none;
       outline: none;
       background: transparent;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 500;
       color: var(--text-main, #334155);
-      padding-right: 2rem;
+      padding-right: 2.2rem;
+      min-width: 0;
+      line-height: normal;
     }
     .search-input-field::placeholder {
       color: var(--text-dim, #94A3B8);
+      font-size: 0.8rem;
     }
 
     .search-icon-tag {
       position: absolute;
-      right: 1rem;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
       color: var(--text-muted, #64748B);
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       pointer-events: none;
+      display: flex;
+      align-items: center;
     }
 
     .clear-search-btn {
       position: absolute;
-      right: 2.75rem;
+      right: 2.4rem;
+      top: 50%;
+      transform: translateY(-50%);
       color: var(--text-dim, #94A3B8);
       background: none;
       border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
+      padding: 0;
     }
 
     .pos-quick-tools {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.35rem;
+      flex-shrink: 0;
+      flex-wrap: nowrap;
     }
 
     .tool-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.55rem 0.95rem;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.75rem;
       border-radius: 9999px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 700;
       cursor: pointer;
       border: 1px solid var(--card-border, #E2E8F0);
       background: var(--card-bg, #F8FAFC);
       color: var(--text-muted, #475569);
       text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
       transition: all 0.15s ease;
     }
     .tool-btn:hover {
       background: var(--bg-app, #F1F5F9);
       border-color: var(--primary, #CBD5E1);
       color: var(--text-main, #0F172A);
+      transform: translateY(-1px);
+    }
+
+    .tool-btn .material-symbols-outlined {
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+
+    .btn-status-online {
+      background: rgba(22, 163, 74, 0.12);
+      border-color: rgba(22, 163, 74, 0.35);
+      color: #16A34A;
+    }
+    .btn-status-offline {
+      background: rgba(220, 38, 38, 0.12);
+      border-color: rgba(220, 38, 38, 0.35);
+      color: #DC2626;
     }
 
     .btn-drafts {
       position: relative;
       color: var(--primary, #7E22CE);
-      background: var(--primary-light, #E6F3F3);
-      border-color: var(--card-border, #B2D8D8);
+      background: var(--primary-light, rgba(126, 34, 206, 0.1));
+      border-color: var(--card-border, #E9D5FF);
     }
     .draft-badge {
       background: #E11D48;
@@ -2522,6 +3119,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       font-weight: 800;
       padding: 0.1rem 0.4rem;
       border-radius: 9999px;
+      line-height: 1;
     }
 
     .btn-exit-dashboard {
@@ -2532,6 +3130,33 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .btn-exit-dashboard:hover {
       background: var(--sidebar-active-accent, #1E293B);
       color: #FFFFFF;
+    }
+
+    /* Collapsing text labels on compact / laptop screens so toolbar never overflows */
+    @media (max-width: 1536px) {
+      .pos-quick-tools .tool-label {
+        display: none;
+      }
+      .pos-quick-tools .tool-btn {
+        padding: 0.45rem 0.6rem;
+      }
+      .pos-quick-tools .btn-exit-dashboard .tool-label,
+      .pos-quick-tools .btn-drafts .tool-label {
+        display: inline;
+      }
+    }
+
+    @media (max-width: 1366px) {
+      .pos-quick-tools .btn-exit-dashboard .tool-label,
+      .pos-quick-tools .btn-drafts .tool-label,
+      .pos-quick-tools .tool-status-text {
+        display: none;
+      }
+      .pos-quick-tools .tool-btn {
+        padding: 0.45rem 0.55rem;
+        min-width: 2.2rem;
+        height: 2.2rem;
+      }
     }
 
     /* 2. SECTION HEADINGS & TITLES */
@@ -2664,7 +3289,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       border: 1.5px solid var(--card-border, #E9D5FF);
       color: var(--primary, #7E22CE);
       cursor: pointer;
-      box-shadow: 0 2px 6px rgba(var(--text-main-rgb, 46, 16, 101), 0.06);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       user-select: none;
       outline: none;
@@ -3958,50 +4583,92 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       color: var(--cart-danger, #FF6B6B);
     }
 
-    /* PROMOTION CODE BOX */
-    .promo-code-box {
+    /* DIRECT DISCOUNT BOX */
+    .cart-discount-box {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       background: var(--cart-sink);
       border: 1px solid var(--cart-line);
-      border-radius: 9999px;
-      padding: 0.25rem 0.3rem 0.25rem 0.9rem;
+      border-radius: 12px;
+      padding: 0.3rem 0.55rem;
       gap: 0.5rem;
       transition: border-color 0.18s ease;
     }
 
-    .promo-code-box:focus-within {
+    .cart-discount-box:focus-within {
       border-color: color-mix(in srgb, var(--cart-accent) 60%, transparent);
     }
 
-    .promo-input {
-      flex: 1;
-      border: none;
-      outline: none;
-      background: transparent;
-      color: #FFFFFF;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-    .promo-input::placeholder {
-      color: var(--cart-text-dim);
+    .discount-type-pill-group {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+      flex-shrink: 0;
     }
 
-    .promo-apply-btn {
+    .discount-type-pill {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      cursor: pointer;
+      line-height: 1;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .discount-type-pill.is-active {
       background: var(--cart-accent);
       color: #FFFFFF;
-      border: none;
-      padding: 0.42rem 0.95rem;
-      border-radius: 9999px;
-      font-size: 0.6875rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      cursor: pointer;
-      transition: filter 0.15s ease, transform 0.15s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
-    .promo-apply-btn:hover {
-      filter: brightness(1.08);
-      transform: translateY(-1px);
+
+    .cart-discount-input {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.25);
+      color: #FFFFFF;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      outline: none;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .cart-discount-input:focus {
+      border-color: var(--cart-accent);
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .cart-discount-input::placeholder {
+      color: var(--cart-text-dim);
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .discount-clear-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      width: 1.4rem;
+      height: 1.4rem;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .discount-clear-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+      color: #F87171;
     }
 
     /* TOTALS BREAKDOWN — the part of the panel a cashier reads aloud, so it
@@ -4192,15 +4859,26 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       .pos-search-pill {
         max-width: 100%;
         width: 100%;
+        height: 2.625rem;
+        min-height: 2.625rem;
+        max-height: 2.625rem;
+        flex: none;
       }
 
       .pos-quick-tools {
         width: 100%;
-        justify-content: space-between;
+        overflow-x: auto;
+        padding-bottom: 3px;
+        gap: 0.35rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .pos-quick-tools::-webkit-scrollbar {
+        display: none;
       }
 
       .pos-quick-tools .tool-btn {
-        flex: 1;
+        flex: 0 0 auto;
         justify-content: center;
         padding: 0.45rem 0.65rem;
         font-size: 0.75rem;
@@ -4432,7 +5110,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       --g-pill-edge: color-mix(in srgb, var(--card-border, #E9D5FF) 72%, transparent);
       --g-avatar: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.62) 100%);
       --g-edge: 1px solid rgba(255, 255, 255, 0.4);
-      --g-scrim: linear-gradient(180deg, rgba(var(--text-main-rgb, 23, 8, 51), 0.04) 0%, rgba(var(--text-main-rgb, 23, 8, 51), 0.16) 45%, rgba(var(--text-main-rgb, 23, 8, 51), 0.34) 100%);
+      --g-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.16) 45%, rgba(0, 0, 0, 0.34) 100%);
       --g-wash: 1;
     }
 
@@ -4461,7 +5139,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       backdrop-filter: var(--g-blur-sm);
       border: 1px solid var(--g-pill-edge, rgba(255, 255, 255, 0.4));
       box-shadow:
-        0 8px 24px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.18),
+        0 8px 24px -6px rgba(0, 0, 0, 0.18),
         inset 1px 1px 0 var(--g-pill-gloss, rgba(255, 255, 255, 0.75));
     }
 
@@ -4471,7 +5149,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       border-color: var(--primary, #7E22CE);
       box-shadow:
         0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.18)),
-        0 10px 28px -6px rgba(var(--text-main-rgb, 46, 16, 101), 0.24),
+        0 10px 28px -6px rgba(0, 0, 0, 0.24),
         inset 1px 1px 0 var(--g-pill-gloss, rgba(255, 255, 255, 0.85));
     }
 
@@ -4504,10 +5182,10 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       backdrop-filter: var(--g-blur);
       border: var(--g-edge);
       box-shadow:
-        0 12px 32px -10px rgba(var(--text-main-rgb, 46, 16, 101), 0.42),
+        0 12px 32px -10px rgba(0, 0, 0, 0.42),
         inset 1px 1px 0 rgba(255, 255, 255, 0.45),
         inset 0 -22px 34px -24px rgba(0, 0, 0, 0.55);
-      text-shadow: 0 1px 2px rgba(var(--text-main-rgb, 23, 8, 51), 0.35);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     }
 
     /* Readability scrim. Where the wash behind a card is pale the glass goes
@@ -4544,7 +5222,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
     .dish-hero-card:hover {
       border-color: rgba(255, 255, 255, 0.55);
       box-shadow:
-        0 18px 40px -10px rgba(var(--text-main-rgb, 46, 16, 101), 0.5),
+        0 18px 40px -10px rgba(0, 0, 0, 0.5),
         inset 1px 1px 0 rgba(255, 255, 255, 0.6);
     }
 
@@ -5035,6 +5713,12 @@ export class PosComponent implements OnInit, AfterViewInit {
   public historyBills: Bill[] = [];
   public historySearch = '';
   public historyStatusFilter = 'ALL';
+  public readonly historyFilters = [
+    { key: 'ALL', label: 'All' },
+    { key: 'PAID', label: 'Paid' },
+    { key: 'VOIDED', label: 'Voided' },
+    { key: 'REOPENED', label: 'Reopened' },
+  ];
   public isLoadingHistory = false;
   public selectedBillForVoid: Bill | null = null;
   public voidReason = 'Customer cancelled order';
@@ -5860,22 +6544,34 @@ export class PosComponent implements OnInit, AfterViewInit {
       });
   }
 
-  applyPromoCode(): void {
-    const code = (this.promoCode || '').trim().toUpperCase();
-    if (!code) {
-      this.cartService.applyCoupon('');
-      this.isPromoApplied = false;
+  // ── Cart Direct Discount ──
+  setCartDiscountType(type: 'FIXED' | 'PERCENTAGE'): void {
+    this.cartService.discountType.set(type);
+    const cur = this.cartService.discountValue();
+    if (cur > 0) {
+      if (type === 'PERCENTAGE' && cur > 100) {
+        this.cartService.discountValue.set(100);
+      }
+    }
+  }
+
+  onDiscountInputChange(val: any): void {
+    if (val === null || val === undefined || val === '') {
+      this.cartService.discountValue.set(0);
       return;
     }
-
-    const applied = this.cartService.applyCoupon(code);
-    if (applied) {
-      this.isPromoApplied = true;
-      this.notify.success(`Coupon code ${code} applied successfully!`);
-    } else {
-      this.isPromoApplied = false;
-      this.notify.error(`Invalid coupon code "${code}". Try SAVE50, WELCOME10, FLAT100, or FESTIVE20.`);
+    const num = Number(val);
+    if (isNaN(num) || num <= 0) {
+      this.cartService.discountValue.set(0);
+      return;
     }
+    const maxVal = this.cartService.discountType() === 'PERCENTAGE' ? 100 : this.cartService.subtotal();
+    const finalVal = maxVal > 0 ? Math.min(Math.max(0, num), maxVal) : Math.max(0, num);
+    this.cartService.discountValue.set(finalVal);
+  }
+
+  clearCartDiscount(): void {
+    this.cartService.discountValue.set(0);
   }
 
   // ── Complimentary & Item Notes ──
@@ -5952,6 +6648,22 @@ export class PosComponent implements OnInit, AfterViewInit {
       );
     }
     return list;
+  }
+
+  /** Bills per status chip, counted before the search box narrows them. */
+  historyStatusCount(status: string): number {
+    const list = this.historyBills || [];
+    switch (status) {
+      case 'PAID': return list.filter((b) => !b.is_voided && !b.is_reopened).length;
+      case 'VOIDED': return list.filter((b) => b.is_voided).length;
+      case 'REOPENED': return list.filter((b) => b.is_reopened).length;
+      default: return list.length;
+    }
+  }
+
+  clearHistoryFilters(): void {
+    this.historySearch = '';
+    this.historyStatusFilter = 'ALL';
   }
 
   promptVoidBill(bill: Bill): void {
