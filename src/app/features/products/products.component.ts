@@ -2344,7 +2344,7 @@ export class ProductsComponent implements OnInit {
    * Stock a dish actually has.
    *
    * Since dish variants arrived, stock lives on the linked ledger item
-   * (stock_vendor_purchase.current_quantity, surfaced as linked_stock_quantity) — that is
+   * (stocks.current_quantity, surfaced as linked_stock_quantity) — that is
    * what Purchase Entry and Adjustment move, and what checkout deducts from.
    * The legacy per-product counter is only mirrored in some paths, so reading
    * it alone reported every dish as out of stock. Prefer the ledger, fall back

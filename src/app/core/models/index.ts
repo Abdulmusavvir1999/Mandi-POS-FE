@@ -71,7 +71,7 @@ export interface ProductVariant {
   product_id?: number;
   name: string;
   /** Ledger item this portion draws from; null uses the dish's common source. */
-  stock_item_id?: number | null;
+  stock_id?: number | null;
   stock_item_name?: string;
   stock_item_code?: string;
   stock_item_unit?: string;
@@ -107,9 +107,9 @@ export interface Product {
   linked_unit_type?: string;
   linked_stock_code?: string;
   /** Dish-level (COMMON mode) source, and which mode the editor is in. */
-  stock_item_id?: number | null;
+  stock_id?: number | null;
   variant_stock_mode?: 'COMMON' | 'EACH';
-  resolved_stock_item_id?: number | null;
+  resolved_stock_id?: number | null;
   linked_avg_cost?: number;
   linked_min_alert?: number;
   linked_stock_status?: string;
@@ -503,6 +503,10 @@ export interface QueueToken {
 
 export type StockUnitType = 'piece' | 'kg' | 'liter' | 'gram' | 'box' | 'packet' | 'portion' | 'other';
 export type StockEntryStatus = 'draft' | 'posted' | 'cancelled';
+
+/** Where a purchase row came from. A 'Vendor' entry carries a vendor_id; an
+ *  'Initial Setup' entry is the opening balance written with the stock item. */
+export type StockEntrySource = 'Initial Setup' | 'Vendor';
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'return' | 'wastage' | 'transfer_in' | 'transfer_out';
 
 export interface StockItem {
@@ -541,10 +545,14 @@ export interface StockItem {
 export interface StockEntry {
   id: number;
   uuid: string;
-  stock_item_id: number;
+  stock_id: number;
   stock_item_name?: string;
   stock_code?: string;
   unit_type?: StockUnitType;
+  /** The vendor this batch was purchased from; null when it was not recorded. */
+  vendor_id?: number | null;
+  vendor_name?: string | null;
+  vendor_code?: string | null;
   entry_number: string;
   entry_date: string;
   quantity: number;
@@ -553,8 +561,8 @@ export interface StockEntry {
   total_price: number;
   unit_price: number;
   status: StockEntryStatus;
-  /** Name snapshot at purchase time; survives the vendor being renamed. */
-  supplier?: string | null;
+  /** The source of the batch, not the vendor name — read vendor_name for that. */
+  supplier?: StockEntrySource | null;
   notes?: string | null;
   created_by?: number | null;
   created_by_name?: string;
@@ -565,7 +573,7 @@ export interface StockEntry {
 export interface StockMovement {
   id: number;
   uuid: string;
-  stock_item_id: number;
+  stock_id: number;
   stock_item_name?: string;
   stock_code?: string;
   unit_type?: StockUnitType;

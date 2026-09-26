@@ -5133,3 +5133,29 @@ button.is-action-busy::after {
 @media (prefers-reduced-motion: reduce) {
   button.is-action-busy::after { animation-duration: 1.6s; }
 }
+
+/* Purchase-entry source chip: 'Initial Setup' (the opening balance) or
+   'Vendor' (a purchase, with stock_vendor_purchase.vendor_id set). Global
+   because the stock ledger and the stock detail page both render it and the
+   detail component carries no scoped styles. */
+.stock-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--text-muted, #6B7280);
+  border: 1px solid rgba(107, 114, 128, 0.18);
+}
+.stock-source-chip.is-vendor {
+  background: rgba(var(--primary-rgb, 126, 34, 206), 0.1);
+  color: var(--primary, #7E22CE);
+  border-color: rgba(var(--primary-rgb, 126, 34, 206), 0.22);
+}
+.stock-source-chip .material-icons {
+  font-size: 13px;
+}

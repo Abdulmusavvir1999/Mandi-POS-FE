@@ -341,7 +341,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       <!-- 5. TAB CONTENT TABLES                                           -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
 
-      <!-- ── TAB 1: STOCK MASTER (stock_vendor_purchase) ────────────────────────── -->
+      <!-- ── TAB 1: STOCK MASTER (stocks) ────────────────────────── -->
       <div
         class="stock-stage mb-6"
         *ngIf="activeTab === 'MASTER'"
@@ -691,19 +691,20 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
         </div>
       </div>
 
-      <!-- ── TAB 2: PURCHASE ENTRIES (stocks) ──────────────────── -->
+      <!-- ── TAB 2: PURCHASE ENTRIES (stock_vendor_purchase) ──────────────────── -->
       <div class="table-container-card" *ngIf="activeTab === 'ENTRIES'">
         <div class="table-responsive-wrapper">
           <table class="saas-data-table">
             <thead>
               <tr>
-                <th style="width: 14%;">Entry # & Date</th>
-                <th style="width: 20%;">Stock Item</th>
-                <th style="width: 16%;">Formula (Qty × Mult)</th>
-                <th style="width: 12%;">Total Qty</th>
-                <th style="width: 12%;">Total Price</th>
-                <th style="width: 12%;">Unit Price</th>
-                <th style="width: 14%;">Supplier</th>
+                <th style="width: 13%;">Entry # & Date</th>
+                <th style="width: 18%;">Stock Item</th>
+                <th style="width: 14%;">Formula (Qty × Mult)</th>
+                <th style="width: 11%;">Total Qty</th>
+                <th style="width: 11%;">Total Price</th>
+                <th style="width: 11%;">Unit Price</th>
+                <th style="width: 11%;">Vendor</th>
+                <th style="width: 11%;">Source</th>
               </tr>
             </thead>
             <tbody>
@@ -749,16 +750,25 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   </span>
                 </td>
 
-                <!-- Supplier. A supply can be bought from several vendors, so
-                     the entry no longer links to one vendor record; this is the
-                     free-text note captured with the purchase. -->
+                <!-- Vendor this batch was purchased from. Blank on the entries
+                     recorded before a vendor was linked to a purchase. -->
                 <td>
-                  <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase' }}</div>
+                  <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.vendor_name || "—" }}</div>
+                  <div class="text-[10px] font-mono text-[var(--primary)]" *ngIf="entry.vendor_code">{{ entry.vendor_code }}</div>
+                </td>
+
+                <!-- Source: whether the row is a vendor purchase or the
+                     opening balance written when the item was created. -->
+                <td>
+                  <span class="stock-source-chip" [class.is-vendor]="entry.supplier === 'Vendor'">
+                    <span class="material-icons text-xs">{{ entry.supplier === 'Vendor' ? 'local_shipping' : 'inventory_2' }}</span>
+                    {{ entry.supplier || 'Initial Setup' }}
+                  </span>
                 </td>
               </tr>
 
               <tr *ngIf="filteredStockEntries.length === 0">
-                <td colspan="7" class="empty-state-cell">
+                <td colspan="8" class="empty-state-cell">
                   <div class="empty-state-box">
                     <span class="material-symbols-outlined empty-icon">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'receipt_long' }}</span>
                     <div class="empty-title">{{ isLoading ? 'Loading…' : loadError ? 'Could not load data' : 'No Purchase Entries Found' }}</div>
@@ -1144,8 +1154,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </label>
               <app-custom-dropdown
                 [options]="stockItemOptions"
-                [(ngModel)]="purchaseForm.stockItemId"
-                name="stockItemId"
+                [(ngModel)]="purchaseForm.stockId"
+                name="stockId"
                 [searchable]="true"
                 minWidth="100%"
                 placeholder="Select Stock Item..."
@@ -1264,20 +1274,28 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </div>
             </div>
 
-            <!-- Supplier. A supply can come from several vendors, so the entry
-                 records a free-text name rather than linking to one record. -->
-            <div class="grid grid-cols-1 gap-4 items-start pt-1">
+            <!-- The vendor is the only thing recorded about where the batch
+                 came from. Leaving it unset books the row as 'Initial Setup';
+                 picking one books it as a 'Vendor' purchase. -->
+            <div class="grid grid-cols-2 gap-4 items-start pt-1">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Supplier (Optional)</label>
-
-                <input
-                  title="Supplier Name"
-                  type="text"
-                  [(ngModel)]="purchaseForm.supplier"
-                  name="supplier"
-                  placeholder="e.g. Al-Watania Poultry"
-                  class="form-control text-sm w-full mt-2"
-                />
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Vendor (Optional)</label>
+                <app-custom-dropdown
+                  [options]="vendorPickerOptions"
+                  [(ngModel)]="purchaseForm.vendorId"
+                  name="vendorId"
+                  [searchable]="true"
+                  minWidth="100%"
+                  placeholder="Select Vendor..."
+                  class="block mt-2"
+                ></app-custom-dropdown>
+              </div>
+              <div class="form-group mb-0">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Source</label>
+                <div class="form-control text-sm w-full mt-2 flex items-center gap-2 bg-[var(--bg-subtle)]">
+                  <span class="material-icons text-sm text-[var(--text-muted)]">{{ purchaseForm.vendorId ? 'local_shipping' : 'inventory_2' }}</span>
+                  <span class="font-semibold text-[var(--text-main)]">{{ purchaseForm.vendorId ? 'Vendor' : 'Initial Setup' }}</span>
+                </div>
               </div>
             </div>
 
@@ -1346,9 +1364,9 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Select Stock Master Item</label>
                 <app-custom-dropdown
                   [options]="stockItemOptions"
-                  [(ngModel)]="adjustForm.stockItemId"
+                  [(ngModel)]="adjustForm.stockId"
                   (ngModelChange)="onAdjustItemChange()"
-                  name="stockItemId"
+                  name="stockId"
                   [searchable]="true"
                   minWidth="100%"
                   placeholder="Select Stock Item..."
@@ -2008,10 +2026,10 @@ export class StockComponent implements OnInit {
   public selectedVendorFilter: number | '' = '';
 
   /** Picker inside the purchase form. 0 is the deliberate "not a vendor"
-   *  choice, which reveals the free-text box for one-off suppliers. */
+   *  choice, which books the row as 'Initial Setup' rather than a purchase. */
   get vendorPickerOptions(): DropdownOption[] {
     return [
-      { value: 0, label: 'One-off supplier (type a name)', icon: 'edit_note' },
+      { value: 0, label: 'No vendor (Initial Setup)', icon: 'inventory_2' },
       ...this.vendors.map((v) => ({
         value: v.id,
         label: v.name,
@@ -2078,18 +2096,18 @@ export class StockComponent implements OnInit {
 
   // Forms
   public purchaseForm: any = {
-    stockItemId: null,
+    stockId: null,
     quantity: null,
     multiplier: 1,
     totalPrice: null,
-    // 0 = one-off supplier, and `supplier` carries the typed name instead.
-    supplier: '',
+    // 0 = no vendor; the server then books the entry as 'Initial Setup'.
+    vendorId: 0,
     notes: '',
     entryDate: '',
   };
 
   public adjustForm: any = {
-    stockItemId: null,
+    stockId: null,
     adjustmentType: 'adjustment',
     quantity: 1,
     multiplier: 1,
@@ -2101,7 +2119,7 @@ export class StockComponent implements OnInit {
 
   /** The master item the adjustment is being applied to. */
   get adjustSelectedItem(): StockItem | undefined {
-    return this.stockItems.find((i) => i.id === Number(this.adjustForm.stockItemId));
+    return this.stockItems.find((i) => i.id === Number(this.adjustForm.stockId));
   }
 
   /**
@@ -2301,7 +2319,7 @@ export class StockComponent implements OnInit {
     else this.loadStockAlerts();
   }
 
-  // ── 1. Load Stock Master (stock_vendor_purchase) ──────────────────────────────
+  // ── 1. Load Stock Master (stocks) ──────────────────────────────
   loadStockMaster(): void {
     this.isLoading = true;
     this.loadError = null;
@@ -2319,7 +2337,7 @@ export class StockComponent implements OnInit {
     });
   }
 
-  // ── 2. Load Purchase Entries (stocks) ────────────────────────
+  // ── 2. Load Purchase Entries (stock_vendor_purchase) ────────────────────────
   loadStockEntries(): void {
     this.stockService
       .getStockEntries(1, 200, undefined, undefined, undefined, undefined, undefined, this.selectedVendorFilter || undefined)
@@ -2381,7 +2399,7 @@ export class StockComponent implements OnInit {
   }
 
   reorderNow(item: any): void {
-    this.purchaseForm.stockItemId = item.id;
+    this.purchaseForm.stockId = item.id;
     const recQty = Number(item.suggested_reorder_quantity) || Number(item.reorder_quantity) || 10;
     this.purchaseForm.quantity = recQty;
     this.purchaseForm.multiplier = 1;
@@ -2405,7 +2423,7 @@ export class StockComponent implements OnInit {
 
   // ── Live Calculation Helpers for Purchase Modal ────────────────────
   get selectedPurchaseItem(): StockItem | undefined {
-    return this.stockItems.find((i) => i.id === Number(this.purchaseForm.stockItemId));
+    return this.stockItems.find((i) => i.id === Number(this.purchaseForm.stockId));
   }
 
   get calculatedTotalQuantity(): number {
@@ -2480,7 +2498,7 @@ export class StockComponent implements OnInit {
         e.entry_number.toLowerCase().includes(q) ||
         e.stock_item_name?.toLowerCase().includes(q) ||
         e.stock_code?.toLowerCase().includes(q) ||
-        e.supplier?.toLowerCase().includes(q)
+        e.vendor_name?.toLowerCase().includes(q)
     );
   }
 
@@ -2561,7 +2579,7 @@ export class StockComponent implements OnInit {
 
   getSearchPlaceholder(): string {
     if (this.activeTab === 'MASTER') return 'Search master items by name or code (e.g. Chicken, STK-0001)...';
-    if (this.activeTab === 'ENTRIES') return 'Search purchase entries by entry #, item, supplier, invoice...';
+    if (this.activeTab === 'ENTRIES') return 'Search purchase entries by entry #, item, stock code, vendor...';
     if (this.activeTab === 'MOVEMENTS') return 'Search movement audit trail by reference, item, notes...';
     return 'Search inventory alerts (out of stock, expiry, reorder)...';
   }
@@ -2569,11 +2587,11 @@ export class StockComponent implements OnInit {
   // ── Modals Trigger Actions ──────────────────────────────────────────
   openPurchaseModal(): void {
     this.purchaseForm = {
-      stockItemId: null,
+      stockId: null,
       quantity: null,
       multiplier: 1,
       totalPrice: null,
-      supplier: '',
+      vendorId: 0,
       notes: '',
       entryDate: new Date().toISOString().split('T')[0],
     };
@@ -2582,11 +2600,11 @@ export class StockComponent implements OnInit {
 
   quickPurchaseEntry(item: StockItem): void {
     this.purchaseForm = {
-      stockItemId: item.id,
+      stockId: item.id,
       quantity: null,
       multiplier: 1,
       totalPrice: null,
-      supplier: '',
+      vendorId: 0,
       notes: '',
       entryDate: new Date().toISOString().split('T')[0],
     };
@@ -2595,7 +2613,7 @@ export class StockComponent implements OnInit {
 
   openAdjustModal(): void {
     this.adjustForm = {
-      stockItemId: null,
+      stockId: null,
       adjustmentType: 'adjustment',
       quantity: 1,
       multiplier: 1,
@@ -2609,7 +2627,7 @@ export class StockComponent implements OnInit {
 
   quickAdjust(item: StockItem): void {
     this.adjustForm = {
-      stockItemId: item.id,
+      stockId: item.id,
       adjustmentType: 'adjustment',
       quantity: 1,
       multiplier: 1,
@@ -2643,7 +2661,7 @@ export class StockComponent implements OnInit {
 
   // ── Form Submissions ────────────────────────────────────────────────
   submitPurchaseEntry(): void {
-    if (!this.purchaseForm.stockItemId) {
+    if (!this.purchaseForm.stockId) {
       this.notify.error('Please select a stock item master');
       return;
     }
@@ -2656,9 +2674,12 @@ export class StockComponent implements OnInit {
       return;
     }
 
-    // An entry records a free-text supplier rather than linking to a vendor
-    // row: one supply can be bought from several vendors.
-    const payload = { ...this.purchaseForm };
+    // 0 is the deliberate "not a vendor" choice in the picker, which the API
+    // takes as an entry with no vendor linked, booked as 'Initial Setup'.
+    const payload = {
+      ...this.purchaseForm,
+      vendorId: Number(this.purchaseForm.vendorId) || null,
+    };
 
     this.stockService.createStockEntry(payload).subscribe({
       next: (res) => {
@@ -2677,7 +2698,7 @@ export class StockComponent implements OnInit {
   }
 
   submitAdjust(): void {
-    if (!this.adjustForm.stockItemId) {
+    if (!this.adjustForm.stockId) {
       this.notify.error('Please select a stock item master');
       return;
     }
@@ -2702,7 +2723,7 @@ export class StockComponent implements OnInit {
     }
 
     const payload: any = {
-      stockItemId: this.adjustForm.stockItemId,
+      stockId: this.adjustForm.stockId,
       adjustmentType: this.adjustForm.adjustmentType,
       quantity: Number(this.adjustForm.quantity) || 0,
       multiplier: 1,
@@ -2777,7 +2798,7 @@ export class StockComponent implements OnInit {
       this.downloadCSV('Stock_Master_Balances', headers, rows);
     } else if (this.activeTab === 'ENTRIES') {
       const entries = this.filteredStockEntries;
-      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Supplier'];
+      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Source', 'Vendor'];
       const rows = entries.map((e) => [
         e.entry_number,
         `"${e.entry_date}"`,
@@ -2788,7 +2809,8 @@ export class StockComponent implements OnInit {
         e.total_quantity,
         e.total_price,
         e.unit_price,
-        `"${e.supplier || ''}"`,
+        `"${e.supplier || 'Initial Setup'}"`,
+        `"${e.vendor_name || ''}"`,
       ]);
       this.downloadCSV('Stock_Purchase_Entries_Ledger', headers, rows);
     } else {

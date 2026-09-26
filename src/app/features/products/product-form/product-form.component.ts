@@ -147,8 +147,8 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
             <label class="form-label">Stock Master Item — every portion consumes this</label>
             <app-custom-dropdown
               [options]="stockItemOptions"
-              [(ngModel)]="form.stockItemId"
-              name="stockItemId"
+              [(ngModel)]="form.stockId"
+              name="stockId"
               [searchable]="true"
               placeholder="Select stock master item…"
               minWidth="100%"
@@ -183,7 +183,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               <app-custom-dropdown
                 *ngIf="form.variantStockMode === 'EACH'"
                 [options]="stockItemOptions"
-                [(ngModel)]="v.stockItemId"
+                [(ngModel)]="v.stockId"
                 [name]="'variantStock' + i"
                 [searchable]="true"
                 placeholder="Select stock item…"
@@ -478,7 +478,7 @@ export class ProductFormComponent implements OnInit {
     imageUrl: '',
     taxRate: 5,
     status: 'ACTIVE',
-    stockItemId: null as number | null,
+    stockId: null as number | null,
     variantStockMode: 'COMMON' as 'COMMON' | 'EACH',
     variants: [] as any[],
   };
@@ -496,7 +496,7 @@ export class ProductFormComponent implements OnInit {
   }
 
   get selectedStockItem(): StockItem | undefined {
-    return this.stockItems.find((s) => s.id === Number(this.form.stockItemId));
+    return this.stockItems.find((s) => s.id === Number(this.form.stockId));
   }
 
   /**
@@ -588,11 +588,11 @@ export class ProductFormComponent implements OnInit {
           imageUrl: p.image_url || '',
           taxRate: p.tax_rate,
           status: p.status,
-          stockItemId: p.stock_item_id ?? p.resolved_stock_item_id ?? null,
+          stockId: p.stock_id ?? p.resolved_stock_id ?? null,
           variantStockMode: p.variant_stock_mode || 'COMMON',
           variants: (p.variants || []).map((v: ProductVariant) => ({
             name: v.name,
-            stockItemId: v.stock_item_id ?? null,
+            stockId: v.stock_id ?? null,
             sellingPrice: Number(v.selling_price),
             stockConsumption: Number(v.stock_consumption),
           })),
@@ -611,7 +611,7 @@ export class ProductFormComponent implements OnInit {
       name: '',
       // A new row inherits the dish-level source so EACH mode starts somewhere
       // sensible rather than empty.
-      stockItemId: this.form.stockItemId ?? null,
+      stockId: this.form.stockId ?? null,
       sellingPrice: Number(this.form.sellingPrice) || 0,
       stockConsumption: 1,
     });
@@ -700,12 +700,12 @@ export class ProductFormComponent implements OnInit {
     }
 
     if (this.form.variantStockMode === 'EACH') {
-      const missing = variants.find((v: any) => !v.stockItemId);
+      const missing = variants.find((v: any) => !v.stockId);
       if (missing) {
         this.notify.error(`Portion "${missing.name}" needs a stock master item.`);
         return;
       }
-    } else if (variants.length > 0 && !this.form.stockItemId) {
+    } else if (variants.length > 0 && !this.form.stockId) {
       this.notify.error('Choose the stock master item every portion consumes.');
       return;
     }
@@ -716,7 +716,7 @@ export class ProductFormComponent implements OnInit {
       ...this.form,
       variants: variants.map((v: any) => ({
         ...v,
-        stockItemId: this.form.variantStockMode === 'EACH' ? v.stockItemId : null,
+        stockId: this.form.variantStockMode === 'EACH' ? v.stockId : null,
       })),
     };
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { StockItem, StockEntry, StockMovement, ApiResponse } from '../models';
+import { StockItem, StockEntry, StockEntrySource, StockMovement, ApiResponse } from '../models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -87,15 +87,15 @@ export class StockService {
   public getStockEntries(
     page = 1,
     limit = 50,
-    stockItemId?: number,
+    stockId?: number,
     search?: string,
-    supplier?: string,
+    supplier?: StockEntrySource,
     dateFrom?: string,
     dateTo?: string,
     vendorId?: number
   ): Observable<ApiResponse<StockEntry[]>> {
     let params = new HttpParams().set('page', page).set('limit', limit);
-    if (stockItemId) params = params.set('stockItemId', stockItemId);
+    if (stockId) params = params.set('stockId', stockId);
     if (search) params = params.set('search', search);
     if (supplier) params = params.set('supplier', supplier);
     if (dateFrom) params = params.set('dateFrom', dateFrom);
@@ -109,13 +109,14 @@ export class StockService {
    * 6. Create Purchase Entry (Quantity × Multiplier = Total Quantity, Total Price ÷ Total Qty = Unit Price)
    */
   public createStockEntry(data: {
-    stockItemId?: number;
+    stockId?: number;
     productId?: number;
+    /** The vendor this purchase came from; omitted when it is not recorded. */
+    vendorId?: number | null;
     quantity: number;
     multiplier?: number;
     totalPrice: number;
     unitPrice?: number;
-    supplier?: string;
     notes?: string;
     entryDate?: string;
   }): Observable<ApiResponse<any>> {
@@ -128,14 +129,14 @@ export class StockService {
   public getStockMovements(
     page = 1,
     limit = 50,
-    stockItemId?: number,
+    stockId?: number,
     movementType?: string,
     search?: string,
     dateFrom?: string,
     dateTo?: string
   ): Observable<ApiResponse<StockMovement[]>> {
     let params = new HttpParams().set('page', page).set('limit', limit);
-    if (stockItemId) params = params.set('stockItemId', stockItemId);
+    if (stockId) params = params.set('stockId', stockId);
     if (movementType && movementType !== 'all') params = params.set('movementType', movementType);
     if (search) params = params.set('search', search);
     if (dateFrom) params = params.set('dateFrom', dateFrom);
@@ -148,7 +149,7 @@ export class StockService {
    * 8. Stock Adjustment (Audit, Wastage, Spoilage, Returns)
    */
   public adjustStock(data: {
-    stockItemId?: number;
+    stockId?: number;
     productId?: number;
     adjustmentType: string;
     quantity: number;
@@ -182,11 +183,10 @@ export class StockService {
    */
   public stockIn(data: {
     productId?: number;
-    stockItemId?: number;
+    stockId?: number;
     quantity: number;
     multiplier?: number;
     totalPrice?: number;
-    supplier?: string;
     notes?: string;
   }): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(`${this.API_URL}/in`, data);
