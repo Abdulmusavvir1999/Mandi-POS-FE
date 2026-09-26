@@ -10,6 +10,7 @@ import { BackOfficeInvoicesComponent } from './back-office-invoices.component';
 import { BackOfficeUnlockComponent } from './back-office-unlock.component';
 import { BackOfficeDeletedComponent } from './back-office-deleted.component';
 import { BackOfficeAccessService } from '../../core/services/back-office-access.service';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 /**
  * Standalone Back-Office, reachable only at `/admin/back-office`.
@@ -31,8 +32,7 @@ import { BackOfficeAccessService } from '../../core/services/back-office-access.
     BackOfficeOrdersComponent,
     BackOfficeInvoicesComponent,
     BackOfficeUnlockComponent,
-    BackOfficeDeletedComponent,
-  ],
+    BackOfficeDeletedComponent,ActionLoadingDirective],
   template: `
     <!--
       The password screen stands in for the whole Back-Office until it is

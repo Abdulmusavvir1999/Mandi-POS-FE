@@ -263,7 +263,7 @@ export class StockLayoutService {
     this.enabled() ? this._activeKey() : BASELINE_STOCK_DESIGN
   );
 
-  public readonly rootClass = computed<string>(() => (this.enabled() ? 'stock-layout-' + this.effectiveKey() : ''));
+  public readonly rootClass = computed<string>(() => 'stock-layout-' + this.effectiveKey());
 
   public readonly tokens = computed<StockTokens>(() => {
     const key = this._activeKey();
@@ -274,9 +274,9 @@ export class StockLayoutService {
 
   public readonly cssVars = computed<Record<string, string>>(() => this.varsFrom(this.tokens()));
 
-  /** Variables the page renders with; none while off so it seamlessly inherits the active theme palette. */
+  /** Variables the page renders with; evaluates with theme tokens */
   public readonly pageCssVars = computed<Record<string, string>>(() =>
-    this.enabled() ? this.varsFrom(this.tokens()) : {}
+    this.enabled() ? this.varsFrom(this.tokens()) : this.varsFrom(STOCK_DEFAULT_TOKENS[BASELINE_STOCK_DESIGN])
   );
 
   private varsFrom(t: StockTokens): Record<string, string> {
@@ -305,15 +305,25 @@ export class StockLayoutService {
       if (!this.theme.isDarkColor(cardBorder)) {
         cardBorder = activeP.cardBorder;
       }
-      if (textMuted === '#64748B' || textMuted === '#6B7280') {
+      if (textMuted === '#64748B' || textMuted === '#6B7280' || textMuted === '#7C3AED') {
         textMuted = 'rgba(226, 232, 240, 0.75)';
       }
-      if (accentColor === '#2563EB' || accentColor === '#7E22CE' || accentColor === '#0F766E') {
+      if (accentColor === '#2563EB' || accentColor === '#7E22CE' || accentColor === '#0F766E' || accentColor === '#6366F1' || accentColor === '#4F46E5') {
         accentColor = activeP.primary;
       }
       if (!this.theme.isDarkColor(buttonBg)) {
         buttonBg = 'rgba(255, 255, 255, 0.08)';
         buttonColor = activeP.textMain || '#F9FAFB';
+      }
+    } else {
+      if (cardBg === '#FFFFFF') {
+        cardBg = activeP.cardBg || '#FFFFFF';
+      }
+      if (cardBorder === '#CBD5E1' || cardBorder === '#E2E8F0' || cardBorder === '#E9D5FF' || cardBorder === '#E5E7EB') {
+        cardBorder = activeP.cardBorder || '#E2E8F0';
+      }
+      if (textColor === '#0F172A' || textColor === '#1E293B' || textColor === '#2E1065' || textColor === '#111827') {
+        textColor = activeP.textMain || '#1E293B';
       }
     }
 

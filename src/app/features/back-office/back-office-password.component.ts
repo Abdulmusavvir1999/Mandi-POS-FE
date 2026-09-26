@@ -7,6 +7,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { BackOfficeAccessService } from '../../core/services/back-office-access.service';
 import { ToastComponent } from '../../shared/components/toast/toast.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 /**
  * The Back-Office password, at `/admin/back-office-password`.
@@ -26,7 +27,7 @@ import { ToastComponent } from '../../shared/components/toast/toast.component';
 @Component({
   selector: 'app-back-office-password',
   standalone: true,
-  imports: [CommonModule, FormsModule, ToastComponent],
+  imports: [CommonModule, FormsModule, ToastComponent, ActionLoadingDirective],
   template: `
     <div class="bop-shell">
       <div class="bop-inner">

@@ -15,10 +15,11 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -340,7 +341,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
       <!-- 5. TAB CONTENT TABLES                                           -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
 
-      <!-- ── TAB 1: STOCK MASTER (stock_items) ────────────────────────── -->
+      <!-- ── TAB 1: STOCK MASTER (stock_vendor_purchase) ────────────────────────── -->
       <div
         class="stock-stage mb-6"
         *ngIf="activeTab === 'MASTER'"
@@ -653,7 +654,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 </div>
                 <div class="stock-card-vbox">
                   <span class="stock-card-vbox-lbl">Unit Cost</span>
-                  <span class="stock-card-vbox-val" style="color: #0F172A;">{{ item.average_unit_price | appCurrency:'1.0-4' }}</span>
+                  <span class="stock-card-vbox-val text-[var(--text-main)]">{{ item.average_unit_price | appCurrency:'1.0-4' }}</span>
                 </div>
               </div>
             </div>
@@ -690,7 +691,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
         </div>
       </div>
 
-      <!-- ── TAB 2: PURCHASE ENTRIES (stock_entries) ──────────────────── -->
+      <!-- ── TAB 2: PURCHASE ENTRIES (stocks) ──────────────────── -->
       <div class="table-container-card" *ngIf="activeTab === 'ENTRIES'">
         <div class="table-responsive-wrapper">
           <table class="saas-data-table">
@@ -702,7 +703,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <th style="width: 12%;">Total Qty</th>
                 <th style="width: 12%;">Total Price</th>
                 <th style="width: 12%;">Unit Price</th>
-                <th style="width: 14%;">Vendor & Invoice</th>
+                <th style="width: 14%;">Supplier</th>
               </tr>
             </thead>
             <tbody>
@@ -748,24 +749,11 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                   </span>
                 </td>
 
-                <!-- Vendor & Invoice -->
+                <!-- Supplier. A supply can be bought from several vendors, so
+                     the entry no longer links to one vendor record; this is the
+                     free-text note captured with the purchase. -->
                 <td>
-                  <!-- A linked vendor is clickable through to its record; an
-                       unlinked one is still shown, just as plain text. -->
-                  <a
-                    *ngIf="entry.vendor_id; else plainSupplier"
-                    [routerLink]="['/vendors']"
-                    [queryParams]="{ vendorId: entry.vendor_id }"
-                    class="text-xs font-semibold text-[var(--primary)] hover:underline truncate block"
-                    [title]="'Open vendor ' + entry.vendor_name"
-                  >
-                    {{ entry.vendor_name || entry.supplier }}
-                    <span class="text-[10px] font-mono text-[var(--text-muted)]">{{ entry.vendor_code }}</span>
-                  </a>
-                  <ng-template #plainSupplier>
-                    <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase' }}</div>
-                  </ng-template>
-                  <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ entry.invoice_number || 'No Invoice #' }}</div>
+                  <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase' }}</div>
                 </td>
               </tr>
 
@@ -971,9 +959,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <tr>
                 <th style="width: 14%;">Alert Status</th>
                 <th style="width: 22%;">Stock Item</th>
-                <th style="width: 22%;">Stock vs Safety Thresholds</th>
-                <th style="width: 16%;">Batch & Expiry</th>
-                <th style="width: 14%;">Recommended Reorder</th>
+                <th style="width: 30%;">Stock vs Safety Thresholds</th>
+                <th style="width: 16%;">Recommended Reorder</th>
                 <th style="width: 12%; text-align: center;">Action</th>
               </tr>
             </thead>
@@ -991,7 +978,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                       }"
                     >
                       <span class="material-symbols-outlined text-[13px]">
-                        {{ item.alert_category === 'OUT_OF_STOCK' ? 'cancel' : item.alert_category === 'EXPIRED' ? 'event_busy' : item.alert_category === 'OVERSTOCK' ? 'upgrade' : 'warning' }}
+                        {{ item.alert_category === 'OUT_OF_STOCK' ? 'cancel' : item.alert_category === 'OVERSTOCK' ? 'upgrade' : 'warning' }}
                       </span>
                       {{ item.alert_category ? item.alert_category.replace('_', ' ') : 'ALERT' }}
                     </span>
@@ -1030,22 +1017,6 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                       ></div>
                     </div>
                   </div>
-                </td>
-
-                <!-- Batch & Expiry -->
-                <td>
-                  <div *ngIf="item.nearest_expiry_date; else noExpiry">
-                    <div class="font-mono text-xs font-bold" [ngClass]="item.days_until_expiry < 0 ? 'text-red-600' : item.days_until_expiry <= 7 ? 'text-amber-600' : 'text-gray-700'">
-                      Exp: {{ item.nearest_expiry_date | date:'dd/MM/yyyy' }}
-                    </div>
-                    <div class="text-[10px] text-gray-500 font-mono">
-                      {{ item.days_until_expiry < 0 ? ('Expired ' + (-item.days_until_expiry) + 'd ago') : (item.days_until_expiry + ' days left') }}
-                      <span *ngIf="item.latest_batch"> • Batch #{{ item.latest_batch }}</span>
-                    </div>
-                  </div>
-                  <ng-template #noExpiry>
-                    <span class="text-gray-400 text-xs">—</span>
-                  </ng-template>
                 </td>
 
                 <!-- Recommended Reorder -->
@@ -1293,69 +1264,19 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
             </div>
 
-            <!-- Vendor & Invoice Details -->
-            <div class="grid grid-cols-2 gap-4 items-start pt-1">
+            <!-- Supplier. A supply can come from several vendors, so the entry
+                 records a free-text name rather than linking to one record. -->
+            <div class="grid grid-cols-1 gap-4 items-start pt-1">
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Vendor</label>
-                <app-custom-dropdown
-                  [options]="vendorPickerOptions"
-                  [(ngModel)]="purchaseForm.vendorId"
-                  name="vendorId"
-                  placeholder="Select a vendor"
-                  [searchable]="true"
-                  minWidth="100%"
-                ></app-custom-dropdown>
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Supplier (Optional)</label>
 
-                <!-- Only for a purchase from someone with no vendor record.
-                     Picking a real vendor makes this redundant: the backend
-                     snapshots that vendor's name onto the entry itself. -->
                 <input
-                  *ngIf="!purchaseForm.vendorId"
                   title="Supplier Name"
                   type="text"
                   [(ngModel)]="purchaseForm.supplier"
                   name="supplier"
                   placeholder="e.g. Al-Watania Poultry"
                   class="form-control text-sm w-full mt-2"
-                />
-                <p *ngIf="!purchaseForm.vendorId" class="text-[10px] text-[var(--text-muted)] mt-1">
-                  Not linked to a vendor — this name stays as plain text.
-                </p>
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Invoice / Bill #</label>
-                <input
-                  title="Invoice / Bill #"
-                  type="text"
-                  [(ngModel)]="purchaseForm.invoiceNumber"
-                  name="invoiceNumber"
-                  placeholder="e.g. INV-9042"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-            </div>
-
-            <!-- Batch Number & Expiry Date -->
-            <div class="grid grid-cols-2 gap-4 items-start pt-1">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Batch / Lot # (Optional)</label>
-                <input
-                  title="Batch / Lot #"
-                  type="text"
-                  [(ngModel)]="purchaseForm.batchNumber"
-                  name="batchNumber"
-                  placeholder="e.g. B-2026-X01"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Expiry Date (Optional)</label>
-                <input
-                  title="Expiry Date"
-                  type="date"
-                  [(ngModel)]="purchaseForm.expiryDate"
-                  name="expiryDate"
-                  class="form-control font-mono text-sm w-full"
                 />
               </div>
             </div>
@@ -1426,6 +1347,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <app-custom-dropdown
                   [options]="stockItemOptions"
                   [(ngModel)]="adjustForm.stockItemId"
+                  (ngModelChange)="onAdjustItemChange()"
                   name="stockItemId"
                   [searchable]="true"
                   minWidth="100%"
@@ -1438,6 +1360,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 <app-custom-dropdown
                   [options]="adjustmentTypeOptions"
                   [(ngModel)]="adjustForm.adjustmentType"
+                  (ngModelChange)="onAdjustFormQuantityChange()"
                   name="adjustmentType"
                   minWidth="100%"
                   placeholder="Select Reason..."
@@ -1445,12 +1368,44 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               </div>
             </div>
 
-            <!-- Quantity x Multiplier + costing, mirroring a purchase entry -->
-            <div class="pt-3.5 border-t border-[#E9D5FF] space-y-3">
+            <!-- What is actually on hand for the chosen item. The dropdown shows
+                 this per option, but not once collapsed, so an operator writing
+                 off stock could not see what there was to write off. -->
+            <div
+              *ngIf="adjustSelectedItem"
+              class="flex items-center justify-between py-2 px-3.5 bg-[var(--bg-app)] border border-[var(--card-border)] rounded-xl text-xs shadow-xs w-full"
+            >
+              <span class="text-[var(--text-muted)] font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[var(--primary)]" style="font-size: 18px;">inventory_2</span>
+                <span>Available Stock:</span>
+              </span>
+              <span class="flex items-center gap-2">
+                <span
+                  *ngIf="adjustIsLowStock"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap border text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]"
+                >
+                  Low
+                </span>
+                <span
+                  class="font-mono font-black text-sm px-2.5 py-0.5 rounded-md border"
+                  [ngClass]="adjustIsLowStock
+                    ? 'text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]'
+                    : 'text-[#16A34A] bg-[#DCFCE7] border-[#86EFAC]'"
+                >
+                  {{ (adjustSelectedItem.current_quantity || 0) | number:'1.0-3' }}
+                  {{ adjustSelectedItem.unit_type || 'piece' }}
+                  <span class="opacity-60 font-normal mx-1">/</span>
+                  {{ (adjustSelectedItem.average_unit_price || 0) | appCurrency:'1.0-2' }} <span class="font-sans font-medium text-xs">unit price</span>
+                </span>
+              </span>
+            </div>
+
+            <!-- Direct Quantity Input + costing -->
+            <div class="pt-3.5 border-t border-[var(--card-border)] space-y-3">
               <div class="flex items-center justify-between pb-1.5">
-                <div class="text-xs font-bold text-[#6B21A8] flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[#7E22CE]" style="font-size: 18px;">calculate</span>
-                  <span class="uppercase tracking-wider">Adjustment Amount: Quantity × Multiplier</span>
+                <div class="text-xs font-bold text-[var(--primary)] flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[var(--primary)]" style="font-size: 18px;">tune</span>
+                  <span class="uppercase tracking-wider">Adjustment Quantity ({{ adjustSelectedItem?.unit_type || 'piece' }})</span>
                 </div>
                 <span
                   class="text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap border"
@@ -1460,83 +1415,141 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
                 </span>
               </div>
 
-              <div class="grid grid-cols-2 gap-4 items-start">
-                <div class="form-group mb-0">
-                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Quantity (Base)</label>
+              <div class="form-group mb-0">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                    Adjustment Quantity
+                  </label>
+                  <span class="text-[11px] font-mono font-bold text-[var(--primary)] bg-[var(--primary-light)] px-2.5 py-0.5 rounded-md border border-[var(--card-border)] uppercase">
+                    Unit: {{ adjustSelectedItem?.unit_type || 'piece' }}
+                  </span>
+                </div>
+                <div class="flex items-stretch rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden focus-within:border-[var(--primary)]">
                   <input
-                    title="Quantity (Base)"
+                    title="Adjustment Quantity"
                     type="number"
                     min="0.001"
                     step="any"
+                    [attr.max]="adjustMaxQuantity"
                     [(ngModel)]="adjustForm.quantity"
                     (ngModelChange)="onAdjustFormQuantityChange()"
                     name="quantity"
-                    class="form-control font-mono font-bold text-[#7E22CE] text-base w-full"
-                    placeholder="1"
+                    class="form-control !border-0 !rounded-none !shadow-none font-mono font-bold text-[var(--primary)] text-base flex-1 min-w-0"
+                    placeholder="Enter count (e.g. 10)"
                     required
                   />
+                  <div class="flex items-center px-4 bg-[var(--bg-app)] border-l border-[var(--card-border)] text-xs font-bold font-mono text-[var(--text-muted)] uppercase select-none">
+                    {{ adjustSelectedItem?.unit_type || 'piece' }}
+                  </div>
                 </div>
-                <div class="form-group mb-0">
-                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Multiplier</label>
-                  <input
-                    title="Multiplier"
-                    type="number"
-                    min="0.001"
-                    step="any"
-                    [(ngModel)]="adjustForm.multiplier"
-                    (ngModelChange)="onAdjustFormQuantityChange()"
-                    name="multiplier"
-                    class="form-control font-mono font-bold text-base w-full"
-                    placeholder="1"
-                  />
-                </div>
+                <p *ngIf="adjustMaxQuantity !== null" class="text-[10px] text-[var(--text-muted)] mt-1">
+                  This reason removes stock, so at most
+                  <strong class="font-mono">{{ adjustMaxQuantity | number:'1.0-3' }} {{ adjustSelectedItem?.unit_type || 'units' }}</strong>
+                  can be taken out.
+                </p>
               </div>
 
-              <!-- Live Total Quantity -->
-              <div class="flex items-center justify-between py-1.5 px-3 bg-[#FAF5FF] border border-[#E9D5FF] rounded-lg text-xs shadow-xs w-full">
-                <span class="text-[#4B5563] font-semibold flex items-center gap-2">
-                  <span class="material-symbols-outlined text-[#16A34A]" style="font-size: 18px;">inventory_2</span>
-                  <span>Calculated Total Quantity:</span>
+              <!-- Where the item lands once this is applied -->
+              <div
+                *ngIf="adjustSelectedItem"
+                class="flex items-center justify-between py-2 px-3.5 bg-[var(--bg-app)] border border-[var(--card-border)] rounded-xl text-xs shadow-xs w-full"
+              >
+                <span class="text-[var(--text-muted)] font-semibold flex items-center gap-2">
+                  <span
+                    class="material-symbols-outlined"
+                    [ngClass]="adjustIsIncrease ? 'text-[#16A34A]' : 'text-[#DC2626]'"
+                    style="font-size: 18px;"
+                  >{{ adjustIsIncrease ? 'trending_up' : 'trending_down' }}</span>
+                  <span>Stock After Adjustment:</span>
                 </span>
-                <span class="font-mono font-black text-sm text-[#16A34A] bg-[#DCFCE7] border border-[#86EFAC] px-2.5 py-0.5 rounded-md">
-                  {{ adjustCalculatedTotalQty | number:'1.0-3' }} {{ adjustSelectedItem?.unit_type || 'units' }}
+                <span class="flex items-center gap-2">
+                  <span
+                    *ngIf="adjustExceedsAvailable"
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap border text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]"
+                  >
+                    Exceeds available
+                  </span>
+                  <span class="font-mono text-xs text-[var(--text-muted)]">
+                    {{ (adjustSelectedItem.current_quantity || 0) | number:'1.0-3' }}
+                    {{ adjustIsIncrease ? '+' : '−' }}
+                    {{ (adjustCalculatedTotalQty || 0) | number:'1.0-3' }} =
+                  </span>
+                  <span
+                    class="font-mono font-black text-sm px-2.5 py-0.5 rounded-md border"
+                    [ngClass]="adjustExceedsAvailable
+                      ? 'text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]'
+                      : (adjustIsIncrease
+                          ? 'text-[#16A34A] bg-[#DCFCE7] border-[#86EFAC]'
+                          : 'text-[#9A3412] bg-[#FFF7ED] border-[#FED7AA]')"
+                  >
+                    {{ adjustResultingQty | number:'1.0-3' }}
+                    {{ adjustSelectedItem.unit_type || 'piece' }}
+                  </span>
                 </span>
               </div>
 
-              <!-- Cost Grid: Total Cost vs auto-derived Unit Cost -->
+              <!-- Cost Grid: Unit Price is entered, Total Cost is derived
+                   from it — Total = Adjustment Quantity x Unit Price. -->
               <div class="grid grid-cols-2 gap-4 items-end">
                 <div class="form-group mb-0">
-                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Total Cost / Price (₹)</label>
+                  <div class="flex items-center justify-between mb-0">
+                    <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Unit Price (₹)</label>
+                    <span class="text-[9px] text-[var(--text-muted)] font-bold bg-[var(--bg-app)] px-2 py-0.5 rounded border border-[var(--card-border)] whitespace-nowrap">
+                      Item average
+                    </span>
+                  </div>
                   <input
-                    title="Total Cost / Price (₹)"
+                    title="Unit Price (₹)"
                     type="number"
                     min="0"
                     step="any"
-                    [(ngModel)]="adjustForm.totalPrice"
-                    (ngModelChange)="onAdjustFormTotalPriceChange()"
-                    name="totalPrice"
-                    class="form-control font-mono font-bold text-[#2E1065] w-full"
-                    placeholder="Leave 0 to use average cost"
+                    [(ngModel)]="adjustForm.unitPrice"
+                    name="unitPrice"
+                    class="form-control font-mono font-bold text-[var(--text-main)] w-full"
+                    placeholder="0.0000"
                   />
                 </div>
                 <div class="form-group mb-0">
                   <div class="flex items-center justify-between mb-0">
-                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Unit Cost (₹)</label>
-                    <span class="text-[9px] text-[#7E22CE] font-bold bg-[#F3E8FF] px-2 py-0.5 rounded border border-[#DDD6FE] whitespace-nowrap">
+                    <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Total Cost / Price (₹)</label>
+                    <span class="text-[9px] text-[var(--primary)] font-bold bg-[var(--primary-light)] px-2 py-0.5 rounded border border-[var(--card-border)] whitespace-nowrap">
                       Auto-calculated
                     </span>
                   </div>
                   <input
-                    title="Unit Cost (₹)"
+                    title="Total Cost / Price (₹)"
                     type="number"
-                    [value]="adjustCalculatedUnitCost"
-                    name="unitPrice"
-                    class="form-control font-mono font-bold bg-[#F3F4F6] text-[#4B5563] cursor-not-allowed border-[#D1D5DB] w-full"
+                    [value]="adjustCalculatedTotalCost"
+                    name="totalPrice"
+                    class="form-control font-mono font-bold bg-[var(--bg-app)] text-[var(--text-muted)] cursor-not-allowed border-[var(--card-border)] w-full"
                     placeholder="0.00"
                     disabled
                     readonly
                   />
                 </div>
+              </div>
+
+              <!-- The line, then its total. One adjustment is one line today,
+                   so the sum below equals it; it is shown separately so the
+                   line figure is never mistaken for a running total. -->
+              <div
+                *ngIf="adjustSelectedItem"
+                class="flex items-center justify-between py-1.5 px-3 bg-[var(--bg-app)] border border-[var(--card-border)] rounded-lg text-xs w-full"
+              >
+                <span class="text-[var(--text-muted)] font-semibold flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[var(--primary)]" style="font-size: 18px;">functions</span>
+                  <span>Total Cost / Price Sum:</span>
+                </span>
+                <span class="flex items-center gap-2">
+                  <span class="font-mono text-[11px] text-[var(--text-muted)]">
+                    {{ adjustCalculatedTotalQty | number:'1.0-3' }}
+                    &#215;
+                    {{ adjustUnitPrice | appCurrency:'1.0-4' }} =
+                  </span>
+                  <span class="font-mono font-black text-sm px-2.5 py-0.5 rounded-md border text-[var(--primary)] bg-[var(--primary-light)] border-[var(--card-border)]">
+                    {{ adjustCalculatedTotalCost | appCurrency:'1.0-2' }}
+                  </span>
+                </span>
               </div>
 
               <!-- What this entry will do to the item's weighted average cost -->
@@ -1557,7 +1570,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Mandatory Audit Reason</label>
+              <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Mandatory Audit Reason</label>
               <input
                 title="Mandatory Audit Reason"
                 type="text"
@@ -1569,7 +1582,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               />
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-5 mt-3 border-t border-[#E9D5FF]">
+            <div class="flex items-center justify-end gap-3 pt-5 mt-3 border-t border-[var(--card-border)]">
               <button
                 type="button"
                 (click)="showAdjustModal = false"
@@ -1580,6 +1593,8 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
               <button
                 type="submit"
                 class="action-btn btn-gradient-purple"
+                [disabled]="adjustOverMax"
+                [title]="adjustOverMax ? 'Cannot remove more than the available stock' : 'Apply Adjustment'"
               >
                 Apply Adjustment ✓
               </button>
@@ -2039,7 +2054,7 @@ export class StockComponent implements OnInit {
   public adjustmentTypeOptions: DropdownOption[] = [
     { value: 'adjustment', label: 'Manual Adjustment', icon: 'tune', description: 'Correction from physical audit' },
     { value: 'wastage', label: 'Kitchen Wastage / Spoilage', icon: 'delete', description: 'Trimming loss, spoiled, expired' },
-    { value: 'return', label: 'Return to Supplier', icon: 'reply', description: 'Returned items to vendor' },
+    { value: 'return_to_supplier', label: 'Return to Supplier', icon: 'reply', description: 'Goods sent back to vendor — removes from stock' },
     { value: 'INCREASE', label: 'INCREASE (+ Audit)', icon: 'arrow_upward', description: 'Found excess stock on audit' },
     { value: 'DECREASE', label: 'DECREASE (- Audit)', icon: 'arrow_downward', description: 'Stock deficit adjustment' },
   ];
@@ -2068,11 +2083,7 @@ export class StockComponent implements OnInit {
     multiplier: 1,
     totalPrice: null,
     // 0 = one-off supplier, and `supplier` carries the typed name instead.
-    vendorId: 0,
     supplier: '',
-    invoiceNumber: '',
-    batchNumber: '',
-    expiryDate: '',
     notes: '',
     entryDate: '',
   };
@@ -2093,7 +2104,66 @@ export class StockComponent implements OnInit {
     return this.stockItems.find((i) => i.id === Number(this.adjustForm.stockItemId));
   }
 
-  /** Reason types that push stock in rather than out. */
+  /**
+   * What the item will hold once this adjustment is applied — the reason type
+   * decides whether the calculated total is added or taken away.
+   */
+  get adjustResultingQty(): number {
+    const available = Number(this.adjustSelectedItem?.current_quantity || 0);
+    const change = Number(this.adjustCalculatedTotalQty || 0);
+    return this.adjustIsIncrease ? available + change : available - change;
+  }
+
+  /** Removing more than is on hand would drive the ledger negative. */
+  get adjustExceedsAvailable(): boolean {
+    return !!this.adjustSelectedItem && !this.adjustIsIncrease && this.adjustResultingQty < 0;
+  }
+
+  /**
+   * The store may permit a negative balance. StockService.adjustStock checks
+   * the same setting before refusing, so the form must not be stricter than
+   * the server — otherwise a store that deliberately allows it could not.
+   */
+  get allowNegativeStock(): boolean {
+    return String(this.settingsService.settingsMap()['POS_ALLOW_NEGATIVE_STOCK'] ?? '').toLowerCase() === 'true';
+  }
+
+  /**
+   * Cap for the quantity box. A reason that removes stock cannot take out more
+   * than is on hand; one that adds has no ceiling. Returns null when there is
+   * nothing to cap, which leaves the input unbounded.
+   */
+  get adjustMaxQuantity(): number | null {
+    if (this.adjustIsIncrease || this.allowNegativeStock) return null;
+    const item = this.adjustSelectedItem;
+    if (!item) return null;
+    return Number(item.current_quantity || 0);
+  }
+
+  /** True when the box is capped and the typed amount is over that cap. */
+  get adjustOverMax(): boolean {
+    const max = this.adjustMaxQuantity;
+    return max !== null && this.adjustCalculatedTotalQty > max;
+  }
+
+  /** True when the chosen item is at or below its reorder alert level. */
+  get adjustIsLowStock(): boolean {
+    const item = this.adjustSelectedItem;
+    if (!item) return false;
+    const qty = Number(item.current_quantity || 0);
+    const alert = Number(item.min_stock_alert || 0);
+    return alert > 0 && qty <= alert;
+  }
+
+  /**
+   * Reason types that push stock in rather than out. Mirrors the same rule in
+   * StockService.adjustStock.
+   *
+   * `return` is a customer handing goods back, which RefundsService sends when
+   * restocking a refund — stock comes in. It is not offered in this dropdown.
+   * `return_to_supplier` is goods going back to the vendor, so it is absent
+   * here and correctly treated as a decrease.
+   */
   get adjustIsIncrease(): boolean {
     return ['INCREASE', 'in', 'return'].includes(this.adjustForm.adjustmentType);
   }
@@ -2104,18 +2174,61 @@ export class StockComponent implements OnInit {
     return qty * mult;
   }
 
+  /**
+   * The rate this adjustment is valued at. Seeded from the item's weighted
+   * average when an item is picked, and editable so stock coming in at a
+   * different price can still be recorded — that is what re-averages the item.
+   */
+  get adjustUnitPrice(): number {
+    const typed = Number(this.adjustForm.unitPrice);
+    if (Number.isFinite(typed) && typed >= 0) return typed;
+    return Number(this.adjustSelectedItem?.average_unit_price) || 0;
+  }
+
+  /**
+   * Total Cost / Price = Adjustment Quantity x Unit Price.
+   *
+   * This used to run the other way — the operator typed a total and the unit
+   * rate was derived from it — which meant the rate moved every time the
+   * quantity changed. Quantity and rate are now the two inputs and the total
+   * is the result, which is the way the figure is actually arrived at.
+   *
+   * Rounded to 2dp for money while the rate itself keeps 4dp, matching the
+   * DECIMAL(14,2) / DECIMAL(14,4) columns behind them.
+   */
+  get adjustCalculatedTotalCost(): number {
+    return +(this.adjustCalculatedTotalQty * this.adjustUnitPrice).toFixed(2);
+  }
+
+  /** Kept for the payload: the rate the backend should value the movement at. */
   get adjustCalculatedUnitCost(): number {
-    const totQty = this.adjustCalculatedTotalQty;
-    const totPrice = Number(this.adjustForm.totalPrice) || 0;
-    return totQty > 0 ? +(totPrice / totQty).toFixed(4) : 0;
+    return +this.adjustUnitPrice.toFixed(4);
   }
 
   onAdjustFormQuantityChange(): void {
-    this.adjustForm.unitPrice = this.adjustCalculatedUnitCost;
+    // A removal cannot exceed what is on hand, so the typed figure is clamped
+    // as it is entered rather than only being refused on submit. Adding has no
+    // ceiling, and a store that allows a negative balance is left alone.
+    const max = this.adjustMaxQuantity;
+    if (max !== null) {
+      const typed = Number(this.adjustForm.quantity);
+      if (Number.isFinite(typed) && typed > max) {
+        this.adjustForm.quantity = max;
+      }
+    }
+    // Total Cost is derived from quantity x unit price, so nothing else needs
+    // recomputing here — the getter reads both.
   }
 
-  onAdjustFormTotalPriceChange(): void {
-    this.adjustForm.unitPrice = this.adjustCalculatedUnitCost;
+  /**
+   * Seeds the rate from the newly chosen item's weighted average, so the
+   * total is right the moment an item is picked. The operator can still type
+   * a different rate for stock arriving at a new price.
+   */
+  onAdjustItemChange(): void {
+    const avg = Number(this.adjustSelectedItem?.average_unit_price);
+    this.adjustForm.unitPrice = Number.isFinite(avg) ? +avg.toFixed(4) : 0;
+    this.onAdjustFormQuantityChange();
   }
 
   public masterForm: any = {
@@ -2188,7 +2301,7 @@ export class StockComponent implements OnInit {
     else this.loadStockAlerts();
   }
 
-  // ── 1. Load Stock Master (stock_items) ──────────────────────────────
+  // ── 1. Load Stock Master (stock_vendor_purchase) ──────────────────────────────
   loadStockMaster(): void {
     this.isLoading = true;
     this.loadError = null;
@@ -2206,7 +2319,7 @@ export class StockComponent implements OnInit {
     });
   }
 
-  // ── 2. Load Purchase Entries (stock_entries) ────────────────────────
+  // ── 2. Load Purchase Entries (stocks) ────────────────────────
   loadStockEntries(): void {
     this.stockService
       .getStockEntries(1, 200, undefined, undefined, undefined, undefined, undefined, this.selectedVendorFilter || undefined)
@@ -2367,10 +2480,7 @@ export class StockComponent implements OnInit {
         e.entry_number.toLowerCase().includes(q) ||
         e.stock_item_name?.toLowerCase().includes(q) ||
         e.stock_code?.toLowerCase().includes(q) ||
-        e.supplier?.toLowerCase().includes(q) ||
-        e.vendor_name?.toLowerCase().includes(q) ||
-        e.vendor_code?.toLowerCase().includes(q) ||
-        e.invoice_number?.toLowerCase().includes(q)
+        e.supplier?.toLowerCase().includes(q)
     );
   }
 
@@ -2411,8 +2521,7 @@ export class StockComponent implements OnInit {
       (a) =>
         a.name?.toLowerCase().includes(q) ||
         a.stock_code?.toLowerCase().includes(q) ||
-        a.alert_category?.toLowerCase().includes(q) ||
-        a.latest_batch?.toLowerCase().includes(q)
+        a.alert_category?.toLowerCase().includes(q)
     );
   }
 
@@ -2464,11 +2573,7 @@ export class StockComponent implements OnInit {
       quantity: null,
       multiplier: 1,
       totalPrice: null,
-      vendorId: 0,
       supplier: '',
-      invoiceNumber: '',
-      batchNumber: '',
-      expiryDate: '',
       notes: '',
       entryDate: new Date().toISOString().split('T')[0],
     };
@@ -2481,11 +2586,7 @@ export class StockComponent implements OnInit {
       quantity: null,
       multiplier: 1,
       totalPrice: null,
-      vendorId: 0,
       supplier: '',
-      invoiceNumber: '',
-      batchNumber: '',
-      expiryDate: '',
       notes: '',
       entryDate: new Date().toISOString().split('T')[0],
     };
@@ -2513,7 +2614,9 @@ export class StockComponent implements OnInit {
       quantity: 1,
       multiplier: 1,
       totalPrice: 0,
-      unitPrice: 0,
+      // The item is already chosen here, so its rate is seeded straight away
+      // rather than waiting for a selection that will not happen.
+      unitPrice: +(Number(item.average_unit_price) || 0).toFixed(4),
       reason: '',
       notes: '',
     };
@@ -2553,16 +2656,9 @@ export class StockComponent implements OnInit {
       return;
     }
 
-    // vendorId 0 is this form's "one-off supplier" choice, not a vendor row —
-    // the API only accepts a positive id, so it is dropped rather than sent.
-    // When a real vendor IS picked, the typed supplier text is dropped too:
-    // the backend snapshots the vendor's own name onto the entry.
+    // An entry records a free-text supplier rather than linking to a vendor
+    // row: one supply can be bought from several vendors.
     const payload = { ...this.purchaseForm };
-    if (payload.vendorId) {
-      payload.supplier = '';
-    } else {
-      delete payload.vendorId;
-    }
 
     this.stockService.createStockEntry(payload).subscribe({
       next: (res) => {
@@ -2591,7 +2687,17 @@ export class StockComponent implements OnInit {
     }
 
     if (this.adjustCalculatedTotalQty <= 0) {
-      this.notify.error('Quantity × Multiplier must be greater than 0');
+      this.notify.error('Please enter a valid quantity greater than 0');
+      return;
+    }
+
+    // Mirrors the server check in StockService.adjustStock. Only reasons that
+    // remove stock are capped; adding has no ceiling.
+    if (this.adjustOverMax) {
+      const unit = this.adjustSelectedItem?.unit_type || 'units';
+      this.notify.error(
+        `Cannot remove ${this.adjustCalculatedTotalQty} ${unit} — only ${this.adjustMaxQuantity} ${unit} available.`
+      );
       return;
     }
 
@@ -2599,15 +2705,19 @@ export class StockComponent implements OnInit {
       stockItemId: this.adjustForm.stockItemId,
       adjustmentType: this.adjustForm.adjustmentType,
       quantity: Number(this.adjustForm.quantity) || 0,
-      multiplier: Number(this.adjustForm.multiplier) || 1,
+      multiplier: 1,
       reason: this.adjustForm.reason,
       notes: this.adjustForm.notes,
     };
 
-    const totalPrice = Number(this.adjustForm.totalPrice);
-    if (Number.isFinite(totalPrice) && totalPrice > 0) {
-      payload.totalPrice = totalPrice;
-      payload.unitPrice = this.adjustCalculatedUnitCost;
+    // Only the rate is sent. adjustStock prefers `totalPrice` when present and
+    // divides it back by the quantity, which re-introduces rounding — a rate
+    // of 12.3456 over 7 units came back as 12.3457 once the total had been
+    // rounded to 2dp. Sending the rate alone keeps it exact, and the server
+    // multiplies it out to the same total.
+    const unitPrice = this.adjustCalculatedUnitCost;
+    if (Number.isFinite(unitPrice) && unitPrice > 0) {
+      payload.unitPrice = unitPrice;
     }
 
     this.stockService.adjustStock(payload).subscribe({
@@ -2667,7 +2777,7 @@ export class StockComponent implements OnInit {
       this.downloadCSV('Stock_Master_Balances', headers, rows);
     } else if (this.activeTab === 'ENTRIES') {
       const entries = this.filteredStockEntries;
-      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Supplier', 'Vendor Code', 'Invoice #'];
+      const headers = ['Entry Number', 'Date', 'Stock Code', 'Item Name', 'Quantity', 'Multiplier', 'Total Quantity', 'Total Price', 'Unit Price', 'Supplier'];
       const rows = entries.map((e) => [
         e.entry_number,
         `"${e.entry_date}"`,
@@ -2678,9 +2788,7 @@ export class StockComponent implements OnInit {
         e.total_quantity,
         e.total_price,
         e.unit_price,
-        `"${e.vendor_name || e.supplier || ''}"`,
-        `"${e.vendor_code || ''}"`,
-        `"${e.invoice_number || ''}"`,
+        `"${e.supplier || ''}"`,
       ]);
       this.downloadCSV('Stock_Purchase_Entries_Ledger', headers, rows);
     } else {

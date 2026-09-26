@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
+import { httpActivityInterceptor } from './core/auth/interceptors/http-activity.interceptor';
 import { apiLoggingInterceptor } from './core/auth/interceptors/api-logging.interceptor';
 import { errorInterceptor } from './core/auth/interceptors/error.interceptor';
 import { backOfficeInterceptor } from './core/auth/interceptors/back-office.interceptor';
@@ -19,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     // set of screens, not over a metered connection.
     provideRouter(routes, withComponentInputBinding(), withPreloading(PreloadAllModules)),
     provideHttpClient(
-      withInterceptors([authInterceptor, backOfficeInterceptor, apiLoggingInterceptor, errorInterceptor])
+      withInterceptors([httpActivityInterceptor, authInterceptor, backOfficeInterceptor, apiLoggingInterceptor, errorInterceptor])
     ),
     provideAnimationsAsync(),
   ],

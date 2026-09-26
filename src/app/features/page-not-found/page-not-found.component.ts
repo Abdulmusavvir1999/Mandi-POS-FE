@@ -3,6 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 import {
   PageNotFoundModule,
   PAGE_NOT_FOUND_DEFAULT,
@@ -18,7 +19,7 @@ import {
 @Component({
   selector: 'app-page-not-found',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ActionLoadingDirective],
   template: `
     <div class="not-found-wrapper">
       <div class="not-found-card">

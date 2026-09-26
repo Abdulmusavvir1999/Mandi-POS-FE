@@ -2,11 +2,12 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DiningDesignKey } from '../../../core/services/dining-layout.service';
 import { DINING_LAYOUT_CSS } from '../../styles/dining-layout.styles';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 @Component({
   selector: 'app-dining-layout-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div
       class="dining-stage"

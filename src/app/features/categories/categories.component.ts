@@ -12,11 +12,12 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { RouterLink } from '@angular/router';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

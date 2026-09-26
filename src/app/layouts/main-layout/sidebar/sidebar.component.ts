@@ -6,6 +6,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SidebarLayoutService } from '../../../core/services/sidebar-layout.service';
 import { SIDEBAR_LAYOUT_CSS } from '../../../shared/styles/sidebar-layout.styles';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 import {
   NavItem,
   NavSection,
@@ -21,7 +22,7 @@ export type { NavItem, NavSection };
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, ActionLoadingDirective],
   template: `
     <!-- Mobile Backdrop Overlay (< 1024px) -->
     <div

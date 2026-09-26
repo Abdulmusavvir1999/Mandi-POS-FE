@@ -113,8 +113,6 @@ export interface Product {
   linked_avg_cost?: number;
   linked_min_alert?: number;
   linked_stock_status?: string;
-  /** Held against open orders; available = current_stock - reserved_stock. */
-  reserved_stock?: number;
   addons?: ProductAddon[];
   created_at?: string;
   updated_at?: string;
@@ -557,13 +555,6 @@ export interface StockEntry {
   status: StockEntryStatus;
   /** Name snapshot at purchase time; survives the vendor being renamed. */
   supplier?: string | null;
-  vendor_id?: number | null;
-  vendor_name?: string | null;
-  vendor_code?: string | null;
-  vendor_status?: string | null;
-  invoice_number?: string | null;
-  batch_number?: string | null;
-  expiry_date?: string | null;
   notes?: string | null;
   created_by?: number | null;
   created_by_name?: string;
@@ -634,7 +625,10 @@ export interface Vendor {
   uuid: string;
   vendor_code: string;
   name: string;
+  /** Primary category — mirrors categories[0]. Kept for headers, pills and reports. */
   category: string;
+  /** Every kind of goods this vendor supplies. */
+  categories?: string[];
   status: VendorStatus;
   image_url?: string | null;
   notes?: string | null;
@@ -669,6 +663,7 @@ export interface Vendor {
   tax_category?: string;
   branch_name?: string | null;
   total_purchases_amount?: number;
+  total_paid_amount?: number;
   total_purchases_count?: number;
   last_purchase_date?: string | null;
   last_payment_date?: string | null;
@@ -798,11 +793,8 @@ export interface StockAlertSummary {
 }
 
 export interface StockAlertItem extends StockItem {
-  alert_category: 'OUT_OF_STOCK' | 'LOW_STOCK' | 'REORDER_LEVEL' | 'OVERSTOCK' | 'EXPIRED' | 'EXPIRING_SOON' | 'NORMAL';
+  alert_category: 'OUT_OF_STOCK' | 'LOW_STOCK' | 'REORDER_LEVEL' | 'OVERSTOCK' | 'NORMAL';
   severity: 'critical' | 'warning' | 'info' | 'normal';
-  latest_batch?: string | null;
-  nearest_expiry_date?: string | null;
-  days_until_expiry?: number | null;
   suggested_reorder_quantity: number;
 }
 

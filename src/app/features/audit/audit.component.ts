@@ -7,10 +7,11 @@ import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 @Component({
   selector: 'app-audit',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, ActionLoadingDirective],
   template: `
     <div class="audit-page-wrapper">
       <app-page-loader

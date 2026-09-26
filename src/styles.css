@@ -1779,16 +1779,11 @@ select option {
   padding: 0.875rem 1.15rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
-}
-
-@media (min-width: 1024px) {
-  .filter-toolbar-card {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
 }
 
 .filter-controls-group {
@@ -1796,16 +1791,17 @@ select option {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .search-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 240px;
-  flex: 1;
-  max-width: 420px;
+  min-width: 220px;
+  flex: 1 1 260px;
+  max-width: 380px;
 }
 
 .search-icon {
@@ -4516,11 +4512,11 @@ html, body {
 }
 
 .tab-scroll-arrow-btn {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   background: var(--card-bg, #ffffff);
   border: 1.5px solid var(--card-border, #E9D5FF);
@@ -4533,12 +4529,6 @@ html, body {
   z-index: 5;
   user-select: none;
   outline: none;
-}
-
-@media (max-width: 1023px) {
-  .tab-scroll-arrow-btn {
-    display: inline-flex;
-  }
 }
 
 .tab-scroll-arrow-btn:hover {
@@ -4555,6 +4545,22 @@ html, body {
 
 .tab-scroll-arrow-btn .material-symbols-outlined {
   font-size: 20px;
+}
+
+:host-context(.dark-theme) .tab-scroll-arrow-btn,
+.dark-theme .tab-scroll-arrow-btn {
+  background: var(--card-bg, #1e293b);
+  border-color: var(--card-border, rgba(255, 255, 255, 0.12));
+  color: #C4B5FD;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+:host-context(.dark-theme) .tab-scroll-arrow-btn:hover,
+.dark-theme .tab-scroll-arrow-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #A855F7;
+  color: #DDD6FE;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
 }
 
 .tabs-scroll-container .module-tabs-bar,
@@ -5082,3 +5088,48 @@ select option {
   color: #f8fafc !important;
 }
 
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Global button in-flight state — applied by ActionLoadingDirective.
+
+   The directive adds .is-action-busy while the work a click started is still
+   running, and removes it on success, error, network failure or cancellation.
+   Styling only: pointer-events blocks the mouse, while the directive also
+   swallows the click in the capture phase so keyboard activation is covered.
+
+   The spinner is drawn in currentColor, so it follows each button's own text
+   colour and needs no per-variant or dark-mode rules.
+   ───────────────────────────────────────────────────────────────────────── */
+button.is-action-busy {
+  position: relative;
+  pointer-events: none;
+  cursor: progress;
+}
+
+/* Element children fade so the spinner reads clearly. Buttons whose label is a
+   bare text node keep it visible behind the spinner, which is harmless. */
+button.is-action-busy > * {
+  opacity: 0.25;
+}
+
+button.is-action-busy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: action-busy-spin 0.6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes action-busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.is-action-busy::after { animation-duration: 1.6s; }
+}

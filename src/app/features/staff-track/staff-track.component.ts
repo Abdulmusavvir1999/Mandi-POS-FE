@@ -11,6 +11,7 @@ import { PageLoaderComponent } from '../../shared/components/page-loader/page-lo
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { StaffTrackFiltersComponent } from './staff-track-filters.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tables' | 'activity' | 'reports';
 
@@ -37,8 +38,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
     PageLoaderComponent,
     CustomDropdownComponent,
     AppCurrencyPipe,
-    StaffTrackFiltersComponent,
-  ],
+    StaffTrackFiltersComponent,ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

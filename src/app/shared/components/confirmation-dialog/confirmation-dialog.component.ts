@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotificationService } from '../../../core/services/notification.service';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 @Component({
   selector: 'app-confirmation-dialog',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div class="modal-backdrop confirm-dialog-backdrop" *ngIf="notificationService.confirmModal() as modal">
       <div

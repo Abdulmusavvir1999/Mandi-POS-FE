@@ -6,6 +6,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { SettingsService } from '../../../core/services/settings.service';
 import { Product, ProductVariant } from '../../../core/models';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 /**
  * Product View — strictly read-only.
@@ -17,7 +18,7 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, AppCurrencyPipe],
+  imports: [CommonModule, RouterModule, AppCurrencyPipe, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -101,15 +102,6 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
             <span class="metric-note" *ngIf="product.linked_stock_code">
               Ledger item {{ product.linked_stock_code }}
             </span>
-          </div>
-
-          <div class="detail-metric">
-            <span class="metric-label">Reserved</span>
-            <span class="metric-value font-mono">
-              {{ reservedStock | number:'1.0-3' }}
-              <span class="metric-unit">{{ unit }}</span>
-            </span>
-            <span class="metric-note">Held against open orders</span>
           </div>
 
           <div class="detail-metric" [class.is-warning]="availableQuantity <= 0">
@@ -626,13 +618,13 @@ export class ProductDetailComponent implements OnInit {
     return Number.isFinite(linked) ? linked : Number(this.product.current_stock) || 0;
   }
 
-  get reservedStock(): number {
-    return Number(this.product?.reserved_stock) || 0;
-  }
-
-  /** What can actually be sold: the balance minus what open orders hold. */
+  /**
+   * What can actually be sold. Nothing reserves stock any more — the legacy
+   * `stock` table carried that counter and never incremented it — so this is
+   * simply the ledger balance.
+   */
   get availableQuantity(): number {
-    return this.currentStock - this.reservedStock;
+    return this.currentStock;
   }
 
   get minAlert(): number {

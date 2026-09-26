@@ -24,12 +24,12 @@ export const DEFAULT_ACTION_BUTTON_CSS = `
 
   .dv-btn {
     /* Fallbacks keep the button presentable even outside a mapped page. */
-    --dv-accent: #7E22CE;
+    --dv-accent: var(--primary, #7E22CE);
     --dv-on-accent: #FFFFFF;
-    --dv-surface: #FFFFFF;
-    --dv-border: #E2E8F0;
-    --dv-text: #1E293B;
-    --dv-muted: #64748B;
+    --dv-surface: var(--card-bg, #FFFFFF);
+    --dv-border: var(--card-border, #E2E8F0);
+    --dv-text: var(--text-main, #1E293B);
+    --dv-muted: var(--text-muted, #64748B);
 
     display: inline-flex;
     align-items: center;
@@ -129,7 +129,7 @@ export const DEFAULT_ACTION_BUTTON_CSS = `
      unmistakable the moment it is pointed at. */
   .dv-btn.is-danger:hover {
     border-color: #FCA5A5;
-    background: #FEF2F2;
+    background: color-mix(in srgb, var(--danger, #DC2626) 8%, var(--dv-surface));
     color: var(--danger, #DC2626);
     box-shadow: 0 6px 14px -6px rgba(var(--danger-rgb, 220, 38, 38), 0.45);
   }
@@ -154,48 +154,48 @@ export const DEFAULT_ACTION_BUTTON_CSS = `
      shares a page picks these up. */
 
   .cat-card-grid .dv-btn {
-    --dv-accent: var(--cat-button-bg, #7E22CE);
+    --dv-accent: var(--cat-button-bg, var(--primary, #7E22CE));
     --dv-on-accent: var(--cat-button-color, #FFFFFF);
-    --dv-surface: var(--cat-card-bg, #FFFFFF);
-    --dv-border: var(--cat-card-border, #E2E8F0);
-    --dv-text: var(--cat-text-color, #1E293B);
-    --dv-muted: var(--cat-text-muted, #64748B);
+    --dv-surface: var(--cat-card-bg, var(--card-bg, #FFFFFF));
+    --dv-border: var(--cat-card-border, var(--card-border, #E2E8F0));
+    --dv-text: var(--cat-text-color, var(--text-main, #1E293B));
+    --dv-muted: var(--cat-text-muted, var(--text-muted, #64748B));
   }
 
   .cust-card-grid .dv-btn {
-    --dv-accent: var(--cust-button-bg, #7E22CE);
+    --dv-accent: var(--cust-button-bg, var(--primary, #7E22CE));
     --dv-on-accent: var(--cust-button-color, #FFFFFF);
-    --dv-surface: var(--cust-card-bg, #FFFFFF);
-    --dv-border: var(--cust-card-border, #E9D5FF);
-    --dv-text: var(--cust-text-color, #2E1065);
-    --dv-muted: var(--cust-text-muted, #64748B);
+    --dv-surface: var(--cust-card-bg, var(--card-bg, #FFFFFF));
+    --dv-border: var(--cust-card-border, var(--card-border, #E9D5FF));
+    --dv-text: var(--cust-text-color, var(--text-main, #2E1065));
+    --dv-muted: var(--cust-text-muted, var(--text-muted, #64748B));
   }
 
   .stock-card-grid .dv-btn {
-    --dv-accent: var(--stock-accent-color, #6366F1);
+    --dv-accent: var(--stock-accent-color, var(--primary, #6366F1));
     --dv-on-accent: #FFFFFF;
-    --dv-surface: var(--stock-card-bg, #FFFFFF);
-    --dv-border: var(--stock-card-border, #E2E8F0);
-    --dv-text: var(--stock-text-color, #1E293B);
-    --dv-muted: var(--stock-text-muted, #64748B);
+    --dv-surface: var(--stock-card-bg, var(--card-bg, #FFFFFF));
+    --dv-border: var(--stock-card-border, var(--card-border, #E2E8F0));
+    --dv-text: var(--stock-text-color, var(--text-main, #1E293B));
+    --dv-muted: var(--stock-text-muted, var(--text-muted, #64748B));
   }
 
   .cardlist-container .dv-btn,
   .list-table-container .dv-btn {
-    --dv-accent: var(--dining-accent-color, #7E22CE);
+    --dv-accent: var(--dining-accent-color, var(--primary, #7E22CE));
     --dv-on-accent: var(--dining-button-color, #FFFFFF);
-    --dv-surface: var(--dining-table-bg, #FFFFFF);
-    --dv-border: var(--dining-table-border, #E2E8F0);
-    --dv-text: var(--dining-text-color, #1E293B);
-    --dv-muted: var(--dining-text-muted, #64748B);
+    --dv-surface: var(--dining-table-bg, var(--card-bg, #FFFFFF));
+    --dv-border: var(--dining-table-border, var(--card-border, #E2E8F0));
+    --dv-text: var(--dining-text-color, var(--text-main, #1E293B));
+    --dv-muted: var(--dining-text-muted, var(--text-muted, #64748B));
   }
 
   .staff-power-table-card .dv-btn {
-    --dv-accent: var(--staff-accent-color, #7E22CE);
+    --dv-accent: var(--staff-accent-color, var(--primary, #7E22CE));
     --dv-on-accent: var(--staff-btn-color, #FFFFFF);
-    --dv-surface: var(--staff-card-bg, #FFFFFF);
-    --dv-border: var(--staff-card-border, #E2E8F0);
-    --dv-text: var(--staff-text-color, #1E293B);
-    --dv-muted: var(--staff-text-muted, #64748B);
+    --dv-surface: var(--staff-card-bg, var(--card-bg, #FFFFFF));
+    --dv-border: var(--staff-card-border, var(--card-border, #E2E8F0));
+    --dv-text: var(--staff-text-color, var(--text-main, #1E293B));
+    --dv-muted: var(--staff-text-muted, var(--text-muted, #64748B));
   }
 `;

@@ -7,10 +7,11 @@ import { QueueToken } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 @Component({
   selector: 'app-queue',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

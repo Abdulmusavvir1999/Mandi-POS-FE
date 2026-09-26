@@ -9,11 +9,12 @@ import { StockItem, StockEntry, StockMovement } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-stock-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, PageLoaderComponent, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -59,7 +60,7 @@ import { PageLoaderComponent } from '../../../shared/components/page-loader/page
 
           <div>
             <div class="header-title-flex flex-wrap items-center gap-2">
-              <h1 class="page-title text-2xl font-black text-[#2E1065]">{{ stockItem?.name || 'Loading Stock Item...' }}</h1>
+              <h1 class="page-title text-2xl font-black text-[var(--text-main)]">{{ stockItem?.name || 'Loading Stock Item...' }}</h1>
               
               <span *ngIf="stockItem?.stock_code" class="font-mono text-xs font-bold text-[var(--primary)] bg-purple-50 px-2.5 py-1 rounded-md border border-[var(--card-border)]">
                 {{ stockItem?.stock_code }}
@@ -396,7 +397,6 @@ import { PageLoaderComponent } from '../../../shared/components/page-loader/page
                 <!-- Supplier & Invoice -->
                 <td>
                   <div class="text-xs font-semibold text-[var(--text-main)] truncate">{{ entry.supplier || 'Direct Purchase / Opening' }}</div>
-                  <div class="text-[10px] text-[var(--text-muted)] font-mono">{{ entry.invoice_number || 'No Invoice #' }}</div>
                 </td>
 
                 <!-- Recorded By -->
@@ -780,19 +780,6 @@ import { PageLoaderComponent } from '../../../shared/components/page-loader/page
                   class="form-control text-sm w-full"
                 />
               </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                  Invoice / Bill #
-                </label>
-                <input
-                  title="Invoice / Bill #"
-                  type="text"
-                  [(ngModel)]="purchaseForm.invoiceNumber"
-                  name="invoiceNumber"
-                  placeholder="e.g. INV-9042"
-                  class="form-control font-mono text-sm w-full"
-                />
-              </div>
             </div>
 
             <!-- Notes -->
@@ -962,7 +949,6 @@ export class StockDetailComponent implements OnInit {
     multiplier: 1,
     totalPrice: null,
     supplier: '',
-    invoiceNumber: '',
     notes: '',
   };
 
@@ -1090,7 +1076,6 @@ export class StockDetailComponent implements OnInit {
       (e) =>
         e.entry_number.toLowerCase().includes(q) ||
         e.supplier?.toLowerCase().includes(q) ||
-        e.invoice_number?.toLowerCase().includes(q) ||
         e.notes?.toLowerCase().includes(q)
     );
   }
@@ -1165,7 +1150,6 @@ export class StockDetailComponent implements OnInit {
       multiplier: 1,
       totalPrice: null,
       supplier: '',
-      invoiceNumber: '',
       notes: '',
     };
     this.showPurchaseModal = true;
@@ -1247,7 +1231,6 @@ export class StockDetailComponent implements OnInit {
         e.total_price,
         e.unit_price,
         `"${e.supplier || ''}"`,
-        `"${e.invoice_number || ''}"`,
         `"${e.notes || ''}"`,
       ]);
       this.downloadCSV(`Ledger_Entries_${this.stockItem.stock_code}`, headers, rows);

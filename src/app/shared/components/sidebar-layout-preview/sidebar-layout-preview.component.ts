@@ -7,6 +7,7 @@ import {
 } from '../../../core/services/sidebar-layout.service';
 import { SIDEBAR_NAV_SECTIONS } from '../../../core/config/sidebar-nav.config';
 import { SIDEBAR_LAYOUT_CSS } from '../../styles/sidebar-layout.styles';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 interface PreviewNavItem {
   label: string;
@@ -31,7 +32,7 @@ interface PreviewNavSection {
 @Component({
   selector: 'app-sidebar-layout-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div class="sb-preview-stage">
       <!-- Faux app chrome so floating / glass rails read correctly -->

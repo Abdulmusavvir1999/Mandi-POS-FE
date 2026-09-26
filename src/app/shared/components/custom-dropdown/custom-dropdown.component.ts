@@ -14,6 +14,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { openFloatingPanel, releaseFloatingPanel } from '../floating-panel-registry';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 export interface DropdownOption {
   value: any;
@@ -27,7 +28,7 @@ export interface DropdownOption {
 @Component({
   selector: 'app-custom-dropdown',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ActionLoadingDirective],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -205,6 +206,7 @@ export interface DropdownOption {
       :host {
         display: inline-block;
         vertical-align: middle;
+        flex-shrink: 0;
       }
 
       :host(.w-full),
@@ -212,7 +214,8 @@ export interface DropdownOption {
       :host-context(.form-group-box),
       :host-context(.form-grid),
       :host-context(.form-control-wrapper),
-      :host-context(.modal-form-group) {
+      :host-context(.modal-form-group),
+      :host-context(.w-full) {
         display: block;
         width: 100%;
       }
@@ -220,12 +223,18 @@ export interface DropdownOption {
       .custom-dropdown-container {
         position: relative;
         display: inline-block;
-        width: 100%;
+        box-sizing: border-box;
         font-family: 'Plus Jakarta Sans', sans-serif;
         user-select: none;
       }
 
-      .custom-dropdown-container.w-full {
+      .custom-dropdown-container.w-full,
+      :host(.w-full) .custom-dropdown-container,
+      :host-context(.form-group) .custom-dropdown-container,
+      :host-context(.form-group-box) .custom-dropdown-container,
+      :host-context(.form-grid) .custom-dropdown-container,
+      :host-context(.form-control-wrapper) .custom-dropdown-container,
+      :host-context(.modal-form-group) .custom-dropdown-container {
         display: block;
         width: 100%;
       }
@@ -233,6 +242,8 @@ export interface DropdownOption {
       /* Trigger Button */
       .dropdown-trigger {
         width: 100%;
+        max-width: 100%;
+        min-width: 0;
         height: 42px;
         min-height: 42px;
         display: flex;
@@ -252,6 +263,7 @@ export interface DropdownOption {
         box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
       }
 
       .dropdown-trigger:hover:not(:disabled) {
@@ -272,7 +284,7 @@ export interface DropdownOption {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
       }
 
@@ -286,6 +298,9 @@ export interface DropdownOption {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        display: block;
+        flex: 1 1 auto;
+        min-width: 0;
       }
       .trigger-label.is-placeholder {
         color: var(--text-muted, #94A3B8);
@@ -885,8 +900,7 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     const selected = this.selectedOptions;
     if (selected.length === 0) return this.placeholder;
     if (selected.length === 1) return selected[0].label;
-    if (selected.length === 2) return `${selected[0].label}, ${selected[1].label}`;
-    return `${selected[0].label}, ${selected[1].label} (+${selected.length - 2} more)`;
+    return `${selected[0].label} (+${selected.length - 1} more)`;
   }
 
   isOptionSelected(opt: DropdownOption): boolean {

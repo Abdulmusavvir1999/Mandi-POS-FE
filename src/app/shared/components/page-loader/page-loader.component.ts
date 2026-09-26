@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 /**
  * The single loading / error surface for every data-backed page.
@@ -25,7 +26,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-page-loader',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <!-- Loading -->
     <div

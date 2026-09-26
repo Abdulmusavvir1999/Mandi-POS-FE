@@ -8,15 +8,17 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { Vendor, VendorPurchase, VendorPayment } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
-type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance' | 'rating' | 'performance';
+type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance';
 
 @Component({
   selector: 'app-vendor-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, DatePickerComponent, AppCurrencyPipe, PageLoaderComponent, ActionLoadingDirective],
   template: `
     <div class="vendor-detail-page">
       <app-page-loader
@@ -66,7 +68,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <span class="status-pill" [ngClass]="getStatusBadgeClass(vendor.status)">
                 {{ vendor.status }}
               </span>
-              <span class="category-pill">{{ vendor.category }}</span>
+              <span class="category-pill" *ngFor="let c of vendorCategories">{{ c }}</span>
             </div>
 
             <div class="hero-meta-row">
@@ -77,17 +79,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <span class="meta-dot">•</span>
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon text-blue">shopping_cart</span>
-                <span>Total Procured: <strong>{{ vendor.total_purchases_amount | appCurrency }}</strong></span>
-              </span>
-              <span class="meta-dot">•</span>
-              <span class="meta-item">
-                <span class="material-symbols-outlined meta-icon text-amber-500">star</span>
-                <span>Rating: <strong class="text-amber-600">{{ vendor.rating | number:'1.1-1' }} / 5.0</strong></span>
-              </span>
-              <span class="meta-dot">•</span>
-              <span class="meta-item">
-                <span class="material-symbols-outlined meta-icon text-emerald-500">verified</span>
-                <span>On-Time: <strong class="text-emerald-600">{{ vendor.on_time_delivery_rate }}%</strong></span>
+                <span>Total Procured: <strong>{{ totalProcuredAmount | appCurrency }}</strong></span>
               </span>
             </div>
           </div>
@@ -114,16 +106,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <span>Record Payment</span>
           </button>
 
-          <button
-            type="button"
-            (click)="openRatingModal()"
-            class="hero-btn btn-outline"
-            title="Evaluate Vendor Performance"
-          >
-            <span class="material-symbols-outlined text-amber-500">grade</span>
-            <span>Rate</span>
-          </button>
-
           <a
             [routerLink]="['/vendors', vendor.id, 'edit']"
             class="hero-btn btn-primary"
@@ -141,16 +123,27 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       <div *ngIf="vendor && !isLoading" class="kpi-grid">
         <div class="kpi-card card-accent-purple">
           <div class="kpi-header-row">
-            <span class="kpi-title">Credit Facility</span>
+            <span class="kpi-title">Total Procured</span>
             <div class="kpi-icon-bubble bg-purple-tint">
-              <span class="material-symbols-outlined">credit_score</span>
+              <span class="material-symbols-outlined">shopping_bag</span>
             </div>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-number">{{ hasNoLimit ? 'No Limit' : (vendor.credit_limit | appCurrency:'1.0-0') }}</span>
-            <span class="kpi-pill" [ngClass]="hasNoLimit ? 'pill-success' : 'pill-purple'">
-              {{ hasNoLimit ? 'Unlimited' : (getCreditUtilizationPercent() + '% Used') }}
-            </span>
+            <span class="kpi-number">{{ totalProcuredAmount | appCurrency:'1.0-0' }}</span>
+            <span class="kpi-pill pill-purple">{{ vendorPurchases.length || vendor.total_purchases_count || 0 }} Invoices</span>
+          </div>
+        </div>
+
+        <div class="kpi-card card-accent-green">
+          <div class="kpi-header-row">
+            <span class="kpi-title">Total Paid</span>
+            <div class="kpi-icon-bubble bg-green-tint">
+              <span class="material-symbols-outlined">payments</span>
+            </div>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-emerald-600">{{ totalPaidAmount | appCurrency:'1.0-0' }}</span>
+            <span class="kpi-pill pill-success">{{ paymentSettlementPercent }}% Settled</span>
           </div>
         </div>
 
@@ -162,162 +155,127 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-number text-rose-600">{{ vendor.outstanding_balance | appCurrency:'1.0-0' }}</span>
+            <span class="kpi-number text-rose-600">{{ (vendor.outstanding_balance || 0) | appCurrency:'1.0-0' }}</span>
             <span class="kpi-pill" [ngClass]="vendor.outstanding_balance > 0 ? 'pill-rose' : 'pill-success'">
               {{ vendor.outstanding_balance > 0 ? 'Pending Payout' : 'All Settled' }}
             </span>
           </div>
         </div>
 
-        <div class="kpi-card card-accent-green">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Available Headroom</span>
-            <div class="kpi-icon-bubble bg-green-tint">
-              <span class="material-symbols-outlined">savings</span>
-            </div>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number text-emerald-600">
-              {{ hasNoLimit ? 'Unlimited' : ((vendor.credit_limit - vendor.outstanding_balance) | appCurrency:'1.0-0') }}
-            </span>
-            <span class="kpi-pill pill-success">Headroom</span>
-          </div>
-        </div>
-
         <div class="kpi-card card-accent-blue">
           <div class="kpi-header-row">
-            <span class="kpi-title">Procurement Spend</span>
+            <span class="kpi-title">Credit Facility</span>
             <div class="kpi-icon-bubble bg-blue-tint">
-              <span class="material-symbols-outlined">shopping_bag</span>
+              <span class="material-symbols-outlined">credit_score</span>
             </div>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-number">{{ vendor.total_purchases_amount | appCurrency:'1.0-0' }}</span>
-            <span class="kpi-pill pill-blue">{{ vendor.total_purchases_count }} Invoices</span>
-          </div>
-        </div>
-
-        <div class="kpi-card card-accent-amber">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Vendor Rating</span>
-            <div class="kpi-icon-bubble bg-amber-tint">
-              <span class="material-symbols-outlined">star</span>
-            </div>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number text-amber-600">{{ vendor.rating | number:'1.2-2' }}</span>
-            <span class="kpi-pill pill-amber">Quality: {{ vendor.quality_score }}%</span>
-          </div>
-        </div>
-
-        <div class="kpi-card card-accent-teal">
-          <div class="kpi-header-row">
-            <span class="kpi-title">Delivery Speed</span>
-            <div class="kpi-icon-bubble bg-teal-tint">
-              <span class="material-symbols-outlined">local_shipping</span>
-            </div>
-          </div>
-          <div class="kpi-value-row">
-            <span class="kpi-number">{{ vendor.on_time_delivery_rate }}%</span>
-            <span class="kpi-pill pill-teal">On-Time</span>
+            <span class="kpi-number">{{ hasNoLimit ? 'No Limit' : (vendor.credit_limit | appCurrency:'1.0-0') }}</span>
+            <span class="kpi-pill" [ngClass]="hasNoLimit ? 'pill-success' : 'pill-blue'">
+              {{ hasNoLimit ? 'Unlimited' : (getCreditUtilizationPercent() + '% Used') }}
+            </span>
           </div>
         </div>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 4. 9-DIMENSION TAB NAVIGATION BAR                               -->
+      <!-- 4. 8-DIMENSION TAB NAVIGATION BAR (Staff Module Style)          -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <nav *ngIf="vendor && !isLoading" class="detail-tabs-bar" aria-label="Vendor profile dimensions">
+      <div *ngIf="vendor && !isLoading" class="tabs-scroll-container">
         <button
           type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'profile'"
-          (click)="activeTab = 'profile'"
+          class="tab-scroll-arrow-btn prev"
+          (click)="scrollTabs(vendorTabsRef, -240)"
+          aria-label="Scroll tabs left"
+          title="Scroll Left"
         >
-          <span class="material-symbols-outlined">badge</span>
-          <span>1. Profile &amp; Class</span>
+          <span class="material-symbols-outlined">chevron_left</span>
         </button>
+
+        <div class="module-tabs-bar" #vendorTabsRef>
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'profile'"
+            (click)="activeTab = 'profile'"
+          >
+            <span class="material-symbols-outlined">badge</span>
+            <span>1. Profile &amp; Class</span>
+          </button>
+
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'contact'"
+            (click)="activeTab = 'contact'"
+          >
+            <span class="material-symbols-outlined">contacts</span>
+            <span>2. Contact &amp; Location</span>
+          </button>
+
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'tax'"
+            (click)="activeTab = 'tax'"
+          >
+            <span class="material-symbols-outlined">receipt_long</span>
+            <span>3. Tax Compliance</span>
+          </button>
+
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'payment_terms'"
+            (click)="activeTab = 'payment_terms'"
+          >
+            <span class="material-symbols-outlined">account_balance</span>
+            <span>4. Bank &amp; Settlement</span>
+          </button>
+
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'credit'"
+            (click)="activeTab = 'credit'"
+          >
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+            <span>5. Financial Overview</span>
+          </button>
+
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'purchases'"
+            (click)="activeTab = 'purchases'"
+          >
+            <span class="material-symbols-outlined">shopping_cart</span>
+            <span>6. Purchase History</span>
+            <span class="tab-count-badge" *ngIf="vendorPurchases.length > 0">{{ vendorPurchases.length }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="module-tab-btn"
+            [class.is-active]="activeTab === 'balance'"
+            (click)="activeTab = 'balance'"
+          >
+            <span class="material-symbols-outlined">payments</span>
+            <span>7. Disbursements</span>
+            <span class="tab-count-badge" *ngIf="vendorPayments.length > 0">{{ vendorPayments.length }}</span>
+          </button>
+        </div>
 
         <button
           type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'contact'"
-          (click)="activeTab = 'contact'"
+          class="tab-scroll-arrow-btn next"
+          (click)="scrollTabs(vendorTabsRef, 240)"
+          aria-label="Scroll tabs right"
+          title="Scroll Right"
         >
-          <span class="material-symbols-outlined">contacts</span>
-          <span>2. Contact &amp; Location</span>
+          <span class="material-symbols-outlined">chevron_right</span>
         </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'tax'"
-          (click)="activeTab = 'tax'"
-        >
-          <span class="material-symbols-outlined">receipt_long</span>
-          <span>3. Tax Compliance</span>
-        </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'payment_terms'"
-          (click)="activeTab = 'payment_terms'"
-        >
-          <span class="material-symbols-outlined">account_balance</span>
-          <span>4. Bank &amp; Settlement</span>
-        </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'credit'"
-          (click)="activeTab = 'credit'"
-        >
-          <span class="material-symbols-outlined">credit_score</span>
-          <span>5. Credit Facility</span>
-        </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'purchases'"
-          (click)="activeTab = 'purchases'"
-        >
-          <span class="material-symbols-outlined">shopping_cart</span>
-          <span>6. Purchase History ({{ vendorPurchases.length }})</span>
-        </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'balance'"
-          (click)="activeTab = 'balance'"
-        >
-          <span class="material-symbols-outlined">payments</span>
-          <span>7. Disbursements ({{ vendorPayments.length }})</span>
-        </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'rating'"
-          (click)="activeTab = 'rating'"
-        >
-          <span class="material-symbols-outlined">star</span>
-          <span>8. Scorecard</span>
-        </button>
-
-        <button
-          type="button"
-          class="detail-tab-btn"
-          [class.is-active]="activeTab === 'performance'"
-          (click)="activeTab = 'performance'"
-        >
-          <span class="material-symbols-outlined">history_edu</span>
-          <span>9. Audit Log</span>
-        </button>
-      </nav>
+      </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 5. TAB CONTENT PANELS                                           -->
@@ -345,8 +303,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <span class="info-value font-mono font-bold text-purple">{{ vendor.vendor_code }}</span>
             </div>
             <div class="info-block">
-              <span class="info-label">Supply Category</span>
-              <span class="info-value font-semibold">{{ vendor.category }}</span>
+              <span class="info-label">Supply Categories</span>
+              <span class="info-value font-semibold">{{ vendorCategories.join(", ") }}</span>
             </div>
             <div class="info-block">
               <span class="info-label">Operating Status</span>
@@ -487,69 +445,64 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
           </div>
         </section>
 
-        <!-- ── TAB 5: CREDIT FACILITY & EXPOSURE ── -->
+        <!-- ── TAB 5: FINANCIAL & BALANCE OVERVIEW ── -->
         <section *ngIf="activeTab === 'credit'" class="content-card">
           <div class="card-header">
             <div class="card-header-icon bg-purple-soft">
-              <span class="material-symbols-outlined">credit_score</span>
+              <span class="material-symbols-outlined">account_balance_wallet</span>
             </div>
             <div>
-              <h2 class="card-title">Credit Facility &amp; Exposure Tracking</h2>
-              <p class="card-subtitle">Approved credit limit, outstanding balances, and utilization gauge</p>
+              <h2 class="card-title">Financial Summary &amp; Balance Overview</h2>
+              <p class="card-subtitle">Comprehensive breakdown of total purchases, settled disbursements, and balance due</p>
             </div>
           </div>
 
           <div class="credit-banner">
             <div class="cb-item">
-              <span class="cb-label">Allocated Credit Limit</span>
-              <span class="cb-val">{{ hasNoLimit ? 'No Limit (Unlimited)' : (vendor.credit_limit | appCurrency:'1.0-0') }}</span>
+              <span class="cb-label">Total Procured Amount</span>
+              <span class="cb-val text-purple">{{ totalProcuredAmount | appCurrency }}</span>
+              <span class="text-xs text-muted mt-1">{{ vendorPurchases.length > 0 ? (vendorPurchases.length + ' invoices recorded') : 'Opening balance registered' }}</span>
             </div>
             <div class="cb-item">
-              <span class="cb-label">Utilized Balance</span>
-              <span class="cb-val text-rose-600">{{ vendor.outstanding_balance | appCurrency:'1.0-0' }}</span>
+              <span class="cb-label">Total Paid Amount</span>
+              <span class="cb-val text-emerald-600">{{ totalPaidAmount | appCurrency }}</span>
+              <span class="text-xs text-muted mt-1">{{ vendorPayments.length }} disbursements processed</span>
             </div>
             <div class="cb-item">
-              <span class="cb-label">Available Headroom</span>
-              <span class="cb-val text-emerald-600">
-                {{ hasNoLimit ? 'Unlimited (No Restriction)' : ((vendor.credit_limit - vendor.outstanding_balance) | appCurrency:'1.0-0') }}
+              <span class="cb-label">Outstanding Balance</span>
+              <span class="cb-val" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
+                {{ (vendor.outstanding_balance || 0) | appCurrency }}
+              </span>
+              <span class="text-xs font-bold mt-1" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
+                {{ vendor.outstanding_balance > 0 ? 'Pending Settlement' : 'Fully Settled (Nil Due)' }}
               </span>
             </div>
           </div>
 
-          <!-- Utilization Gauge -->
-          <div class="mt-6" *ngIf="!hasNoLimit">
+          <!-- Settlement Progress Bar -->
+          <div class="mt-6">
             <div class="flex justify-between text-xs font-semibold mb-2">
-              <span>Credit Utilization Progress</span>
-              <span>{{ getCreditUtilizationPercent() }}% Used</span>
+              <span class="text-main">Settlement Progress</span>
+              <span class="text-emerald-600 font-bold">{{ paymentSettlementPercent }}% Settled</span>
             </div>
             <div class="gauge-track-large">
               <div
-                class="gauge-fill-large"
-                [style.width.%]="getCreditUtilizationPercent()"
-                [ngClass]="getUtilizationClass()"
+                class="gauge-fill-large gauge-safe"
+                [style.width.%]="paymentSettlementPercent"
               ></div>
             </div>
             <div class="flex justify-between text-xs text-muted mt-2">
-              <span>₹0</span>
-              <span>Safe (&lt;70%)</span>
-              <span>Warning (70-90%)</span>
-              <span>{{ vendor.credit_limit | appCurrency:'1.0-0' }}</span>
-            </div>
-          </div>
-
-          <div class="no-limit-card mt-6" *ngIf="hasNoLimit">
-            <span class="material-symbols-outlined text-3xl text-emerald-500">all_inclusive</span>
-            <div>
-              <h4 class="font-bold text-sm text-emerald-700">Open Credit Terms Active</h4>
-              <p class="text-xs text-muted">This supplier does not have a strict credit ceiling. Purchase invoices are deferred per agreement.</p>
+              <span>Paid: <strong class="text-emerald-600">{{ totalPaidAmount | appCurrency }}</strong></span>
+              <span>Due: <strong [class.text-rose-600]="vendor.outstanding_balance > 0">{{ (vendor.outstanding_balance || 0) | appCurrency }}</strong></span>
+              <span>Total: <strong class="text-purple">{{ totalProcuredAmount | appCurrency }}</strong></span>
             </div>
           </div>
         </section>
 
         <!-- ── TAB 6: PURCHASES HISTORY ── -->
         <section *ngIf="activeTab === 'purchases'" class="content-card">
-          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-            <div class="card-header !mb-0 !pb-0 !border-none">
+          <div class="card-header">
+            <div class="card-header-left">
               <div class="card-header-icon bg-blue-soft">
                 <span class="material-symbols-outlined">shopping_cart</span>
               </div>
@@ -558,10 +511,15 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 <p class="card-subtitle">All supply invoices recorded for this vendor</p>
               </div>
             </div>
-            <button type="button" (click)="openPurchaseModal()" class="action-btn btn-primary">
-              <span class="material-symbols-outlined">add</span>
-              <span>Record Purchase</span>
-            </button>
+
+            <div class="card-header-right">
+              <div class="payable-pill-badge" [class.is-settled]="vendor.outstanding_balance <= 0">
+                <span class="payable-pill-label">Balance Due:</span>
+                <span class="payable-pill-val" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
+                  {{ (vendor.outstanding_balance || 0) | appCurrency }}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div *ngIf="vendorPurchases.length === 0" class="empty-state-card">
@@ -580,6 +538,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   <th>Paid Amount</th>
                   <th>Balance Due</th>
                   <th>Status</th>
+                  <th class="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -597,6 +556,26 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                       {{ p.payment_status }}
                     </span>
                   </td>
+                  <td class="text-right">
+                    <div class="row-actions">
+                      <button
+                        type="button"
+                        class="action-icon-btn btn-edit"
+                        (click)="openEditPurchaseModal(p)"
+                        title="Edit Purchase Invoice"
+                      >
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="action-icon-btn btn-delete"
+                        (click)="confirmDeletePurchase(p)"
+                        title="Delete Purchase Invoice"
+                      >
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -605,8 +584,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 
         <!-- ── TAB 7: DISBURSEMENTS & PAYMENTS ── -->
         <section *ngIf="activeTab === 'balance'" class="content-card">
-          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-            <div class="card-header !mb-0 !pb-0 !border-none">
+          <div class="card-header">
+            <div class="card-header-left">
               <div class="card-header-icon bg-emerald-soft">
                 <span class="material-symbols-outlined">payments</span>
               </div>
@@ -615,10 +594,28 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 <p class="card-subtitle">All outgoing payments and settlement vouchers</p>
               </div>
             </div>
-            <button type="button" (click)="openPaymentModal()" class="action-btn btn-primary">
-              <span class="material-symbols-outlined">add</span>
-              <span>Record Payment</span>
-            </button>
+
+            <div class="card-header-right">
+              <div class="payable-pill-badge" [class.is-settled]="vendor.outstanding_balance <= 0">
+                <span class="material-symbols-outlined text-base" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
+                  {{ vendor.outstanding_balance > 0 ? 'account_balance_wallet' : 'check_circle' }}
+                </span>
+                <span class="payable-pill-label">Amount Payable:</span>
+                <span class="payable-pill-val" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
+                  {{ (vendor.outstanding_balance || 0) | appCurrency }}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                (click)="openPaymentModal()"
+                class="hero-btn btn-pay"
+                title="Record Supplier Disbursement"
+              >
+                <span class="material-symbols-outlined">add</span>
+                <span>Record Payment</span>
+              </button>
+            </div>
           </div>
 
           <div *ngIf="vendorPayments.length === 0" class="empty-state-card">
@@ -636,6 +633,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   <th>Reference / TXN #</th>
                   <th>Amount</th>
                   <th>Remarks</th>
+                  <th class="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -648,110 +646,29 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   <td class="font-mono">{{ pm.reference_number || 'N/A' }}</td>
                   <td class="font-bold text-emerald-600">{{ pm.amount | appCurrency }}</td>
                   <td class="text-xs text-muted">{{ pm.notes || 'Direct disbursement' }}</td>
+                  <td class="text-right">
+                    <div class="row-actions">
+                      <button
+                        type="button"
+                        class="action-icon-btn btn-edit"
+                        (click)="openEditPaymentModal(pm)"
+                        title="Edit Disbursement"
+                      >
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="action-icon-btn btn-delete"
+                        (click)="confirmDeletePayment(pm)"
+                        title="Delete Disbursement"
+                      >
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
-          </div>
-        </section>
-
-        <!-- ── TAB 8: PERFORMANCE & SCORECARD ── -->
-        <section *ngIf="activeTab === 'rating'" class="content-card">
-          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-            <div class="card-header !mb-0 !pb-0 !border-none">
-              <div class="card-header-icon bg-amber-soft">
-                <span class="material-symbols-outlined">star</span>
-              </div>
-              <div>
-                <h2 class="card-title">Supplier Performance Scorecard</h2>
-                <p class="card-subtitle">Audited rating metrics, quality scores, and speed analytics</p>
-              </div>
-            </div>
-            <button type="button" (click)="openRatingModal()" class="action-btn btn-outline">
-              <span class="material-symbols-outlined text-amber-500">grade</span>
-              <span>Update Evaluation</span>
-            </button>
-          </div>
-
-          <div class="rating-dashboard-grid">
-            <div class="rating-overall-card">
-              <span class="rating-big-num">{{ vendor.rating | number:'1.1-1' }}</span>
-              <div class="stars-row">
-                <span class="material-symbols-outlined text-amber-500 text-xl" *ngFor="let s of getStarsArray(vendor.rating)">star</span>
-              </div>
-              <span class="text-xs text-muted font-bold mt-1">OVERALL SUPPLIER SCORE</span>
-            </div>
-
-            <div class="rating-metric-bars">
-              <div class="metric-bar-group">
-                <div class="metric-bar-meta">
-                  <span>Delivery Speed ({{ vendor.delivery_speed_rating || 5.0 | number:'1.1-1' }} / 5.0)</span>
-                  <span class="font-bold">{{ vendor.on_time_delivery_rate }}% On-Time</span>
-                </div>
-                <div class="pm-bar">
-                  <div class="pm-fill bg-purple" [style.width.%]="vendor.on_time_delivery_rate || 100"></div>
-                </div>
-              </div>
-
-              <div class="metric-bar-group">
-                <div class="metric-bar-meta">
-                  <span>Product Quality ({{ vendor.quality_rating || 5.0 | number:'1.1-1' }} / 5.0)</span>
-                  <span class="font-bold">{{ vendor.quality_score }}% Quality Score</span>
-                </div>
-                <div class="pm-bar">
-                  <div class="pm-fill bg-emerald" [style.width.%]="vendor.quality_score || 100"></div>
-                </div>
-              </div>
-
-              <div class="metric-bar-group">
-                <div class="metric-bar-meta">
-                  <span>Order Fulfillment Rate</span>
-                  <span class="font-bold">{{ vendor.fulfillment_rate }}% Completed</span>
-                </div>
-                <div class="pm-bar">
-                  <div class="pm-fill bg-blue" [style.width.%]="vendor.fulfillment_rate || 100"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="vendor.performance_notes" class="notes-box mt-4">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="material-symbols-outlined text-amber-500">rate_review</span>
-              <span class="font-bold text-xs uppercase tracking-wide">Procurement Quality Auditor Notes</span>
-            </div>
-            <p class="notes-text">{{ vendor.performance_notes }}</p>
-          </div>
-        </section>
-
-        <!-- ── TAB 9: AUDIT LOG ── -->
-        <section *ngIf="activeTab === 'performance'" class="content-card">
-          <div class="card-header">
-            <div class="card-header-icon bg-primary-soft">
-              <span class="material-symbols-outlined">history_edu</span>
-            </div>
-            <div>
-              <h2 class="card-title">System Audit &amp; Metadata</h2>
-              <p class="card-subtitle">Timestamp audit trails and unique system identifiers</p>
-            </div>
-          </div>
-
-          <div class="meta-grid-3">
-            <div class="info-block">
-              <span class="info-label">Internal Database ID</span>
-              <span class="info-value font-mono">#{{ vendor.id }}</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Universal UUID</span>
-              <span class="info-value font-mono text-xs truncate" [title]="vendor.uuid">{{ vendor.uuid }}</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Registration Date</span>
-              <span class="info-value">{{ vendor.created_at | date:'medium' }}</span>
-            </div>
-            <div class="info-block">
-              <span class="info-label">Last Profile Modification</span>
-              <span class="info-value">{{ vendor.updated_at | date:'medium' }}</span>
-            </div>
           </div>
         </section>
       </main>
@@ -764,7 +681,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         <div class="modal-panel" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div>
-              <h3 class="modal-title">Record Purchase Invoice</h3>
+              <h3 class="modal-title">{{ editingPurchaseId ? 'Edit Purchase Invoice' : 'Record Purchase Invoice' }}</h3>
               <p class="modal-subtitle">{{ vendor.name }} ({{ vendor.vendor_code }})</p>
             </div>
             <button type="button" (click)="closePurchaseModal()" class="close-btn">
@@ -780,28 +697,40 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 [(ngModel)]="purchaseForm.invoice_number"
                 name="invoice_number"
                 required
-                placeholder="e.g. INV-2026-099"
+                placeholder="Enter invoice / bill number (e.g. INV-2026-001)"
                 class="form-control font-mono"
               />
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
                 <label class="form-label">Invoice Date *</label>
-                <input type="date" [(ngModel)]="purchaseForm.order_date" name="order_date" required class="form-control" />
+                <app-date-picker
+                  [(ngModel)]="purchaseForm.order_date"
+                  name="order_date"
+                  label="Invoice Date"
+                  placeholder="Select invoice date"
+                  minWidth="100%"
+                ></app-date-picker>
               </div>
               <div class="form-group">
                 <label class="form-label">Payment Due Date</label>
-                <input type="date" [(ngModel)]="purchaseForm.due_date" name="due_date" class="form-control" />
+                <app-date-picker
+                  [(ngModel)]="purchaseForm.due_date"
+                  name="due_date"
+                  label="Payment Due Date"
+                  placeholder="Select due date"
+                  minWidth="100%"
+                ></app-date-picker>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
                 <label class="form-label">Total Bill Amount ({{ defaultCurrency }}) *</label>
-                <input type="number" step="0.01" min="1" [(ngModel)]="purchaseForm.total_amount" name="total_amount" required class="form-control font-bold" />
+                <input type="number" step="0.01" min="0.01" [(ngModel)]="purchaseForm.total_amount" name="total_amount" required placeholder="0.00" class="form-control font-bold" />
               </div>
               <div class="form-group">
                 <label class="form-label">Immediate Paid Amount</label>
-                <input type="number" step="0.01" min="0" [(ngModel)]="purchaseForm.paid_amount" name="paid_amount" class="form-control" />
+                <input type="number" step="0.01" min="0" [(ngModel)]="purchaseForm.paid_amount" name="paid_amount" placeholder="0.00" class="form-control" />
               </div>
             </div>
             <div class="form-group">
@@ -818,8 +747,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <div class="modal-footer">
               <button type="button" (click)="closePurchaseModal()" class="action-btn btn-outline">Cancel</button>
               <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">receipt_long</span>
-                <span>{{ isSubmitting ? 'Recording…' : 'Record Purchase' }}</span>
+                <span class="material-symbols-outlined">{{ editingPurchaseId ? 'save' : 'receipt_long' }}</span>
+                <span>{{ isSubmitting ? (editingPurchaseId ? 'Saving…' : 'Recording…') : (editingPurchaseId ? 'Update Purchase' : 'Record Purchase') }}</span>
               </button>
             </div>
           </form>
@@ -831,7 +760,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         <div class="modal-panel" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div>
-              <h3 class="modal-title">Record Supplier Disbursement</h3>
+              <h3 class="modal-title">{{ editingPaymentId ? 'Edit Supplier Disbursement' : 'Record Supplier Disbursement' }}</h3>
               <p class="modal-subtitle">Payable balance: {{ vendor.outstanding_balance | appCurrency }}</p>
             </div>
             <button type="button" (click)="closePaymentModal()" class="close-btn">
@@ -845,8 +774,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <input
                 type="number"
                 step="0.01"
-                min="1"
-                [max]="vendor.outstanding_balance || 9999999"
+                min="0.01"
                 [(ngModel)]="paymentForm.amount"
                 name="amount"
                 required
@@ -856,7 +784,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
                 <label class="form-label">Payment Date *</label>
-                <input type="date" [(ngModel)]="paymentForm.payment_date" name="payment_date" required class="form-control" />
+                <app-date-picker
+                  [(ngModel)]="paymentForm.payment_date"
+                  name="payment_date"
+                  label="Payment Date"
+                  placeholder="Select payment date"
+                  minWidth="100%"
+                ></app-date-picker>
               </div>
               <div class="form-group">
                 <label class="form-label">Payment Method *</label>
@@ -893,75 +827,57 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <div class="modal-footer">
               <button type="button" (click)="closePaymentModal()" class="action-btn btn-outline">Cancel</button>
               <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">payments</span>
-                <span>{{ isSubmitting ? 'Processing…' : 'Record Disbursement' }}</span>
+                <span class="material-symbols-outlined">{{ editingPaymentId ? 'save' : 'payments' }}</span>
+                <span>{{ isSubmitting ? (editingPaymentId ? 'Saving…' : 'Processing…') : (editingPaymentId ? 'Update Disbursement' : 'Record Disbursement') }}</span>
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Rating Modal -->
-      <div *ngIf="isRatingModalOpen && vendor" class="modal-backdrop" (click)="closeRatingModal()">
-        <div class="modal-panel" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <div>
-              <h3 class="modal-title">Supplier Performance Audit</h3>
-              <p class="modal-subtitle">Update satisfaction scores and delivery fulfillment</p>
+      <!-- Delete Purchase Confirmation Modal -->
+      <div *ngIf="isDeletePurchaseConfirmOpen && purchaseToDelete" class="modal-backdrop" (click)="closeDeletePurchaseModal()">
+        <div class="modal-panel delete-confirm-panel" (click)="$event.stopPropagation()">
+          <div class="modal-body p-6 text-center">
+            <div class="confirm-icon-bubble">
+              <span class="material-symbols-outlined">delete_forever</span>
             </div>
-            <button type="button" (click)="closeRatingModal()" class="close-btn">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="saveRating()" class="modal-body space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Overall Star Rating (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.rating" name="rating" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Delivery Speed Rating (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.delivery_speed_rating" name="delivery_speed_rating" class="form-control" />
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Product Quality Rating (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.quality_rating" name="quality_rating" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Pricing Competitiveness (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.pricing_rating" name="pricing_rating" class="form-control" />
-              </div>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="form-group">
-                <label class="form-label text-xs">On-Time %</label>
-                <input type="number" min="0" max="100" [(ngModel)]="ratingForm.on_time_delivery_rate" name="on_time_delivery_rate" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label text-xs">Quality %</label>
-                <input type="number" min="0" max="100" [(ngModel)]="ratingForm.quality_score" name="quality_score" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label text-xs">Fulfillment %</label>
-                <input type="number" min="0" max="100" [(ngModel)]="ratingForm.fulfillment_rate" name="fulfillment_rate" class="form-control" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Auditor Review Notes</label>
-              <textarea [(ngModel)]="ratingForm.performance_notes" name="performance_notes" rows="2" class="form-control"></textarea>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" (click)="closeRatingModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">grade</span>
-                <span>Save Evaluation</span>
+            <h3 class="confirm-title">Delete Purchase Invoice?</h3>
+            <p class="confirm-desc">
+              Are you sure you want to delete invoice <strong class="font-mono text-purple">{{ purchaseToDelete.invoice_number }}</strong> ({{ purchaseToDelete.total_amount | appCurrency }})? 
+              This will deduct the unpaid balance from the vendor's outstanding ledger.
+            </p>
+            <div class="confirm-footer">
+              <button type="button" (click)="closeDeletePurchaseModal()" class="action-btn btn-outline">Cancel</button>
+              <button type="button" [disabled]="isSubmitting" (click)="executeDeletePurchase()" class="action-btn btn-danger">
+                <span class="material-symbols-outlined">delete</span>
+                <span>{{ isSubmitting ? 'Deleting…' : 'Yes, Delete Invoice' }}</span>
               </button>
             </div>
-          </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Payment Confirmation Modal -->
+      <div *ngIf="isDeletePaymentConfirmOpen && paymentToDelete" class="modal-backdrop" (click)="closeDeletePaymentModal()">
+        <div class="modal-panel delete-confirm-panel" (click)="$event.stopPropagation()">
+          <div class="modal-body p-6 text-center">
+            <div class="confirm-icon-bubble">
+              <span class="material-symbols-outlined">delete_forever</span>
+            </div>
+            <h3 class="confirm-title">Delete Payment Voucher?</h3>
+            <p class="confirm-desc">
+              Are you sure you want to delete payment receipt <strong class="font-mono text-purple">{{ paymentToDelete.payment_number }}</strong> ({{ paymentToDelete.amount | appCurrency }})? 
+              The disbursed amount will be restored back to the vendor's outstanding payable balance.
+            </p>
+            <div class="confirm-footer">
+              <button type="button" (click)="closeDeletePaymentModal()" class="action-btn btn-outline">Cancel</button>
+              <button type="button" [disabled]="isSubmitting" (click)="executeDeletePayment()" class="action-btn btn-danger">
+                <span class="material-symbols-outlined">delete</span>
+                <span>{{ isSubmitting ? 'Deleting…' : 'Yes, Delete Payment' }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1099,6 +1015,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         border-radius: 0.5rem;
       }
       .category-pill {
+        /* Several categories per vendor now — keep them apart when they wrap. */
+        margin-right: 0.375rem;
         font-size: 0.75rem;
         font-weight: 700;
         color: var(--text-muted, #64748B);
@@ -1169,11 +1087,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       /* ── KPI GRID ──────────────────────────────────────────── */
       .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.875rem;
+        width: 100%;
       }
-      @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
-      @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr; } }
 
       .kpi-card {
         background: var(--card-bg, #FFFFFF);
@@ -1247,43 +1166,57 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       .pill-amber { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
       .pill-teal { background: rgba(13, 148, 136, 0.1); color: #0D9488; }
 
-      /* ── TABS BAR ──────────────────────────────────────────── */
-      .detail-tabs-bar {
+      /* ── TABS SCROLL CONTAINER & ARROW BUTTONS ─────────────── */
+      .tabs-scroll-container {
+        position: relative;
         display: flex;
         align-items: center;
+        width: 100%;
         gap: 0.5rem;
-        overflow-x: auto;
-        padding: 0.25rem 0;
-        scrollbar-width: none;
       }
-      .detail-tabs-bar::-webkit-scrollbar { display: none; }
-
-      .detail-tab-btn {
-        display: inline-flex;
+      .tab-scroll-arrow-btn {
+        display: inline-flex !important;
         align-items: center;
-        gap: 0.45rem;
-        padding: 0.625rem 1.15rem;
-        border-radius: 0.875rem;
-        font-size: 0.8125rem;
-        font-weight: 700;
-        color: var(--text-muted, #64748B);
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
         background: var(--card-bg, #FFFFFF);
-        border: 1px solid var(--card-border, #E9D5FF);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-      }
-      .detail-tab-btn .material-symbols-outlined { font-size: 1.125rem; }
-      .detail-tab-btn:hover {
-        background: var(--bg-app, #FAF5FF);
+        border: 1.5px solid var(--card-border, #E9D5FF);
         color: var(--primary, #7E22CE);
-        border-color: var(--primary, #7E22CE);
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        flex-shrink: 0;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        padding: 0;
+        z-index: 5;
+        user-select: none;
+        outline: none;
       }
-      .detail-tab-btn.is-active {
-        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-variant, #6B21A8) 100%);
-        color: #FFFFFF;
-        border-color: transparent;
-        box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
+      .tab-scroll-arrow-btn:hover {
+        background: var(--bg-app, #FAF5FF);
+        border-color: var(--primary, #7E22CE);
+        color: var(--primary, #7E22CE);
+        transform: scale(1.08);
+        box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
+      }
+      .tab-scroll-arrow-btn:active {
+        transform: scale(0.92);
+      }
+      .tab-scroll-arrow-btn .material-symbols-outlined {
+        font-size: 20px;
+      }
+      .tabs-scroll-container .module-tabs-bar {
+        flex: 1;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 0.35rem 0.25rem 0.5rem 0.25rem;
+        margin: 0;
+      }
+      .tabs-scroll-container .module-tabs-bar::-webkit-scrollbar {
+        display: none;
       }
 
       /* ── CONTENT PANELS ────────────────────────────────────── */
@@ -1298,10 +1231,49 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       .card-header {
         display: flex;
         align-items: center;
-        gap: 0.875rem;
+        justify-content: space-between;
+        gap: 1rem;
         margin-bottom: 1.5rem;
         padding-bottom: 1rem;
         border-bottom: 1px solid var(--card-border, #F1F5F9);
+        flex-wrap: wrap;
+      }
+      .card-header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+      }
+      .card-header-right {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        flex-wrap: wrap;
+      }
+      .payable-pill-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.45rem 0.875rem;
+        border-radius: 0.75rem;
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+      }
+      .payable-pill-badge.is-settled {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: rgba(16, 185, 129, 0.25);
+      }
+      .payable-pill-label {
+        font-size: 0.6875rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-muted, #64748B);
+        letter-spacing: 0.04em;
+      }
+      .payable-pill-val {
+        font-family: ui-monospace, monospace;
+        font-weight: 800;
+        font-size: 0.9375rem;
       }
       .card-header-icon {
         width: 2.75rem;
@@ -1329,6 +1301,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         margin: 0.2rem 0 0;
       }
 
+      .meta-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+      }
       .meta-grid-3 {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -1339,8 +1316,53 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         grid-template-columns: repeat(2, 1fr);
         gap: 1.25rem;
       }
+      @media (max-width: 1024px) {
+        .meta-grid-4 { grid-template-columns: repeat(2, 1fr); }
+      }
       @media (max-width: 800px) {
-        .meta-grid-3, .meta-grid-2 { grid-template-columns: 1fr; }
+        .meta-grid-4, .meta-grid-3, .meta-grid-2 { grid-template-columns: 1fr; }
+      }
+
+      .audit-action-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.625rem;
+        border-radius: 999px;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+      .badge-purple { background: rgba(126, 34, 206, 0.12); color: #7E22CE; }
+      .badge-green { background: rgba(16, 185, 129, 0.12); color: #10B981; }
+      .badge-danger { background: rgba(239, 68, 68, 0.12); color: #EF4444; }
+      .badge-amber { background: rgba(245, 158, 11, 0.12); color: #F59E0B; }
+      .badge-blue { background: rgba(59, 130, 246, 0.12); color: #3B82F6; }
+      .badge-neutral { background: rgba(100, 116, 139, 0.12); color: #64748B; }
+
+      .operator-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .user-avatar-tiny {
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(var(--primary-rgb, 126, 34, 206), 0.18) 0%, rgba(var(--primary-rgb, 126, 34, 206), 0.3) 100%);
+        color: var(--primary, #7E22CE);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      .audit-details-cell {
+        color: var(--text-main, #334155);
+        font-weight: 500;
+        line-height: 1.4;
       }
 
       .info-block {
@@ -1518,6 +1540,57 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         border-bottom: 1px solid var(--card-border, #F1F5F9);
         color: var(--text-main, #334155);
       }
+      .text-right {
+        text-align: right;
+      }
+
+      /* Row Action Buttons */
+      .row-actions {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.375rem;
+      }
+      .action-icon-btn {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #FFFFFF);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        padding: 0;
+      }
+      .action-icon-btn .material-symbols-outlined {
+        font-size: 1.125rem;
+      }
+      .btn-edit {
+        color: #6366F1;
+        border-color: rgba(99, 102, 241, 0.25);
+        background: rgba(99, 102, 241, 0.06);
+      }
+      .btn-edit:hover {
+        background: #6366F1;
+        color: #FFFFFF;
+        border-color: #6366F1;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+      }
+      .btn-delete {
+        color: #EF4444;
+        border-color: rgba(239, 68, 68, 0.25);
+        background: rgba(239, 68, 68, 0.06);
+      }
+      .btn-delete:hover {
+        background: #EF4444;
+        color: #FFFFFF;
+        border-color: #EF4444;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+      }
 
       .empty-state-card {
         padding: 3rem 1.5rem;
@@ -1627,6 +1700,55 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         border-top: 1px solid var(--card-border, #F1F5F9);
       }
 
+      /* Delete Confirmation Modal Styles */
+      .delete-confirm-panel {
+        max-width: 460px;
+        border-radius: 1.25rem;
+      }
+      .confirm-icon-bubble {
+        width: 3.75rem;
+        height: 3.75rem;
+        border-radius: 1.125rem;
+        background: rgba(239, 68, 68, 0.12);
+        color: #EF4444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0.5rem auto 1.25rem;
+      }
+      .confirm-icon-bubble .material-symbols-outlined {
+        font-size: 2rem;
+      }
+      .confirm-title {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-main, #0F172A);
+        text-align: center;
+        margin: 0 0 0.5rem;
+      }
+      .confirm-desc {
+        font-size: 0.8125rem;
+        color: var(--text-muted, #64748B);
+        text-align: center;
+        line-height: 1.55;
+        margin: 0 0 1.5rem;
+      }
+      .confirm-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+      }
+      .btn-danger {
+        background: #EF4444;
+        color: #FFFFFF;
+        border: none;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+      }
+      .btn-danger:hover {
+        background: #DC2626;
+      }
+
       .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
       .form-label { font-size: 0.8125rem; font-weight: 700; color: var(--text-main, #334155); }
       .form-control {
@@ -1669,6 +1791,16 @@ export class VendorDetailComponent implements OnInit {
 
   public vendorId: number | null = null;
   public vendor: Vendor | null = null;
+
+  /**
+   * Every category this vendor supplies. Falls back to the single `category`
+   * field for vendors saved before multi-category, so nothing shows blank.
+   */
+  public get vendorCategories(): string[] {
+    const list = this.vendor?.categories?.filter((c) => !!c && String(c).trim().length > 0);
+    if (list && list.length) return list;
+    return this.vendor?.category ? [this.vendor.category] : [];
+  }
   public isLoading = true;
   public loadError: string | null = null;
   public isSubmitting = false;
@@ -1676,11 +1808,18 @@ export class VendorDetailComponent implements OnInit {
   public activeTab: ActiveTab = 'profile';
   public vendorPurchases: VendorPurchase[] = [];
   public vendorPayments: VendorPayment[] = [];
+  public vendorAuditLogs: any[] = [];
 
-  // Modals
+  // Modals & Edit States
   public isPurchaseModalOpen = false;
+  public editingPurchaseId: number | null = null;
+  public isDeletePurchaseConfirmOpen = false;
+  public purchaseToDelete: VendorPurchase | null = null;
+
   public isPaymentModalOpen = false;
-  public isRatingModalOpen = false;
+  public editingPaymentId: number | null = null;
+  public isDeletePaymentConfirmOpen = false;
+  public paymentToDelete: VendorPayment | null = null;
 
   public purchaseForm = {
     invoice_number: '',
@@ -1700,17 +1839,6 @@ export class VendorDetailComponent implements OnInit {
     notes: '',
   };
 
-  public ratingForm = {
-    rating: 5.0,
-    delivery_speed_rating: 5.0,
-    quality_rating: 5.0,
-    pricing_rating: 5.0,
-    on_time_delivery_rate: 100,
-    quality_score: 100,
-    fulfillment_rate: 100,
-    performance_notes: '',
-  };
-
   public modalPaymentMethodOptions: DropdownOption[] = [
     { value: 'BANK_TRANSFER', label: 'Bank Transfer (NEFT/RTGS/Wire)', icon: 'account_balance', description: 'Direct bank settlement' },
     { value: 'UPI', label: 'UPI / Instant Online', icon: 'qr_code', description: 'Instant UPI or QR settlement' },
@@ -1724,6 +1852,32 @@ export class VendorDetailComponent implements OnInit {
 
   public get hasNoLimit(): boolean {
     return !this.vendor?.credit_limit || this.vendor.credit_limit <= 0;
+  }
+
+  public get totalPaidAmount(): number {
+    if (this.vendorPayments && this.vendorPayments.length > 0) {
+      return this.vendorPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    }
+    const total = Number(this.vendor?.total_purchases_amount) || 0;
+    const balance = Number(this.vendor?.outstanding_balance) || 0;
+    return Math.max(0, total - balance);
+  }
+
+  public get totalProcuredAmount(): number {
+    const invoiceTotal = Number(this.vendor?.total_purchases_amount) || 0;
+    const currentBalance = Number(this.vendor?.outstanding_balance) || 0;
+    const paidTotal = this.totalPaidAmount;
+    // Total financial obligation: opening/initial amount not on invoice + total invoices = paid + currentBalance
+    return Math.max(invoiceTotal, paidTotal + currentBalance);
+  }
+
+  public get paymentSettlementPercent(): number {
+    const total = this.totalProcuredAmount;
+    if (total <= 0) {
+      return (Number(this.vendor?.outstanding_balance) || 0) <= 0 ? 100 : 0;
+    }
+    const paid = this.totalPaidAmount;
+    return Math.min(100, Math.max(0, Math.round((paid / total) * 100)));
   }
 
   ngOnInit(): void {
@@ -1746,6 +1900,9 @@ export class VendorDetailComponent implements OnInit {
         this.isLoading = false;
         if (res.data) {
           this.vendor = res.data;
+          if ((res.data as any).audit_logs) {
+            this.vendorAuditLogs = (res.data as any).audit_logs;
+          }
           this.loadSubCollections();
         } else {
           this.loadError = 'Vendor record not found';
@@ -1772,6 +1929,126 @@ export class VendorDetailComponent implements OnInit {
         if (res.success) this.vendorPayments = res.data || [];
       },
     });
+
+    this.vendorService.getAuditLogs(this.vendorId).subscribe({
+      next: (res) => {
+        if (res.success && res.data) this.vendorAuditLogs = res.data;
+      },
+    });
+  }
+
+  public get allAuditLogs(): any[] {
+    const logs = [...this.vendorAuditLogs];
+    
+    // Synthesize baseline logs if backend table has fewer items
+    if (this.vendor) {
+      const hasCreate = logs.some(l => l.action === 'VENDOR_CREATED');
+      if (!hasCreate && this.vendor.created_at) {
+        logs.push({
+          action: 'VENDOR_CREATED',
+          created_at: this.vendor.created_at,
+          user_name: 'Admin',
+          ip_address: '127.0.0.1',
+          new_values: { name: this.vendor.name, vendor_code: this.vendor.vendor_code, initial_balance: this.vendor.outstanding_balance }
+        });
+      }
+
+      for (const p of this.vendorPurchases) {
+        const hasP = logs.some(l => l.action.includes('PURCHASE') && (l.new_values?.invoice_number === p.invoice_number || l.old_values?.invoice_number === p.invoice_number));
+        if (!hasP) {
+          logs.push({
+            action: 'VENDOR_PURCHASE_RECORDED',
+            created_at: p.created_at || p.order_date,
+            user_name: 'Procurement',
+            ip_address: '127.0.0.1',
+            new_values: { invoice_number: p.invoice_number, total_amount: p.total_amount, paid_amount: p.paid_amount }
+          });
+        }
+      }
+
+      for (const pm of this.vendorPayments) {
+        const hasPm = logs.some(l => l.action.includes('PAYMENT') && (l.new_values?.payment_number === pm.payment_number || l.old_values?.payment_number === pm.payment_number));
+        if (!hasPm) {
+          logs.push({
+            action: 'VENDOR_PAYMENT_RECORDED',
+            created_at: pm.created_at || pm.payment_date,
+            user_name: 'Finance',
+            ip_address: '127.0.0.1',
+            new_values: { payment_number: pm.payment_number, amount: pm.amount, method: pm.payment_method }
+          });
+        }
+      }
+      logs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return logs;
+  }
+
+  public getAuditActionBadgeClass(action?: string): string {
+    if (!action) return 'badge-neutral';
+    if (action.includes('CREATED')) return 'badge-purple';
+    if (action.includes('PURCHASE')) return 'badge-blue';
+    if (action.includes('PAYMENT')) return 'badge-green';
+    if (action.includes('DELETED')) return 'badge-danger';
+    if (action.includes('UPDATED')) return 'badge-amber';
+    return 'badge-blue';
+  }
+
+  public getAuditActionIcon(action?: string): string {
+    if (!action) return 'info';
+    if (action.includes('PAYMENT')) return 'payments';
+    if (action.includes('PURCHASE')) return 'receipt_long';
+    if (action.includes('CREATED')) return 'add_circle';
+    if (action.includes('DELETED')) return 'delete';
+    if (action.includes('UPDATED')) return 'edit_note';
+    return 'history';
+  }
+
+  public formatAuditAction(action?: string): string {
+    if (!action) return 'Activity Event';
+    switch (action) {
+      case 'VENDOR_CREATED': return 'Vendor Profile Created';
+      case 'VENDOR_UPDATED': return 'Profile Updated';
+      case 'VENDOR_DELETED': return 'Vendor Deleted';
+      case 'VENDOR_PURCHASE_RECORDED': return 'Purchase Bill Recorded';
+      case 'VENDOR_PURCHASE_UPDATED': return 'Purchase Bill Updated';
+      case 'VENDOR_PURCHASE_DELETED': return 'Purchase Bill Deleted';
+      case 'VENDOR_PAYMENT_RECORDED': return 'Disbursement Paid';
+      case 'VENDOR_PAYMENT_UPDATED': return 'Disbursement Updated';
+      case 'VENDOR_PAYMENT_DELETED': return 'Disbursement Deleted';
+      default: return action.replace(/_/g, ' ');
+    }
+  }
+
+  public formatAuditDetails(log: any): string {
+    if (!log) return '';
+    const nv = log.new_values;
+    const ov = log.old_values;
+    if (log.action === 'VENDOR_CREATED') {
+      return `Created supplier record "${nv?.name || this.vendor?.name}" (${nv?.vendor_code || this.vendor?.vendor_code})`;
+    }
+    if (log.action === 'VENDOR_PURCHASE_RECORDED') {
+      return `Recorded purchase invoice #${nv?.invoice_number || ''} for ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.total_amount || 0).toFixed(2)}`;
+    }
+    if (log.action === 'VENDOR_PURCHASE_UPDATED') {
+      return `Updated invoice #${nv?.invoice_number || ''} (Amount: ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.total_amount || 0).toFixed(2)})`;
+    }
+    if (log.action === 'VENDOR_PURCHASE_DELETED') {
+      return `Deleted purchase bill #${ov?.invoice_number || ''} (${this.settingsService.currencySymbol() || '₹'}${Number(ov?.total_amount || 0).toFixed(2)})`;
+    }
+    if (log.action === 'VENDOR_PAYMENT_RECORDED') {
+      return `Disbursed settlement payment #${nv?.payment_number || ''} of ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.amount || 0).toFixed(2)} via ${nv?.method || nv?.payment_method || 'Bank'}`;
+    }
+    if (log.action === 'VENDOR_PAYMENT_UPDATED') {
+      return `Updated disbursement #${nv?.payment_number || ''} (Amount: ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.amount || 0).toFixed(2)})`;
+    }
+    if (log.action === 'VENDOR_PAYMENT_DELETED') {
+      return `Cancelled/deleted disbursement #${ov?.payment_number || ''} (${this.settingsService.currencySymbol() || '₹'}${Number(ov?.amount || 0).toFixed(2)})`;
+    }
+    if (log.action === 'VENDOR_UPDATED') {
+      const keys = Object.keys(nv || {});
+      return keys.length > 0 ? `Updated fields: ${keys.slice(0, 4).join(', ')}` : 'Vendor profile coordinates updated';
+    }
+    return nv ? JSON.stringify(nv) : 'System event logged';
   }
 
   public goBack(): void {
@@ -1825,22 +2102,47 @@ export class VendorDetailComponent implements OnInit {
     return Array(count).fill(0);
   }
 
-  // Purchase Modal
+  // Purchase Modal & CRUD Operations
   public openPurchaseModal(): void {
+    this.editingPurchaseId = null;
     this.purchaseForm = {
-      invoice_number: 'INV-' + Date.now().toString().slice(-6),
+      invoice_number: '',
       order_date: new Date().toISOString().split('T')[0],
       due_date: '',
-      total_amount: 0,
-      paid_amount: 0,
+      total_amount: null as any,
+      paid_amount: null as any,
       items_summary: '',
       notes: '',
     };
     this.isPurchaseModalOpen = true;
   }
 
+  public openEditPurchaseModal(p: VendorPurchase): void {
+    this.editingPurchaseId = p.id;
+    let orderDate = '';
+    if (p.order_date) {
+      orderDate = typeof p.order_date === 'string' ? p.order_date.split('T')[0] : new Date(p.order_date).toISOString().split('T')[0];
+    }
+    let dueDate = '';
+    if (p.due_date) {
+      dueDate = typeof p.due_date === 'string' ? p.due_date.split('T')[0] : new Date(p.due_date).toISOString().split('T')[0];
+    }
+
+    this.purchaseForm = {
+      invoice_number: p.invoice_number,
+      order_date: orderDate,
+      due_date: dueDate,
+      total_amount: Number(p.total_amount) || 0,
+      paid_amount: Number(p.paid_amount) || 0,
+      items_summary: p.items_summary || '',
+      notes: p.notes || '',
+    };
+    this.isPurchaseModalOpen = true;
+  }
+
   public closePurchaseModal(): void {
     this.isPurchaseModalOpen = false;
+    this.editingPurchaseId = null;
   }
 
   public savePurchase(): void {
@@ -1849,24 +2151,68 @@ export class VendorDetailComponent implements OnInit {
       return;
     }
     this.isSubmitting = true;
-    this.vendorService.recordPurchase(this.vendor.id, this.purchaseForm).subscribe({
+
+    if (this.editingPurchaseId) {
+      this.vendorService.updatePurchase(this.vendor.id, this.editingPurchaseId, this.purchaseForm).subscribe({
+        next: (res) => {
+          this.isSubmitting = false;
+          this.notify.success('Purchase invoice updated successfully');
+          this.closePurchaseModal();
+          this.loadVendor();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          this.notify.error(err?.error?.message || 'Failed to update purchase invoice');
+        },
+      });
+    } else {
+      this.vendorService.recordPurchase(this.vendor.id, this.purchaseForm).subscribe({
+        next: (res) => {
+          this.isSubmitting = false;
+          this.notify.success('Purchase invoice recorded successfully');
+          this.closePurchaseModal();
+          if (res.data) this.vendor = res.data;
+          this.loadSubCollections();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          this.notify.error(err?.error?.message || 'Failed to record purchase');
+        },
+      });
+    }
+  }
+
+  public confirmDeletePurchase(p: VendorPurchase): void {
+    this.purchaseToDelete = p;
+    this.isDeletePurchaseConfirmOpen = true;
+  }
+
+  public closeDeletePurchaseModal(): void {
+    this.isDeletePurchaseConfirmOpen = false;
+    this.purchaseToDelete = null;
+  }
+
+  public executeDeletePurchase(): void {
+    if (!this.vendor || !this.purchaseToDelete) return;
+    this.isSubmitting = true;
+    this.vendorService.deletePurchase(this.vendor.id, this.purchaseToDelete.id).subscribe({
       next: (res) => {
         this.isSubmitting = false;
-        this.notify.success('Purchase invoice recorded successfully');
-        this.closePurchaseModal();
-        if (res.data) this.vendor = res.data;
-        this.loadSubCollections();
+        this.notify.success('Purchase invoice deleted successfully');
+        this.closeDeletePurchaseModal();
+        this.loadVendor();
       },
       error: (err) => {
         this.isSubmitting = false;
-        this.notify.error(err?.error?.message || 'Failed to record purchase');
+        this.notify.error(err?.error?.message || 'Failed to delete purchase invoice');
       },
     });
   }
 
-  // Payment Modal
+  // Payment Modal & CRUD Operations
   public openPaymentModal(): void {
     if (!this.vendor) return;
+    this.editingPaymentId = null;
     this.paymentForm = {
       amount: this.vendor.outstanding_balance > 0 ? this.vendor.outstanding_balance : 0,
       payment_date: new Date().toISOString().split('T')[0],
@@ -1877,8 +2223,26 @@ export class VendorDetailComponent implements OnInit {
     this.isPaymentModalOpen = true;
   }
 
+  public openEditPaymentModal(pm: VendorPayment): void {
+    this.editingPaymentId = pm.id;
+    let paymentDate = '';
+    if (pm.payment_date) {
+      paymentDate = typeof pm.payment_date === 'string' ? pm.payment_date.split('T')[0] : new Date(pm.payment_date).toISOString().split('T')[0];
+    }
+
+    this.paymentForm = {
+      amount: Number(pm.amount) || 0,
+      payment_date: paymentDate,
+      payment_method: pm.payment_method || 'BANK_TRANSFER',
+      reference_number: pm.reference_number || '',
+      notes: pm.notes || '',
+    };
+    this.isPaymentModalOpen = true;
+  }
+
   public closePaymentModal(): void {
     this.isPaymentModalOpen = false;
+    this.editingPaymentId = null;
   }
 
   public savePayment(): void {
@@ -1887,55 +2251,69 @@ export class VendorDetailComponent implements OnInit {
       return;
     }
     this.isSubmitting = true;
-    this.vendorService.recordPayment(this.vendor.id, this.paymentForm).subscribe({
-      next: (res) => {
-        this.isSubmitting = false;
-        this.notify.success('Disbursement payment recorded successfully');
-        this.closePaymentModal();
-        if (res.data) this.vendor = res.data;
-        this.loadSubCollections();
-      },
-      error: (err) => {
-        this.isSubmitting = false;
-        this.notify.error(err?.error?.message || 'Failed to record payment');
-      },
-    });
+
+    if (this.editingPaymentId) {
+      this.vendorService.updatePayment(this.vendor.id, this.editingPaymentId, this.paymentForm).subscribe({
+        next: (res) => {
+          this.isSubmitting = false;
+          this.notify.success('Disbursement payment updated successfully');
+          this.closePaymentModal();
+          this.loadVendor();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          this.notify.error(err?.error?.message || 'Failed to update disbursement payment');
+        },
+      });
+    } else {
+      this.vendorService.recordPayment(this.vendor.id, this.paymentForm).subscribe({
+        next: (res) => {
+          this.isSubmitting = false;
+          this.notify.success('Disbursement payment recorded successfully');
+          this.closePaymentModal();
+          if (res.data) this.vendor = res.data;
+          this.loadSubCollections();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          this.notify.error(err?.error?.message || 'Failed to record payment');
+        },
+      });
+    }
   }
 
-  // Rating Modal
-  public openRatingModal(): void {
-    if (!this.vendor) return;
-    this.ratingForm = {
-      rating: this.vendor.rating || 5.0,
-      delivery_speed_rating: this.vendor.delivery_speed_rating || 5.0,
-      quality_rating: this.vendor.quality_rating || 5.0,
-      pricing_rating: this.vendor.pricing_rating || 5.0,
-      on_time_delivery_rate: this.vendor.on_time_delivery_rate ?? 100,
-      quality_score: this.vendor.quality_score ?? 100,
-      fulfillment_rate: this.vendor.fulfillment_rate ?? 100,
-      performance_notes: this.vendor.performance_notes || '',
-    };
-    this.isRatingModalOpen = true;
+  public confirmDeletePayment(pm: VendorPayment): void {
+    this.paymentToDelete = pm;
+    this.isDeletePaymentConfirmOpen = true;
   }
 
-  public closeRatingModal(): void {
-    this.isRatingModalOpen = false;
+  public closeDeletePaymentModal(): void {
+    this.isDeletePaymentConfirmOpen = false;
+    this.paymentToDelete = null;
   }
 
-  public saveRating(): void {
-    if (!this.vendor) return;
+  public executeDeletePayment(): void {
+    if (!this.vendor || !this.paymentToDelete) return;
     this.isSubmitting = true;
-    this.vendorService.updateRating(this.vendor.id, this.ratingForm).subscribe({
+    this.vendorService.deletePayment(this.vendor.id, this.paymentToDelete.id).subscribe({
       next: (res) => {
         this.isSubmitting = false;
-        this.notify.success('Vendor evaluation saved successfully');
-        this.closeRatingModal();
-        if (res.data) this.vendor = res.data;
+        this.notify.success('Disbursement payment deleted successfully');
+        this.closeDeletePaymentModal();
+        this.loadVendor();
       },
       error: (err) => {
         this.isSubmitting = false;
-        this.notify.error(err?.error?.message || 'Failed to update evaluation');
+        this.notify.error(err?.error?.message || 'Failed to delete disbursement payment');
       },
     });
+  }
+
+  public scrollTabs(container: HTMLElement, amount: number): void {
+    if (!container) return;
+    container.scrollBy({ left: amount, behavior: 'smooth' });
   }
 }
+
+
+

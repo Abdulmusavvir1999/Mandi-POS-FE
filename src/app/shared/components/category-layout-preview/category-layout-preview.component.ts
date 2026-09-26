@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CategoryDesignKey } from '../../../core/services/category-layout.service';
 import { CATEGORY_LAYOUT_CSS } from '../../styles/category-layout.styles';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 export interface PreviewCategoryItem {
   id: number;
@@ -17,7 +18,7 @@ export interface PreviewCategoryItem {
 @Component({
   selector: 'app-category-layout-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div
       class="category-stage"

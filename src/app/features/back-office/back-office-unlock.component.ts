@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { BackOfficeAccessService } from '../../core/services/back-office-access.service';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 /**
  * The password screen in front of `/admin/back-office`.
@@ -26,7 +27,7 @@ import { BackOfficeAccessService } from '../../core/services/back-office-access.
 @Component({
   selector: 'app-back-office-unlock',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ActionLoadingDirective],
   template: `
     <div class="bo-lock-screen">
       <div class="bo-lock-card">

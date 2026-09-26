@@ -11,6 +11,7 @@ import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-bu
 import { STAFF_LAYOUT_CSS } from '../../shared/styles/staff-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 interface ModuleGroup {
   name: string;
@@ -22,7 +23,7 @@ interface ModuleGroup {
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink, ActionLoadingDirective],
   styles: [STAFF_LAYOUT_CSS, DEFAULT_ACTION_BUTTON_CSS],
   template: `
     <div class="users-page-wrapper">

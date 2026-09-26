@@ -5,11 +5,12 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ActionLoadingDirective],
   template: `
     <div class="login-canvas">
       <!-- LEFT: Hero Branding & Visual Panel -->

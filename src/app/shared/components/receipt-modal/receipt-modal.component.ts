@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AppCurrencyPipe } from '../../pipes/app-currency.pipe';
 import { PrinterService } from '../../../core/services/printer.service';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 @Component({
   selector: 'app-receipt-modal',
   standalone: true,
-  imports: [CommonModule, AppCurrencyPipe],
+  imports: [CommonModule, AppCurrencyPipe, ActionLoadingDirective],
   template: `
     <div class="modal-backdrop" *ngIf="isOpen">
       <div class="modal-content max-w-md p-0 overflow-hidden bg-[var(--card-bg)] text-[var(--text-main)] shadow-2xl border border-[var(--card-border)]">

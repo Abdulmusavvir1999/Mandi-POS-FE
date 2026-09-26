@@ -116,10 +116,6 @@ export class StockService {
     totalPrice: number;
     unitPrice?: number;
     supplier?: string;
-    vendorId?: number;
-    invoiceNumber?: string;
-    batchNumber?: string;
-    expiryDate?: string;
     notes?: string;
     entryDate?: string;
   }): Observable<ApiResponse<any>> {
@@ -191,7 +187,6 @@ export class StockService {
     multiplier?: number;
     totalPrice?: number;
     supplier?: string;
-    invoiceNumber?: string;
     notes?: string;
   }): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(`${this.API_URL}/in`, data);

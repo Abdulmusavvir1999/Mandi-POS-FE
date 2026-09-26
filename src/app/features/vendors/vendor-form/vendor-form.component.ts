@@ -8,11 +8,12 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { Vendor, VendorStatus, PaymentTermsType, PreferredPaymentMethod } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-vendor-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
   template: `
     <div class="vendor-form-page">
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -167,14 +168,15 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
               </div>
 
               <div class="form-group">
-                <label class="form-label required-label">Supply Category</label>
+                <label class="form-label required-label">Supply Categories</label>
                 <app-custom-dropdown
                   [options]="categoryOptions"
-                  [(ngModel)]="form.category"
-                  name="category"
+                  [(ngModel)]="form.categories"
+                  name="categories"
+                  [multiple]="true"
                   [searchable]="true"
                   [allowCustom]="true"
-                  placeholder="Select or enter category group"
+                  placeholder="Select every category this vendor supplies"
                   minWidth="100%"
                 ></app-custom-dropdown>
               </div>
@@ -495,7 +497,14 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
               </div>
               <div class="preview-name">{{ form.name || 'Vendor Name' }}</div>
               <div class="preview-code">{{ form.vendor_code || 'VND-AUTO' }}</div>
-              <div class="preview-cat-badge">{{ form.category || 'General Supplies' }}</div>
+              <div class="preview-cat-badges">
+                <div
+                  class="preview-cat-badge"
+                  *ngFor="let c of (form.categories?.length ? form.categories : ['General Supplies'])"
+                >
+                  {{ c }}
+                </div>
+              </div>
 
               <div class="preview-meta-list">
                 <div class="preview-meta-row">
@@ -714,12 +723,18 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         grid-template-columns: minmax(0, 1fr) 340px;
         gap: 1.5rem;
         align-items: start;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
       }
 
       .main-column {
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
       }
 
       .sidebar-column {
@@ -728,6 +743,9 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         gap: 1.25rem;
         position: sticky;
         top: 1.5rem;
+        min-width: 0;
+        width: 340px;
+        max-width: 100%;
       }
 
       /* ── FORM CARDS ────────────────────────────────────────── */
@@ -737,6 +755,10 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         border-radius: 1.25rem;
         padding: 1.5rem;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
       }
 
       .form-card-header {
@@ -776,17 +798,29 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 
       .card-body-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.125rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.25rem;
+        width: 100%;
+        min-width: 0;
       }
 
       .form-group {
         display: flex;
         flex-direction: column;
         gap: 0.375rem;
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
       }
       .form-group.full-width {
-        grid-column: span 2;
+        grid-column: 1 / -1;
+      }
+
+      app-custom-dropdown {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
       }
 
       .form-label {
@@ -803,6 +837,9 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         position: relative;
         display: flex;
         align-items: center;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
       }
       .input-icon {
         position: absolute;
@@ -810,19 +847,24 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         color: var(--text-muted, #94A3B8);
         font-size: 1.125rem;
         pointer-events: none;
+        z-index: 1;
       }
 
       .form-control {
         width: 100%;
+        min-width: 0;
+        max-width: 100%;
         height: 2.625rem;
         padding: 0 0.875rem 0 2.5rem;
         border-radius: 0.75rem;
-        border: 1px solid var(--card-border, #E2E8F0);
+        border: 1.5px solid var(--card-border, #E2E8F0);
         background: var(--card-bg, #FFFFFF);
         color: var(--text-main, #0F172A);
         font-size: 0.875rem;
+        font-weight: 500;
         transition: all 0.2s ease;
         outline: none;
+        box-sizing: border-box;
       }
       .form-control:focus {
         border-color: var(--primary, #7E22CE);
@@ -1082,9 +1124,17 @@ import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
         font-weight: 600;
         margin-top: 0.25rem;
       }
+      /* Several categories now, so they wrap instead of stacking with a
+         margin each. */
+      .preview-cat-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        margin-top: 0.625rem;
+        justify-content: center;
+      }
       .preview-cat-badge {
         display: inline-block;
-        margin-top: 0.625rem;
         padding: 0.25rem 0.75rem;
         border-radius: 999px;
         background: var(--bg-app, #FAF5FF);
@@ -1257,6 +1307,7 @@ export class VendorFormComponent implements OnInit {
     vendor_code: '',
     image_url: '',
     category: 'Meat & Poultry',
+    categories: ['Meat & Poultry'],
     status: 'ACTIVE',
     contact_person: '',
     phone: '',
@@ -1290,10 +1341,10 @@ export class VendorFormComponent implements OnInit {
   ];
 
   public vendorStatusOptions: DropdownOption[] = [
-    { value: 'ACTIVE', label: 'Active', icon: 'check_circle', badge: 'Active' },
-    { value: 'INACTIVE', label: 'Inactive', icon: 'pause_circle', badge: 'Inactive' },
-    { value: 'BLOCKED', label: 'Blocked', icon: 'block', badge: 'Blocked' },
-    { value: 'UNDER_REVIEW', label: 'Under Review', icon: 'pending', badge: 'Review' },
+    { value: 'ACTIVE', label: 'Active', icon: 'check_circle' },
+    { value: 'INACTIVE', label: 'Inactive', icon: 'pause_circle' },
+    { value: 'BLOCKED', label: 'Blocked', icon: 'block' },
+    { value: 'UNDER_REVIEW', label: 'Under Review', icon: 'pending' },
   ];
 
   public paymentTermsOptions: DropdownOption[] = [
@@ -1307,9 +1358,9 @@ export class VendorFormComponent implements OnInit {
   ];
 
   public paymentMethodOptions: DropdownOption[] = [
-    { value: 'BANK_TRANSFER', label: 'Direct Bank Transfer / NEFT / RTGS', icon: 'account_balance', description: 'RTGS, NEFT, IMPS or Wire Transfer' },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer / NEFT / RTGS', icon: 'account_balance', description: 'RTGS, NEFT, IMPS or Wire Transfer' },
     { value: 'UPI', label: 'UPI / Instant QR Payment', icon: 'qr_code', description: 'Instant QR, UPI ID or wallet transfers' },
-    { value: 'PAY_LATER', label: 'Pay Later / Deferred Payment', icon: 'pending_actions', description: 'Deferred credit ledger or invoice settlement' },
+    { value: 'PAY_LATER', label: 'Pay Later / Deferred Credit', icon: 'pending_actions', description: 'Deferred credit ledger or invoice settlement' },
     { value: 'CASH', label: 'Cash on Delivery', icon: 'attach_money', description: 'Immediate cash settlement at delivery' },
     { value: 'CHEQUE', label: 'Bank Cheque / DD', icon: 'fact_check', description: 'Current or post-dated bank cheque' },
     { value: 'CREDIT_TERMS', label: 'Credit Account', icon: 'credit_score', description: 'Direct credit account with periodic billing' },
@@ -1331,6 +1382,10 @@ export class VendorFormComponent implements OnInit {
         this.isLoading = false;
         if (res.data) {
           this.form = { ...res.data };
+          // A vendor saved before multi-category has only the single field.
+          if (!this.form.categories?.length) {
+            this.form.categories = this.form.category ? [this.form.category] : [];
+          }
           this.isNoLimit = (this.form.credit_limit === null || this.form.credit_limit === undefined || Number(this.form.credit_limit) === 0);
         }
       },
@@ -1386,6 +1441,8 @@ export class VendorFormComponent implements OnInit {
   }
 
   public save(): void {
+    if (this.isSubmitting) return;
+
     if (!this.form.name?.trim()) {
       this.notify.warning('Please enter Vendor / Company Legal Name');
       return;
@@ -1395,9 +1452,31 @@ export class VendorFormComponent implements OnInit {
       return;
     }
 
+    const categories = (this.form.categories || [])
+      .map((c) => String(c || '').trim())
+      .filter((c) => c.length > 0);
+
+    if (categories.length === 0) {
+      this.notify.warning('Please select at least one supply category');
+      return;
+    }
+
     this.isSubmitting = true;
+
+    const payload: Partial<Vendor> = {
+      ...this.form,
+      categories,
+      // Kept in step with the first selection so the vendor list, the detail
+      // header and the purchases report keep showing a sensible single value.
+      category: categories[0],
+      preferred_payment_method: Array.isArray(this.form.preferred_payment_method)
+        ? (this.form.preferred_payment_method as string[]).join(',')
+        : (this.form.preferred_payment_method || 'BANK_TRANSFER'),
+      outstanding_balance: Number(this.form.outstanding_balance || 0),
+    };
+
     if (this.isEdit && this.vendorId) {
-      this.vendorService.updateVendor(this.vendorId, this.form).subscribe({
+      this.vendorService.updateVendor(this.vendorId, payload).subscribe({
         next: () => {
           this.isSubmitting = false;
           this.notify.success('Vendor profile updated successfully');
@@ -1405,11 +1484,11 @@ export class VendorFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          this.notify.error(err?.error?.message || 'Failed to update vendor');
+          this.notify.error(err?.error?.message || err?.message || 'Failed to update vendor');
         },
       });
     } else {
-      this.vendorService.createVendor(this.form).subscribe({
+      this.vendorService.createVendor(payload).subscribe({
         next: () => {
           this.isSubmitting = false;
           this.notify.success('New vendor registered successfully');
@@ -1417,7 +1496,7 @@ export class VendorFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          this.notify.error(err?.error?.message || 'Failed to create vendor');
+          this.notify.error(err?.error?.message || err?.message || 'Failed to create vendor');
         },
       });
     }

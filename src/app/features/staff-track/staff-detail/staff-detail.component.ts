@@ -10,6 +10,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { StaffTrackFiltersComponent } from '../staff-track-filters.component';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 /**
  * One staff member's tracking record.
@@ -27,8 +28,7 @@ import { StaffTrackFiltersComponent } from '../staff-track-filters.component';
     RouterLink,
     PageLoaderComponent,
     AppCurrencyPipe,
-    StaffTrackFiltersComponent,
-  ],
+    StaffTrackFiltersComponent,ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StockDesignKey } from '../../../core/services/stock-layout.service';
 import { STOCK_LAYOUT_CSS } from '../../styles/stock-layout.styles';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 export interface PreviewStockItem {
   id: number;
@@ -18,7 +19,7 @@ export interface PreviewStockItem {
 @Component({
   selector: 'app-stock-layout-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div
       class="stock-stage"

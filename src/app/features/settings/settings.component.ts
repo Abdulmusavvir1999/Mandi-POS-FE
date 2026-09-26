@@ -96,6 +96,7 @@ type SettingsTab = 'customization' | 'theme' | 'toast' | 'business' | 'hardware'
 
 /** Branding images that can be replaced from the Store tab. */
 import { SidebarLayoutPreviewComponent } from '../../shared/components/sidebar-layout-preview/sidebar-layout-preview.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 import {
   SidebarLayoutService,
   SidebarTemplateKey,
@@ -129,8 +130,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
     CustomerLayoutPreviewComponent,
     StaffLayoutPreviewComponent,
     SidebarLayoutPreviewComponent,
-    DragScrollDirective,
-  ],
+    DragScrollDirective,ActionLoadingDirective],
   template: `
     <div class="settings-page-wrapper">
       <app-page-loader

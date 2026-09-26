@@ -7,6 +7,7 @@ import { BackOfficeService, BulkResult } from '../../core/services/back-office.s
 import { NotificationService } from '../../core/services/notification.service';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { BackOfficeResultComponent } from './back-office-result.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 type Bin = 'ORDERS' | 'INVOICES';
 
@@ -26,7 +27,7 @@ type Bin = 'ORDERS' | 'INVOICES';
 @Component({
   selector: 'app-back-office-deleted',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppCurrencyPipe, BackOfficeResultComponent],
+  imports: [CommonModule, FormsModule, AppCurrencyPipe, BackOfficeResultComponent, ActionLoadingDirective],
   template: `
     <!-- ════════════════════════════════════════════════════════════════ -->
     <!-- TOOLBAR                                                          -->

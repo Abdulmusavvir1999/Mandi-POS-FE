@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { forkJoin, of, catchError } from 'rxjs';
 import { VendorService } from '../../core/services/vendor.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
@@ -10,13 +11,15 @@ import { Vendor, VendorPurchase, VendorPayment, VendorStats } from '../../core/m
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
-type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance' | 'rating' | 'performance';
+type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance' | 'performance';
 
 @Component({
   selector: 'app-vendors',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent, CustomDropdownComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AppCurrencyPipe, PageLoaderComponent, CustomDropdownComponent, DatePickerComponent, ActionLoadingDirective],
   template: `
     <div class="vendors-page-wrapper">
       <app-page-loader
@@ -148,19 +151,23 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
           </div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" [class.border-rose-300]="(stats?.overdueCount || 0) > 0">
           <div class="kpi-header">
-            <span class="kpi-label">Avg Quality & Rating</span>
+            <span class="kpi-label">Overdue Invoices</span>
             <div class="kpi-icon-badge bg-amber-light text-amber">
-              <span class="material-symbols-outlined">grade</span>
+              <span class="material-symbols-outlined">pending_actions</span>
             </div>
           </div>
-          <div class="kpi-value text-amber-500">
-            ★ {{ stats?.avgRating || '4.80' }} <span class="text-sm font-normal text-muted">/ 5.0</span>
+          <div class="kpi-value" [class.text-rose-600]="(stats?.overdueCount || 0) > 0">
+            {{ (stats?.overdueAmount || 0) | appCurrency:'1.0-0' }}
           </div>
           <div class="kpi-subtext">
-            <span class="text-emerald-600 font-medium">{{ stats?.avgOnTime || '97.2' }}% On-Time</span>
-            <span class="text-muted"> • {{ stats?.avgFulfillment || '98.0' }}% Fulfillment</span>
+            <span *ngIf="(stats?.overdueCount || 0) > 0" class="text-rose-600 font-medium">
+              ⚠️ {{ stats?.overdueCount }} Bills Past Due
+            </span>
+            <span *ngIf="!(stats?.overdueCount)" class="text-emerald-600 font-medium">
+              ✓ All payments on schedule
+            </span>
           </div>
         </div>
       </div>
@@ -190,81 +197,89 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 
         <div class="filter-controls">
           <!-- Status Dropdown -->
-          <div class="filter-dropdown-wrapper">
-            <label class="filter-label">Status:</label>
-            <app-custom-dropdown
-              [options]="filterStatusOptions"
-              [(ngModel)]="statusFilter"
-              (ngModelChange)="onFilterChange()"
-              placeholder="All Statuses"
-              minWidth="140px"
-            ></app-custom-dropdown>
-          </div>
+          <app-custom-dropdown
+            [options]="filterStatusOptions"
+            [(ngModel)]="statusFilter"
+            (ngModelChange)="onFilterChange()"
+            placeholder="All Statuses"
+            minWidth="145px"
+          ></app-custom-dropdown>
 
           <!-- Sort Dropdown -->
-          <div class="filter-dropdown-wrapper">
-            <label class="filter-label">Sort:</label>
-            <app-custom-dropdown
-              [options]="filterSortOptions"
-              [(ngModel)]="sortBy"
-              (ngModelChange)="onFilterChange()"
-              placeholder="Sort By"
-              minWidth="160px"
-            ></app-custom-dropdown>
-          </div>
+          <app-custom-dropdown
+            [options]="filterSortOptions"
+            [(ngModel)]="sortBy"
+            (ngModelChange)="onFilterChange()"
+            placeholder="Sort By"
+            minWidth="160px"
+          ></app-custom-dropdown>
 
-          <!-- View Toggle (Grid / Table) -->
-          <div class="view-toggle-group">
-            <button
-              type="button"
-              [class.active]="viewMode === 'grid'"
-              (click)="viewMode = 'grid'"
-              class="view-btn"
-              title="Grid View"
-            >
-              <span class="material-symbols-outlined">grid_view</span>
-            </button>
-            <button
-              type="button"
-              [class.active]="viewMode === 'table'"
-              (click)="viewMode = 'table'"
-              class="view-btn"
-              title="Table View"
-            >
-              <span class="material-symbols-outlined">view_list</span>
-            </button>
-          </div>
+          <!-- View Toggle Button (Switches between Card View and Table View) -->
+          <button
+            type="button"
+            (click)="toggleViewMode()"
+            class="view-toggle-btn"
+            [title]="viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'"
+            [attr.aria-label]="viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'"
+          >
+            <span class="material-symbols-outlined">
+              {{ viewMode === 'table' ? 'grid_view' : 'table_rows' }}
+            </span>
+          </button>
         </div>
       </div>
 
-      <!-- Category Filter Pills -->
-      <div class="category-pills-row">
+      <!-- Category Filter Pills with Scroll Container & Side Arrow Buttons -->
+      <div class="category-scroll-wrapper">
         <button
           type="button"
-          class="cat-pill"
-          [class.active]="categoryFilter === 'ALL'"
-          (click)="categoryFilter = 'ALL'; onFilterChange()"
+          class="cat-scroll-arrow-btn prev"
+          (click)="scrollCategories(catScrollRef, -240)"
+          aria-label="Scroll categories left"
+          title="Scroll Left"
         >
-          <span>All Categories</span>
-          <span class="cat-count">{{ vendors.length }}</span>
+          <span class="material-symbols-outlined">chevron_left</span>
         </button>
 
+        <div class="category-pills-row" #catScrollRef>
+          <button
+            type="button"
+            class="cat-pill"
+            [class.active]="categoryFilter === 'ALL'"
+            (click)="categoryFilter = 'ALL'; onFilterChange()"
+          >
+            <span>All Categories</span>
+            <span class="cat-count">{{ vendors.length }}</span>
+          </button>
+
+          <button
+            *ngFor="let cat of availableCategories"
+            type="button"
+            class="cat-pill"
+            [class.active]="categoryFilter === cat"
+            (click)="categoryFilter = cat; onFilterChange()"
+          >
+            <span>{{ cat }}</span>
+            <span class="cat-count">{{ getCategoryCount(cat) }}</span>
+          </button>
+        </div>
+
         <button
-          *ngFor="let cat of availableCategories"
           type="button"
-          class="cat-pill"
-          [class.active]="categoryFilter === cat"
-          (click)="categoryFilter = cat; onFilterChange()"
+          class="cat-scroll-arrow-btn next"
+          (click)="scrollCategories(catScrollRef, 240)"
+          aria-label="Scroll categories right"
+          title="Scroll Right"
         >
-          <span>{{ cat }}</span>
-          <span class="cat-count">{{ getCategoryCount(cat) }}</span>
+          <span class="material-symbols-outlined">chevron_right</span>
         </button>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 4. VENDOR LISTING: GRID VIEW                                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="viewMode === 'grid'" class="vendor-cards-grid">
+      <div *ngIf="viewMode === 'grid' && filteredVendors.length > 0" class="vendor-cards-grid">
         <div *ngFor="let vendor of filteredVendors" class="vendor-card" (click)="openDetailDrawer(vendor)">
           <!-- Card Header -->
           <div class="vc-top-row">
@@ -280,7 +295,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 </span>
               </div>
               <h3 class="vc-name" [title]="vendor.name">{{ vendor.name }}</h3>
-              <span class="vc-category-pill">{{ vendor.category }}</span>
+              <span class="vc-category-pill" *ngFor="let c of categoriesOf(vendor)">{{ c }}</span>
             </div>
           </div>
 
@@ -300,40 +315,31 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
           </div>
 
-          <!-- Credit & Outstanding Gauge -->
+          <!-- Financial Settlement & Range Gauge -->
           <div class="vc-credit-gauge">
             <div class="gauge-meta">
               <span class="gauge-label">Outstanding Balance</span>
-              <span class="gauge-amount" [class.text-rose-600]="vendor.outstanding_balance > 0">
-                {{ vendor.outstanding_balance | appCurrency:'1.0-0' }}
+              <span class="gauge-amount" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
+                {{ (vendor.outstanding_balance || 0) | appCurrency:'1.0-0' }}
               </span>
             </div>
             <div class="gauge-track">
               <div
                 class="gauge-fill"
-                [style.width.%]="getCreditUtilizationPercent(vendor)"
-                [ngClass]="getUtilizationClass(vendor)"
+                [style.width.%]="getVendorSettlementPercent(vendor)"
+                [ngClass]="getVendorSettlementPercent(vendor) >= 100 ? 'gauge-safe' : (getVendorSettlementPercent(vendor) > 0 ? 'gauge-partial' : 'gauge-danger')"
               ></div>
             </div>
-            <div class="gauge-footer">
-              <span>Limit: {{ (vendor.credit_limit && vendor.credit_limit > 0) ? (vendor.credit_limit | appCurrency:'1.0-0') : 'No Limit' }}</span>
-              <span>{{ (vendor.credit_limit && vendor.credit_limit > 0) ? (getCreditUtilizationPercent(vendor) + '% Used') : 'Unlimited' }}</span>
-            </div>
-          </div>
-
-          <!-- Performance & Rating Bar -->
-          <div class="vc-performance-row">
-            <div class="vc-rating">
-              <span class="material-symbols-outlined text-amber-500 text-[18px]">star</span>
-              <span class="font-bold text-amber-600">{{ vendor.rating | number:'1.2-2' }}</span>
-            </div>
-            <div class="vc-metric" title="On-time delivery performance">
-              <span class="material-symbols-outlined text-purple text-[16px]">schedule</span>
-              <span>{{ vendor.on_time_delivery_rate }}% On-Time</span>
-            </div>
-            <div class="vc-metric" title="Purchase invoice count">
-              <span class="material-symbols-outlined text-purple text-[16px]">receipt</span>
-              <span>{{ vendor.total_purchases_count }} Orders</span>
+            <div class="gauge-range-footer">
+              <span class="range-paid">
+                Paid: <strong class="text-emerald-600">{{ getVendorPaidAmount(vendor) | appCurrency:'1.0-0' }}</strong>
+              </span>
+              <span class="range-percent font-bold" [class.text-emerald-600]="getVendorSettlementPercent(vendor) > 0">
+                {{ getVendorSettlementPercent(vendor) }}% Settled
+              </span>
+              <span class="range-total">
+                Total: <strong class="text-purple">{{ getVendorTotalPayable(vendor) | appCurrency:'1.0-0' }}</strong>
+              </span>
             </div>
           </div>
 
@@ -347,15 +353,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             >
               <span class="material-symbols-outlined">visibility</span>
               <span>Full Details</span>
-            </button>
-            <button
-              type="button"
-              (click)="openPurchaseModal(vendor)"
-              class="vc-action-btn btn-purchase"
-              title="Record supply purchase invoice"
-            >
-              <span class="material-symbols-outlined">add_shopping_cart</span>
-              <span>Bill</span>
             </button>
             <button
               type="button"
@@ -374,7 +371,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 4b. VENDOR LISTING: TABLE VIEW                                  -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="viewMode === 'table'" class="vendor-table-card">
+      <div *ngIf="viewMode === 'table' && filteredVendors.length > 0" class="vendor-table-card">
         <table class="vt-table">
           <thead>
             <tr>
@@ -469,13 +466,43 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 </div>
               </td>
             </tr>
-            <tr *ngIf="filteredVendors.length === 0">
-              <td colspan="8" class="text-center py-8 text-muted">
-                No vendors found matching your current filter.
-              </td>
-            </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 4c. VENDOR EMPTY STATE                                          -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div *ngIf="filteredVendors.length === 0" class="vendor-empty-state">
+        <div class="empty-icon-wrapper">
+          <span class="material-symbols-outlined empty-icon">local_shipping</span>
+        </div>
+        <h3 class="empty-title">
+          {{ (searchQuery || statusFilter !== 'ALL' || categoryFilter !== 'ALL') ? 'No Matching Suppliers Found' : 'No Vendors Registered Yet' }}
+        </h3>
+        <p class="empty-description">
+          {{ (searchQuery || statusFilter !== 'ALL' || categoryFilter !== 'ALL') 
+            ? 'Try adjusting your search query, status, or category filters to find the supplier you are looking for.' 
+            : 'Build your procurement pipeline by adding raw material vendors, ingredient suppliers, and packaging partners.' }}
+        </p>
+        <div class="empty-actions">
+          <button
+            *ngIf="searchQuery || statusFilter !== 'ALL' || categoryFilter !== 'ALL'"
+            type="button"
+            (click)="resetFilters()"
+            class="action-btn btn-outline"
+          >
+            <span class="material-symbols-outlined">restart_alt</span>
+            <span>Clear All Filters</span>
+          </button>
+          <a
+            routerLink="/vendors/new"
+            class="action-btn btn-primary"
+          >
+            <span class="material-symbols-outlined">add_business</span>
+            <span>Add New Vendor</span>
+          </a>
+        </div>
       </div>
 
       <div *ngIf="false" class="modal-backdrop" (click)="closeDetailDrawer()">
@@ -587,20 +614,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <button
               type="button"
               class="d-tab"
-              [class.active]="activeTab === 'rating'"
-              (click)="activeTab = 'rating'"
-            >
-              <span class="material-symbols-outlined">star</span>
-              <span>8. Rating</span>
-            </button>
-            <button
-              type="button"
-              class="d-tab"
               [class.active]="activeTab === 'performance'"
               (click)="activeTab = 'performance'"
             >
               <span class="material-symbols-outlined">analytics</span>
-              <span>9. Performance</span>
+              <span>8. Performance</span>
             </button>
           </div>
 
@@ -964,82 +982,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
 
             <!-- ═════════════════════════════════════════════════════════ -->
-            <!-- TAB 8: VENDOR RATING                                    -->
-            <!-- ═════════════════════════════════════════════════════════ -->
-            <div *ngIf="activeTab === 'rating'" class="tab-pane">
-              <div class="section-card">
-                <div class="flex justify-between items-center mb-4">
-                  <h3 class="section-title m-0">
-                    <span class="material-symbols-outlined">star</span>
-                    <span>Vendor Rating & Evaluation</span>
-                  </h3>
-                  <button
-                    type="button"
-                    (click)="openRatingModal(selectedVendor)"
-                    class="action-btn btn-outline"
-                  >
-                    <span class="material-symbols-outlined">rate_review</span>
-                    <span>Update Rating & Feedback</span>
-                  </button>
-                </div>
-
-                <div class="rating-display-grid">
-                  <div class="rating-hero-card">
-                    <span class="text-5xl font-black text-amber-500">{{ selectedVendor.rating | number:'1.1-1' }}</span>
-                    <div class="stars-row mt-2">
-                      <span
-                        *ngFor="let s of [1, 2, 3, 4, 5]"
-                        class="material-symbols-outlined text-[24px]"
-                        [ngClass]="s <= selectedVendor.rating ? 'text-amber-500' : 'text-slate-300'"
-                      >
-                        star
-                      </span>
-                    </div>
-                    <span class="text-xs text-muted mt-2">Overall Vendor Quality Score</span>
-                  </div>
-
-                  <div class="sub-ratings-card">
-                    <div class="sr-item">
-                      <div class="flex justify-between text-xs font-semibold mb-1">
-                        <span>Delivery Speed & Punctuality</span>
-                        <span class="text-amber-600 font-bold">★ {{ selectedVendor.delivery_speed_rating | number:'1.1-1' }}</span>
-                      </div>
-                      <div class="sr-track">
-                        <div class="sr-fill bg-amber-500" [style.width.%]="(selectedVendor.delivery_speed_rating / 5) * 100"></div>
-                      </div>
-                    </div>
-
-                    <div class="sr-item mt-4">
-                      <div class="flex justify-between text-xs font-semibold mb-1">
-                        <span>Product Freshness & Specification Quality</span>
-                        <span class="text-amber-600 font-bold">★ {{ selectedVendor.quality_rating | number:'1.1-1' }}</span>
-                      </div>
-                      <div class="sr-track">
-                        <div class="sr-fill bg-emerald-500" [style.width.%]="(selectedVendor.quality_rating / 5) * 100"></div>
-                      </div>
-                    </div>
-
-                    <div class="sr-item mt-4">
-                      <div class="flex justify-between text-xs font-semibold mb-1">
-                        <span>Pricing & Commercial Competitiveness</span>
-                        <span class="text-amber-600 font-bold">★ {{ selectedVendor.pricing_rating | number:'1.1-1' }}</span>
-                      </div>
-                      <div class="sr-track">
-                        <div class="sr-fill bg-purple" [style.width.%]="(selectedVendor.pricing_rating / 5) * 100"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl" *ngIf="selectedVendor.performance_notes">
-                  <span class="text-xs font-bold text-slate-700 block mb-1">Auditor & Chef Review Remarks</span>
-                  <p class="text-sm text-slate-600 leading-relaxed">{{ selectedVendor.performance_notes }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- ═════════════════════════════════════════════════════════ -->
-            <!-- TAB 9: VENDOR PERFORMANCE                               -->
+            <!-- TAB 8: VENDOR PERFORMANCE                               -->
             <!-- ═════════════════════════════════════════════════════════ -->
             <div *ngIf="activeTab === 'performance'" class="tab-pane">
               <div class="section-card">
@@ -1140,11 +1083,23 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
                 <label class="form-label">Invoice Date *</label>
-                <input type="date" [(ngModel)]="purchaseForm.order_date" name="order_date" required class="form-control" />
+                <app-date-picker
+                  [(ngModel)]="purchaseForm.order_date"
+                  name="order_date"
+                  label="Invoice Date"
+                  placeholder="Select invoice date"
+                  minWidth="100%"
+                ></app-date-picker>
               </div>
               <div class="form-group">
                 <label class="form-label">Payment Due Date</label>
-                <input type="date" [(ngModel)]="purchaseForm.due_date" name="due_date" class="form-control" />
+                <app-date-picker
+                  [(ngModel)]="purchaseForm.due_date"
+                  name="due_date"
+                  label="Payment Due Date"
+                  placeholder="Select due date"
+                  minWidth="100%"
+                ></app-date-picker>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
@@ -1211,7 +1166,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
                 <label class="form-label">Payment Date *</label>
-                <input type="date" [(ngModel)]="paymentForm.payment_date" name="payment_date" required class="form-control" />
+                <app-date-picker
+                  [(ngModel)]="paymentForm.payment_date"
+                  name="payment_date"
+                  label="Payment Date"
+                  placeholder="Select payment date"
+                  minWidth="100%"
+                ></app-date-picker>
               </div>
               <div class="form-group">
                 <label class="form-label">Payment Method *</label>
@@ -1256,76 +1217,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         </div>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 9. UPDATE RATING & EVALUATION MODAL                             -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="isRatingModalOpen && selectedVendor" class="modal-backdrop" (click)="closeRatingModal()">
-        <div class="compact-modal-panel" (click)="$event.stopPropagation()">
-          <div class="fmp-header">
-            <div>
-              <h3 class="text-lg font-bold text-slate-800">Evaluate Vendor & Scorecard</h3>
-              <p class="text-xs text-purple font-medium">{{ selectedVendor.name }}</p>
-            </div>
-            <button type="button" (click)="closeRatingModal()" class="drawer-close-btn">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="saveRating()" class="p-6 space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Overall Star Rating (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.rating" name="rating" class="form-control font-bold" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Delivery Speed Rating (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.delivery_speed_rating" name="delivery_speed_rating" class="form-control" />
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Product Quality Rating (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.quality_rating" name="quality_rating" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Pricing Competitiveness (1 - 5)</label>
-                <input type="number" step="0.1" min="1" max="5" [(ngModel)]="ratingForm.pricing_rating" name="pricing_rating" class="form-control" />
-              </div>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="form-group">
-                <label class="form-label text-xs">On-Time %</label>
-                <input type="number" min="0" max="100" [(ngModel)]="ratingForm.on_time_delivery_rate" name="on_time_delivery_rate" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label text-xs">Quality %</label>
-                <input type="number" min="0" max="100" [(ngModel)]="ratingForm.quality_score" name="quality_score" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label text-xs">Fulfillment %</label>
-                <input type="number" min="0" max="100" [(ngModel)]="ratingForm.fulfillment_rate" name="fulfillment_rate" class="form-control" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Auditor Review Notes</label>
-              <textarea [(ngModel)]="ratingForm.performance_notes" name="performance_notes" rows="2" class="form-control"></textarea>
-            </div>
-
-            <div class="fmp-footer mt-4">
-              <button type="button" (click)="closeRatingModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">grade</span>
-                <span>Save Evaluation</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
   `,
   styles: [`
     /* === VENDOR MANAGEMENT ENTERPRISE STYLES === */
     .vendors-page-wrapper {
+      position: relative;
       padding: 1.5rem;
       max-width: 1600px;
       margin: 0 auto;
@@ -1559,31 +1456,51 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       padding: 0.75rem 1rem;
       margin-bottom: 1rem;
       flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 1rem;
     }
     .search-box {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
       background: var(--bg-app, #F8FAFC);
-      border: 1px solid var(--card-border, #E2E8F0);
-      border-radius: 8px;
-      padding: 0.4rem 0.75rem;
+      border: 1.5px solid var(--card-border, #E2E8F0);
+      border-radius: 10px;
+      padding: 0 0.75rem;
+      height: 40px;
       flex: 1;
-      min-width: 280px;
+      min-width: 260px;
       max-width: 500px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+    .search-box:focus-within {
+      border-color: var(--primary, #7E22CE);
+      box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
     }
     .search-icon {
       color: var(--text-dim, #94A3B8);
-      font-size: 20px;
+      font-size: 18px;
+      margin-right: 0.5rem;
+      pointer-events: none;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
     }
     .search-input {
-      border: none;
-      background: transparent;
-      outline: none;
+      border: none !important;
+      background: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
+      padding: 0 0.5rem 0 0 !important;
+      margin: 0 !important;
       width: 100%;
+      height: 100%;
       font-size: 0.8125rem;
       color: var(--text-main, #1E293B);
+    }
+    .search-input::placeholder {
+      color: var(--text-dim, #94A3B8);
+      font-size: 0.78rem;
     }
     .clear-search-btn {
       background: transparent;
@@ -1591,9 +1508,64 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       cursor: pointer;
       color: var(--text-dim, #94A3B8);
       display: flex;
+      align-items: center;
+      padding: 0;
+      margin-left: 0.25rem;
     }
     .clear-search-btn .material-symbols-outlined {
       font-size: 16px;
+    }
+
+    /* Vendor Empty State */
+    .vendor-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: var(--card-bg, #FFFFFF);
+      border: 1.5px dashed var(--card-border, #E9D5FF);
+      border-radius: 18px;
+      padding: 3.5rem 1.5rem;
+      margin-top: 0.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+    .empty-icon-wrapper {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.08));
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+      color: var(--primary, #7E22CE);
+      box-shadow: 0 8px 16px -4px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
+    }
+    .empty-icon {
+      font-size: 36px;
+    }
+    .empty-title {
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-main, #1E293B);
+      margin: 0 0 0.5rem;
+    }
+    .empty-description {
+      font-size: 0.8125rem;
+      color: var(--text-muted, #64748B);
+      max-width: 440px;
+      line-height: 1.5;
+      margin: 0 0 1.5rem;
+    }
+    .empty-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     .filter-controls {
       display: flex;
@@ -1601,56 +1573,101 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       gap: 0.75rem;
       flex-wrap: wrap;
     }
-    .filter-dropdown-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 0.375rem;
-      font-size: 0.8125rem;
+    .filter-controls app-custom-dropdown {
+      display: inline-block;
+      width: auto;
+      flex-shrink: 0;
     }
-    .filter-label {
-      color: var(--text-muted, #64748B);
-      font-weight: 500;
-    }
-    .filter-select {
-      border: 1px solid var(--card-border, #E2E8F0);
-      border-radius: 8px;
-      padding: 0.4rem 0.6rem;
-      font-size: 0.8125rem;
-      color: var(--text-main, #1E293B);
-      background: var(--card-bg, #FFFFFF);
-      outline: none;
-    }
-    .view-toggle-group {
-      display: flex;
-      background: var(--card-hover, #F1F5F9);
-      border-radius: 8px;
-      padding: 2px;
-    }
-    .view-btn {
-      border: none;
-      background: transparent;
-      padding: 0.35rem 0.5rem;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text-muted, #64748B);
-      display: flex;
+    .view-toggle-btn {
+      display: inline-flex !important;
       align-items: center;
       justify-content: center;
-    }
-    .view-btn.active {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+      border-radius: 12px;
       background: var(--card-bg, #FFFFFF);
+      border: 1.5px solid var(--card-border, #E9D5FF);
       color: var(--primary, #7E22CE);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 0;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    .view-toggle-btn:hover {
+      background: var(--bg-app, #FAF5FF);
+      border-color: var(--primary, #7E22CE);
+      color: var(--primary, #7E22CE);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
+    }
+    .view-toggle-btn:active {
+      transform: scale(0.95);
+    }
+    .view-toggle-btn .material-symbols-outlined {
+      font-size: 21px;
     }
 
-    /* Category Pills */
-    .category-pills-row {
+    /* Category Scroll Wrapper & Side Buttons */
+    .category-scroll-wrapper {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
+      width: 100%;
+      gap: 0.625rem;
       margin-bottom: 1.5rem;
+    }
+    .cat-scroll-arrow-btn {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--card-bg, #FFFFFF);
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      color: var(--primary, #7E22CE);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 0;
+      z-index: 5;
+      user-select: none;
+      outline: none;
+    }
+    .cat-scroll-arrow-btn:hover {
+      background: var(--bg-app, #FAF5FF);
+      border-color: var(--primary, #7E22CE);
+      color: var(--primary, #7E22CE);
+      transform: scale(1.08);
+      box-shadow: 0 4px 12px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.15));
+    }
+    .cat-scroll-arrow-btn:active {
+      transform: scale(0.92);
+    }
+    .cat-scroll-arrow-btn .material-symbols-outlined {
+      font-size: 20px;
+    }
+    .category-pills-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding: 0.25rem 0.125rem;
+      margin-bottom: 0;
+    }
+    .category-pills-row::-webkit-scrollbar {
+      display: none;
+      width: 0 !important;
+      height: 0 !important;
     }
     .cat-pill {
       display: inline-flex;
@@ -1666,6 +1683,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.15s ease;
+      flex-shrink: 0;
     }
     .cat-pill:hover {
       border-color: var(--primary-hover, #D8B4FE);
@@ -1762,6 +1780,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .vc-category-pill {
       display: inline-block;
+      /* Several categories per vendor now — keep them apart when they wrap. */
+      margin: 0 0.25rem 0.25rem 0;
       font-size: 0.6875rem;
       font-weight: 600;
       color: var(--text-muted, #4B5563);
@@ -1791,20 +1811,25 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       color: var(--primary, #7E22CE);
     }
 
-    /* Credit Gauge */
+    /* Financial Range Gauge */
     .vc-credit-gauge {
       margin-bottom: 1rem;
+      padding: 0.75rem 0.875rem;
+      background: var(--bg-app, #F8FAFC);
+      border: 1px solid var(--card-border, #E2E8F0);
+      border-radius: 12px;
     }
     .gauge-meta {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      margin-bottom: 0.375rem;
+      margin-bottom: 0.5rem;
     }
     .gauge-label {
       font-size: 0.6875rem;
       font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.05em;
       color: var(--text-muted, #64748B);
     }
     .gauge-amount {
@@ -1814,24 +1839,42 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
     .gauge-track {
       width: 100%;
-      height: 7px;
-      background: var(--card-border, #E2E8F0);
+      height: 6px;
+      background: var(--card-border, rgba(148, 163, 184, 0.25));
       border-radius: 9999px;
       overflow: hidden;
+      margin-bottom: 0.5rem;
     }
     .gauge-fill {
       height: 100%;
       border-radius: 9999px;
-      transition: width 0.3s ease;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .gauge-footer {
+    .gauge-range-footer {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 0.6875rem;
-      color: var(--text-dim, #94A3B8);
-      margin-top: 0.25rem;
+      color: var(--text-muted, #64748B);
+    }
+    .range-paid {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .range-total {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .range-percent {
+      font-size: 0.6875rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      background: var(--card-hover, rgba(0,0,0,0.04));
     }
     .gauge-safe { background: #10B981; }
+    .gauge-partial { background: #3B82F6; }
     .gauge-warning { background: #F59E0B; }
     .gauge-danger { background: var(--danger, #EF4444); }
 
@@ -2500,6 +2543,7 @@ export class VendorsComponent implements OnInit {
   private notify = inject(NotificationService);
   public settingsService = inject(SettingsService);
   public authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   public isLoading = true;
   public loadError: string | null = null;
@@ -2536,7 +2580,6 @@ export class VendorsComponent implements OnInit {
   public isEditing = false;
   public isPurchaseModalOpen = false;
   public isPaymentModalOpen = false;
-  public isRatingModalOpen = false;
 
   public defaultCurrency = 'SAR';
 
@@ -2609,16 +2652,6 @@ export class VendorsComponent implements OnInit {
     reference_number: '',
     notes: '',
   };
-  public ratingForm = {
-    rating: 5.0,
-    delivery_speed_rating: 5.0,
-    quality_rating: 5.0,
-    pricing_rating: 5.0,
-    on_time_delivery_rate: 100,
-    quality_score: 100,
-    fulfillment_rate: 100,
-    performance_notes: '',
-  };
 
   ngOnInit(): void {
     this.defaultCurrency = this.settingsService.currencySymbol() || 'SAR';
@@ -2628,36 +2661,72 @@ export class VendorsComponent implements OnInit {
   public loadData(): void {
     this.isLoading = true;
     this.loadError = null;
+    this.cdr.markForCheck();
 
-    this.vendorService.getStats().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.stats = res.data;
-          if (res.data.categories?.length) {
-            const dynamicCats = res.data.categories.map((c) => c.name);
+    forkJoin({
+      stats: this.vendorService.getStats().pipe(catchError(() => of(null))),
+      vendors: this.vendorService.getVendors({ limit: 100 }).pipe(
+        catchError((err) => {
+          this.loadError = err?.error?.message || err?.message || 'Failed to load vendor directory. Please verify connection.';
+          return of(null);
+        })
+      ),
+    }).subscribe({
+      next: ({ stats, vendors }) => {
+        this.isLoading = false;
+        if (stats && stats.success && stats.data) {
+          this.stats = stats.data;
+          if (stats.data.categories?.length) {
+            const dynamicCats = stats.data.categories.map((c: any) => c.name);
             this.availableCategories = Array.from(new Set([...this.availableCategories, ...dynamicCats]));
           }
         }
-      },
-      error: () => {},
-    });
-
-    this.vendorService.getVendors({ limit: 100 }).subscribe({
-      next: (res) => {
-        this.isLoading = false;
-        if (res.success) {
-          this.vendors = res.data || [];
+        if (vendors && vendors.success && vendors.data) {
+          this.vendors = vendors.data || [];
+          this.applyFilters();
+        } else if (!this.loadError) {
+          this.vendors = [];
           this.applyFilters();
         }
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;
-        this.loadError = err?.message || 'Failed to load vendor directory. Please verify connection.';
+        this.loadError = err?.error?.message || err?.message || 'Failed to load vendor directory.';
+        this.cdr.detectChanges();
       },
     });
   }
 
+  public toggleViewMode(): void {
+    this.viewMode = this.viewMode === 'table' ? 'grid' : 'table';
+  }
+
+  public scrollCategories(container: HTMLElement, amount: number): void {
+    if (container) {
+      container.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  }
+
+  /**
+   * Every category a vendor supplies, for the pills on its card. Falls back to
+   * the single `category` field for vendors saved before multi-category.
+   */
+  public categoriesOf(vendor: Vendor): string[] {
+    const list = vendor?.categories?.filter((c) => !!c && String(c).trim().length > 0);
+    if (list && list.length) return list;
+    return vendor?.category ? [vendor.category] : [];
+  }
+
   public onFilterChange(): void {
+    this.applyFilters();
+  }
+
+  public resetFilters(): void {
+    this.searchQuery = '';
+    this.categoryFilter = 'ALL';
+    this.statusFilter = 'ALL';
+    this.sortBy = 'name';
     this.applyFilters();
   }
 
@@ -2698,6 +2767,31 @@ export class VendorsComponent implements OnInit {
 
   public getCategoryCount(catName: string): number {
     return this.vendors.filter((v) => v.category === catName).length;
+  }
+
+  public getVendorPaidAmount(vendor: Vendor): number {
+    if (vendor?.total_paid_amount !== undefined && vendor.total_paid_amount !== null) {
+      return Number(vendor.total_paid_amount) || 0;
+    }
+    const total = Number(vendor?.total_purchases_amount) || 0;
+    const balance = Number(vendor?.outstanding_balance) || 0;
+    return Math.max(0, total - balance);
+  }
+
+  public getVendorTotalPayable(vendor: Vendor): number {
+    const invoiceTotal = Number(vendor?.total_purchases_amount) || 0;
+    const currentBalance = Number(vendor?.outstanding_balance) || 0;
+    const paidTotal = this.getVendorPaidAmount(vendor);
+    return Math.max(invoiceTotal, paidTotal + currentBalance);
+  }
+
+  public getVendorSettlementPercent(vendor: Vendor): number {
+    const total = this.getVendorTotalPayable(vendor);
+    if (total <= 0) {
+      return (Number(vendor?.outstanding_balance) || 0) <= 0 ? 100 : 0;
+    }
+    const paid = this.getVendorPaidAmount(vendor);
+    return Math.min(100, Math.max(0, Math.round((paid / total) * 100)));
   }
 
   public getCreditUtilizationPercent(vendor: Vendor): number {
@@ -2891,44 +2985,6 @@ export class VendorsComponent implements OnInit {
       error: (err) => {
         this.isSubmitting = false;
         this.notify.error(err?.error?.message || 'Failed to record payment');
-      },
-    });
-  }
-
-  // Rating Modal
-  public openRatingModal(vendor: Vendor): void {
-    this.selectedVendor = vendor;
-    this.ratingForm = {
-      rating: vendor.rating || 5.0,
-      delivery_speed_rating: vendor.delivery_speed_rating || 5.0,
-      quality_rating: vendor.quality_rating || 5.0,
-      pricing_rating: vendor.pricing_rating || 5.0,
-      on_time_delivery_rate: vendor.on_time_delivery_rate || 100,
-      quality_score: vendor.quality_score || 100,
-      fulfillment_rate: vendor.fulfillment_rate || 100,
-      performance_notes: vendor.performance_notes || '',
-    };
-    this.isRatingModalOpen = true;
-  }
-
-  public closeRatingModal(): void {
-    this.isRatingModalOpen = false;
-  }
-
-  public saveRating(): void {
-    if (!this.selectedVendor) return;
-    this.isSubmitting = true;
-    this.vendorService.updateRating(this.selectedVendor.id, this.ratingForm).subscribe({
-      next: (res) => {
-        this.isSubmitting = false;
-        this.notify.success('Vendor evaluation & scorecard updated');
-        this.closeRatingModal();
-        this.loadData();
-        this.selectedVendor = res.data;
-      },
-      error: (err) => {
-        this.isSubmitting = false;
-        this.notify.error(err?.error?.message || 'Failed to update rating');
       },
     });
   }

@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CustomerDesignKey } from '../../../core/services/customer-layout.service';
 import { CUSTOMER_LAYOUT_CSS } from '../../styles/customer-layout.styles';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 export interface PreviewCustomerItem {
   id: number;
@@ -20,7 +21,7 @@ export interface PreviewCustomerItem {
 @Component({
   selector: 'app-customer-layout-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div
       class="customer-stage"

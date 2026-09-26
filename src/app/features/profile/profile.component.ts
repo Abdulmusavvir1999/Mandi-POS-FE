@@ -5,13 +5,14 @@ import { AuthService } from '../../core/auth/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { User } from '../../core/models';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 type ProfileTab = 'personal' | 'security' | 'permissions';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ActionLoadingDirective],
   template: `
     <div class="profile-page-wrapper">
       <!-- ═══════════════════════════════════════════════════════════════ -->

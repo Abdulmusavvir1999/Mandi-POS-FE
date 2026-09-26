@@ -13,10 +13,11 @@ import { DishLayoutService } from '../../core/services/dish-layout.service';
 import { DISH_LAYOUT_CSS } from '../../shared/styles/dish-layout.styles';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -2343,7 +2344,7 @@ export class ProductsComponent implements OnInit {
    * Stock a dish actually has.
    *
    * Since dish variants arrived, stock lives on the linked ledger item
-   * (stock_items.current_quantity, surfaced as linked_stock_quantity) — that is
+   * (stock_vendor_purchase.current_quantity, surfaced as linked_stock_quantity) — that is
    * what Purchase Entry and Adjustment move, and what checkout deducts from.
    * The legacy per-product counter is only mirrored in some paths, so reading
    * it alone reported every dish as out of stock. Prefer the ledger, fall back

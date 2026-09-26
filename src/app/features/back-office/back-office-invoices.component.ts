@@ -11,6 +11,7 @@ import {
 } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
 import { BackOfficeResultComponent } from './back-office-result.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 /**
  * Invoice management for the Back-Office.
@@ -28,8 +29,7 @@ import { BackOfficeResultComponent } from './back-office-result.component';
     AppCurrencyPipe,
     CustomDropdownComponent,
     DatePickerComponent,
-    BackOfficeResultComponent,
-  ],
+    BackOfficeResultComponent,ActionLoadingDirective],
   template: `
     <!-- ════════════════════════════════════════════════════════════════ -->
     <!-- FILTER & SEARCH TOOLBAR                                          -->

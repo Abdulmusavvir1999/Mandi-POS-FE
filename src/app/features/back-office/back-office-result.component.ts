@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BulkResult } from '../../core/services/back-office.service';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 /**
  * Outcome report for a bulk operation.
@@ -12,7 +13,7 @@ import { BulkResult } from '../../core/services/back-office.service';
 @Component({
   selector: 'app-back-office-result',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div class="modal-backdrop" *ngIf="result">
       <div class="modal-content p-6 md:p-7 w-full max-w-xl shadow-2xl bo-result-card">

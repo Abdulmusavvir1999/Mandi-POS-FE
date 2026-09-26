@@ -20,10 +20,11 @@ const DwellRail = {
 } as const;
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 @Component({
   selector: 'app-dining',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, AppCurrencyPipe, CustomDropdownComponent],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, AppCurrencyPipe, CustomDropdownComponent, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

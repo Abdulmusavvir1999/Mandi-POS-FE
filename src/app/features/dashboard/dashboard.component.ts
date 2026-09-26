@@ -5,11 +5,12 @@ import { DashboardService } from '../../core/services/dashboard.service';
 import { normalizeOrderType, orderTypeLabel } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, RouterLink, AppCurrencyPipe, PageLoaderComponent, ActionLoadingDirective],
   template: `
     <div class="dashboard-wrapper">
       <app-page-loader

@@ -13,11 +13,12 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { CUSTOMER_LAYOUT_CSS } from '../../shared/styles/customer-layout.styles';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterLink, CustomDropdownComponent, AppCurrencyPipe],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterLink, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
   templateUrl: './customers.component.html',
   styleUrls: ['./customers.component.css'],
   styles: [CUSTOMER_LAYOUT_CSS, DEFAULT_ACTION_BUTTON_CSS],

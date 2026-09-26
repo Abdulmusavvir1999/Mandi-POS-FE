@@ -14,6 +14,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { openFloatingPanel, releaseFloatingPanel } from '../floating-panel-registry';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 interface DayCell {
   date: Date;
@@ -36,7 +37,7 @@ interface DayCell {
 @Component({
   selector: 'app-date-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,

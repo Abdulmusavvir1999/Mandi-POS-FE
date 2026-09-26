@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, ActionLoadingDirective],
   template: `
     <header class="header-bar">
       <!-- Left: Mobile Menu Hamburger Button (< 1024px) -->

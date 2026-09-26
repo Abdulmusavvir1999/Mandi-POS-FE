@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
 import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-track.service';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 /**
  * The single filter bar for every Staff Track view.
@@ -20,7 +21,7 @@ import { StaffTrackService, StaffTrackFilters } from '../../core/services/staff-
 @Component({
   selector: 'app-staff-track-filters',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, CustomDropdownComponent, DatePickerComponent, ActionLoadingDirective],
   template: `
     <div class="filter-toolbar-card">
       <div class="filter-controls-group">

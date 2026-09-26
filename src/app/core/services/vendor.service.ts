@@ -76,6 +76,14 @@ export class VendorService {
     return this.http.post<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/purchases`, data);
   }
 
+  public updatePurchase(vendorId: number, purchaseId: number, data: Partial<VendorPurchase>): Observable<ApiResponse<Vendor>> {
+    return this.http.put<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/purchases/${purchaseId}`, data);
+  }
+
+  public deletePurchase(vendorId: number, purchaseId: number): Observable<ApiResponse<Vendor>> {
+    return this.http.delete<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/purchases/${purchaseId}`);
+  }
+
   public getPayments(vendorId: number, page = 1, limit = 50): Observable<ApiResponse<VendorPayment[]>> {
     const params = new HttpParams().set('page', page.toString()).set('limit', limit.toString());
     return this.http.get<ApiResponse<VendorPayment[]>>(`${this.API_URL}/${vendorId}/payments`, { params });
@@ -93,16 +101,15 @@ export class VendorService {
     return this.http.post<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/payments`, data);
   }
 
-  public updateRating(vendorId: number, data: {
-    rating?: number;
-    delivery_speed_rating?: number;
-    quality_rating?: number;
-    pricing_rating?: number;
-    on_time_delivery_rate?: number;
-    quality_score?: number;
-    fulfillment_rate?: number;
-    performance_notes?: string;
-  }): Observable<ApiResponse<Vendor>> {
-    return this.http.patch<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/rating`, data);
+  public updatePayment(vendorId: number, paymentId: number, data: Partial<VendorPayment>): Observable<ApiResponse<Vendor>> {
+    return this.http.put<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/payments/${paymentId}`, data);
+  }
+
+  public deletePayment(vendorId: number, paymentId: number): Observable<ApiResponse<Vendor>> {
+    return this.http.delete<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/payments/${paymentId}`);
+  }
+
+  public getAuditLogs(vendorId: number): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/${vendorId}/audit-logs`);
   }
 }

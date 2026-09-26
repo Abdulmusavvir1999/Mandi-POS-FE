@@ -48,11 +48,12 @@ import {
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe, PageLoaderComponent, ActionLoadingDirective],
   template: `
     <div
       class="pos-fullscreen-container"

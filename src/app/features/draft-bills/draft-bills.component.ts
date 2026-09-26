@@ -10,6 +10,7 @@ import { SettingsService } from '../../core/services/settings.service';
 import { DraftBill, Product } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 import {
   CustomDropdownComponent,
   DropdownOption,
@@ -23,8 +24,7 @@ import {
     FormsModule,
     AppCurrencyPipe,
     PageLoaderComponent,
-    CustomDropdownComponent,
-  ],
+    CustomDropdownComponent,ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

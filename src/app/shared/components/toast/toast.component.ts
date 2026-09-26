@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotificationService, ToastPosition, ToastType, ToastMessage } from '../../../core/services/notification.service';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 @Component({
   selector: 'app-toast',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div
       class="toast-master-container"

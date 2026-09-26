@@ -9,6 +9,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { SettingsService } from '../../../core/services/settings.service';
 import { Category, Product, ProductVariant, StockItem } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
+import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 /**
  * Add / Edit Dish.
@@ -20,7 +21,7 @@ import { CustomDropdownComponent, DropdownOption } from '../../../shared/compone
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <!-- ═══════════════════════════════════════════════════════════════ -->

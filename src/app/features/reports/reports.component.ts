@@ -7,11 +7,12 @@ import { CustomDropdownComponent, DropdownOption } from '../../shared/components
 import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomDropdownComponent, DatePickerComponent, PageLoaderComponent, AppCurrencyPipe],
+  imports: [CommonModule, FormsModule, CustomDropdownComponent, DatePickerComponent, PageLoaderComponent, AppCurrencyPipe, ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader

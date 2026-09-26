@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StaffDesignKey } from '../../../core/services/staff-layout.service';
 import { STAFF_LAYOUT_CSS } from '../../styles/staff-layout.styles';
+import { ActionLoadingDirective } from '../../directives/action-loading.directive';
 
 export interface PreviewStaffItem {
   id: number;
@@ -24,7 +25,7 @@ export interface PreviewStaffItem {
 @Component({
   selector: 'app-staff-layout-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionLoadingDirective],
   template: `
     <div
       class="staff-stage"
