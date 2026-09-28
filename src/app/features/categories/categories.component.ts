@@ -3,12 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Category } from '../../core/models';
+import { Category, Product } from '../../core/models';
+import { ProductService } from '../../core/services/product.service';
+import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { SettingsService } from '../../core/services/settings.service';
 import { CategoryLayoutService } from '../../core/services/category-layout.service';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { CATEGORY_LAYOUT_CSS } from '../../shared/styles/category-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { RouterLink } from '@angular/router';
@@ -17,7 +20,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink, ActionLoadingDirective],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink, ActionLoadingDirective, ImageUploadComponent, AppCurrencyPipe],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -333,7 +336,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 1. BENTO SHOWCASE -->
         <div *ngIf="categoryLayout.effectiveKey() === 'showcase' && filteredCategories.length > 0" class="cat-bento-grid">
-          <div *ngFor="let cat of paginatedCategories" class="cat-bento-card" [class.bg-purple-50]="selectedIds.has(cat.id)">
+          <div *ngFor="let cat of paginatedCategories" class="cat-bento-card" (click)="openViewModal(cat)" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <div class="cat-bento-header">
               <div class="flex items-center gap-3">
                 <input
@@ -367,11 +370,11 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="cat-bento-footer">
               <span class="cat-bento-order">Seq #{{ cat.display_order }}</span>
               <div class="cat-bento-actions">
-                <button type="button" (click)="openEditModal(cat)" class="cat-bento-btn" title="Edit Category">
+                <button type="button" (click)="openEditModal(cat); $event.stopPropagation()" class="cat-bento-btn" title="Edit Category">
                   <span class="material-symbols-outlined" style="font-size: 15px;">edit</span>
                   <span>Edit</span>
                 </button>
-                <button type="button" (click)="deleteCategory(cat)" class="cat-bento-btn !text-red-500 hover:!bg-red-50" title="Delete Category">
+                <button type="button" (click)="deleteCategory(cat); $event.stopPropagation()" class="cat-bento-btn !text-red-500 hover:!bg-red-50" title="Delete Category">
                   <span class="material-symbols-outlined" style="font-size: 15px;">delete</span>
                 </button>
               </div>
@@ -402,7 +405,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cat of paginatedCategories" class="cat-clean-row" [class.bg-purple-50]="selectedIds.has(cat.id)">
+              <tr *ngFor="let cat of paginatedCategories" class="cat-clean-row" (click)="openViewModal(cat)" [class.bg-purple-50]="selectedIds.has(cat.id)">
                 <td style="text-align: center;">
                   <input
                     title="Select this category"
@@ -443,10 +446,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 </td>
                 <td style="text-align: right;">
                   <div class="flex items-center justify-end gap-1">
-                    <button type="button" (click)="openEditModal(cat)" class="cat-clean-btn" title="Edit">
+                    <button type="button" (click)="openEditModal(cat); $event.stopPropagation()" class="cat-clean-btn" title="Edit">
                       <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
                     </button>
-                    <button type="button" (click)="deleteCategory(cat)" class="cat-clean-btn text-red-500 hover:bg-red-50" title="Delete">
+                    <button type="button" (click)="deleteCategory(cat); $event.stopPropagation()" class="cat-clean-btn text-red-500 hover:bg-red-50" title="Delete">
                       <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
                     </button>
                   </div>
@@ -458,7 +461,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 3. COMPACT BADGE TILES -->
         <div *ngIf="categoryLayout.effectiveKey() === 'compact' && filteredCategories.length > 0" class="cat-compact-grid">
-          <div *ngFor="let cat of paginatedCategories" class="cat-compact-tile" [class.bg-purple-50]="selectedIds.has(cat.id)">
+          <div *ngFor="let cat of paginatedCategories" class="cat-compact-tile" (click)="openViewModal(cat)" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <div class="cat-compact-header">
               <div class="flex items-center gap-2">
                 <input
@@ -486,10 +489,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 {{ cat.product_count || 0 }} dishes
               </span>
               <div class="cat-compact-actions">
-                <button type="button" (click)="openEditModal(cat)" class="cat-compact-btn" title="Edit">
+                <button type="button" (click)="openEditModal(cat); $event.stopPropagation()" class="cat-compact-btn" title="Edit">
                   <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
                 </button>
-                <button type="button" (click)="deleteCategory(cat)" class="cat-compact-btn text-red-500 hover:bg-red-50" title="Delete">
+                <button type="button" (click)="deleteCategory(cat); $event.stopPropagation()" class="cat-compact-btn text-red-500 hover:bg-red-50" title="Delete">
                   <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
                 </button>
               </div>
@@ -499,7 +502,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 4. LIST VIEW -->
         <div *ngIf="categoryLayout.effectiveKey() === 'list' && filteredCategories.length > 0" class="cat-list-container">
-          <div *ngFor="let cat of paginatedCategories" class="cat-list-row" [class.bg-purple-50]="selectedIds.has(cat.id)">
+          <div *ngFor="let cat of paginatedCategories" class="cat-list-row" (click)="openViewModal(cat)" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <input
               title="Select category"
               type="checkbox"
@@ -531,10 +534,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             </div>
 
             <div class="cat-list-actions">
-              <button type="button" (click)="openEditModal(cat)" class="cat-list-btn" title="Edit Category">
+              <button type="button" (click)="openEditModal(cat); $event.stopPropagation()" class="cat-list-btn" title="Edit Category">
                 <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
               </button>
-              <button type="button" (click)="deleteCategory(cat)" class="cat-list-btn text-red-500 hover:bg-red-50" title="Delete Category">
+              <button type="button" (click)="deleteCategory(cat); $event.stopPropagation()" class="cat-list-btn text-red-500 hover:bg-red-50" title="Delete Category">
                 <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
               </button>
             </div>
@@ -543,7 +546,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 5. CARD VIEW -->
         <div *ngIf="categoryLayout.effectiveKey() === 'card' && filteredCategories.length > 0" class="cat-card-grid">
-          <div *ngFor="let cat of paginatedCategories" class="cat-card-item" [class.bg-purple-50]="selectedIds.has(cat.id)">
+          <div *ngFor="let cat of paginatedCategories" class="cat-card-item" (click)="openViewModal(cat)" [class.bg-purple-50]="selectedIds.has(cat.id)">
             <div class="cat-card-banner">
               <div class="flex items-center gap-2">
                 <input
@@ -581,11 +584,11 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="cat-card-footer">
               <span class="cat-card-seq-pill">Seq #{{ cat.display_order }}</span>
               <div class="cat-card-actions">
-                <button type="button" (click)="openEditModal(cat)" class="dv-btn is-primary" title="Edit">
+                <button type="button" (click)="openEditModal(cat); $event.stopPropagation()" class="dv-btn is-primary" title="Edit">
                   <span class="material-symbols-outlined">edit</span>
                   <span>Edit</span>
                 </button>
-                <button type="button" (click)="deleteCategory(cat)" class="dv-btn is-icon is-danger" title="Delete">
+                <button type="button" (click)="deleteCategory(cat); $event.stopPropagation()" class="dv-btn is-icon is-danger" title="Delete">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -725,43 +728,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
                 Category Image (Optional)
               </label>
-              <div class="image-upload-row">
-                <div class="image-upload-preview" [class.is-empty]="!form.image_url">
-                  <img *ngIf="form.image_url" [src]="settingsService.assetUrl(form.image_url)" alt="Category image preview" />
-                  <span *ngIf="!form.image_url" class="material-symbols-outlined">add_photo_alternate</span>
-                </div>
-                <div class="image-upload-actions">
-                  <input
-                    type="file"
-                    hidden
-                    #catPicker
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    (change)="onCategoryImageFile($event, catPicker)"
-                    title="Choose category image"
-                  />
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      [disabled]="isUploadingImage"
-                      (click)="catPicker.click()"
-                    >
-                      <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
-                      <span>{{ isUploadingImage ? 'Uploading…' : (form.image_url ? 'Replace' : 'Choose Image') }}</span>
-                    </button>
-                    <button
-                      *ngIf="form.image_url && !isUploadingImage"
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      (click)="removeCategoryImage()"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
-                </div>
-              </div>
+              <app-image-upload
+                [imageUrl]="form.image_url"
+                [uploading]="isUploadingImage"
+                uploadLabel="Choose Image"
+                alt="Category image"
+                pickerTitle="Choose category image"
+                (fileChange)="onCategoryImageFile($event.event, $event.picker)"
+                (removed)="removeCategoryImage()"
+              ></app-image-upload>
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">
@@ -780,6 +755,162 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 8. VIEW CATEGORY DETAILS DIALOG MODAL                           -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showViewModal && viewingCategory" (click)="closeViewModal()">
+        <div class="modal-content p-0 max-w-2xl w-full shadow-2xl rounded-3xl overflow-hidden" (click)="$event.stopPropagation()">
+          <!-- Hero Header Banner -->
+          <div class="relative p-6 bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 text-white">
+            <button
+              type="button"
+              (click)="closeViewModal()"
+              class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+              title="Close Dialog"
+            >
+              <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+
+            <div class="flex items-start gap-4 pr-8">
+              <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 overflow-hidden shadow-lg">
+                <img
+                  *ngIf="viewingCategory.image_url"
+                  [src]="settingsService.assetUrl(viewingCategory.image_url)"
+                  [alt]="viewingCategory.name"
+                  class="w-full h-full object-cover"
+                />
+                <span *ngIf="!viewingCategory.image_url" class="material-symbols-outlined text-3xl">restaurant_menu</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-white/20 text-white backdrop-blur-xs">
+                    Seq #{{ viewingCategory.display_order }}
+                  </span>
+                  <span
+                    class="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                    [ngClass]="viewingCategory.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'"
+                  >
+                    ● {{ viewingCategory.status === 'ACTIVE' ? 'Live on Catalog' : 'Hidden / Draft' }}
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/30 text-purple-200">
+                    ID: #{{ viewingCategory.id }}
+                  </span>
+                </div>
+                <h3 class="text-2xl font-black tracking-tight text-white truncate">{{ viewingCategory.name }}</h3>
+                <p class="text-xs text-purple-200 mt-1 line-clamp-2">
+                  {{ viewingCategory.description || 'Standard dish classification for menu catalog' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick KPI Strip -->
+          <div class="grid grid-cols-3 divide-x divide-purple-100 dark:divide-slate-800 bg-purple-50/60 dark:bg-slate-900/50 border-b border-purple-100 dark:border-slate-800 text-center py-3">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block">Total Dishes</span>
+              <span class="text-sm font-black font-mono text-purple-700 dark:text-purple-400">
+                {{ viewingCategory.product_count || categoryProducts.length }} Items
+              </span>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block">Display Order</span>
+              <span class="text-sm font-black font-mono text-slate-800 dark:text-slate-200">
+                Position #{{ viewingCategory.display_order }}
+              </span>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block">Catalog Visibility</span>
+              <span class="text-sm font-black font-mono" [ngClass]="viewingCategory.status === 'ACTIVE' ? 'text-emerald-600' : 'text-amber-600'">
+                {{ viewingCategory.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Dialog Body: Linked Dishes -->
+          <div class="p-6 space-y-4 max-h-[50vh] overflow-y-auto custom-scrollbar">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-sm text-purple-600">restaurant</span>
+                  <span>Dishes Linked in this Category ({{ categoryProducts.length }})</span>
+                </h4>
+                <span class="text-xs text-slate-400" *ngIf="categoryProducts.length > 0">
+                  Showing all assigned menu items
+                </span>
+              </div>
+
+              <!-- Loading state for dishes -->
+              <div *ngIf="isLoadingCategoryProducts" class="py-8 text-center text-slate-400">
+                <span class="material-symbols-outlined animate-spin text-2xl text-purple-600 mb-2">progress_activity</span>
+                <p class="text-xs">Loading linked dishes...</p>
+              </div>
+
+              <!-- Empty state for dishes -->
+              <div *ngIf="!isLoadingCategoryProducts && categoryProducts.length === 0" class="p-6 rounded-2xl border border-dashed border-purple-200 dark:border-slate-800 text-center bg-purple-50/30 dark:bg-slate-900/30">
+                <span class="material-symbols-outlined text-3xl text-purple-300 dark:text-purple-600 mb-1">no_meals</span>
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-300">No dishes linked to this category yet</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Dishes assigned to "{{ viewingCategory.name }}" will appear here.</p>
+              </div>
+
+              <!-- Dishes List -->
+              <div *ngIf="!isLoadingCategoryProducts && categoryProducts.length > 0" class="space-y-2">
+                <div
+                  *ngFor="let dish of categoryProducts"
+                  class="flex items-center justify-between p-3 rounded-xl bg-purple-50/40 dark:bg-slate-900/60 border border-purple-100 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-600 transition"
+                >
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 border border-purple-100 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                      <img
+                        *ngIf="dish.image_url"
+                        [src]="settingsService.assetUrl(dish.image_url)"
+                        [alt]="dish.name"
+                        class="w-full h-full object-cover"
+                      />
+                      <span *ngIf="!dish.image_url" class="material-symbols-outlined text-purple-400 text-lg">restaurant</span>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{{ dish.name }}</div>
+                      <div class="text-[10px] text-slate-400 font-mono">
+                        SKU: {{ dish.sku || '—' }} • <span class="capitalize" [ngClass]="dish.status === 'ACTIVE' ? 'text-emerald-600' : 'text-slate-400'">{{ dish.status }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="text-xs font-mono font-bold text-purple-700 dark:text-purple-300">
+                      {{ dish.selling_price | appCurrency:'1.0-0' }}
+                    </div>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded font-bold" [ngClass]="dish.is_available ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'">
+                      {{ dish.is_available ? 'Available' : 'Out of Stock' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dialog Footer Action Bar -->
+          <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/80 border-t border-purple-100 dark:border-slate-800">
+            <button
+              type="button"
+              (click)="closeViewModal()"
+              class="action-btn btn-outline-purple"
+            >
+              Close
+            </button>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="openEditFromView()"
+                class="action-btn btn-gradient-purple flex items-center gap-1.5"
+              >
+                <span class="material-symbols-outlined text-base">edit</span>
+                <span>Edit Category</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -875,55 +1006,6 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       }
 
       /* ─── Image upload field ─── */
-      .image-upload-row {
-        display: flex;
-        align-items: center;
-        gap: 0.875rem;
-      }
-
-      .image-upload-preview {
-        width: 4.5rem;
-        height: 4.5rem;
-        flex-shrink: 0;
-        border-radius: 14px;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--bg-app, #FAF5FF);
-        border: 1.5px solid var(--card-border, #E9D5FF);
-        color: var(--primary, #7E22CE);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-      }
-
-      .image-upload-preview.is-empty {
-        border-style: dashed;
-      }
-
-      .image-upload-preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .image-upload-preview .material-symbols-outlined {
-        font-size: 26px;
-        opacity: 0.55;
-      }
-
-      .image-upload-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 0.45rem;
-        min-width: 0;
-      }
-
-      .image-upload-hint {
-        margin: 0;
-        font-size: 0.6875rem;
-        color: var(--text-muted, #6B7280);
-      }
     `,
     CATEGORY_LAYOUT_CSS,
     DEFAULT_ACTION_BUTTON_CSS,
@@ -935,7 +1017,13 @@ export class CategoriesComponent implements OnInit {
   public settingsService = inject(SettingsService);
   public categoryLayout = inject(CategoryLayoutService);
   private categoryService = inject(CategoryService);
+  private productService = inject(ProductService);
   private notify = inject(NotificationService);
+
+  public showViewModal = false;
+  public viewingCategory: Category | null = null;
+  public categoryProducts: Product[] = [];
+  public isLoadingCategoryProducts = false;
 
   public categories: Category[] = [];
   public searchQuery = '';
@@ -1201,6 +1289,42 @@ export class CategoriesComponent implements OnInit {
         });
       },
     });
+  }
+
+  
+  openViewModal(cat: Category): void {
+    this.viewingCategory = cat;
+    this.showViewModal = true;
+    this.categoryProducts = [];
+    this.loadCategoryProducts(cat.id);
+  }
+
+  closeViewModal(): void {
+    this.showViewModal = false;
+    this.viewingCategory = null;
+    this.categoryProducts = [];
+  }
+
+  loadCategoryProducts(categoryId: number): void {
+    this.isLoadingCategoryProducts = true;
+    this.productService.getProducts(1, 100, undefined, categoryId).subscribe({
+      next: (res) => {
+        this.isLoadingCategoryProducts = false;
+        if (res.success && res.data) {
+          this.categoryProducts = res.data;
+        }
+      },
+      error: () => {
+        this.isLoadingCategoryProducts = false;
+      },
+    });
+  }
+
+  openEditFromView(): void {
+    if (!this.viewingCategory) return;
+    const cat = this.viewingCategory;
+    this.closeViewModal();
+    this.openEditModal(cat);
   }
 
   openAddModal(): void {

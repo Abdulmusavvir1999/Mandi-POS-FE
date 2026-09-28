@@ -7,13 +7,14 @@ import { NotificationService } from '../../../core/services/notification.service
 import { SettingsService } from '../../../core/services/settings.service';
 import { Vendor, VendorStatus, PaymentTermsType, PreferredPaymentMethod } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
+import { ImageUploadComponent } from '../../../shared/components/image-upload/image-upload.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
 @Component({
   selector: 'app-vendor-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
+  imports: [CommonModule, FormsModule, RouterModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective, ImageUploadComponent],
   template: `
     <div class="vendor-form-page">
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -99,43 +100,16 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               <!-- Vendor Logo / Image Upload -->
               <div class="form-group full-width vendor-image-upload-wrapper">
                 <label class="form-label">Vendor Logo / Profile Image</label>
-                <div class="vendor-image-upload-box">
-                  <div class="vendor-avatar-preview" [class.has-image]="!!form.image_url">
-                    <img *ngIf="form.image_url" [src]="settingsService.assetUrl(form.image_url)" alt="Vendor Logo" />
-                    <span *ngIf="!form.image_url" class="material-symbols-outlined">add_photo_alternate</span>
-                  </div>
-                  <div class="vendor-image-actions">
-                    <input
-                      type="file"
-                      hidden
-                      #vendorImagePicker
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                      (change)="onImageFile($event, vendorImagePicker)"
-                      title="Choose vendor logo or image"
-                    />
-                    <div class="image-btn-row">
-                      <button
-                        type="button"
-                        class="btn-image-action upload-btn"
-                        [disabled]="isUploadingImage"
-                        (click)="vendorImagePicker.click()"
-                      >
-                        <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
-                        <span>{{ isUploadingImage ? 'Uploading…' : (form.image_url ? 'Change Image' : 'Upload Logo') }}</span>
-                      </button>
-                      <button
-                        *ngIf="form.image_url && !isUploadingImage"
-                        type="button"
-                        class="btn-image-action remove-btn"
-                        (click)="form.image_url = ''"
-                      >
-                        <span class="material-symbols-outlined">delete</span>
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                    <p class="image-upload-hint">PNG, JPG, WEBP or GIF &bull; Max 2MB &bull; Recommended square 1:1 format</p>
-                  </div>
-                </div>
+                <app-image-upload
+                  [imageUrl]="form.image_url"
+                  [uploading]="isUploadingImage"
+                  uploadLabel="Upload Logo"
+                  hint="PNG, JPG, WEBP or GIF · Max 2MB · Square 1:1 recommended"
+                  alt="Vendor logo"
+                  pickerTitle="Choose vendor logo or image"
+                  (fileChange)="onImageFile($event.event, $event.picker)"
+                  (removed)="form.image_url = ''"
+                ></app-image-upload>
               </div>
 
               <div class="form-group full-width">
@@ -885,96 +859,6 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
       /* ── VENDOR IMAGE UPLOAD ───────────────────────────────── */
       .vendor-image-upload-wrapper {
         margin-bottom: 0.25rem;
-      }
-      .vendor-image-upload-box {
-        display: flex;
-        align-items: center;
-        gap: 1.25rem;
-        padding: 1rem;
-        background: var(--bg-app, #FAF5FF);
-        border: 1.5px dashed var(--card-border, #E9D5FF);
-        border-radius: 1rem;
-        transition: all 0.2s ease;
-      }
-      .vendor-image-upload-box:hover {
-        border-color: var(--primary, #7E22CE);
-      }
-      .vendor-avatar-preview {
-        width: 4.75rem;
-        height: 4.75rem;
-        border-radius: 1rem;
-        background: var(--card-bg, #FFFFFF);
-        border: 1.5px solid var(--card-border, #E9D5FF);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        overflow: hidden;
-        color: var(--primary, #7E22CE);
-        box-shadow: 0 4px 12px -2px rgba(var(--primary-rgb, 126, 34, 206), 0.15);
-      }
-      .vendor-avatar-preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .vendor-avatar-preview .material-symbols-outlined {
-        font-size: 2.25rem;
-        opacity: 0.6;
-      }
-      .vendor-image-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        flex: 1;
-        min-width: 0;
-      }
-      .image-btn-row {
-        display: flex;
-        align-items: center;
-        gap: 0.625rem;
-        flex-wrap: wrap;
-      }
-      .btn-image-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-        padding: 0.45rem 0.875rem;
-        border-radius: 0.625rem;
-        font-size: 0.75rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      .btn-image-action .material-symbols-outlined {
-        font-size: 1.125rem;
-      }
-      .btn-image-action.upload-btn {
-        background: var(--card-bg, #FFFFFF);
-        border: 1.5px solid var(--primary, #7E22CE);
-        color: var(--primary, #7E22CE);
-      }
-      .btn-image-action.upload-btn:hover:not(:disabled) {
-        background: var(--primary, #7E22CE);
-        color: #FFFFFF;
-      }
-      .btn-image-action.upload-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      .btn-image-action.remove-btn {
-        background: transparent;
-        border: 1px solid var(--danger, #EF4444);
-        color: var(--danger, #EF4444);
-      }
-      .btn-image-action.remove-btn:hover {
-        background: rgba(239, 68, 68, 0.1);
-      }
-      .image-upload-hint {
-        font-size: 0.6875rem;
-        color: var(--text-muted, #64748B);
-        margin: 0;
       }
 
       /* ── CREDIT LIMIT TOGGLE & NO LIMIT BANNER ─────────────── */

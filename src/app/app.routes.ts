@@ -157,6 +157,15 @@ export const routes: Routes = [
         data: { permission: 'customer.manage' },
       },
       {
+        path: 'customers/:id',
+        loadComponent: () =>
+          import('./features/customers/customer-detail/customer-detail.component').then(
+            (m) => m.CustomerDetailComponent
+          ),
+        canActivate: [roleGuard],
+        data: { permission: 'customer.manage' },
+      },
+      {
         path: 'vendors',
         loadComponent: () =>
           import('./features/vendors/vendors.component').then((m) => m.VendorsComponent),

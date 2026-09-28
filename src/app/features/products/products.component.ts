@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Product, Category, ProductAddon, ComboDeal } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { DishLayoutService } from '../../core/services/dish-layout.service';
 import { DISH_LAYOUT_CSS } from '../../shared/styles/dish-layout.styles';
@@ -17,7 +18,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective, ImageUploadComponent],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -728,8 +729,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <!-- Dish Name & Avatar -->
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-[#F3E8FF] border border-[#E9D5FF] flex items-center justify-center font-bold text-xs text-[#7E22CE] shrink-0 shadow-xs">
-                      <span class="material-symbols-outlined" style="font-size: 20px;">restaurant</span>
+                    <div class="w-9 h-9 rounded-xl bg-[#F3E8FF] border border-[#E9D5FF] flex items-center justify-center font-bold text-xs text-[#7E22CE] shrink-0 shadow-xs overflow-hidden">
+                      <img
+                        *ngIf="hasCardImage(p)"
+                        [src]="settingsService.assetUrl(p.image_url!)"
+                        [alt]="p.name"
+                        class="w-full h-full object-cover rounded-xl"
+                        (error)="onCardImageError(p)"
+                      />
+                      <span *ngIf="!hasCardImage(p)" class="material-symbols-outlined" style="font-size: 20px;">restaurant</span>
                     </div>
                     <div class="min-w-0">
                       <div class="font-bold text-[#2E1065] text-xs truncate">{{ p.name }}</div>
@@ -920,47 +928,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             </div>
             <div>
               <label class="form-label text-xs font-bold text-gray-700 uppercase">Add-on Photo</label>
-              <div class="image-upload-row">
-                <div class="image-upload-preview" [class.is-empty]="!addonForm.image_url">
-                  <img
-                    *ngIf="addonForm.image_url"
-                    [src]="settingsService.assetUrl(addonForm.image_url)"
-                    alt="Add-on photo preview"
-                  />
-                  <span *ngIf="!addonForm.image_url" class="material-symbols-outlined">add_photo_alternate</span>
-                </div>
-                <div class="image-upload-actions">
-                  <input
-                    type="file"
-                    hidden
-                    #addonPicker
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    (change)="onOfferImageFile($event, addonPicker, addonForm, 'addon')"
-                    title="Choose add-on photo"
-                  />
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      [disabled]="uploadingImageFor === 'addon'"
-                      (click)="addonPicker.click()"
-                    >
-                      <span class="material-symbols-outlined">{{ uploadingImageFor === 'addon' ? 'progress_activity' : 'upload' }}</span>
-                      <span>{{ uploadingImageFor === 'addon' ? 'Uploading…' : (addonForm.image_url ? 'Replace' : 'Choose Image') }}</span>
-                    </button>
-                    <button
-                      *ngIf="addonForm.image_url && uploadingImageFor !== 'addon'"
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      (click)="addonForm.image_url = ''"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
-                </div>
-              </div>
+              <app-image-upload
+                [imageUrl]="addonForm.image_url"
+                [uploading]="uploadingImageFor === 'addon'"
+                uploadLabel="Choose Image"
+                alt="Add-on photo"
+                pickerTitle="Choose add-on photo"
+                (fileChange)="onOfferImageFile($event.event, $event.picker, addonForm, 'addon')"
+                (removed)="addonForm.image_url = ''"
+              ></app-image-upload>
             </div>
             <div class="flex items-center gap-2 pt-2">
               <input type="checkbox" id="addonAvail" [(ngModel)]="addonForm.is_available" name="addonAvail" class="rounded border-gray-300 text-purple-600" />
@@ -1002,47 +978,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             </div>
             <div>
               <label class="form-label text-xs font-bold text-gray-700 uppercase">Combo Photo</label>
-              <div class="image-upload-row">
-                <div class="image-upload-preview" [class.is-empty]="!comboForm.image_url">
-                  <img
-                    *ngIf="comboForm.image_url"
-                    [src]="settingsService.assetUrl(comboForm.image_url)"
-                    alt="Combo deal photo preview"
-                  />
-                  <span *ngIf="!comboForm.image_url" class="material-symbols-outlined">add_photo_alternate</span>
-                </div>
-                <div class="image-upload-actions">
-                  <input
-                    type="file"
-                    hidden
-                    #comboPicker
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    (change)="onOfferImageFile($event, comboPicker, comboForm, 'combo')"
-                    title="Choose combo photo"
-                  />
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      [disabled]="uploadingImageFor === 'combo'"
-                      (click)="comboPicker.click()"
-                    >
-                      <span class="material-symbols-outlined">{{ uploadingImageFor === 'combo' ? 'progress_activity' : 'upload' }}</span>
-                      <span>{{ uploadingImageFor === 'combo' ? 'Uploading…' : (comboForm.image_url ? 'Replace' : 'Choose Image') }}</span>
-                    </button>
-                    <button
-                      *ngIf="comboForm.image_url && uploadingImageFor !== 'combo'"
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      (click)="comboForm.image_url = ''"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
-                </div>
-              </div>
+              <app-image-upload
+                [imageUrl]="comboForm.image_url"
+                [uploading]="uploadingImageFor === 'combo'"
+                uploadLabel="Choose Image"
+                alt="Combo deal photo"
+                pickerTitle="Choose combo photo"
+                (fileChange)="onOfferImageFile($event.event, $event.picker, comboForm, 'combo')"
+                (removed)="comboForm.image_url = ''"
+              ></app-image-upload>
             </div>
             <!-- Included Items Section -->
             <div class="offer-items-block">
@@ -1174,29 +1118,6 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       }
 
       /* ─── Dish image upload ─── */
-      .image-upload-row { display: flex; align-items: center; gap: 0.875rem; }
-
-      .image-upload-preview {
-        width: 4.5rem;
-        height: 4.5rem;
-        flex-shrink: 0;
-        border-radius: 14px;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--bg-app, #FAF5FF);
-        border: 1.5px solid var(--card-border, #E9D5FF);
-        color: var(--primary, #7E22CE);
-      }
-
-      .image-upload-preview.is-empty { border-style: dashed; }
-      .image-upload-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
-      .image-upload-preview .material-symbols-outlined { font-size: 26px; opacity: 0.55; }
-
-      .image-upload-actions { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
-      .image-upload-hint { margin: 0; font-size: 0.6875rem; color: var(--text-muted, #6B7280); }
-
       /* ─── Variant editor ─── */
       .variants-hint {
         margin: 0.3rem 0 0;

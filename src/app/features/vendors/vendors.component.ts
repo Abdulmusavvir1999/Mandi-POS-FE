@@ -7,14 +7,14 @@ import { VendorService } from '../../core/services/vendor.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { AuthService } from '../../core/auth/services/auth.service';
-import { Vendor, VendorPurchase, VendorPayment, VendorStats } from '../../core/models';
+import { Vendor, VendorPayment, VendorStats } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
 import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
-type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance' | 'performance';
+type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'balance' | 'performance';
 
 @Component({
   selector: 'app-vendors',
@@ -26,7 +26,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         [loading]="isLoading"
         [error]="loadError"
         message="Loading vendor directory…"
-        subMessage="Synchronizing supplier profiles, purchase records & performance scores."
+        subMessage="Synchronizing supplier profiles, payment records & performance scores."
         icon="local_shipping"
         (retry)="loadData()"
       ></app-page-loader>
@@ -57,16 +57,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon">account_balance</span>
                 <span>Total Payable: <strong>{{ (stats?.totalOutstanding || 0) | appCurrency:'1.0-0' }}</strong></span>
-              </span>
-              <span class="meta-dot">•</span>
-              <span class="meta-item">
-                <span class="material-symbols-outlined meta-icon">shopping_bag</span>
-                <span>Total Procured: <strong>{{ (stats?.totalPurchases || 0) | appCurrency:'1.0-0' }}</strong></span>
-              </span>
-              <span class="meta-dot">•</span>
-              <span class="meta-item" *ngIf="stats?.overdueCount">
-                <span class="material-symbols-outlined meta-icon text-rose-500">warning</span>
-                <span class="text-rose-600 font-semibold">{{ stats?.overdueCount }} Invoices Overdue ({{ (stats?.overdueAmount || 0) | appCurrency:'1.0-0' }})</span>
               </span>
             </div>
           </div>
@@ -131,43 +121,8 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
           </div>
           <div class="kpi-value text-rose-600">{{ (stats?.totalOutstanding || 0) | appCurrency:'1.0-0' }}</div>
           <div class="kpi-subtext">
-            <span *ngIf="(stats?.overdueCount || 0) > 0" class="text-rose-600 font-medium">
-              ⚠️ {{ stats?.overdueCount }} Overdue Bills
-            </span>
-            <span *ngIf="!stats?.overdueCount" class="text-emerald-600 font-medium">All accounts current</span>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">Gross Spend</span>
-            <div class="kpi-icon-badge bg-indigo-light text-indigo">
-              <span class="material-symbols-outlined">receipt_long</span>
-            </div>
-          </div>
-          <div class="kpi-value">{{ (stats?.totalPurchases || 0) | appCurrency:'1.0-0' }}</div>
-          <div class="kpi-subtext">
-            <span class="text-purple font-medium">All-time supplies</span>
-          </div>
-        </div>
-
-        <div class="kpi-card" [class.border-rose-300]="(stats?.overdueCount || 0) > 0">
-          <div class="kpi-header">
-            <span class="kpi-label">Overdue Invoices</span>
-            <div class="kpi-icon-badge bg-amber-light text-amber">
-              <span class="material-symbols-outlined">pending_actions</span>
-            </div>
-          </div>
-          <div class="kpi-value" [class.text-rose-600]="(stats?.overdueCount || 0) > 0">
-            {{ (stats?.overdueAmount || 0) | appCurrency:'1.0-0' }}
-          </div>
-          <div class="kpi-subtext">
-            <span *ngIf="(stats?.overdueCount || 0) > 0" class="text-rose-600 font-medium">
-              ⚠️ {{ stats?.overdueCount }} Bills Past Due
-            </span>
-            <span *ngIf="!(stats?.overdueCount)" class="text-emerald-600 font-medium">
-              ✓ All payments on schedule
-            </span>
+            <span *ngIf="(stats?.totalOutstanding || 0) > 0" class="text-rose-600 font-medium">Payable to suppliers</span>
+            <span *ngIf="!(stats?.totalOutstanding || 0)" class="text-emerald-600 font-medium">All accounts current</span>
           </div>
         </div>
       </div>
@@ -176,20 +131,21 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       <!-- 3. SEARCH, FILTERS & CATEGORIES BAR                             -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="filter-toolbar">
-        <div class="search-box">
+        <div class="search-input-wrapper">
           <span class="material-symbols-outlined search-icon">search</span>
           <input
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="onFilterChange()"
             placeholder="Search by vendor name, code, contact person, phone, or GSTIN…"
-            class="search-input"
+            class="toolbar-search-input"
           />
           <button
             *ngIf="searchQuery"
             type="button"
             (click)="searchQuery = ''; onFilterChange()"
-            class="clear-search-btn"
+            class="search-clear-btn"
+            title="Clear search"
           >
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -440,14 +396,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   </button>
                   <button
                     type="button"
-                    (click)="openPurchaseModal(vendor)"
-                    class="table-icon-btn text-purple"
-                    title="Record Purchase"
-                  >
-                    <span class="material-symbols-outlined">add_shopping_cart</span>
-                  </button>
-                  <button
-                    type="button"
                     *ngIf="vendor.outstanding_balance > 0"
                     (click)="openPaymentModal(vendor)"
                     class="table-icon-btn text-emerald-600"
@@ -596,20 +544,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <button
               type="button"
               class="d-tab"
-              [class.active]="activeTab === 'purchases'"
-              (click)="activeTab = 'purchases'"
-            >
-              <span class="material-symbols-outlined">shopping_cart</span>
-              <span>6. Purchases ({{ selectedVendor.total_purchases_count }})</span>
-            </button>
-            <button
-              type="button"
-              class="d-tab"
               [class.active]="activeTab === 'balance'"
               (click)="activeTab = 'balance'"
             >
               <span class="material-symbols-outlined">receipt_long</span>
-              <span>7. Balance</span>
+              <span>6. Balance</span>
             </button>
             <button
               type="button"
@@ -618,7 +557,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               (click)="activeTab = 'performance'"
             >
               <span class="material-symbols-outlined">analytics</span>
-              <span>8. Performance</span>
+              <span>7. Performance</span>
             </button>
           </div>
 
@@ -655,10 +594,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                   <div class="info-item">
                     <span class="info-label">Onboarding Date</span>
                     <span class="info-val">{{ (selectedVendor.created_at || 'Recently added') | date:'mediumDate' }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Last Purchase Date</span>
-                    <span class="info-val">{{ selectedVendor.last_purchase_date ? (selectedVendor.last_purchase_date | date:'mediumDate') : 'No purchases yet' }}</span>
                   </div>
                 </div>
 
@@ -848,67 +783,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
 
             <!-- ═════════════════════════════════════════════════════════ -->
-            <!-- TAB 6: PURCHASE HISTORY                                 -->
-            <!-- ═════════════════════════════════════════════════════════ -->
-            <div *ngIf="activeTab === 'purchases'" class="tab-pane">
-              <div class="section-card">
-                <div class="flex justify-between items-center mb-4">
-                  <h3 class="section-title m-0">
-                    <span class="material-symbols-outlined">shopping_cart</span>
-                    <span>Purchase Invoices & Orders History</span>
-                  </h3>
-                  <button
-                    type="button"
-                    (click)="openPurchaseModal(selectedVendor)"
-                    class="action-btn btn-primary"
-                  >
-                    <span class="material-symbols-outlined">add</span>
-                    <span>Record New Purchase</span>
-                  </button>
-                </div>
-
-                <div *ngIf="vendorPurchases.length === 0" class="empty-tab-state">
-                  <span class="material-symbols-outlined">receipt_long</span>
-                  <p>No purchase records found for this vendor yet.</p>
-                </div>
-
-                <div *ngIf="vendorPurchases.length > 0" class="purchases-table-wrap">
-                  <table class="vt-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Invoice #</th>
-                        <th>Items Summary</th>
-                        <th>Amount</th>
-                        <th>Paid</th>
-                        <th>Balance</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let p of vendorPurchases">
-                        <td>{{ p.order_date | date:'mediumDate' }}</td>
-                        <td class="font-mono font-bold text-purple">{{ p.invoice_number }}</td>
-                        <td class="text-sm max-w-xs truncate" [title]="p.items_summary">{{ p.items_summary || 'General supplies' }}</td>
-                        <td class="font-bold">{{ p.total_amount | appCurrency:'1.0-0' }}</td>
-                        <td class="text-emerald-600 font-semibold">{{ p.paid_amount | appCurrency:'1.0-0' }}</td>
-                        <td class="font-bold" [class.text-rose-600]="p.balance_amount > 0">
-                          {{ p.balance_amount | appCurrency:'1.0-0' }}
-                        </td>
-                        <td>
-                          <span class="badge" [ngClass]="getPurchaseStatusBadgeClass(p.payment_status)">
-                            {{ p.payment_status }}
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <!-- ═════════════════════════════════════════════════════════ -->
-            <!-- TAB 7: OUTSTANDING BALANCE & PAYMENTS                   -->
+            <!-- TAB 6: OUTSTANDING BALANCE & PAYMENTS                   -->
             <!-- ═════════════════════════════════════════════════════════ -->
             <div *ngIf="activeTab === 'balance'" class="tab-pane">
               <div class="section-card">
@@ -982,7 +857,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
 
             <!-- ═════════════════════════════════════════════════════════ -->
-            <!-- TAB 8: VENDOR PERFORMANCE                               -->
+            <!-- TAB 7: VENDOR PERFORMANCE                               -->
             <!-- ═════════════════════════════════════════════════════════ -->
             <div *ngIf="activeTab === 'performance'" class="tab-pane">
               <div class="section-card">
@@ -1054,87 +929,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 6. RECORD PURCHASE INVOICE MODAL                                -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="isPurchaseModalOpen && selectedVendor" class="modal-backdrop" (click)="closePurchaseModal()">
-        <div class="compact-modal-panel" (click)="$event.stopPropagation()">
-          <div class="fmp-header">
-            <div>
-              <h3 class="text-lg font-bold text-slate-800">Record Purchase Invoice</h3>
-              <p class="text-xs text-purple font-medium">{{ selectedVendor.name }} ({{ selectedVendor.vendor_code }})</p>
-            </div>
-            <button type="button" (click)="closePurchaseModal()" class="drawer-close-btn">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="savePurchase()" class="p-6 space-y-4">
-            <div class="form-group">
-              <label class="form-label">Invoice / Bill Number *</label>
-              <input
-                type="text"
-                [(ngModel)]="purchaseForm.invoice_number"
-                name="invoice_number"
-                required
-                placeholder="e.g. INV-2026-099"
-                class="form-control font-mono"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Invoice Date *</label>
-                <app-date-picker
-                  [(ngModel)]="purchaseForm.order_date"
-                  name="order_date"
-                  label="Invoice Date"
-                  placeholder="Select invoice date"
-                  minWidth="100%"
-                ></app-date-picker>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Payment Due Date</label>
-                <app-date-picker
-                  [(ngModel)]="purchaseForm.due_date"
-                  name="due_date"
-                  label="Payment Due Date"
-                  placeholder="Select due date"
-                  minWidth="100%"
-                ></app-date-picker>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Total Bill Amount *</label>
-                <input type="number" step="0.01" min="1" [(ngModel)]="purchaseForm.total_amount" name="total_amount" required class="form-control font-bold" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Immediate Paid Amount</label>
-                <input type="number" step="0.01" min="0" [(ngModel)]="purchaseForm.paid_amount" name="paid_amount" class="form-control" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Items Summary / Description</label>
-              <textarea
-                [(ngModel)]="purchaseForm.items_summary"
-                name="items_summary"
-                rows="2"
-                placeholder="e.g. 200x Fresh Chickens (1100g), 40kg Mutton Cuts"
-                class="form-control"
-              ></textarea>
-            </div>
-
-            <div class="fmp-footer mt-4">
-              <button type="button" (click)="closePurchaseModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">receipt_long</span>
-                <span>{{ isSubmitting ? 'Recording…' : 'Record Purchase' }}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 8. RECORD PAYMENT MODAL                                         -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div *ngIf="isPaymentModalOpen && selectedVendor" class="modal-backdrop" (click)="closePaymentModal()">
@@ -1155,13 +949,18 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <input
                 type="number"
                 step="0.01"
-                min="1"
+                min="0.01"
                 [max]="selectedVendor.outstanding_balance"
                 [(ngModel)]="paymentForm.amount"
+                (ngModelChange)="onPaymentAmountChange()"
                 name="amount"
                 required
                 class="form-control text-lg font-bold text-emerald-600"
+                [class.border-rose-500]="paymentForm.amount > selectedVendor.outstanding_balance"
               />
+              <p *ngIf="paymentForm.amount > selectedVendor.outstanding_balance" class="text-xs text-rose-600 font-bold mt-1">
+                Disbursement amount cannot exceed the outstanding balance of {{ selectedVendor.outstanding_balance | appCurrency:'1.0-2' }}
+              </p>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
@@ -1208,7 +1007,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 
             <div class="fmp-footer mt-4">
               <button type="button" (click)="closePaymentModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
+              <button
+                type="submit"
+                [disabled]="isSubmitting || !paymentForm.amount || paymentForm.amount <= 0 || paymentForm.amount > selectedVendor.outstanding_balance"
+                class="action-btn btn-primary"
+              >
                 <span class="material-symbols-outlined">payments</span>
                 <span>{{ isSubmitting ? 'Processing…' : 'Record Payment' }}</span>
               </button>
@@ -1458,62 +1261,10 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       flex-wrap: wrap;
       gap: 1rem;
     }
-    .search-box {
-      position: relative;
-      display: flex;
-      align-items: center;
-      background: var(--bg-app, #F8FAFC);
-      border: 1.5px solid var(--card-border, #E2E8F0);
-      border-radius: 10px;
-      padding: 0 0.75rem;
-      height: 40px;
+    .filter-toolbar .search-input-wrapper {
       flex: 1;
       min-width: 260px;
-      max-width: 500px;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-    }
-    .search-box:focus-within {
-      border-color: var(--primary, #7E22CE);
-      box-shadow: 0 0 0 3px var(--primary-light, rgba(var(--primary-rgb, 126, 34, 206), 0.12));
-    }
-    .search-icon {
-      color: var(--text-dim, #94A3B8);
-      font-size: 18px;
-      margin-right: 0.5rem;
-      pointer-events: none;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-    }
-    .search-input {
-      border: none !important;
-      background: transparent !important;
-      outline: none !important;
-      box-shadow: none !important;
-      padding: 0 0.5rem 0 0 !important;
-      margin: 0 !important;
-      width: 100%;
-      height: 100%;
-      font-size: 0.8125rem;
-      color: var(--text-main, #1E293B);
-    }
-    .search-input::placeholder {
-      color: var(--text-dim, #94A3B8);
-      font-size: 0.78rem;
-    }
-    .clear-search-btn {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--text-dim, #94A3B8);
-      display: flex;
-      align-items: center;
-      padding: 0;
-      margin-left: 0.25rem;
-    }
-    .clear-search-btn .material-symbols-outlined {
-      font-size: 16px;
+      max-width: 480px;
     }
 
     /* Vendor Empty State */
@@ -1932,14 +1683,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     .btn-view:hover {
       background: rgba(139, 92, 246, 0.22);
     }
-    .btn-purchase {
-      background: rgba(99, 102, 241, 0.12);
-      color: #4F46E5;
-      border-color: rgba(99, 102, 241, 0.25);
-    }
-    .btn-purchase:hover {
-      background: rgba(99, 102, 241, 0.22);
-    }
     .btn-pay {
       background: rgba(16, 185, 129, 0.12);
       color: #059669;
@@ -1950,7 +1693,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
     }
 
     :host-context(.dark-theme) .btn-view, .dark-theme .btn-view { color: #C4B5FD; }
-    :host-context(.dark-theme) .btn-purchase, .dark-theme .btn-purchase { color: #A5B4FC; }
     :host-context(.dark-theme) .btn-pay, .dark-theme .btn-pay { color: #6EE7B7; }
 
     /* Table View */
@@ -2572,13 +2314,11 @@ export class VendorsComponent implements OnInit {
   // Selected vendor detail drawer
   public selectedVendor: Vendor | null = null;
   public activeTab: ActiveTab = 'profile';
-  public vendorPurchases: VendorPurchase[] = [];
   public vendorPayments: VendorPayment[] = [];
 
   // Modals
   public isVendorModalOpen = false;
   public isEditing = false;
-  public isPurchaseModalOpen = false;
   public isPaymentModalOpen = false;
 
   public defaultCurrency = 'SAR';
@@ -2630,21 +2370,11 @@ export class VendorsComponent implements OnInit {
     { value: 'name', label: 'Vendor Name', icon: 'sort_by_alpha' },
     { value: 'vendor_code', label: 'Vendor Code', icon: 'tag' },
     { value: 'outstanding_balance', label: 'Outstanding Balance', icon: 'account_balance_wallet' },
-    { value: 'total_purchases_amount', label: 'Spend Volume', icon: 'shopping_bag' },
     { value: 'rating', label: 'Rating', icon: 'star' },
   ];
 
   // Form states
   public vendorForm: Partial<Vendor> = this.resetVendorForm();
-  public purchaseForm = {
-    invoice_number: '',
-    order_date: new Date().toISOString().split('T')[0],
-    due_date: '',
-    total_amount: 0,
-    paid_amount: 0,
-    items_summary: '',
-    notes: '',
-  };
   public paymentForm = {
     amount: 0,
     payment_date: new Date().toISOString().split('T')[0],
@@ -2757,7 +2487,6 @@ export class VendorsComponent implements OnInit {
     list.sort((a, b) => {
       if (this.sortBy === 'vendor_code') return a.vendor_code.localeCompare(b.vendor_code);
       if (this.sortBy === 'outstanding_balance') return (b.outstanding_balance || 0) - (a.outstanding_balance || 0);
-      if (this.sortBy === 'total_purchases_amount') return (b.total_purchases_amount || 0) - (a.total_purchases_amount || 0);
       if (this.sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
       return a.name.localeCompare(b.name);
     });
@@ -2770,19 +2499,12 @@ export class VendorsComponent implements OnInit {
   }
 
   public getVendorPaidAmount(vendor: Vendor): number {
-    if (vendor?.total_paid_amount !== undefined && vendor.total_paid_amount !== null) {
-      return Number(vendor.total_paid_amount) || 0;
-    }
-    const total = Number(vendor?.total_purchases_amount) || 0;
-    const balance = Number(vendor?.outstanding_balance) || 0;
-    return Math.max(0, total - balance);
+    return Number(vendor?.total_paid_amount) || 0;
   }
 
+  /** Everything owed over the vendor's life: what has been paid plus what is still outstanding. */
   public getVendorTotalPayable(vendor: Vendor): number {
-    const invoiceTotal = Number(vendor?.total_purchases_amount) || 0;
-    const currentBalance = Number(vendor?.outstanding_balance) || 0;
-    const paidTotal = this.getVendorPaidAmount(vendor);
-    return Math.max(invoiceTotal, paidTotal + currentBalance);
+    return this.getVendorPaidAmount(vendor) + (Number(vendor?.outstanding_balance) || 0);
   }
 
   public getVendorSettlementPercent(vendor: Vendor): number {
@@ -2813,12 +2535,6 @@ export class VendorsComponent implements OnInit {
     return 'badge-inactive';
   }
 
-  public getPurchaseStatusBadgeClass(status: string): string {
-    if (status === 'PAID') return 'badge-paid';
-    if (status === 'PARTIAL') return 'badge-partial';
-    return 'badge-unpaid';
-  }
-
   public formatPaymentTerms(terms: string): string {
     if (!terms) return 'Net 30';
     if (terms === 'PAY_ANYTIME') return 'Pay Anytime';
@@ -2836,12 +2552,6 @@ export class VendorsComponent implements OnInit {
   }
 
   private loadVendorSubCollections(vendorId: number): void {
-    this.vendorService.getPurchases(vendorId).subscribe({
-      next: (res) => {
-        if (res.success) this.vendorPurchases = res.data || [];
-      },
-    });
-
     this.vendorService.getPayments(vendorId).subscribe({
       next: (res) => {
         if (res.success) this.vendorPayments = res.data || [];
@@ -2901,53 +2611,6 @@ export class VendorsComponent implements OnInit {
     }
   }
 
-  // Purchase Modal
-  public openPurchaseModal(vendor: Vendor): void {
-    this.selectedVendor = vendor;
-    const today = new Date().toISOString().split('T')[0];
-    const due = new Date();
-    due.setDate(due.getDate() + 30);
-
-    this.purchaseForm = {
-      invoice_number: `INV-${vendor.vendor_code}-${Math.floor(100 + Math.random() * 900)}`,
-      order_date: today,
-      due_date: due.toISOString().split('T')[0],
-      total_amount: 0,
-      paid_amount: 0,
-      items_summary: '',
-      notes: '',
-    };
-    this.isPurchaseModalOpen = true;
-  }
-
-  public closePurchaseModal(): void {
-    this.isPurchaseModalOpen = false;
-  }
-
-  public savePurchase(): void {
-    if (!this.selectedVendor) return;
-    if (!this.purchaseForm.invoice_number.trim() || this.purchaseForm.total_amount <= 0) {
-      this.notify.warning('Please specify a valid invoice number and positive total amount');
-      return;
-    }
-
-    this.isSubmitting = true;
-    this.vendorService.recordPurchase(this.selectedVendor.id, this.purchaseForm).subscribe({
-      next: (res) => {
-        this.isSubmitting = false;
-        this.notify.success('Purchase invoice recorded successfully');
-        this.closePurchaseModal();
-        this.loadData();
-        this.selectedVendor = res.data;
-        this.loadVendorSubCollections(res.data.id);
-      },
-      error: (err) => {
-        this.isSubmitting = false;
-        this.notify.error(err?.error?.message || 'Failed to record purchase invoice');
-      },
-    });
-  }
-
   // Payment Modal
   public openPaymentModal(vendor: Vendor): void {
     this.selectedVendor = vendor;
@@ -2965,10 +2628,24 @@ export class VendorsComponent implements OnInit {
     this.isPaymentModalOpen = false;
   }
 
+  public onPaymentAmountChange(): void {
+    if (!this.selectedVendor) return;
+    const max = Number(this.selectedVendor.outstanding_balance) || 0;
+    if (Number(this.paymentForm.amount) > max) {
+      this.paymentForm.amount = max;
+    }
+  }
+
   public savePayment(): void {
     if (!this.selectedVendor) return;
-    if (this.paymentForm.amount <= 0) {
+    const amount = Number(this.paymentForm.amount);
+    const outstanding = Number(this.selectedVendor.outstanding_balance) || 0;
+    if (amount <= 0) {
       this.notify.warning('Disbursement amount must be greater than zero');
+      return;
+    }
+    if (amount > outstanding) {
+      this.notify.warning(`Disbursement amount cannot exceed the outstanding balance of ${this.selectedVendor.outstanding_balance}`);
       return;
     }
 
@@ -2999,7 +2676,7 @@ export class VendorsComponent implements OnInit {
     const headers = [
       'Code', 'Name', 'Category', 'Status', 'Contact Person', 'Phone', 'Email',
       'City', 'GSTIN/Tax ID', 'Payment Terms', 'Credit Limit', 'Outstanding Balance',
-      'Total Purchases', 'Rating', 'On-Time %'
+      'Rating', 'On-Time %'
     ];
 
     const rows = this.filteredVendors.map((v) => [
@@ -3015,7 +2692,6 @@ export class VendorsComponent implements OnInit {
       `"${v.payment_terms || ''}"`,
       v.credit_limit || 0,
       v.outstanding_balance || 0,
-      v.total_purchases_amount || 0,
       v.rating || 5.0,
       v.on_time_delivery_rate || 100,
     ]);

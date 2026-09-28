@@ -167,24 +167,37 @@ export const POS_DESIGN_CSS = `
 
     [class*='pos-design-'] .dish-specs {
       flex-direction: column;
-      gap: 0.3rem;
+      gap: 0.35rem;
+      width: 100%;
+      margin: 0.25rem 0;
+    }
+
+    [class*='pos-design-'] .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
       width: 100%;
     }
 
     [class*='pos-design-'] .spec-label {
-      display: block;
-      font-size: 0.5625rem;
+      display: inline-block;
+      font-size: 0.625rem;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       color: var(--card-accent);
+      opacity: 0.85;
+      flex-shrink: 0;
     }
 
     [class*='pos-design-'] .spec-value {
-      display: block;
-      font-size: 0.625rem;
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 700;
       line-height: 1.4;
       color: var(--pos-body-color);
+      text-align: right;
     }
 
     /* The CTA is decorative: the whole card is the click target already, so it

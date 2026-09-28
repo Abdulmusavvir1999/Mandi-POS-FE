@@ -6,14 +6,14 @@ import { VendorService } from '../../../core/services/vendor.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { Vendor, VendorPurchase, VendorPayment } from '../../../core/models';
+import { Vendor, VendorPayment } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
 import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
-type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'purchases' | 'balance';
+type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'balance';
 
 @Component({
   selector: 'app-vendor-detail',
@@ -25,7 +25,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         [loading]="isLoading"
         [error]="loadError"
         message="Loading vendor profile…"
-        subMessage="Synchronizing supplier ledger, purchase invoices & performance analytics."
+        subMessage="Synchronizing supplier ledger, payments & performance analytics."
         icon="storefront"
         (retry)="loadVendor()"
       ></app-page-loader>
@@ -79,23 +79,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
               <span class="meta-dot">•</span>
               <span class="meta-item">
                 <span class="material-symbols-outlined meta-icon text-blue">shopping_cart</span>
-                <span>Total Procured: <strong>{{ totalProcuredAmount | appCurrency }}</strong></span>
+                <span>Total Payable: <strong>{{ totalPayableAmount | appCurrency }}</strong></span>
               </span>
             </div>
           </div>
         </div>
 
         <div class="hero-actions">
-          <button
-            type="button"
-            (click)="openPurchaseModal()"
-            class="hero-btn btn-purchase"
-            title="Record Purchase Invoice"
-          >
-            <span class="material-symbols-outlined">add_shopping_cart</span>
-            <span>Record Bill</span>
-          </button>
-
           <button
             type="button"
             (click)="openPaymentModal()"
@@ -123,14 +113,13 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       <div *ngIf="vendor && !isLoading" class="kpi-grid">
         <div class="kpi-card card-accent-purple">
           <div class="kpi-header-row">
-            <span class="kpi-title">Total Procured</span>
+            <span class="kpi-title">Total Payable</span>
             <div class="kpi-icon-bubble bg-purple-tint">
               <span class="material-symbols-outlined">shopping_bag</span>
             </div>
           </div>
           <div class="kpi-value-row">
-            <span class="kpi-number">{{ totalProcuredAmount | appCurrency:'1.0-0' }}</span>
-            <span class="kpi-pill pill-purple">{{ vendorPurchases.length || vendor.total_purchases_count || 0 }} Invoices</span>
+            <span class="kpi-number">{{ totalPayableAmount | appCurrency:'1.0-0' }}</span>
           </div>
         </div>
 
@@ -246,22 +235,11 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
           <button
             type="button"
             class="module-tab-btn"
-            [class.is-active]="activeTab === 'purchases'"
-            (click)="activeTab = 'purchases'"
-          >
-            <span class="material-symbols-outlined">shopping_cart</span>
-            <span>6. Purchase History</span>
-            <span class="tab-count-badge" *ngIf="vendorPurchases.length > 0">{{ vendorPurchases.length }}</span>
-          </button>
-
-          <button
-            type="button"
-            class="module-tab-btn"
             [class.is-active]="activeTab === 'balance'"
             (click)="activeTab = 'balance'"
           >
             <span class="material-symbols-outlined">payments</span>
-            <span>7. Disbursements</span>
+            <span>6. Disbursements</span>
             <span class="tab-count-badge" *ngIf="vendorPayments.length > 0">{{ vendorPayments.length }}</span>
           </button>
         </div>
@@ -453,15 +431,15 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             </div>
             <div>
               <h2 class="card-title">Financial Summary &amp; Balance Overview</h2>
-              <p class="card-subtitle">Comprehensive breakdown of total purchases, settled disbursements, and balance due</p>
+              <p class="card-subtitle">Comprehensive breakdown of the amount payable, settled disbursements, and balance due</p>
             </div>
           </div>
 
           <div class="credit-banner">
             <div class="cb-item">
-              <span class="cb-label">Total Procured Amount</span>
-              <span class="cb-val text-purple">{{ totalProcuredAmount | appCurrency }}</span>
-              <span class="text-xs text-muted mt-1">{{ vendorPurchases.length > 0 ? (vendorPurchases.length + ' invoices recorded') : 'Opening balance registered' }}</span>
+              <span class="cb-label">Total Payable Amount</span>
+              <span class="cb-val text-purple">{{ totalPayableAmount | appCurrency }}</span>
+              <span class="text-xs text-muted mt-1">Paid plus outstanding balance</span>
             </div>
             <div class="cb-item">
               <span class="cb-label">Total Paid Amount</span>
@@ -494,95 +472,12 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
             <div class="flex justify-between text-xs text-muted mt-2">
               <span>Paid: <strong class="text-emerald-600">{{ totalPaidAmount | appCurrency }}</strong></span>
               <span>Due: <strong [class.text-rose-600]="vendor.outstanding_balance > 0">{{ (vendor.outstanding_balance || 0) | appCurrency }}</strong></span>
-              <span>Total: <strong class="text-purple">{{ totalProcuredAmount | appCurrency }}</strong></span>
+              <span>Total: <strong class="text-purple">{{ totalPayableAmount | appCurrency }}</strong></span>
             </div>
           </div>
         </section>
 
-        <!-- ── TAB 6: PURCHASES HISTORY ── -->
-        <section *ngIf="activeTab === 'purchases'" class="content-card">
-          <div class="card-header">
-            <div class="card-header-left">
-              <div class="card-header-icon bg-blue-soft">
-                <span class="material-symbols-outlined">shopping_cart</span>
-              </div>
-              <div>
-                <h2 class="card-title">Purchase Invoices &amp; Orders History</h2>
-                <p class="card-subtitle">All supply invoices recorded for this vendor</p>
-              </div>
-            </div>
-
-            <div class="card-header-right">
-              <div class="payable-pill-badge" [class.is-settled]="vendor.outstanding_balance <= 0">
-                <span class="payable-pill-label">Balance Due:</span>
-                <span class="payable-pill-val" [class.text-rose-600]="vendor.outstanding_balance > 0" [class.text-emerald-600]="vendor.outstanding_balance <= 0">
-                  {{ (vendor.outstanding_balance || 0) | appCurrency }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="vendorPurchases.length === 0" class="empty-state-card">
-            <span class="material-symbols-outlined">receipt_long</span>
-            <p>No purchase records found for this vendor yet.</p>
-          </div>
-
-          <div *ngIf="vendorPurchases.length > 0" class="table-wrap">
-            <table class="saas-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Invoice #</th>
-                  <th>Items Summary</th>
-                  <th>Total Amount</th>
-                  <th>Paid Amount</th>
-                  <th>Balance Due</th>
-                  <th>Status</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let p of vendorPurchases">
-                  <td>{{ p.order_date | date:'mediumDate' }}</td>
-                  <td class="font-mono font-bold text-purple">{{ p.invoice_number }}</td>
-                  <td class="text-sm max-w-xs truncate" [title]="p.items_summary">{{ p.items_summary || 'General supplies' }}</td>
-                  <td class="font-bold">{{ p.total_amount | appCurrency }}</td>
-                  <td class="text-emerald-600 font-semibold">{{ p.paid_amount | appCurrency }}</td>
-                  <td class="font-bold" [class.text-rose-600]="p.balance_amount > 0">
-                    {{ p.balance_amount | appCurrency }}
-                  </td>
-                  <td>
-                    <span class="status-pill" [ngClass]="getPurchaseStatusBadgeClass(p.payment_status)">
-                      {{ p.payment_status }}
-                    </span>
-                  </td>
-                  <td class="text-right">
-                    <div class="row-actions">
-                      <button
-                        type="button"
-                        class="action-icon-btn btn-edit"
-                        (click)="openEditPurchaseModal(p)"
-                        title="Edit Purchase Invoice"
-                      >
-                        <span class="material-symbols-outlined">edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="action-icon-btn btn-delete"
-                        (click)="confirmDeletePurchase(p)"
-                        title="Delete Purchase Invoice"
-                      >
-                        <span class="material-symbols-outlined">close</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- ── TAB 7: DISBURSEMENTS & PAYMENTS ── -->
+        <!-- ── TAB 6: DISBURSEMENTS & PAYMENTS ── -->
         <section *ngIf="activeTab === 'balance'" class="content-card">
           <div class="card-header">
             <div class="card-header-left">
@@ -676,85 +571,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 6. MODALS                                                       -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- Purchase Modal -->
-      <div *ngIf="isPurchaseModalOpen && vendor" class="modal-backdrop" (click)="closePurchaseModal()">
-        <div class="modal-panel" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <div>
-              <h3 class="modal-title">{{ editingPurchaseId ? 'Edit Purchase Invoice' : 'Record Purchase Invoice' }}</h3>
-              <p class="modal-subtitle">{{ vendor.name }} ({{ vendor.vendor_code }})</p>
-            </div>
-            <button type="button" (click)="closePurchaseModal()" class="close-btn">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <form (ngSubmit)="savePurchase()" class="modal-body space-y-4">
-            <div class="form-group">
-              <label class="form-label">Invoice / Bill Number *</label>
-              <input
-                type="text"
-                [(ngModel)]="purchaseForm.invoice_number"
-                name="invoice_number"
-                required
-                placeholder="Enter invoice / bill number (e.g. INV-2026-001)"
-                class="form-control font-mono"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Invoice Date *</label>
-                <app-date-picker
-                  [(ngModel)]="purchaseForm.order_date"
-                  name="order_date"
-                  label="Invoice Date"
-                  placeholder="Select invoice date"
-                  minWidth="100%"
-                ></app-date-picker>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Payment Due Date</label>
-                <app-date-picker
-                  [(ngModel)]="purchaseForm.due_date"
-                  name="due_date"
-                  label="Payment Due Date"
-                  placeholder="Select due date"
-                  minWidth="100%"
-                ></app-date-picker>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-group">
-                <label class="form-label">Total Bill Amount ({{ defaultCurrency }}) *</label>
-                <input type="number" step="0.01" min="0.01" [(ngModel)]="purchaseForm.total_amount" name="total_amount" required placeholder="0.00" class="form-control font-bold" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Immediate Paid Amount</label>
-                <input type="number" step="0.01" min="0" [(ngModel)]="purchaseForm.paid_amount" name="paid_amount" placeholder="0.00" class="form-control" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Items Summary / Description</label>
-              <textarea
-                [(ngModel)]="purchaseForm.items_summary"
-                name="items_summary"
-                rows="2"
-                placeholder="e.g. 200x Fresh Chickens (1100g), 40kg Mutton Cuts"
-                class="form-control"
-              ></textarea>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" (click)="closePurchaseModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
-                <span class="material-symbols-outlined">{{ editingPurchaseId ? 'save' : 'receipt_long' }}</span>
-                <span>{{ isSubmitting ? (editingPurchaseId ? 'Saving…' : 'Recording…') : (editingPurchaseId ? 'Update Purchase' : 'Record Purchase') }}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
       <!-- Payment Modal -->
       <div *ngIf="isPaymentModalOpen && vendor" class="modal-backdrop" (click)="closePaymentModal()">
         <div class="modal-panel" (click)="$event.stopPropagation()">
@@ -775,11 +591,17 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
                 type="number"
                 step="0.01"
                 min="0.01"
+                [max]="maxDisbursementAmount"
                 [(ngModel)]="paymentForm.amount"
+                (ngModelChange)="onPaymentAmountChange()"
                 name="amount"
                 required
                 class="form-control text-lg font-bold text-emerald-600"
+                [class.border-rose-500]="paymentForm.amount > maxDisbursementAmount"
               />
+              <p *ngIf="paymentForm.amount > maxDisbursementAmount" class="text-xs text-rose-600 font-bold mt-1">
+                Disbursement amount cannot exceed the payable balance of {{ maxDisbursementAmount | appCurrency:'1.0-2' }}
+              </p>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="form-group">
@@ -826,35 +648,16 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
 
             <div class="modal-footer">
               <button type="button" (click)="closePaymentModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="submit" [disabled]="isSubmitting" class="action-btn btn-primary">
+              <button
+                type="submit"
+                [disabled]="isSubmitting || !paymentForm.amount || paymentForm.amount <= 0 || paymentForm.amount > maxDisbursementAmount"
+                class="action-btn btn-primary"
+              >
                 <span class="material-symbols-outlined">{{ editingPaymentId ? 'save' : 'payments' }}</span>
                 <span>{{ isSubmitting ? (editingPaymentId ? 'Saving…' : 'Processing…') : (editingPaymentId ? 'Update Disbursement' : 'Record Disbursement') }}</span>
               </button>
             </div>
           </form>
-        </div>
-      </div>
-
-      <!-- Delete Purchase Confirmation Modal -->
-      <div *ngIf="isDeletePurchaseConfirmOpen && purchaseToDelete" class="modal-backdrop" (click)="closeDeletePurchaseModal()">
-        <div class="modal-panel delete-confirm-panel" (click)="$event.stopPropagation()">
-          <div class="modal-body p-6 text-center">
-            <div class="confirm-icon-bubble">
-              <span class="material-symbols-outlined">delete_forever</span>
-            </div>
-            <h3 class="confirm-title">Delete Purchase Invoice?</h3>
-            <p class="confirm-desc">
-              Are you sure you want to delete invoice <strong class="font-mono text-purple">{{ purchaseToDelete.invoice_number }}</strong> ({{ purchaseToDelete.total_amount | appCurrency }})? 
-              This will deduct the unpaid balance from the vendor's outstanding ledger.
-            </p>
-            <div class="confirm-footer">
-              <button type="button" (click)="closeDeletePurchaseModal()" class="action-btn btn-outline">Cancel</button>
-              <button type="button" [disabled]="isSubmitting" (click)="executeDeletePurchase()" class="action-btn btn-danger">
-                <span class="material-symbols-outlined">delete</span>
-                <span>{{ isSubmitting ? 'Deleting…' : 'Yes, Delete Invoice' }}</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1067,11 +870,6 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'p
         color: #FFFFFF;
         border: none;
         box-shadow: 0 4px 12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.3));
-      }
-      .btn-purchase {
-        background: rgba(99, 102, 241, 0.12);
-        color: #4F46E5;
-        border: 1px solid rgba(99, 102, 241, 0.25);
       }
       .btn-pay {
         background: rgba(16, 185, 129, 0.12);
@@ -1806,30 +1604,14 @@ export class VendorDetailComponent implements OnInit {
   public isSubmitting = false;
 
   public activeTab: ActiveTab = 'profile';
-  public vendorPurchases: VendorPurchase[] = [];
   public vendorPayments: VendorPayment[] = [];
   public vendorAuditLogs: any[] = [];
 
   // Modals & Edit States
-  public isPurchaseModalOpen = false;
-  public editingPurchaseId: number | null = null;
-  public isDeletePurchaseConfirmOpen = false;
-  public purchaseToDelete: VendorPurchase | null = null;
-
   public isPaymentModalOpen = false;
   public editingPaymentId: number | null = null;
   public isDeletePaymentConfirmOpen = false;
   public paymentToDelete: VendorPayment | null = null;
-
-  public purchaseForm = {
-    invoice_number: '',
-    order_date: new Date().toISOString().split('T')[0],
-    due_date: '',
-    total_amount: 0,
-    paid_amount: 0,
-    items_summary: '',
-    notes: '',
-  };
 
   public paymentForm = {
     amount: 0,
@@ -1858,21 +1640,16 @@ export class VendorDetailComponent implements OnInit {
     if (this.vendorPayments && this.vendorPayments.length > 0) {
       return this.vendorPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     }
-    const total = Number(this.vendor?.total_purchases_amount) || 0;
-    const balance = Number(this.vendor?.outstanding_balance) || 0;
-    return Math.max(0, total - balance);
+    return Number(this.vendor?.total_paid_amount) || 0;
   }
 
-  public get totalProcuredAmount(): number {
-    const invoiceTotal = Number(this.vendor?.total_purchases_amount) || 0;
-    const currentBalance = Number(this.vendor?.outstanding_balance) || 0;
-    const paidTotal = this.totalPaidAmount;
-    // Total financial obligation: opening/initial amount not on invoice + total invoices = paid + currentBalance
-    return Math.max(invoiceTotal, paidTotal + currentBalance);
+  /** Everything owed over the vendor's life: what has been paid plus what is still outstanding. */
+  public get totalPayableAmount(): number {
+    return this.totalPaidAmount + (Number(this.vendor?.outstanding_balance) || 0);
   }
 
   public get paymentSettlementPercent(): number {
-    const total = this.totalProcuredAmount;
+    const total = this.totalPayableAmount;
     if (total <= 0) {
       return (Number(this.vendor?.outstanding_balance) || 0) <= 0 ? 100 : 0;
     }
@@ -1918,12 +1695,6 @@ export class VendorDetailComponent implements OnInit {
   public loadSubCollections(): void {
     if (!this.vendorId) return;
 
-    this.vendorService.getPurchases(this.vendorId).subscribe({
-      next: (res) => {
-        if (res.success) this.vendorPurchases = res.data || [];
-      },
-    });
-
     this.vendorService.getPayments(this.vendorId).subscribe({
       next: (res) => {
         if (res.success) this.vendorPayments = res.data || [];
@@ -1953,19 +1724,6 @@ export class VendorDetailComponent implements OnInit {
         });
       }
 
-      for (const p of this.vendorPurchases) {
-        const hasP = logs.some(l => l.action.includes('PURCHASE') && (l.new_values?.invoice_number === p.invoice_number || l.old_values?.invoice_number === p.invoice_number));
-        if (!hasP) {
-          logs.push({
-            action: 'VENDOR_PURCHASE_RECORDED',
-            created_at: p.created_at || p.order_date,
-            user_name: 'Procurement',
-            ip_address: '127.0.0.1',
-            new_values: { invoice_number: p.invoice_number, total_amount: p.total_amount, paid_amount: p.paid_amount }
-          });
-        }
-      }
-
       for (const pm of this.vendorPayments) {
         const hasPm = logs.some(l => l.action.includes('PAYMENT') && (l.new_values?.payment_number === pm.payment_number || l.old_values?.payment_number === pm.payment_number));
         if (!hasPm) {
@@ -1986,7 +1744,6 @@ export class VendorDetailComponent implements OnInit {
   public getAuditActionBadgeClass(action?: string): string {
     if (!action) return 'badge-neutral';
     if (action.includes('CREATED')) return 'badge-purple';
-    if (action.includes('PURCHASE')) return 'badge-blue';
     if (action.includes('PAYMENT')) return 'badge-green';
     if (action.includes('DELETED')) return 'badge-danger';
     if (action.includes('UPDATED')) return 'badge-amber';
@@ -1996,7 +1753,6 @@ export class VendorDetailComponent implements OnInit {
   public getAuditActionIcon(action?: string): string {
     if (!action) return 'info';
     if (action.includes('PAYMENT')) return 'payments';
-    if (action.includes('PURCHASE')) return 'receipt_long';
     if (action.includes('CREATED')) return 'add_circle';
     if (action.includes('DELETED')) return 'delete';
     if (action.includes('UPDATED')) return 'edit_note';
@@ -2009,9 +1765,6 @@ export class VendorDetailComponent implements OnInit {
       case 'VENDOR_CREATED': return 'Vendor Profile Created';
       case 'VENDOR_UPDATED': return 'Profile Updated';
       case 'VENDOR_DELETED': return 'Vendor Deleted';
-      case 'VENDOR_PURCHASE_RECORDED': return 'Purchase Bill Recorded';
-      case 'VENDOR_PURCHASE_UPDATED': return 'Purchase Bill Updated';
-      case 'VENDOR_PURCHASE_DELETED': return 'Purchase Bill Deleted';
       case 'VENDOR_PAYMENT_RECORDED': return 'Disbursement Paid';
       case 'VENDOR_PAYMENT_UPDATED': return 'Disbursement Updated';
       case 'VENDOR_PAYMENT_DELETED': return 'Disbursement Deleted';
@@ -2025,15 +1778,6 @@ export class VendorDetailComponent implements OnInit {
     const ov = log.old_values;
     if (log.action === 'VENDOR_CREATED') {
       return `Created supplier record "${nv?.name || this.vendor?.name}" (${nv?.vendor_code || this.vendor?.vendor_code})`;
-    }
-    if (log.action === 'VENDOR_PURCHASE_RECORDED') {
-      return `Recorded purchase invoice #${nv?.invoice_number || ''} for ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.total_amount || 0).toFixed(2)}`;
-    }
-    if (log.action === 'VENDOR_PURCHASE_UPDATED') {
-      return `Updated invoice #${nv?.invoice_number || ''} (Amount: ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.total_amount || 0).toFixed(2)})`;
-    }
-    if (log.action === 'VENDOR_PURCHASE_DELETED') {
-      return `Deleted purchase bill #${ov?.invoice_number || ''} (${this.settingsService.currencySymbol() || '₹'}${Number(ov?.total_amount || 0).toFixed(2)})`;
     }
     if (log.action === 'VENDOR_PAYMENT_RECORDED') {
       return `Disbursed settlement payment #${nv?.payment_number || ''} of ${this.settingsService.currencySymbol() || '₹'}${Number(nv?.amount || 0).toFixed(2)} via ${nv?.method || nv?.payment_method || 'Bank'}`;
@@ -2078,12 +1822,6 @@ export class VendorDetailComponent implements OnInit {
     }
   }
 
-  public getPurchaseStatusBadgeClass(status: string): string {
-    if (status === 'PAID') return 'badge-paid';
-    if (status === 'PARTIAL') return 'badge-partial';
-    return 'badge-unpaid';
-  }
-
   public formatPaymentTerms(terms?: string): string {
     if (!terms) return 'Net 30 Days';
     if (terms === 'PAY_ANYTIME') return 'Pay Anytime (Flexible)';
@@ -2100,113 +1838,6 @@ export class VendorDetailComponent implements OnInit {
   public getStarsArray(rating: number = 5): number[] {
     const count = Math.min(5, Math.max(1, Math.round(rating)));
     return Array(count).fill(0);
-  }
-
-  // Purchase Modal & CRUD Operations
-  public openPurchaseModal(): void {
-    this.editingPurchaseId = null;
-    this.purchaseForm = {
-      invoice_number: '',
-      order_date: new Date().toISOString().split('T')[0],
-      due_date: '',
-      total_amount: null as any,
-      paid_amount: null as any,
-      items_summary: '',
-      notes: '',
-    };
-    this.isPurchaseModalOpen = true;
-  }
-
-  public openEditPurchaseModal(p: VendorPurchase): void {
-    this.editingPurchaseId = p.id;
-    let orderDate = '';
-    if (p.order_date) {
-      orderDate = typeof p.order_date === 'string' ? p.order_date.split('T')[0] : new Date(p.order_date).toISOString().split('T')[0];
-    }
-    let dueDate = '';
-    if (p.due_date) {
-      dueDate = typeof p.due_date === 'string' ? p.due_date.split('T')[0] : new Date(p.due_date).toISOString().split('T')[0];
-    }
-
-    this.purchaseForm = {
-      invoice_number: p.invoice_number,
-      order_date: orderDate,
-      due_date: dueDate,
-      total_amount: Number(p.total_amount) || 0,
-      paid_amount: Number(p.paid_amount) || 0,
-      items_summary: p.items_summary || '',
-      notes: p.notes || '',
-    };
-    this.isPurchaseModalOpen = true;
-  }
-
-  public closePurchaseModal(): void {
-    this.isPurchaseModalOpen = false;
-    this.editingPurchaseId = null;
-  }
-
-  public savePurchase(): void {
-    if (!this.vendor || !this.purchaseForm.invoice_number || this.purchaseForm.total_amount <= 0) {
-      this.notify.warning('Please enter valid invoice number and amount');
-      return;
-    }
-    this.isSubmitting = true;
-
-    if (this.editingPurchaseId) {
-      this.vendorService.updatePurchase(this.vendor.id, this.editingPurchaseId, this.purchaseForm).subscribe({
-        next: (res) => {
-          this.isSubmitting = false;
-          this.notify.success('Purchase invoice updated successfully');
-          this.closePurchaseModal();
-          this.loadVendor();
-        },
-        error: (err) => {
-          this.isSubmitting = false;
-          this.notify.error(err?.error?.message || 'Failed to update purchase invoice');
-        },
-      });
-    } else {
-      this.vendorService.recordPurchase(this.vendor.id, this.purchaseForm).subscribe({
-        next: (res) => {
-          this.isSubmitting = false;
-          this.notify.success('Purchase invoice recorded successfully');
-          this.closePurchaseModal();
-          if (res.data) this.vendor = res.data;
-          this.loadSubCollections();
-        },
-        error: (err) => {
-          this.isSubmitting = false;
-          this.notify.error(err?.error?.message || 'Failed to record purchase');
-        },
-      });
-    }
-  }
-
-  public confirmDeletePurchase(p: VendorPurchase): void {
-    this.purchaseToDelete = p;
-    this.isDeletePurchaseConfirmOpen = true;
-  }
-
-  public closeDeletePurchaseModal(): void {
-    this.isDeletePurchaseConfirmOpen = false;
-    this.purchaseToDelete = null;
-  }
-
-  public executeDeletePurchase(): void {
-    if (!this.vendor || !this.purchaseToDelete) return;
-    this.isSubmitting = true;
-    this.vendorService.deletePurchase(this.vendor.id, this.purchaseToDelete.id).subscribe({
-      next: (res) => {
-        this.isSubmitting = false;
-        this.notify.success('Purchase invoice deleted successfully');
-        this.closeDeletePurchaseModal();
-        this.loadVendor();
-      },
-      error: (err) => {
-        this.isSubmitting = false;
-        this.notify.error(err?.error?.message || 'Failed to delete purchase invoice');
-      },
-    });
   }
 
   // Payment Modal & CRUD Operations
@@ -2245,9 +1876,33 @@ export class VendorDetailComponent implements OnInit {
     this.editingPaymentId = null;
   }
 
+  get maxDisbursementAmount(): number {
+    if (!this.vendor) return 0;
+    const currentOutstanding = Number(this.vendor.outstanding_balance) || 0;
+    if (this.editingPaymentId) {
+      const currentEditing = this.vendorPayments.find((p) => p.id === this.editingPaymentId);
+      const existingAmount = Number(currentEditing?.amount) || 0;
+      return +(currentOutstanding + existingAmount).toFixed(2);
+    }
+    return currentOutstanding;
+  }
+
+  public onPaymentAmountChange(): void {
+    const max = this.maxDisbursementAmount;
+    if (Number(this.paymentForm.amount) > max) {
+      this.paymentForm.amount = max;
+    }
+  }
+
   public savePayment(): void {
     if (!this.vendor || this.paymentForm.amount <= 0) {
       this.notify.warning('Please enter a valid disbursement amount');
+      return;
+    }
+    const amount = Number(this.paymentForm.amount);
+    const max = this.maxDisbursementAmount;
+    if (amount > max) {
+      this.notify.warning(`Disbursement amount cannot exceed the payable balance of ${max}`);
       return;
     }
     this.isSubmitting = true;

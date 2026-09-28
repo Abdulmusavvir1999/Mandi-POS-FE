@@ -45,8 +45,8 @@ import { SidebarLayoutService } from '../../core/services/sidebar-layout.service
         <!-- Routed Feature Screen with Canvas -->
         <main
           #scrollArea
-          class="flex-1 overflow-hidden min-w-0"
-          [ngClass]="isPosRoute ? 'p-0 w-full h-full' : 'overflow-y-auto p-3 sm:p-4 md:p-6'"
+          class="flex-1 min-w-0"
+          [ngClass]="isPosRoute ? 'p-0 w-full h-full overflow-hidden' : 'overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6'"
           [style.color]="'var(--text-main, #2E1065)'"
         >
           <router-outlet></router-outlet>

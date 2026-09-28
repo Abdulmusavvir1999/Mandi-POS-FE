@@ -229,26 +229,38 @@ export const DISH_LAYOUT_CSS = `
       display: none;
       grid-area: auto;
       flex-direction: column;
-      gap: 0.3rem;
+      gap: 0.35rem;
       width: 100%;
+      margin: 0.25rem 0;
     }
 
-    [class*='dish-layout-'] .spec-row { display: block; grid-area: auto; }
+    [class*='dish-layout-'] .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      width: 100%;
+      grid-area: auto;
+    }
 
     [class*='dish-layout-'] .spec-label {
-      display: block;
-      font-size: 0.5625rem;
+      display: inline-block;
+      font-size: 0.625rem;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       color: var(--dl-accent);
+      opacity: 0.85;
+      flex-shrink: 0;
     }
 
     [class*='dish-layout-'] .spec-value {
-      display: block;
-      font-size: 0.625rem;
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 700;
       line-height: 1.4;
       color: var(--dl-body-color);
+      text-align: right;
     }
 
     [class*='dish-layout-'] .dish-card-footer {

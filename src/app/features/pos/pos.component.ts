@@ -474,25 +474,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <div class="dish-specs">
                   <div class="spec-row">
                     <span class="spec-label">Category</span>
-                    <span class="spec-value">{{ p.category_name || 'Uncategorised' }}</span>
+                    <span class="spec-value">{{ p.category_name || 'General' }}</span>
                   </div>
                   <div class="spec-row">
                     <span class="spec-label">In Stock</span>
-                    <span class="spec-value">{{ p.current_stock || 0 }}</span>
+                    <span class="spec-value">{{ availableStock(p) | number:'1.0-0' }} {{ p.linked_unit_type || 'units' }}</span>
                   </div>
                   <div class="spec-row">
                     <span class="spec-label">Portions</span>
-                    <span class="spec-value">{{ variantCount(p) || 'Single' }}</span>
-                  </div>
-                </div>
-
-                <div class="dish-card-footer">
-                  <div class="star-rating">
-                    <span class="star-icon">★</span>
-                    <span class="rating-value">{{ (4.2 + (i % 8) * 0.1) | number:'1.1-1' }}</span>
-                  </div>
-                  <div class="sales-count-badge">
-                    {{ (120 + (i * 45) + 30) }} Total Sale
+                    <span class="spec-value">{{ variantCount(p) > 0 ? (variantCount(p) + ' Sizes') : 'Single' }}</span>
                   </div>
                 </div>
 
@@ -706,7 +696,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div>
               <h2 class="section-heading">Order Reports</h2>
               <p class="section-subtext">
-                <span class="accent-orange font-bold">Wow 100+ new</span> Orders processed this shift
+                <span class="accent-orange font-bold">{{ (shiftSummary?.totalOrders != null ? shiftSummary.totalOrders : totalOrdersCount) || recentOrders.length || 0 }}</span> {{ (((shiftSummary?.totalOrders != null ? shiftSummary.totalOrders : totalOrdersCount) || recentOrders.length) === 1) ? 'Order' : 'Orders' }} processed this shift
               </p>
             </div>
             <a routerLink="/orders" class="section-link-btn">
@@ -914,14 +904,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 </span>
               </div>
 
-              <p class="item-sub-desc">
-                <ng-container *ngIf="item.variant">
-                  Uses {{ item.variant.stock_consumption }} per unit
-                  <ng-container *ngIf="item.notes"> · <i>{{ item.notes }}</i></ng-container>
-                </ng-container>
-                <ng-container *ngIf="!item.variant">
-                  {{ item.notes ? item.notes : (item.product.category_id === 1 ? 'Thin Crust' : 'Special Portion') }}
-                </ng-container>
+              <p class="item-sub-desc" *ngIf="item.notes">
+                <i>{{ item.notes }}</i>
               </p>
 
               <div *ngIf="item.isComplimentary && item.complimentaryReason" class="cart-comp-note">
@@ -3671,6 +3655,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       align-items: center;
       text-align: center;
       gap: 0.2rem;
+      width: 100%;
     }
 
     .dish-title {
@@ -3696,6 +3681,75 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       font-weight: 900;
       color: #FFFFFF;
       margin: 0.2rem 0;
+    }
+
+    .dish-desc {
+      font-size: 0.72rem;
+      color: rgba(255, 255, 255, 0.8);
+      font-weight: 400;
+      line-height: 1.3;
+      margin: 0.2rem 0 0.35rem;
+      text-align: center;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .dish-specs {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin: 0.35rem 0;
+      padding: 0.45rem 0.65rem;
+      background: rgba(0, 0, 0, 0.18);
+      border-radius: 0.6rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    .spec-label {
+      display: inline-block;
+      font-size: 0.625rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.75);
+      flex-shrink: 0;
+      text-align: left;
+    }
+
+    .spec-value {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      line-height: 1.4;
+      color: #FFFFFF;
+      text-align: right;
+    }
+
+    .dish-cta {
+      width: 100%;
+      margin-top: 0.45rem;
+      padding: 0.45rem 0.75rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #FFFFFF;
+      text-align: center;
+      transition: background 0.2s ease;
     }
 
     /* Combo savings row. It is not one of the dish card's parts, so it carries
@@ -4382,6 +4436,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       border: 2px solid var(--card-border, #E9D5FF);
       border-radius: 14px;
       background: var(--card-bg, #FFFFFF);
+      color: var(--text-main, #2E1065);
       transition:
         border-color 0.18s ease,
         background 0.18s ease,
@@ -4389,12 +4444,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
     }
 
     .portion-option:hover {
-      border-color: color-mix(in srgb, var(--primary, #7E22CE) 45%, #FFFFFF);
+      border-color: color-mix(in srgb, var(--primary, #7E22CE) 45%, var(--card-bg, #FFFFFF));
     }
 
     .portion-option.is-selected {
       border-color: var(--primary, #7E22CE);
-      background: color-mix(in srgb, var(--primary, #7E22CE) 7%, #FFFFFF);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 15%, var(--card-bg, #FFFFFF));
       box-shadow: 0 8px 18px -12px var(--primary-glow, rgba(var(--primary-rgb, 126, 34, 206), 0.45));
     }
 
@@ -4428,7 +4483,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       height: 1.15rem;
       border: 2px solid var(--card-border, #E9D5FF);
       border-radius: 6px;
-      background: #FFFFFF;
+      background: var(--card-bg, #FFFFFF);
       transition: border-color 0.18s ease, background 0.18s ease;
     }
 
@@ -4480,8 +4535,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       flex: 0 0 auto;
       border-radius: 9px;
       border: 1.5px solid var(--card-border, #E9D5FF);
-      background: #FFFFFF;
-      color: var(--primary, #7E22CE);
+      background: var(--card-bg, #FFFFFF);
+      color: var(--text-main, #2E1065);
       cursor: pointer;
       touch-action: manipulation;
       transition: border-color 0.15s ease, background 0.15s ease;
@@ -4489,7 +4544,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
     .portion-qty-btn:hover:not(:disabled) {
       border-color: var(--primary, #7E22CE);
-      background: color-mix(in srgb, var(--primary, #7E22CE) 10%, #FFFFFF);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 20%, var(--card-bg, #FFFFFF));
+      color: var(--primary, #7E22CE);
     }
 
     .portion-qty-btn:disabled {
@@ -5664,6 +5720,7 @@ export class PosComponent implements OnInit, AfterViewInit {
   public draftBills: DraftBill[] = [];
   public draftCount = 0;
   public recentOrders: Order[] = [];
+  public totalOrdersCount = 0;
   public activeOrderId = Math.floor(1000 + Math.random() * 9000);
 
   // Promo code
@@ -5764,6 +5821,7 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.loadProducts();
     this.loadDraftCount();
     this.loadRecentOrders();
+    this.loadCurrentShiftSummary();
     this.loadCombos();
     this.loadAddons();
   }
@@ -5902,6 +5960,9 @@ export class PosComponent implements OnInit, AfterViewInit {
       next: (res) => {
         if (res.success) {
           this.recentOrders = res.data;
+          if (res.pagination?.total !== undefined) {
+            this.totalOrdersCount = res.pagination.total;
+          }
         }
       },
       error: () => { },
@@ -6434,9 +6495,15 @@ export class PosComponent implements OnInit, AfterViewInit {
     return Number.isFinite(linked) ? linked : Number(product.current_stock) || 0;
   }
 
-  /** What the balance becomes if this portion is sold once. */
-  public stockAfter(product: Product | null, variant: ProductVariant): number {
-    return this.availableStock(product) - (Number(variant.stock_consumption) || 0);
+  /** How many portions of this variant can be prepared from available stock. */
+  public stockAfter(product: Product | null, variant?: ProductVariant): number {
+    if (!product) return 0;
+    const usage = Number(variant?.stock_consumption ?? variant?.stockConsumption) || 1;
+    let stock = this.availableStock(product);
+    if (variant?.stock_id && variant.stock_item_quantity !== undefined && variant.stock_item_quantity !== null) {
+      stock = Number(variant.stock_item_quantity) || 0;
+    }
+    return usage > 0 ? Math.max(0, Math.floor(stock / usage)) : 0;
   }
 
   private commitToCart(product: Product, variant: ProductVariant | null): void {
@@ -6761,6 +6828,7 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.actualCash = this.calcExpectedCash();
         }
       },
+      error: () => { },
     });
   }
 
@@ -6771,6 +6839,7 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.pastClosings = res.data;
         }
       },
+      error: () => { },
     });
   }
 
@@ -7113,6 +7182,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.activeOrderId = Math.floor(1000 + Math.random() * 9000);
         this.loadProducts(); // refresh stock numbers
         this.loadRecentOrders(); // refresh bottom order reports
+        this.loadCurrentShiftSummary(); // refresh shift order numbers
       },
       error: () => {
         this.isCheckingOut = false;

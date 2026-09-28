@@ -136,8 +136,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               </span>
             </h2>
             <span class="detail-section-note">
-              What one sale of each portion takes out of
-              <strong>{{ availableQuantity | number:'1.0-3' }} {{ unit }}</strong> available
+              Portions possible from <strong>{{ availableQuantity | number:'1.0-3' }} {{ unit }}</strong> in stock
             </span>
           </div>
 
@@ -145,12 +144,11 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
             <table class="saas-data-table">
               <thead>
                 <tr>
-                  <th style="width: 18%;">Dish Variant</th>
-                  <th style="width: 22%;">Stock Source</th>
-                  <th style="width: 12%;">Price</th>
-                  <th style="width: 16%; text-align: right;">Stock Consumption</th>
-                  <th style="width: 16%; text-align: right;">Remaining Stock</th>
-                  <th style="width: 16%; text-align: right;">Servings Possible</th>
+                  <th style="width: 24%;">Dish Variant</th>
+                  <th style="width: 26%;">Stock Source</th>
+                  <th style="width: 16%; text-align: center;">Stock Usage</th>
+                  <th style="width: 16%;">Price</th>
+                  <th style="width: 18%; text-align: right;">Remaining Stock</th>
                 </tr>
               </thead>
               <tbody>
@@ -163,20 +161,19 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
                     <span class="source-name">{{ sourceName(v) }}</span>
                     <span class="source-code" *ngIf="sourceCode(v)">{{ sourceCode(v) }}</span>
                   </td>
+                  <td class="font-mono text-center font-bold">
+                    <span class="inline-flex items-center justify-center gap-1.5">
+                      <span>{{ (v.stock_consumption ?? v.stockConsumption ?? 1) | number:'1.0-3' }}</span>
+                      <span class="cell-unit">{{ variantUnit(v) }}</span>
+                    </span>
+                  </td>
                   <td class="font-mono font-bold">{{ v.selling_price | appCurrency:'1.0-2' }}</td>
                   <td class="font-mono" style="text-align: right;">
-                    {{ v.stock_consumption | number:'1.0-3' }}
-                    <span class="cell-unit">{{ unit }}</span>
-                  </td>
-                  <td class="font-mono" style="text-align: right;">
-                    <span [class.text-danger]="remainingAfterOne(v) < 0">
-                      {{ remainingAfterOne(v) | number:'1.0-3' }}
-                    </span>
-                    <span class="cell-unit">{{ unit }}</span>
-                  </td>
-                  <td style="text-align: right;">
-                    <span class="servings-pill" [class.is-none]="servingsPossible(v) === 0">
-                      {{ servingsPossible(v) }}
+                    <span class="inline-flex items-center justify-end gap-1.5">
+                      <span [class.text-danger]="servingsPossible(v) <= 0" class="font-bold">
+                        {{ servingsPossible(v) | number:'1.0-0' }}
+                      </span>
+                      <span class="cell-unit">portions</span>
                     </span>
                   </td>
                 </tr>
@@ -187,16 +184,12 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
           <p class="section-note" *ngIf="hasVariants">
             <span class="material-symbols-outlined">info</span>
             <span>
-              Remaining Stock is the balance after <strong>one</strong> sale of that portion —
-              each row is measured from the same {{ availableQuantity | number:'1.0-3' }} {{ unit }},
-              not run cumulatively. Servings Possible is how many of that portion the
-              current balance can still cover.
+              <strong>Remaining Stock</strong> is calculated as <strong>Total Stock ÷ Stock Usage</strong> per portion — indicating how many full servings can be prepared from the current balance of {{ availableQuantity | number:'1.0-3' }} {{ unit }}.
             </span>
           </p>
 
           <p class="empty-note" *ngIf="!hasVariants">
-            No variants assigned. This product sells as a single item and one sale consumes
-            1 {{ unit }}. Add portions from the Edit page to control consumption per size.
+            No variants assigned. This product sells as a single item.
           </p>
         </div>
 
@@ -260,7 +253,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
             <div class="detail-section-head">
               <h2 class="detail-section-title">
                 <span class="material-symbols-outlined">payments</span>
-                <span>Pricing, Tax &amp; Discount</span>
+                <span>Pricing &amp; Tax</span>
               </h2>
             </div>
 
@@ -268,21 +261,6 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               <div class="detail-row">
                 <dt>Selling Price</dt>
                 <dd class="font-mono font-bold">{{ product.selling_price | appCurrency:'1.0-2' }}</dd>
-              </div>
-              <div class="detail-row">
-                <dt>Purchase Price</dt>
-                <dd class="font-mono">{{ product.cost_price | appCurrency:'1.0-2' }}</dd>
-              </div>
-              <div class="detail-row">
-                <dt>Weighted Avg Cost</dt>
-                <dd class="font-mono">
-                  {{ (product.linked_avg_cost || 0) | appCurrency:'1.0-4' }}
-                  <span class="cell-unit">/ {{ unit }}</span>
-                </dd>
-              </div>
-              <div class="detail-row">
-                <dt>Margin</dt>
-                <dd class="font-mono">{{ marginPercent }}</dd>
               </div>
               <div class="detail-row">
                 <dt>Tax Rate</dt>
@@ -295,13 +273,6 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               <div class="detail-row">
                 <dt>Price incl. Tax</dt>
                 <dd class="font-mono font-bold">{{ priceInclTax | appCurrency:'1.0-2' }}</dd>
-              </div>
-              <div class="detail-row is-muted">
-                <dt>Discount</dt>
-                <dd>
-                  Not set per product
-                  <span class="detail-hint">Applied per bill or order at the till</span>
-                </dd>
               </div>
             </dl>
           </div>
@@ -324,6 +295,15 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+      }
+
+      .module-page-wrapper {
+        padding-bottom: 3.5rem;
+      }
+
       .dish-hero-thumb {
         width: 3rem;
         height: 3rem;
@@ -400,6 +380,8 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
         font-size: 0.6875rem;
         font-weight: 600;
         color: var(--text-muted, #6B7280);
+        margin-left: 0.35rem;
+        display: inline-block;
       }
 
       .metric-note { font-size: 0.625rem; color: var(--text-muted, #6B7280); }
@@ -654,20 +636,25 @@ export class ProductDetailComponent implements OnInit {
     return Math.round(((Number(this.product?.selling_price) || 0) + this.taxAmount) * 100) / 100;
   }
 
-  /**
-   * Balance after ONE sale of this portion. Each row is measured from the same
-   * starting balance rather than run cumulatively, which is what makes
-   * "Full leaves 66, Half leaves 68" a fair comparison of the two portions.
-   */
-  remainingAfterOne(variant: ProductVariant): number {
-    return this.availableQuantity - (Number(variant.stock_consumption) || 0);
+  variantStock(variant?: ProductVariant): number {
+    if (this.isEachMode && variant?.stock_id && variant.stock_item_quantity !== undefined && variant.stock_item_quantity !== null) {
+      return Number(variant.stock_item_quantity) || 0;
+    }
+    return this.availableQuantity;
   }
 
-  /** How many of this portion the current balance can still cover. */
-  servingsPossible(variant: ProductVariant): number {
-    const uses = Number(variant.stock_consumption) || 0;
-    if (uses <= 0) return 0;
-    return Math.max(0, Math.floor(this.availableQuantity / uses));
+  variantUnit(variant?: ProductVariant): string {
+    if (this.isEachMode && variant?.stock_item_unit) {
+      return variant.stock_item_unit;
+    }
+    return this.unit;
+  }
+
+  /** How many portions the current stock balance can cover (overall stock / stock usage). */
+  servingsPossible(variant?: ProductVariant): number {
+    const stock = this.variantStock(variant);
+    const usage = Number(variant?.stock_consumption ?? variant?.stockConsumption) || 1;
+    return usage > 0 ? Math.max(0, Math.floor(stock / usage)) : 0;
   }
 
   formatDate(value?: string): string {

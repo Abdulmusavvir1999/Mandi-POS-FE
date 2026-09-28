@@ -10,6 +10,7 @@ import { StaffLayoutService } from '../../core/services/staff-layout.service';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
 import { STAFF_LAYOUT_CSS } from '../../shared/styles/staff-layout.styles';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
@@ -23,7 +24,7 @@ interface ModuleGroup {
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink, ActionLoadingDirective],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, CustomDropdownComponent, RouterLink, ActionLoadingDirective, ImageUploadComponent],
   styles: [STAFF_LAYOUT_CSS, DEFAULT_ACTION_BUTTON_CSS],
   template: `
     <div class="users-page-wrapper">
@@ -1215,43 +1216,16 @@ interface ModuleGroup {
               <label class="form-label text-xs font-bold text-[var(--text-muted, #4B5563)] uppercase tracking-wider mb-0 block">
                 Staff Photo (Optional)
               </label>
-              <div class="image-upload-row">
-                <div class="image-upload-preview" [class.is-empty]="!userForm.image_url">
-                  <img *ngIf="userForm.image_url" [src]="settingsService.assetUrl(userForm.image_url)" alt="Staff Photo preview" />
-                  <span *ngIf="!userForm.image_url" class="material-symbols-outlined">add_a_photo</span>
-                </div>
-                <div class="image-upload-actions">
-                  <input
-                    type="file"
-                    hidden
-                    #staffPicker
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    (change)="onPhotoFile($event, staffPicker)"
-                    title="Choose staff photo"
-                  />
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      [disabled]="isUploadingImage"
-                      (click)="staffPicker.click()"
-                    >
-                      <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
-                      <span>{{ isUploadingImage ? 'Uploading…' : (userForm.image_url ? 'Replace' : 'Choose Photo') }}</span>
-                    </button>
-                    <button
-                      *ngIf="userForm.image_url && !isUploadingImage"
-                      type="button"
-                      class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                      (click)="userForm.image_url = ''"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                  <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
-                </div>
-              </div>
+              <app-image-upload
+                [imageUrl]="userForm.image_url"
+                [uploading]="isUploadingImage"
+                emptyIcon="add_a_photo"
+                uploadLabel="Choose Photo"
+                alt="Staff photo"
+                pickerTitle="Choose staff photo"
+                (fileChange)="onPhotoFile($event.event, $event.picker)"
+                (removed)="userForm.image_url = ''"
+              ></app-image-upload>
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[var(--card-border, #E9D5FF)]">

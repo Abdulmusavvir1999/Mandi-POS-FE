@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { StockItem, StockEntry, StockEntrySource, StockMovement, ApiResponse } from '../models';
+import { StockItem, StockEntry, StockEntrySource, StockMovement, StockUnitType, ApiResponse } from '../models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -156,10 +156,40 @@ export class StockService {
     multiplier?: number;
     totalPrice?: number;
     unitPrice?: number;
+    vendorId?: number;
     reason: string;
     notes?: string;
   }): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(`${this.API_URL}/adjust`, data);
+  }
+
+  /**
+   * 8B. Get stock items associated with a vendor for Return to Supplier
+   */
+  public getVendorReturnItems(vendorId: number): Observable<ApiResponse<Array<{
+    id: number;
+    name: string;
+    stock_code: string;
+    unit_type: StockUnitType;
+    average_unit_price: number;
+    vendor_total_quantity: number;
+    previously_returned_quantity: number;
+    vendor_returnable_quantity: number;
+    current_available_stock: number;
+    max_return_allowed: number;
+  }>>> {
+    return this.http.get<ApiResponse<Array<{
+      id: number;
+      name: string;
+      stock_code: string;
+      unit_type: StockUnitType;
+      average_unit_price: number;
+      vendor_total_quantity: number;
+      previously_returned_quantity: number;
+      vendor_returnable_quantity: number;
+      current_available_stock: number;
+      max_return_allowed: number;
+    }>>>(`${this.API_URL}/vendor-items/${vendorId}`);
   }
 
   /**

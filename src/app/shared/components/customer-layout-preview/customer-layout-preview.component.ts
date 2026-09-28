@@ -269,7 +269,7 @@ export interface PreviewCustomerItem {
             <div class="cust-profile-avatar-pos">
               <div class="cust-profile-avatar">{{ c.initials }}</div>
             </div>
-            <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-black" [style.background]="c.tierBg" [style.color]="c.tierColor">
+            <span class="cust-profile-tier" [style.background]="c.tierBg" [style.color]="c.tierColor">
               {{ c.tier }}
             </span>
           </div>
@@ -365,8 +365,8 @@ export class CustomerLayoutPreviewComponent {
       email: 'arjun.p@example.com',
       address: 'Skyline Towers, Flat 901',
       tier: 'New Guest',
-      tierColor: 'var(--text-muted, #6B7280)',
-      tierBg: '#F3F4F6',
+      tierColor: '#FFFFFF',
+      tierBg: 'linear-gradient(135deg, #4F46E5, #4338CA)',
       total_visits: 2,
       total_spent: 1950,
       initials: 'AP',

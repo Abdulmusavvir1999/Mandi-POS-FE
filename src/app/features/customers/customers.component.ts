@@ -9,6 +9,7 @@ import { CartService } from '../../core/services/cart.service';
 import { CustomerLayoutService } from '../../core/services/customer-layout.service';
 import { Customer, CustomerNote, CustomerAnalytics, CustomerSummaryKpis } from '../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
+import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../shared/styles/default-action-buttons.styles';
@@ -18,7 +19,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterLink, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective],
+  imports: [PageLoaderComponent, CommonModule, FormsModule, RouterLink, CustomDropdownComponent, AppCurrencyPipe, ActionLoadingDirective, ImageUploadComponent],
   templateUrl: './customers.component.html',
   styleUrls: ['./customers.component.css'],
   styles: [CUSTOMER_LAYOUT_CSS, DEFAULT_ACTION_BUTTON_CSS],
@@ -182,39 +183,33 @@ export class CustomersComponent implements OnInit {
 
   getTierBg(c: Customer): string {
     const tier = this.getTier(c);
-    if (tier.includes('Platinum')) return 'var(--primary-light, #F3E8FF)';
-    if (tier.includes('Gold')) return 'var(--warning-light, #FEF3C7)';
-    if (tier.includes('Silver')) return 'var(--card-hover, #F1F5F9)';
-    if (tier.includes('VIP')) return '#FDF2F8';
-    if (tier.includes('Regular')) return '#CCFBF1';
-    return '#F3F4F6';
+    if (tier.includes('Platinum')) return 'linear-gradient(135deg, #7E22CE, #9333EA)';
+    if (tier.includes('Gold')) return 'linear-gradient(135deg, #D97706, #B45309)';
+    if (tier.includes('Silver')) return 'linear-gradient(135deg, #475569, #334155)';
+    if (tier.includes('VIP')) return 'linear-gradient(135deg, #BE185D, #9D174D)';
+    if (tier.includes('Regular')) return 'linear-gradient(135deg, #0D9488, #0F766E)';
+    return 'linear-gradient(135deg, #4F46E5, #4338CA)';
   }
 
   getTierColor(c: Customer): string {
-    const tier = this.getTier(c);
-    if (tier.includes('Platinum')) return 'var(--primary, #7E22CE)';
-    if (tier.includes('Gold')) return 'var(--warning, #B45309)';
-    if (tier.includes('Silver')) return '#475569';
-    if (tier.includes('VIP')) return '#BE185D';
-    if (tier.includes('Regular')) return '#0F766E';
-    return 'var(--text-muted, #6B7280)';
+    return '#FFFFFF';
   }
 
   getActivityBadge(c: Customer): { label: string; bg: string; color: string; icon: string } {
     const status = c.activity_status || 'ACTIVE';
     if (status === 'FREQUENT') {
-      return { label: 'Frequent Diner', bg: 'var(--success-light, #DCFCE7)', color: 'var(--success, #15803D)', icon: 'trending_up' };
+      return { label: 'Frequent Diner', bg: '#DCFCE7', color: '#15803D', icon: 'trending_up' };
     }
     if (status === 'AT_RISK') {
-      return { label: 'At-Risk Diner', bg: 'var(--danger-light, #FEE2E2)', color: 'var(--danger, #B91C1C)', icon: 'warning' };
+      return { label: 'At-Risk Diner', bg: '#FEE2E2', color: '#B91C1C', icon: 'warning' };
     }
     if (status === 'DORMANT') {
-      return { label: 'Dormant (>90d)', bg: '#F3F4F6', color: 'var(--text-muted, #6B7280)', icon: 'schedule' };
+      return { label: 'Dormant (>90d)', bg: '#E2E8F0', color: '#334155', icon: 'schedule' };
     }
     if (status === 'NEW') {
       return { label: 'New Diner', bg: '#E0E7FF', color: '#4338CA', icon: 'fiber_new' };
     }
-    return { label: 'Active Guest', bg: 'var(--card-border, #E9D5FF)', color: 'var(--primary, #7E22CE)', icon: 'check_circle' };
+    return { label: 'Active Guest', bg: '#EDE9FE', color: '#6D28D9', icon: 'check_circle' };
   }
 
   get filteredCustomers(): (Customer & { selected?: boolean })[] {
@@ -312,19 +307,20 @@ export class CustomersComponent implements OnInit {
     this.paginatedCustomers.forEach((c) => (c.selected = this.selectAll));
   }
 
-  // --- Customer 360° Drawer Methods ---
+  // --- Customer View / Navigation ---
 
-  openCustomer360(c: Customer, tab: 'analytics' | 'history' | 'notes' | 'timeline' = 'analytics'): void {
-    this.selectedCustomerFor360 = c;
-    this.active360Tab = tab;
-    this.load360Details(c.id);
+  viewCustomer(c: Customer): void {
+    if (c?.id) {
+      this.router.navigate(['/customers', c.id]);
+    }
+  }
+
+  openCustomer360(c: Customer, tab: string = 'analytics'): void {
+    this.viewCustomer(c);
   }
 
   closeCustomer360(): void {
     this.selectedCustomerFor360 = null;
-    this.customerAnalytics = null;
-    this.customerNotes = [];
-    this.purchaseHistory = [];
   }
 
   load360Details(customerId: number): void {

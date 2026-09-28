@@ -805,14 +805,17 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
     const height = Math.min(naturalHeight, available);
     const top = this.isFlipped ? rect.top - GAP - height : rect.bottom + GAP;
 
+    const panelMinW = Math.max(rect.width, 230);
     let left = rect.left;
-    const overflowRight = left + rect.width + MARGIN - window.innerWidth;
+    const overflowRight = left + panelMinW + MARGIN - window.innerWidth;
     if (overflowRight > 0) left -= overflowRight;
     if (left < MARGIN) left = MARGIN;
 
     panel.style.top = `${top - origin.top}px`;
     panel.style.left = `${left - origin.left}px`;
-    panel.style.width = `${rect.width}px`;
+    panel.style.minWidth = `${rect.width}px`;
+    panel.style.width = 'max-content';
+    panel.style.maxWidth = 'min(90vw, 420px)';
     panel.style.maxHeight = `${available}px`;
 
     this.isPositioned = true;
@@ -852,13 +855,13 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
   }
 
   get selectedOption(): DropdownOption | undefined {
-    if (this.innerValue === null || this.innerValue === undefined || this.innerValue === '') {
-      return undefined;
+    if (this.innerValue === null || this.innerValue === undefined) {
+      return this.options.find((o) => o.value === null || o.value === undefined);
     }
     let opt = this.options.find(
       (o) => o.value === this.innerValue || (o.value !== null && o.value !== undefined && String(o.value) === String(this.innerValue))
     );
-    if (!opt && this.allowCustom) {
+    if (!opt && this.allowCustom && this.innerValue !== '') {
       // Ensure custom or newly bound values only render if allowCustom is enabled
       opt = { value: this.innerValue, label: String(this.innerValue), icon: 'edit_note' };
     }
@@ -905,7 +908,10 @@ export class CustomDropdownComponent implements ControlValueAccessor, OnInit, On
 
   isOptionSelected(opt: DropdownOption): boolean {
     if (!this.multiple) {
-      return opt.value === this.innerValue || String(opt.value) === String(this.innerValue);
+      if (this.innerValue === null || this.innerValue === undefined) {
+        return opt.value === null || opt.value === undefined;
+      }
+      return opt.value === this.innerValue || (opt.value !== null && opt.value !== undefined && String(opt.value) === String(this.innerValue));
     }
     const currentValues = this.getSelectedValuesArray();
     return currentValues.includes(opt.value) || currentValues.includes(String(opt.value));

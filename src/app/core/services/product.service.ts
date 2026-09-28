@@ -48,6 +48,14 @@ export class ProductService {
     return this.http.put<ApiResponse<Product>>(`${this.API_URL}/${id}`, data);
   }
 
+  public checkSkuUnique(sku: string, excludeId?: number): Observable<ApiResponse<{ isUnique: boolean; existingProduct?: { id: number; name: string; sku: string } | null }>> {
+    let params = new HttpParams().set('sku', sku);
+    if (excludeId) {
+      params = params.set('excludeId', excludeId.toString());
+    }
+    return this.http.get<ApiResponse<{ isUnique: boolean; existingProduct?: { id: number; name: string; sku: string } | null }>>(`${this.API_URL}/check-sku`, { params });
+  }
+
   public deleteProduct(id: number): Observable<ApiResponse<any>> {
     return this.http.delete<ApiResponse<any>>(`${this.API_URL}/${id}`);
   }
@@ -57,6 +65,10 @@ export class ProductService {
   // -------------------------------------------------------------
   public getAddons(): Observable<ApiResponse<any[]>> {
     return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/addons`);
+  }
+
+  public getProductAddons(productId: number): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.API_URL}/${productId}/addons`);
   }
 
   public createAddon(data: any): Observable<ApiResponse<any>> {
@@ -71,8 +83,8 @@ export class ProductService {
     return this.http.delete<ApiResponse<any>>(`${this.API_URL}/addons/${id}`);
   }
 
-  public linkProductAddons(productId: number, addonIds: number[]): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.API_URL}/${productId}/addons`, { addonIds });
+  public linkProductAddons(productId: number, mappings: any[]): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/${productId}/addons`, { mappings });
   }
 
   // -------------------------------------------------------------

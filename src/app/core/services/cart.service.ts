@@ -187,7 +187,11 @@ export class CartService {
     }
 
     const basePrice = variant ? Number(variant.selling_price) : Number(product.selling_price);
-    const addonsCost = (selectedAddons || []).reduce((acc, a) => acc + Number(a.price || 0), 0);
+    const addonsCost = (selectedAddons || []).reduce((acc, a) => {
+      if (a.is_free === 'Free') return acc;
+      const charge = a.amount !== undefined && a.amount !== null ? Number(a.amount) : Number(a.price || 0);
+      return acc + charge;
+    }, 0);
     const unitPrice = basePrice + addonsCost;
 
     const addonIds = (selectedAddons || []).map((a) => a.id).sort((a, b) => a - b);
@@ -409,7 +413,6 @@ export class CartService {
                 id: item.variant_id,
                 name: item.variant_name || '',
                 selling_price: item.unit_price,
-                stock_consumption: Number(item.stock_consumption) || 1,
               }
             : null,
           quantity: item.quantity,
@@ -492,7 +495,6 @@ export class CartService {
                 id: variantId,
                 name: item.variantName || item.variant_name || '',
                 selling_price: unitP,
-                stock_consumption: 1,
               }
             : null,
           quantity: item.quantity,

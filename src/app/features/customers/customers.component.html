@@ -244,7 +244,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- 4. FILTER & SEARCH ACTION TOOLBAR                               -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="filter-toolbar-card">
+  <div class="filter-toolbar-card mb-4">
     <div class="filter-controls-group">
       <!-- Search Box -->
       <div class="search-input-wrapper">
@@ -307,7 +307,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- 5. CUSTOMERS STAGE (5 DYNAMIC DESIGNS)                           -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="customer-stage" [ngClass]="customerLayout.rootClass()" [ngStyle]="customerLayout.pageCssVars()">
+  <div class="customer-stage mb-4" [ngClass]="customerLayout.rootClass()" [ngStyle]="customerLayout.pageCssVars()">
     <!-- Empty State -->
     <div *ngIf="filteredCustomers.length === 0" class="empty-state-box p-8 text-center bg-white rounded-2xl border border-purple-100 shadow-sm">
       <span class="material-symbols-outlined empty-icon text-5xl text-purple-400">{{ isLoading ? 'hourglass_top' : loadError ? 'cloud_off' : 'contacts' }}</span>
@@ -325,13 +325,14 @@
 
     <!-- DESIGN 1: EXECUTIVE VIP CARDS -->
     <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'vipcard'" class="cust-vip-grid">
-      <div *ngFor="let c of paginatedCustomers" class="cust-vip-card">
+      <div *ngFor="let c of paginatedCustomers" class="cust-vip-card" (click)="viewCustomer(c)">
         <div class="cust-vip-header">
           <div class="flex items-center gap-3">
             <input
               title="Select guest"
               type="checkbox"
               [(ngModel)]="c.selected"
+              (click)="$event.stopPropagation()"
               class="rounded border-[#E9D5FF] text-[#7E22CE]"
             />
             <div class="cust-vip-avatar-wrap">
@@ -362,7 +363,7 @@
         </div>
 
         <div class="cust-vip-body">
-          <h4 class="cust-vip-name" (click)="openCustomer360(c, 'analytics')" style="cursor: pointer;" title="View 360° Profile">
+          <h4 class="cust-vip-name" (click)="viewCustomer(c)" style="cursor: pointer;" title="View 360° Profile">
             {{ c.name }}
           </h4>
           <div class="cust-vip-locality">
@@ -402,7 +403,7 @@
         <div class="cust-vip-actions">
           <button
             type="button"
-            (click)="startPosOrder(c)"
+            (click)="startPosOrder(c); $event.stopPropagation()"
             class="pos-quick-btn"
             title="Start POS Order for this guest"
           >
@@ -410,19 +411,13 @@
             <span>Start POS</span>
           </button>
           <div class="cust-vip-btn-group">
-            <button type="button" (click)="openCustomer360(c, 'analytics')" class="cust-act is-vip" title="360° Profile & Analytics">
-              <span class="material-symbols-outlined text-purple-700">insights</span>
+            <button type="button" (click)="viewCustomer(c); $event.stopPropagation()" class="cust-act is-vip" title="View Customer Details & 360° Profile">
+              <span class="material-symbols-outlined text-purple-700">visibility</span>
             </button>
-            <button type="button" (click)="openCustomer360(c, 'history')" class="cust-act is-vip" title="Order History">
-              <span class="material-symbols-outlined">receipt_long</span>
-            </button>
-            <button type="button" (click)="openCustomer360(c, 'notes')" class="cust-act is-vip" title="Notes & Preferences">
-              <span class="material-symbols-outlined">edit_note</span>
-            </button>
-            <button type="button" (click)="openEditModal(c)" class="cust-act is-vip" title="Edit Customer">
+            <button type="button" (click)="openEditModal(c); $event.stopPropagation()" class="cust-act is-vip" title="Edit Customer">
               <span class="material-symbols-outlined">edit</span>
             </button>
-            <button type="button" (click)="deleteCustomer(c)" class="cust-act is-vip is-delete" title="Delete Customer">
+            <button type="button" (click)="deleteCustomer(c); $event.stopPropagation()" class="cust-act is-vip is-delete" title="Delete Customer">
               <span class="material-symbols-outlined">delete</span>
             </button>
           </div>
@@ -448,12 +443,12 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let c of paginatedCustomers">
-            <td style="text-align: center;">
-              <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
+          <tr *ngFor="let c of paginatedCustomers" (click)="viewCustomer(c)">
+            <td style="text-align: center;" (click)="$event.stopPropagation()">
+              <input type="checkbox" [(ngModel)]="c.selected" (click)="$event.stopPropagation()" class="rounded" />
             </td>
             <td>
-              <div class="cust-clean-name" (click)="openCustomer360(c, 'analytics')" style="cursor: pointer;">
+              <div class="cust-clean-name" (click)="viewCustomer(c)" style="cursor: pointer;">
                 {{ c.name }}
               </div>
               <div class="text-[11px] font-mono text-purple-600 font-bold">
@@ -490,22 +485,16 @@
             </td>
             <td style="text-align: center;">
               <div class="cust-clean-actions">
-                <button type="button" (click)="startPosOrder(c)" class="cust-act is-clean !text-purple-700" title="Start POS Order">
+                <button type="button" (click)="startPosOrder(c); $event.stopPropagation()" class="cust-act is-clean !text-purple-700" title="Start POS Order">
                   <span class="material-symbols-outlined">point_of_sale</span>
                 </button>
-                <button type="button" (click)="openCustomer360(c, 'analytics')" class="cust-act is-clean" title="360° Profile & Analytics">
-                  <span class="material-symbols-outlined text-purple-700">insights</span>
+                <button type="button" (click)="viewCustomer(c); $event.stopPropagation()" class="cust-act is-clean" title="View Customer Details & 360° Profile">
+                  <span class="material-symbols-outlined text-purple-700">visibility</span>
                 </button>
-                <button type="button" (click)="openCustomer360(c, 'history')" class="cust-act is-clean" title="Order History">
-                  <span class="material-symbols-outlined">receipt_long</span>
-                </button>
-                <button type="button" (click)="openCustomer360(c, 'notes')" class="cust-act is-clean" title="Notes & Preferences">
-                  <span class="material-symbols-outlined">edit_note</span>
-                </button>
-                <button type="button" (click)="openEditModal(c)" class="cust-act is-clean" title="Edit Customer">
+                <button type="button" (click)="openEditModal(c); $event.stopPropagation()" class="cust-act is-clean" title="Edit Customer">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" (click)="deleteCustomer(c)" class="cust-act is-clean is-delete" title="Delete Customer">
+                <button type="button" (click)="deleteCustomer(c); $event.stopPropagation()" class="cust-act is-clean is-delete" title="Delete Customer">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -517,7 +506,7 @@
 
     <!-- DESIGN 3: COMPACT CRM TILES -->
     <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'compact'" class="cust-compact-grid">
-      <div *ngFor="let c of paginatedCustomers" class="cust-compact-tile">
+      <div *ngFor="let c of paginatedCustomers" class="cust-compact-tile" (click)="viewCustomer(c)">
         <div class="cust-compact-top">
           <input type="checkbox" [(ngModel)]="c.selected" class="rounded" />
           <div class="cust-compact-avatar">
@@ -525,7 +514,7 @@
             <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
           </div>
           <div class="min-w-0 flex-1">
-            <h5 class="cust-compact-title" (click)="openCustomer360(c, 'analytics')" style="cursor: pointer;">{{ c.name }}</h5>
+            <h5 class="cust-compact-title" (click)="viewCustomer(c)" style="cursor: pointer;">{{ c.name }}</h5>
             <div class="cust-compact-phone">#{{ c.customer_code || ('CUST-' + c.id) }} • {{ c.phone }}</div>
           </div>
           <span class="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
@@ -542,22 +531,16 @@
           </div>
           <span class="cust-compact-spent">{{ c.total_spent | appCurrency:'1.0-0' }}</span>
           <div class="cust-compact-actions">
-            <button type="button" (click)="startPosOrder(c)" class="cust-act is-compact !text-purple-700" title="Start POS">
+            <button type="button" (click)="startPosOrder(c); $event.stopPropagation()" class="cust-act is-compact !text-purple-700" title="Start POS">
               <span class="material-symbols-outlined">point_of_sale</span>
             </button>
-            <button type="button" (click)="openCustomer360(c, 'analytics')" class="cust-act is-compact" title="360° Profile">
-              <span class="material-symbols-outlined text-purple-700">insights</span>
+            <button type="button" (click)="viewCustomer(c); $event.stopPropagation()" class="cust-act is-compact" title="View Customer Details">
+              <span class="material-symbols-outlined text-purple-700">visibility</span>
             </button>
-            <button type="button" (click)="openCustomer360(c, 'history')" class="cust-act is-compact" title="Invoices">
-              <span class="material-symbols-outlined">receipt_long</span>
-            </button>
-            <button type="button" (click)="openCustomer360(c, 'notes')" class="cust-act is-compact" title="Notes">
-              <span class="material-symbols-outlined">edit_note</span>
-            </button>
-            <button type="button" (click)="openEditModal(c)" class="cust-act is-compact" title="Edit">
+            <button type="button" (click)="openEditModal(c); $event.stopPropagation()" class="cust-act is-compact" title="Edit">
               <span class="material-symbols-outlined">edit</span>
             </button>
-            <button type="button" (click)="deleteCustomer(c)" class="cust-act is-compact is-delete" title="Delete">
+            <button type="button" (click)="deleteCustomer(c); $event.stopPropagation()" class="cust-act is-compact is-delete" title="Delete">
               <span class="material-symbols-outlined">delete</span>
             </button>
           </div>
@@ -589,12 +572,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let c of paginatedCustomers">
+          <tr *ngFor="let c of paginatedCustomers" (click)="viewCustomer(c)">
             <td style="text-align: center;">
               <input
                 title="Select this guest"
                 type="checkbox"
                 [(ngModel)]="c.selected"
+                (click)="$event.stopPropagation()"
                 class="rounded border-[#E9D5FF] text-[#7E22CE]"
               />
             </td>
@@ -610,7 +594,7 @@
                   <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
                 </div>
                 <div class="min-w-0">
-                  <div class="font-bold text-[#2E1065] text-xs truncate cursor-pointer hover:underline" (click)="openCustomer360(c, 'analytics')">
+                  <div class="font-bold text-[#2E1065] text-xs truncate cursor-pointer hover:underline" (click)="viewCustomer(c)">
                     {{ c.name }}
                   </div>
                   <div class="text-[11px] text-[#7E22CE] font-mono font-semibold">
@@ -656,22 +640,16 @@
             </td>
             <td style="text-align: center;">
               <div class="cust-list-actions">
-                <button type="button" (click)="startPosOrder(c)" class="cust-act is-list !text-purple-700" title="Start POS Order">
+                <button type="button" (click)="startPosOrder(c); $event.stopPropagation()" class="cust-act is-list !text-purple-700" title="Start POS Order">
                   <span class="material-symbols-outlined">point_of_sale</span>
                 </button>
-                <button type="button" (click)="openCustomer360(c, 'analytics')" class="cust-act is-list" title="360° Profile & Analytics">
-                  <span class="material-symbols-outlined text-purple-700">insights</span>
+                <button type="button" (click)="viewCustomer(c); $event.stopPropagation()" class="cust-act is-list" title="View Customer Details & 360° Profile">
+                  <span class="material-symbols-outlined text-purple-700">visibility</span>
                 </button>
-                <button type="button" (click)="openCustomer360(c, 'history')" class="cust-act is-list" title="View Invoices">
-                  <span class="material-symbols-outlined">receipt_long</span>
-                </button>
-                <button type="button" (click)="openCustomer360(c, 'notes')" class="cust-act is-list" title="Notes & Preferences">
-                  <span class="material-symbols-outlined">edit_note</span>
-                </button>
-                <button type="button" (click)="openEditModal(c)" class="cust-act is-list" title="Edit Customer">
+                <button type="button" (click)="openEditModal(c); $event.stopPropagation()" class="cust-act is-list" title="Edit Customer">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" (click)="deleteCustomer(c)" class="cust-act is-list is-delete" title="Delete Customer">
+                <button type="button" (click)="deleteCustomer(c); $event.stopPropagation()" class="cust-act is-list is-delete" title="Delete Customer">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -683,7 +661,7 @@
 
     <!-- DESIGN 5: CARD VIEW (GUEST PROFILE CARDS) -->
     <div *ngIf="filteredCustomers.length > 0 && customerLayout.effectiveKey() === 'card'" class="cust-card-grid">
-      <div *ngFor="let c of paginatedCustomers" class="cust-profile-card">
+      <div *ngFor="let c of paginatedCustomers" class="cust-profile-card" (click)="viewCustomer(c)">
         <div class="cust-profile-cover">
           <div class="cust-profile-avatar-pos">
             <div class="cust-profile-avatar">
@@ -691,7 +669,7 @@
               <span *ngIf="!c.image_url">{{ getInitials(c.name) }}</span>
             </div>
           </div>
-          <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-black" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
+          <span class="cust-profile-tier" [style.background]="getTierBg(c)" [style.color]="getTierColor(c)">
             {{ getTier(c) }}
           </span>
         </div>
@@ -707,7 +685,7 @@
               {{ getActivityBadge(c).label }}
             </span>
           </div>
-          <h4 class="cust-profile-name" (click)="openCustomer360(c, 'analytics')" style="cursor: pointer;">{{ c.name }}</h4>
+          <h4 class="cust-profile-name" (click)="viewCustomer(c)" style="cursor: pointer;">{{ c.name }}</h4>
           <div class="cust-profile-loc">{{ c.address || 'Local Guest' }}</div>
 
           <div class="cust-profile-stats-row">
@@ -735,7 +713,7 @@
         <div class="cust-profile-card-footer">
           <button
             type="button"
-            (click)="startPosOrder(c)"
+            (click)="startPosOrder(c); $event.stopPropagation()"
             class="pos-quick-btn"
             title="Start POS Order"
           >
@@ -743,30 +721,25 @@
             <span>POS</span>
           </button>
           <div class="cust-card-actions">
-            <button type="button" (click)="openCustomer360(c, 'analytics')" class="dv-btn is-icon" title="360° Profile & Analytics">
-              <span class="material-symbols-outlined text-purple-700">insights</span>
+            <button type="button" (click)="viewCustomer(c); $event.stopPropagation()" class="dv-btn is-icon" title="View Details">
+              <span class="material-symbols-outlined text-purple-700">visibility</span>
             </button>
-            <button type="button" (click)="openCustomer360(c, 'history')" class="dv-btn is-icon" title="Invoices">
-              <span class="material-symbols-outlined">receipt_long</span>
-            </button>
-            <button type="button" (click)="openCustomer360(c, 'notes')" class="dv-btn is-icon" title="Notes">
-              <span class="material-symbols-outlined">edit_note</span>
-            </button>
-            <button type="button" (click)="openEditModal(c)" class="dv-btn is-icon" title="Edit">
+            <button type="button" (click)="openEditModal(c); $event.stopPropagation()" class="dv-btn is-icon" title="Edit">
               <span class="material-symbols-outlined">edit</span>
             </button>
-            <button type="button" (click)="deleteCustomer(c)" class="dv-btn is-icon is-danger" title="Delete">
+            <button type="button" (click)="deleteCustomer(c); $event.stopPropagation()" class="dv-btn is-icon is-danger" title="Delete">
               <span class="material-symbols-outlined">delete</span>
             </button>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- 6. BOTTOM PAGINATION BAR                                        -->
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <div class="pagination-footer-bar" *ngIf="filteredCustomers.length > 0">
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- 6. BOTTOM PAGINATION BAR                                        -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="pagination-footer-bar rounded-2xl border border-[#E9D5FF] dark:border-slate-800 shadow-sm" *ngIf="filteredCustomers.length > 0">
       <div class="pagination-info">
         Showing <strong>{{ paginationStart }}</strong> to <strong>{{ paginationEnd }}</strong> of <strong>{{ filteredCustomers.length }}</strong> guest entries
       </div>
@@ -801,524 +774,9 @@
         >
           <span class="material-symbols-outlined">chevron_right</span>
         </button>
-      </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- 7. INTERACTIVE CUSTOMER 360° DRAWER MODAL                       -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="modal-backdrop drawer-backdrop" *ngIf="selectedCustomerFor360">
-    <div class="drawer-modal-panel">
-      <!-- Drawer Header -->
-      <div class="drawer-header">
-        <div class="drawer-header-left">
-          <div class="drawer-avatar">
-            <img *ngIf="selectedCustomerFor360.image_url" [src]="settingsService.assetUrl(selectedCustomerFor360.image_url)" [alt]="selectedCustomerFor360.name" />
-            <span *ngIf="!selectedCustomerFor360.image_url">{{ getInitials(selectedCustomerFor360.name) }}</span>
-          </div>
-          <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="drawer-title">{{ selectedCustomerFor360.name }}</h2>
-              <span class="drawer-code">#{{ selectedCustomerFor360.customer_code || ('CUST-' + selectedCustomerFor360.id) }}</span>
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold" [style.background]="getTierBg(selectedCustomerFor360)" [style.color]="getTierColor(selectedCustomerFor360)">
-                {{ getTier(selectedCustomerFor360) }}
-              </span>
-              <span
-                class="crm-activity-pill"
-                [style.background]="getActivityBadge(selectedCustomerFor360).bg"
-                [style.color]="getActivityBadge(selectedCustomerFor360).color"
-              >
-                <span class="material-symbols-outlined" style="font-size: 13px;">{{ getActivityBadge(selectedCustomerFor360).icon }}</span>
-                {{ getActivityBadge(selectedCustomerFor360).label }}
-              </span>
-            </div>
-            <div class="drawer-contact-row">
-              <span>📞 {{ selectedCustomerFor360.phone }}</span>
-              <span *ngIf="selectedCustomerFor360.email">• ✉️ {{ selectedCustomerFor360.email }}</span>
-              <span *ngIf="selectedCustomerFor360.address">• 📍 {{ selectedCustomerFor360.address }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="drawer-header-actions">
-          <button
-            type="button"
-            (click)="startPosOrder(selectedCustomerFor360)"
-            class="action-btn btn-gradient-purple"
-            title="Start POS ticket for this customer"
-          >
-            <span class="material-symbols-outlined">shopping_cart_checkout</span>
-            <span>Start POS Order</span>
-          </button>
-          <button
-            type="button"
-            (click)="closeCustomer360()"
-            class="modal-close-btn"
-            title="Close Drawer"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Drawer Tabs Navigation -->
-      <div class="drawer-tabs-strip">
-        <button
-          type="button"
-          (click)="active360Tab = 'analytics'"
-          class="drawer-tab-btn"
-          [class.is-active]="active360Tab === 'analytics'"
-        >
-          <span class="material-symbols-outlined">insights</span>
-          <span>360° Analytics</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="active360Tab = 'history'"
-          class="drawer-tab-btn"
-          [class.is-active]="active360Tab === 'history'"
-        >
-          <span class="material-symbols-outlined">receipt_long</span>
-          <span>Order & Purchase History</span>
-          <span class="tab-count-badge">{{ purchaseHistory.length }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="active360Tab = 'notes'"
-          class="drawer-tab-btn"
-          [class.is-active]="active360Tab === 'notes'"
-        >
-          <span class="material-symbols-outlined">edit_note</span>
-          <span>Notes & Dietary Preferences</span>
-          <span class="tab-count-badge">{{ customerNotes.length }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="active360Tab = 'timeline'"
-          class="drawer-tab-btn"
-          [class.is-active]="active360Tab === 'timeline'"
-        >
-          <span class="material-symbols-outlined">history</span>
-          <span>Activity Timeline</span>
-        </button>
-      </div>
-
-      <!-- Drawer Tab Content Body -->
-      <div class="drawer-body-content">
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <!-- TAB 1: 360° ANALYTICS                                        -->
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <div *ngIf="active360Tab === 'analytics'" class="space-y-6">
-          <!-- 4 Core Metric Cards Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            <div class="c360-kpi-card bg-purple-50 border-purple-200">
-              <span class="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Total Orders</span>
-              <div class="text-2xl font-black text-[#2E1065] mt-1 font-mono">
-                {{ customerAnalytics?.summary?.total_orders ?? selectedCustomerFor360.total_visits }}
-              </div>
-              <span class="text-[11px] text-slate-500 mt-0.5 block">Lifetime visits recorded</span>
-            </div>
-
-            <div class="c360-kpi-card bg-emerald-50 border-emerald-200">
-              <span class="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Total Spent</span>
-              <div class="text-2xl font-black text-emerald-800 mt-1 font-mono">
-                {{ (customerAnalytics?.summary?.total_spent ?? selectedCustomerFor360.total_spent) | appCurrency:'1.0-0' }}
-              </div>
-              <span class="text-[11px] text-slate-500 mt-0.5 block">Lifetime revenue</span>
-            </div>
-
-            <div class="c360-kpi-card bg-amber-50 border-amber-200">
-              <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Average Order Value</span>
-              <div class="text-2xl font-black text-amber-800 mt-1 font-mono">
-                {{ (customerAnalytics?.summary?.avg_order_value ?? selectedCustomerFor360.avg_order_value ?? 0) | appCurrency:'1.0-0' }}
-              </div>
-              <span class="text-[11px] text-slate-500 mt-0.5 block">Per visit average</span>
-            </div>
-
-            <div class="c360-kpi-card bg-indigo-50 border-indigo-200">
-              <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wide">Frequency Rating</span>
-              <div class="text-base font-black text-indigo-800 mt-1">
-                {{ customerAnalytics?.summary?.frequency_category || 'REGULAR' }}
-              </div>
-              <span class="text-[11px] text-slate-500 mt-0.5 block">
-                Last visited: {{ customerAnalytics?.summary?.days_since_last_visit ?? 0 }}d ago
-              </span>
-            </div>
-          </div>
-
-          <!-- RFM Recency & Retention Card -->
-          <div class="p-4 rounded-xl bg-white border border-[#E9D5FF] shadow-xs">
-            <h4 class="text-xs font-bold text-[#2E1065] uppercase tracking-wider mb-3 flex items-center gap-2">
-              <span class="material-symbols-outlined text-purple-700 text-sm">schedule</span>
-              Recency, Frequency & Loyalty Status
-            </h4>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div class="p-3 bg-[#FAF5FF] rounded-lg border border-[#E9D5FF]">
-                <span class="text-slate-500 block mb-1">First Visit (Member Since)</span>
-                <strong class="text-slate-800 text-sm font-mono">
-                  {{ (customerAnalytics?.summary?.first_visit_at || selectedCustomerFor360.created_at) | date:'mediumDate' }}
-                </strong>
-              </div>
-              <div class="p-3 bg-[#FAF5FF] rounded-lg border border-[#E9D5FF]">
-                <span class="text-slate-500 block mb-1">Last Dine-in / Order</span>
-                <strong class="text-slate-800 text-sm font-mono">
-                  {{ (customerAnalytics?.summary?.last_visit_at || selectedCustomerFor360.last_visit_at || selectedCustomerFor360.created_at) | date:'mediumDate' }}
-                </strong>
-                <span class="text-purple-700 font-bold ml-1">({{ customerAnalytics?.summary?.days_since_last_visit ?? 0 }} days ago)</span>
-              </div>
-              <div class="p-3 bg-[#FAF5FF] rounded-lg border border-[#E9D5FF]">
-                <span class="text-slate-500 block mb-1">Loyalty Points Balance</span>
-                <strong class="text-purple-700 text-sm font-mono">
-                  {{ selectedCustomerFor360.loyalty_points || 0 }} Points
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- Two-Column Section: Favorite Dishes & Monthly Spending -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Favorite Dishes (Top Ordered Items) -->
-            <div class="p-4 rounded-xl bg-white border border-[#E9D5FF] shadow-xs flex flex-col">
-              <h4 class="text-xs font-bold text-[#2E1065] uppercase tracking-wider mb-3 flex items-center justify-between">
-                <span class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-amber-500 text-sm">stars</span>
-                  Favorite Dishes (Top Ordered Items)
-                </span>
-                <span class="text-[11px] text-slate-400 font-normal">Ranked by frequency</span>
-              </h4>
-
-              <div *ngIf="!customerAnalytics?.favorite_items || customerAnalytics?.favorite_items?.length === 0" class="text-center py-6 text-xs text-slate-400">
-                <span class="material-symbols-outlined text-3xl text-purple-200 block mb-1">restaurant</span>
-                No itemized dish history recorded yet for this customer.
-              </div>
-
-              <div class="space-y-2 flex-1">
-                <div
-                  *ngFor="let item of customerAnalytics?.favorite_items; let i = index"
-                  class="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF5FF] border border-[#E9D5FF] text-xs"
-                >
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-5 h-5 rounded-full bg-purple-200 text-purple-800 font-bold text-[10px] flex items-center justify-center">
-                      #{{ i + 1 }}
-                    </span>
-                    <div>
-                      <div class="font-bold text-slate-800">{{ item.product_name }}</div>
-                      <div class="text-[10px] text-slate-400">Last ordered {{ item.last_ordered_at | date:'shortDate' }}</div>
-                    </div>
-                  </div>
-                  <div class="text-right">
-                    <span class="font-mono font-bold text-purple-700 block">{{ item.total_qty }}x ordered</span>
-                    <span class="text-[10px] text-slate-500 font-mono">{{ item.total_spent | appCurrency:'1.0-0' }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Monthly Spending Trend (Last 6 Months) -->
-            <div class="p-4 rounded-xl bg-white border border-[#E9D5FF] shadow-xs flex flex-col">
-              <h4 class="text-xs font-bold text-[#2E1065] uppercase tracking-wider mb-3 flex items-center justify-between">
-                <span class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-purple-700 text-sm">bar_chart</span>
-                  Monthly Spending Trends
-                </span>
-                <span class="text-[11px] text-slate-400 font-normal">Past 6 Months</span>
-              </h4>
-
-              <div *ngIf="!customerAnalytics?.monthly_spending || customerAnalytics?.monthly_spending?.length === 0" class="text-center py-6 text-xs text-slate-400">
-                <span class="material-symbols-outlined text-3xl text-purple-200 block mb-1">trending_up</span>
-                Monthly spending bars will appear once orders are settled.
-              </div>
-
-              <div class="space-y-3 flex-1 justify-center flex flex-col" *ngIf="customerAnalytics?.monthly_spending && customerAnalytics!.monthly_spending.length > 0">
-                <div *ngFor="let m of customerAnalytics?.monthly_spending" class="space-y-1">
-                  <div class="flex justify-between text-[11px] font-mono">
-                    <span class="font-bold text-slate-700">{{ m.month_key }} ({{ m.order_count }} orders)</span>
-                    <span class="font-bold text-purple-700">{{ m.total_spent | appCurrency:'1.0-0' }}</span>
-                  </div>
-                  <div class="w-full bg-purple-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      class="bg-gradient-to-r from-purple-600 to-indigo-600 h-2.5 rounded-full transition-all duration-500"
-                      [style.width.%]="(m.total_spent / getMaxMonthlySpend()) * 100"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Order Type Breakdown -->
-              <div class="mt-4 pt-3 border-t border-[#E9D5FF]" *ngIf="customerAnalytics?.order_type_breakdown && customerAnalytics!.order_type_breakdown.length > 0">
-                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider block mb-2">Order Channels</span>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <div
-                    *ngFor="let ot of customerAnalytics?.order_type_breakdown"
-                    class="px-2.5 py-1 rounded-lg bg-[#FAF5FF] border border-[#E9D5FF] text-[11px]"
-                  >
-                    <span class="font-bold text-purple-800">{{ ot.order_type }}: </span>
-                    <span class="font-mono text-slate-700">{{ ot.count }} orders</span>
-                    <span class="font-mono text-emerald-700 font-bold ml-1">({{ ot.total_amount | appCurrency:'1.0-0' }})</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <!-- TAB 2: ORDER & PURCHASE HISTORY                              -->
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <div *ngIf="active360Tab === 'history'" class="space-y-3">
-          <div *ngIf="purchaseHistory.length === 0" class="text-center py-10 text-xs text-slate-500">
-            <span class="material-symbols-outlined text-4xl text-purple-300 block mb-2">receipt_long</span>
-            No settled bills found for this customer profile.
-          </div>
-
-          <div
-            *ngFor="let bill of purchaseHistory"
-            class="p-4 rounded-xl bg-white border border-[#E9D5FF] shadow-xs space-y-2.5 text-xs hover:border-purple-400 transition-colors"
-          >
-            <div class="flex items-center justify-between border-b border-[#E9D5FF] pb-2.5">
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-purple-800 font-mono text-sm">#{{ bill.bill_number }}</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
-                  {{ bill.order_type }}
-                </span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                  {{ bill.payment_method }}
-                </span>
-              </div>
-              <div class="text-right">
-                <span class="text-slate-500 font-mono">{{ bill.created_at | date:'medium' }}</span>
-                <span *ngIf="bill.cashier_name" class="text-[10px] text-slate-400 block">Cashier: {{ bill.cashier_name }}</span>
-              </div>
-            </div>
-
-            <!-- Bill items breakdown -->
-            <div class="space-y-1 bg-[#FAF5FF] p-2.5 rounded-lg border border-purple-100">
-              <div *ngFor="let item of bill.items" class="flex justify-between text-slate-700 text-[11px]">
-                <span>
-                  <strong class="text-slate-800">{{ item.product_name }}</strong>
-                  <span class="text-slate-400 ml-1">× {{ item.quantity }} &#64; {{ item.unit_price | appCurrency:'1.0-0' }}</span>
-                </span>
-                <span class="font-mono font-semibold">{{ item.subtotal | appCurrency:'1.0-0' }}</span>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between pt-2 border-t border-[#E9D5FF] font-bold">
-              <span class="text-slate-700">Total Settled</span>
-              <span class="font-mono text-sm text-emerald-700">{{ bill.total_amount | appCurrency:'1.0-0' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <!-- TAB 3: CUSTOMER NOTES & DIETARY PREFERENCES                 -->
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <div *ngIf="active360Tab === 'notes'" class="space-y-5">
-          <!-- Add Note Form Box -->
-          <div class="p-4 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
-            <h4 class="text-xs font-bold text-[#2E1065] uppercase tracking-wider flex items-center gap-2">
-              <span class="material-symbols-outlined text-purple-700 text-sm">edit_note</span>
-              Add Customer Note / Preference Alert
-            </h4>
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div class="sm:col-span-1">
-                <label class="form-label text-[10px]">Note Category</label>
-                <app-custom-dropdown
-                  [options]="noteTypeOptions"
-                  [(ngModel)]="newNoteForm.note_type"
-                  placeholder="Category"
-                  minWidth="100%"
-                ></app-custom-dropdown>
-              </div>
-              <div class="sm:col-span-3">
-                <label class="form-label text-[10px]">Note / Dietary Preference / Allergy Description</label>
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    [(ngModel)]="newNoteForm.note_text"
-                    (keyup.enter)="addCustomerNote()"
-                    placeholder="e.g. Shellfish allergy, prefers window booth table, likes low spicy food..."
-                    class="form-control text-xs flex-1"
-                  />
-                  <button
-                    type="button"
-                    [disabled]="isSavingNote || !newNoteForm.note_text.trim()"
-                    (click)="addCustomerNote()"
-                    class="action-btn btn-gradient-purple shrink-0 !py-2 !px-4"
-                  >
-                    <span class="material-symbols-outlined">{{ isSavingNote ? 'progress_activity' : 'add' }}</span>
-                    <span>Save Note</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Notes Filter Buttons -->
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              (click)="noteTypeFilter = 'ALL'"
-              class="px-2.5 py-1 rounded-full text-xs font-bold border transition-colors"
-              [class.bg-purple-700]="noteTypeFilter === 'ALL'"
-              [class.text-white]="noteTypeFilter === 'ALL'"
-              [class.border-purple-700]="noteTypeFilter === 'ALL'"
-              [class.bg-white]="noteTypeFilter !== 'ALL'"
-              [class.text-slate-600]="noteTypeFilter !== 'ALL'"
-            >
-              All Notes ({{ customerNotes.length }})
-            </button>
-            <button
-              type="button"
-              (click)="noteTypeFilter = 'ALLERGY'"
-              class="px-2.5 py-1 rounded-full text-xs font-bold border transition-colors"
-              [class.bg-red-600]="noteTypeFilter === 'ALLERGY'"
-              [class.text-white]="noteTypeFilter === 'ALLERGY'"
-              [class.border-red-600]="noteTypeFilter === 'ALLERGY'"
-              [class.bg-red-50]="noteTypeFilter !== 'ALLERGY'"
-              [class.text-red-700]="noteTypeFilter !== 'ALLERGY'"
-            >
-              ⚠️ Allergy Alerts
-            </button>
-            <button
-              type="button"
-              (click)="noteTypeFilter = 'DIETARY'"
-              class="px-2.5 py-1 rounded-full text-xs font-bold border transition-colors"
-              [class.bg-emerald-600]="noteTypeFilter === 'DIETARY'"
-              [class.text-white]="noteTypeFilter === 'DIETARY'"
-              [class.border-emerald-600]="noteTypeFilter === 'DIETARY'"
-              [class.bg-emerald-50]="noteTypeFilter !== 'DIETARY'"
-              [class.text-emerald-700]="noteTypeFilter !== 'DIETARY'"
-            >
-              🥗 Dietary
-            </button>
-            <button
-              type="button"
-              (click)="noteTypeFilter = 'VIP_REQUEST'"
-              class="px-2.5 py-1 rounded-full text-xs font-bold border transition-colors"
-              [class.bg-amber-600]="noteTypeFilter === 'VIP_REQUEST'"
-              [class.text-white]="noteTypeFilter === 'VIP_REQUEST'"
-              [class.border-amber-600]="noteTypeFilter === 'VIP_REQUEST'"
-              [class.bg-amber-50]="noteTypeFilter !== 'VIP_REQUEST'"
-              [class.text-amber-700]="noteTypeFilter !== 'VIP_REQUEST'"
-            >
-              ⭐ VIP Requests
-            </button>
-            <button
-              type="button"
-              (click)="noteTypeFilter = 'GENERAL'"
-              class="px-2.5 py-1 rounded-full text-xs font-bold border transition-colors"
-              [class.bg-slate-700]="noteTypeFilter === 'GENERAL'"
-              [class.text-white]="noteTypeFilter === 'GENERAL'"
-              [class.border-slate-700]="noteTypeFilter === 'GENERAL'"
-              [class.bg-slate-50]="noteTypeFilter !== 'GENERAL'"
-              [class.text-slate-700]="noteTypeFilter !== 'GENERAL'"
-            >
-              📝 General
-            </button>
-          </div>
-
-          <!-- Notes Timeline List -->
-          <div *ngIf="filteredNotes.length === 0" class="text-center py-8 text-xs text-slate-400">
-            <span class="material-symbols-outlined text-3xl text-purple-200 block mb-1">note_alt</span>
-            No notes logged in this category. Use the form above to add one.
-          </div>
-
-          <div class="space-y-3">
-            <div
-              *ngFor="let note of filteredNotes"
-              class="p-3.5 rounded-xl bg-white border shadow-xs transition-all flex items-start justify-between gap-3"
-              [style.borderColor]="getNoteBadgeStyle(note.note_type).border"
-            >
-              <div class="flex items-start gap-3 min-w-0">
-                <span
-                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  [style.background]="getNoteBadgeStyle(note.note_type).bg"
-                  [style.color]="getNoteBadgeStyle(note.note_type).color"
-                >
-                  <span class="material-symbols-outlined text-base">{{ getNoteBadgeStyle(note.note_type).icon }}</span>
-                </span>
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    <span
-                      class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                      [style.background]="getNoteBadgeStyle(note.note_type).bg"
-                      [style.color]="getNoteBadgeStyle(note.note_type).color"
-                    >
-                      {{ note.note_type }}
-                    </span>
-                    <span class="text-[11px] text-slate-400 font-mono">• {{ note.created_at | date:'medium' }}</span>
-                    <span class="text-[11px] text-purple-700 font-semibold">• by {{ note.author_name || note.user_full_name || 'Staff' }}</span>
-                  </div>
-                  <p class="text-xs text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">{{ note.note_text }}</p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                (click)="deleteNote(note)"
-                class="cust-act is-clean is-delete shrink-0"
-                title="Remove Note"
-              >
-                <span class="material-symbols-outlined text-sm">delete</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <!-- TAB 4: ACTIVITY TIMELINE                                     -->
-        <!-- ════════════════════════════════════════════════════════════ -->
-        <div *ngIf="active360Tab === 'timeline'" class="space-y-4">
-          <div class="c360-timeline-track">
-            <!-- Timeline Item: Account Creation -->
-            <div class="timeline-step">
-              <div class="timeline-marker bg-purple-600">
-                <span class="material-symbols-outlined text-white text-xs">person_add</span>
-              </div>
-              <div class="timeline-body">
-                <div class="text-xs font-bold text-slate-800">Guest Profile Registered</div>
-                <div class="text-[11px] text-slate-500 font-mono">{{ selectedCustomerFor360.created_at | date:'medium' }}</div>
-                <p class="text-xs text-slate-600 mt-1">Profile created with code #{{ selectedCustomerFor360.customer_code || ('CUST-' + selectedCustomerFor360.id) }}.</p>
-              </div>
-            </div>
-
-            <!-- Timeline Item: Recent Orders -->
-            <div *ngFor="let order of customerAnalytics?.recent_orders" class="timeline-step">
-              <div class="timeline-marker bg-emerald-600">
-                <span class="material-symbols-outlined text-white text-xs">receipt</span>
-              </div>
-              <div class="timeline-body">
-                <div class="text-xs font-bold text-slate-800">
-                  Dine-in / Order Settled: <span class="font-mono text-purple-700">#{{ order.bill_number }}</span>
-                </div>
-                <div class="text-[11px] text-slate-500 font-mono">{{ order.created_at | date:'medium' }}</div>
-                <div class="text-xs text-slate-700 mt-1">
-                  Settled <strong class="text-emerald-700 font-mono">{{ order.total_amount | appCurrency:'1.0-0' }}</strong> via {{ order.payment_method }} ({{ order.order_type }}).
-                </div>
-              </div>
-            </div>
-
-            <!-- Timeline Item: Milestone -->
-            <div *ngIf="(selectedCustomerFor360.total_visits || 0) >= 5" class="timeline-step">
-              <div class="timeline-marker bg-amber-500">
-                <span class="material-symbols-outlined text-white text-xs">military_tech</span>
-              </div>
-              <div class="timeline-body">
-                <div class="text-xs font-bold text-amber-800">VIP Milestone Achieved</div>
-                <p class="text-xs text-slate-600 mt-1">Guest has completed {{ selectedCustomerFor360.total_visits }} dine-in visits and gross spend of {{ selectedCustomerFor360.total_spent | appCurrency:'1.0-0' }}.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- 8. ADD / EDIT CUSTOMER MODAL                                    -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div class="modal-backdrop" *ngIf="showModal">
@@ -1427,43 +885,16 @@
           <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
             Customer Photo (Optional)
           </label>
-          <div class="image-upload-row">
-            <div class="image-upload-preview" [class.is-empty]="!form.image_url">
-              <img *ngIf="form.image_url" [src]="settingsService.assetUrl(form.image_url)" alt="Customer Photo preview" />
-              <span *ngIf="!form.image_url" class="material-symbols-outlined">add_a_photo</span>
-            </div>
-            <div class="image-upload-actions">
-              <input
-                type="file"
-                hidden
-                #custPicker
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                (change)="onPhotoFile($event, custPicker)"
-                title="Choose customer photo"
-              />
-              <div class="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                  [disabled]="isUploadingImage"
-                  (click)="custPicker.click()"
-                >
-                  <span class="material-symbols-outlined">{{ isUploadingImage ? 'progress_activity' : 'upload' }}</span>
-                  <span>{{ isUploadingImage ? 'Uploading…' : (form.image_url ? 'Replace' : 'Choose Photo') }}</span>
-                </button>
-                <button
-                  *ngIf="form.image_url && !isUploadingImage"
-                  type="button"
-                  class="action-btn btn-outline-purple !py-1.5 !px-3 !text-xs"
-                  (click)="form.image_url = ''"
-                >
-                  <span class="material-symbols-outlined">delete</span>
-                  <span>Remove</span>
-                </button>
-              </div>
-              <p class="image-upload-hint">PNG, JPG, WEBP or GIF · up to 2 MB</p>
-            </div>
-          </div>
+          <app-image-upload
+            [imageUrl]="form.image_url"
+            [uploading]="isUploadingImage"
+            emptyIcon="add_a_photo"
+            uploadLabel="Choose Photo"
+            alt="Customer photo"
+            pickerTitle="Choose customer photo"
+            (fileChange)="onPhotoFile($event.event, $event.picker)"
+            (removed)="form.image_url = ''"
+          ></app-image-upload>
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-[#E9D5FF]">

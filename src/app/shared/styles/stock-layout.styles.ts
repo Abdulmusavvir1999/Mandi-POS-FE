@@ -50,6 +50,7 @@ export const STOCK_LAYOUT_CSS = `
     transform: scale(var(--stock-card-scale, 1));
     position: relative;
     overflow: hidden;
+    cursor: pointer;
   }
   .stock-wh-card:hover {
     transform: scale(calc(var(--stock-card-scale, 1) * 1.015)) translateY(-2px);
@@ -256,9 +257,10 @@ export const STOCK_LAYOUT_CSS = `
   }
   .stock-fin-row {
     transition: background-color 0.2s ease;
+    cursor: pointer;
   }
   .stock-fin-row:hover {
-    background: color-mix(in srgb, var(--stock-accent-color, var(--primary, #0F766E)) 4%, transparent);
+    background: color-mix(in srgb, var(--stock-accent-color, var(--primary, #0F766E)) 6%, transparent);
   }
 
   .stock-fin-sku {
@@ -366,11 +368,12 @@ export const STOCK_LAYOUT_CSS = `
     justify-content: space-between;
     transition: all 0.2s ease;
     transform: scale(var(--stock-card-scale, 1));
-    box-shadow: 0 2px 8px rgba(var(--primary-rgb, 126, 34, 206), 0.04);
+    cursor: pointer;
   }
   .stock-kan-tile:hover {
     border-color: var(--stock-accent-color, var(--primary, #7E22CE));
     box-shadow: 0 6px 16px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
+    transform: translateY(-2px);
   }
 
   .stock-kan-header {
@@ -644,7 +647,7 @@ export const STOCK_LAYOUT_CSS = `
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     transform: scale(var(--stock-card-scale, 1));
     position: relative;
-    overflow: hidden;
+    cursor: pointer;
   }
   .stock-card-item:hover {
     transform: scale(calc(var(--stock-card-scale, 1) * 1.015)) translateY(-3px);

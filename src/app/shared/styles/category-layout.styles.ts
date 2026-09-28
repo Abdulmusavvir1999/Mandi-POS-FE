@@ -216,6 +216,7 @@ export const CATEGORY_LAYOUT_CSS = `
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     transform: scale(var(--cat-card-scale, 1));
     position: relative;
+    cursor: pointer;
   }
   .cat-bento-card:hover {
     transform: scale(calc(var(--cat-card-scale, 1) * 1.02)) translateY(-3px);
@@ -331,6 +332,7 @@ export const CATEGORY_LAYOUT_CSS = `
   .cat-clean-row {
     border-bottom: 1px solid #F3F4F6;
     transition: background-color 0.15s ease;
+    cursor: pointer;
   }
   .cat-clean-row:last-child {
     border-bottom: none;
@@ -405,6 +407,7 @@ export const CATEGORY_LAYOUT_CSS = `
     box-shadow: 0 2px 8px -4px rgba(15, 23, 42, 0.18);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     transform: scale(var(--cat-card-scale, 1));
+    cursor: pointer;
   }
   .cat-compact-tile:hover {
     box-shadow: 0 10px 20px -10px rgba(15, 23, 42, 0.3);
@@ -487,6 +490,7 @@ export const CATEGORY_LAYOUT_CSS = `
     gap: 14px;
     padding: var(--cat-padding, 12px) 16px;
     transition: background-color 0.15s ease;
+    cursor: pointer;
   }
   .cat-list-row + .cat-list-row {
     border-top: 1px solid var(--card-border, #F1F5F9);
@@ -594,6 +598,7 @@ export const CATEGORY_LAYOUT_CSS = `
     flex-direction: column;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     transform: scale(var(--cat-card-scale, 1));
+    cursor: pointer;
   }
   .cat-card-item:hover {
     box-shadow: 0 18px 34px -14px rgba(15, 23, 42, 0.32);

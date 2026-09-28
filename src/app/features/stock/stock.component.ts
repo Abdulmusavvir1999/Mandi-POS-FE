@@ -294,7 +294,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             [(ngModel)]="selectedMovementType"
             (valueChange)="currentPage = 1; loadStockMovements()"
             placeholder="All Movement Types"
-            minWidth="200px"
+            minWidth="240px"
           ></app-custom-dropdown>
 
           <!-- Vendor filter (for Entries tab) -->
@@ -359,7 +359,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 1. WAREHOUSE METRIC GRID -->
         <div *ngIf="stockLayout.effectiveKey() === 'warehouse' && filteredMasterItems.length > 0" class="stock-wh-grid">
-          <div *ngFor="let item of paginatedMasterItems" class="stock-wh-card">
+          <div
+            *ngFor="let item of paginatedMasterItems"
+            (click)="viewItemHistory(item)"
+            class="stock-wh-card cursor-pointer"
+            title="Click to view item details and ledger history"
+          >
             <div>
               <div class="stock-wh-header">
                 <span class="stock-wh-sku">{{ item.stock_code }}</span>
@@ -411,7 +416,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="stock-wh-footer">
               <button
                 type="button"
-                (click)="quickPurchaseEntry(item)"
+                (click)="$event.stopPropagation(); quickPurchaseEntry(item)"
                 class="stock-wh-btn btn-entry"
                 title="Add Purchase Entry"
               >
@@ -420,7 +425,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
               <button
                 type="button"
-                (click)="quickAdjust(item)"
+                (click)="$event.stopPropagation(); quickAdjust(item)"
                 class="stock-wh-btn"
                 title="Adjust Stock"
               >
@@ -429,7 +434,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
               <button
                 type="button"
-                (click)="viewItemHistory(item)"
+                (click)="$event.stopPropagation(); viewItemHistory(item)"
                 class="stock-wh-btn"
                 title="View Details & Ledger"
               >
@@ -454,7 +459,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of paginatedMasterItems" class="stock-fin-row">
+              <tr
+                *ngFor="let item of paginatedMasterItems"
+                (click)="viewItemHistory(item)"
+                class="stock-fin-row cursor-pointer"
+                title="Click to view item details and ledger history"
+              >
                 <td>
                   <span class="stock-fin-sku">{{ item.stock_code }}</span>
                 </td>
@@ -484,10 +494,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 </td>
                 <td style="text-align: right;">
                   <div class="flex items-center justify-end gap-1">
-                    <button type="button" (click)="quickPurchaseEntry(item)" class="stock-fin-btn" title="Purchase Entry">
+                    <button type="button" (click)="$event.stopPropagation(); quickPurchaseEntry(item)" class="stock-fin-btn" title="Purchase Entry">
                       <span class="material-symbols-outlined" style="font-size: 15px;">add_shopping_cart</span>
                     </button>
-                    <button type="button" (click)="viewItemHistory(item)" class="stock-fin-btn" title="View Ledger">
+                    <button type="button" (click)="$event.stopPropagation(); viewItemHistory(item)" class="stock-fin-btn" title="View Ledger">
                       <span class="material-symbols-outlined" style="font-size: 15px;">visibility</span>
                     </button>
                   </div>
@@ -499,7 +509,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 3. COMPACT KANBAN STOCK TILES -->
         <div *ngIf="stockLayout.effectiveKey() === 'kanban' && filteredMasterItems.length > 0" class="stock-kan-grid">
-          <div *ngFor="let item of paginatedMasterItems" class="stock-kan-tile">
+          <div
+            *ngFor="let item of paginatedMasterItems"
+            (click)="viewItemHistory(item)"
+            class="stock-kan-tile cursor-pointer"
+            title="Click to view item details and ledger history"
+          >
             <div class="stock-kan-header">
               <span class="stock-kan-sku">{{ item.stock_code }}</span>
               <span
@@ -532,10 +547,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="stock-kan-footer">
               <span class="stock-kan-alert">Alert: {{ item.min_stock_alert }}</span>
               <div class="stock-kan-actions">
-                <button type="button" (click)="quickPurchaseEntry(item)" class="stock-kan-btn" title="Purchase Entry">
+                <button type="button" (click)="$event.stopPropagation(); quickPurchaseEntry(item)" class="stock-kan-btn" title="Purchase Entry">
                   <span class="material-symbols-outlined" style="font-size: 13px;">add</span>
                 </button>
-                <button type="button" (click)="viewItemHistory(item)" class="stock-kan-btn" title="Ledger">
+                <button type="button" (click)="$event.stopPropagation(); viewItemHistory(item)" class="stock-kan-btn" title="Ledger">
                   <span class="material-symbols-outlined" style="font-size: 13px;">history</span>
                 </button>
               </div>
@@ -545,7 +560,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 4. LIST VIEW -->
         <div *ngIf="stockLayout.effectiveKey() === 'list' && filteredMasterItems.length > 0" class="stock-list-container">
-          <div *ngFor="let item of paginatedMasterItems" class="stock-list-row">
+          <div
+            *ngFor="let item of paginatedMasterItems"
+            (click)="viewItemHistory(item)"
+            class="stock-list-row cursor-pointer hover:bg-purple-50/40 dark:hover:bg-purple-950/20 transition-colors"
+            title="Click to view item details and ledger history"
+          >
             <div class="stock-list-left">
               <span class="stock-list-sku">{{ item.stock_code }}</span>
               <div>
@@ -584,7 +604,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="stock-list-actions">
               <button
                 type="button"
-                (click)="quickPurchaseEntry(item)"
+                (click)="$event.stopPropagation(); quickPurchaseEntry(item)"
                 class="stock-list-btn btn-entry"
                 title="Add Purchase Entry"
               >
@@ -593,7 +613,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
               <button
                 type="button"
-                (click)="quickAdjust(item)"
+                (click)="$event.stopPropagation(); quickAdjust(item)"
                 class="stock-list-btn"
                 title="Adjust Stock"
               >
@@ -602,7 +622,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
               <button
                 type="button"
-                (click)="viewItemHistory(item)"
+                (click)="$event.stopPropagation(); viewItemHistory(item)"
                 class="stock-list-btn"
                 title="Ledger Details"
               >
@@ -614,7 +634,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- 5. CARD VIEW -->
         <div *ngIf="stockLayout.effectiveKey() === 'card' && filteredMasterItems.length > 0" class="stock-card-grid">
-          <div *ngFor="let item of paginatedMasterItems" class="stock-card-item">
+          <div
+            *ngFor="let item of paginatedMasterItems"
+            (click)="viewItemHistory(item)"
+            class="stock-card-item cursor-pointer"
+            title="Click to view item details and ledger history"
+          >
             <div>
               <div class="stock-card-top">
                 <span class="stock-card-sku-pill">{{ item.stock_code }}</span>
@@ -662,7 +687,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="stock-card-footer">
               <button
                 type="button"
-                (click)="quickPurchaseEntry(item)"
+                (click)="$event.stopPropagation(); quickPurchaseEntry(item)"
                 class="dv-btn is-success"
                 title="Purchase Entry"
               >
@@ -671,7 +696,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
               <button
                 type="button"
-                (click)="quickAdjust(item)"
+                (click)="$event.stopPropagation(); quickAdjust(item)"
                 class="dv-btn"
                 title="Adjust"
               >
@@ -680,7 +705,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
               <button
                 type="button"
-                (click)="viewItemHistory(item)"
+                (click)="$event.stopPropagation(); viewItemHistory(item)"
                 class="dv-btn"
                 title="Audit"
               >
@@ -708,7 +733,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let entry of paginatedStockEntries">
+              <tr *ngFor="let entry of paginatedStockEntries" (click)="viewEntryDetail(entry)" class="cursor-pointer hover:bg-[#FAF5FF] dark:hover:bg-purple-950/20 transition-colors" title="Click to view purchase entry details">
                 <!-- Entry # & Date -->
                 <td>
                   <div class="font-mono text-xs font-bold text-[var(--text-main)]">{{ entry.entry_number }}</div>
@@ -761,7 +786,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                      opening balance written when the item was created. -->
                 <td>
                   <span class="stock-source-chip" [class.is-vendor]="entry.supplier === 'Vendor'">
-                    <span class="material-icons text-xs">{{ entry.supplier === 'Vendor' ? 'local_shipping' : 'inventory_2' }}</span>
+                    <span class="material-symbols-outlined text-[13px]">{{ entry.supplier === 'Vendor' ? 'local_shipping' : 'inventory_2' }}</span>
                     {{ entry.supplier || 'Initial Setup' }}
                   </span>
                 </td>
@@ -797,7 +822,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let move of paginatedStockMovements">
+              <tr *ngFor="let move of paginatedStockMovements" (click)="viewMovementDetail(move)" class="cursor-pointer hover:bg-[#FAF5FF] dark:hover:bg-purple-950/20 transition-colors" title="Click to view movement audit details">
                 <!-- Timestamp -->
                 <td class="text-xs text-[var(--text-muted)] font-mono">
                   {{ move.movement_date | date:'dd/MM/yyyy HH:mm:ss' }}
@@ -1147,14 +1172,30 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
           </div>
 
           <form (ngSubmit)="submitPurchaseEntry()" class="space-y-4">
-            <!-- Select Master Item -->
+            <!-- Vendor (Optional) Selection (First) -->
             <div class="form-group mb-0">
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                Select Stock Item Master
+                Vendor (Optional)
+              </label>
+              <app-custom-dropdown
+                [options]="vendorPickerOptions"
+                [(ngModel)]="purchaseForm.vendorId"
+                name="vendorId"
+                [searchable]="true"
+                minWidth="100%"
+                placeholder="Select Vendor..."
+              ></app-custom-dropdown>
+            </div>
+
+            <!-- Select Stock Item -->
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                Select Stock Item
               </label>
               <app-custom-dropdown
                 [options]="stockItemOptions"
                 [(ngModel)]="purchaseForm.stockId"
+                (ngModelChange)="onPurchaseStockItemChange()"
                 name="stockId"
                 [searchable]="true"
                 minWidth="100%"
@@ -1175,11 +1216,13 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </div>
 
               <!-- Base Quantity & Multiplier Grid -->
-              <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="grid grid-cols-2 gap-4 items-end">
                 <div class="form-group mb-0">
-                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                    Base Quantity
-                  </label>
+                  <div class="flex items-center justify-between mb-1 min-h-[22px]">
+                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider !mb-0 block">
+                      Base Quantity
+                    </label>
+                  </div>
                   <input
                     title="Base Quantity"
                     type="number"
@@ -1187,25 +1230,30 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     step="any"
                     [(ngModel)]="purchaseForm.quantity"
                     name="quantity"
-                    class="form-control font-mono font-bold text-base w-full"
+                    class="form-control font-mono font-bold text-base w-full h-[42px]"
                     placeholder="e.g. 5"
                     required
                   />
                 </div>
                 <div class="form-group mb-0">
-                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
-                    Multiplier
-                  </label>
+                  <div class="flex items-center justify-between mb-1 min-h-[22px]">
+                    <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider !mb-0 block">
+                      Multiplier
+                    </label>
+                    <span class="text-[9px] text-[#7E22CE] font-bold bg-[#F3E8FF] px-2 py-0.5 rounded border border-[#DDD6FE] whitespace-nowrap leading-none">
+                      Auto from Stock
+                    </span>
+                  </div>
                   <input
                     title="Multiplier"
                     type="number"
-                    min="0.001"
-                    step="any"
-                    [(ngModel)]="purchaseForm.multiplier"
+                    [ngModel]="purchaseForm.multiplier"
+                    (ngModelChange)="purchaseForm.multiplier = $event"
                     name="multiplier"
-                    class="form-control font-mono font-bold text-base w-full"
-                    placeholder="e.g. 4"
-                    required
+                    class="form-control font-mono font-bold text-base w-full bg-[#F3F4F6] text-[#6B7280] cursor-not-allowed border-[#D1D5DB] h-[42px]"
+                    placeholder="1"
+                    disabled
+                    readonly
                   />
                 </div>
               </div>
@@ -1274,31 +1322,6 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </div>
             </div>
 
-            <!-- The vendor is the only thing recorded about where the batch
-                 came from. Leaving it unset books the row as 'Initial Setup';
-                 picking one books it as a 'Vendor' purchase. -->
-            <div class="grid grid-cols-2 gap-4 items-start pt-1">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Vendor (Optional)</label>
-                <app-custom-dropdown
-                  [options]="vendorPickerOptions"
-                  [(ngModel)]="purchaseForm.vendorId"
-                  name="vendorId"
-                  [searchable]="true"
-                  minWidth="100%"
-                  placeholder="Select Vendor..."
-                  class="block mt-2"
-                ></app-custom-dropdown>
-              </div>
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Source</label>
-                <div class="form-control text-sm w-full mt-2 flex items-center gap-2 bg-[var(--bg-subtle)]">
-                  <span class="material-icons text-sm text-[var(--text-muted)]">{{ purchaseForm.vendorId ? 'local_shipping' : 'inventory_2' }}</span>
-                  <span class="font-semibold text-[var(--text-main)]">{{ purchaseForm.vendorId ? 'Vendor' : 'Initial Setup' }}</span>
-                </div>
-              </div>
-            </div>
-
             <div class="form-group mb-0">
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Notes (Optional)</label>
               <input
@@ -1358,12 +1381,55 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
           </div>
 
           <form (ngSubmit)="submitAdjust()" class="space-y-4">
-            <!-- Row 1: Stock Item & Movement Type in a 2-column grid -->
+            <!-- Row 1: Movement / Reason Type first, then Stock Item or Vendor in 2-column grid -->
             <div class="grid grid-cols-2 gap-4 items-start">
+              <!-- 1. Movement / Reason Type (First) -->
               <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Select Stock Master Item</label>
+                <div class="flex items-center justify-between mb-1 min-h-[22px]">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                    Movement / Reason Type
+                  </label>
+                </div>
                 <app-custom-dropdown
-                  [options]="stockItemOptions"
+                  [options]="adjustmentTypeOptions"
+                  [(ngModel)]="adjustForm.adjustmentType"
+                  (ngModelChange)="onAdjustReasonTypeChange()"
+                  name="adjustmentType"
+                  minWidth="100%"
+                  placeholder="Select Reason..."
+                ></app-custom-dropdown>
+              </div>
+
+              <!-- 2A. If Return to Supplier: Vendor appears beside Movement Type -->
+              <div *ngIf="adjustForm.adjustmentType === 'return_to_supplier'" class="form-group mb-0">
+                <div class="flex items-center justify-between mb-1 min-h-[22px]">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                    Select Supplier / Vendor <span class="text-[#DC2626] font-black">*</span>
+                  </label>
+                  <span class="text-[10px] font-bold text-[var(--primary)] bg-[var(--primary-light)] px-2 py-0.5 rounded border border-[var(--card-border)] whitespace-nowrap leading-none">
+                    Return Target
+                  </span>
+                </div>
+                <app-custom-dropdown
+                  [options]="adjustVendorPickerOptions"
+                  [(ngModel)]="adjustForm.vendorId"
+                  (ngModelChange)="onAdjustVendorChange()"
+                  name="vendorId"
+                  [searchable]="true"
+                  minWidth="100%"
+                  placeholder="Select Vendor to return to..."
+                ></app-custom-dropdown>
+              </div>
+
+              <!-- 2B. If other reason: Stock Item appears beside Movement Type -->
+              <div *ngIf="adjustForm.adjustmentType !== 'return_to_supplier'" class="form-group mb-0">
+                <div class="flex items-center justify-between mb-1 min-h-[22px]">
+                  <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                    Select Stock Item
+                  </label>
+                </div>
+                <app-custom-dropdown
+                  [options]="adjustStockItemOptions"
                   [(ngModel)]="adjustForm.stockId"
                   (ngModelChange)="onAdjustItemChange()"
                   name="stockId"
@@ -1372,25 +1438,96 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   placeholder="Select Stock Item..."
                 ></app-custom-dropdown>
               </div>
+            </div>
 
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">Movement / Reason Type</label>
-                <app-custom-dropdown
-                  [options]="adjustmentTypeOptions"
-                  [(ngModel)]="adjustForm.adjustmentType"
-                  (ngModelChange)="onAdjustFormQuantityChange()"
-                  name="adjustmentType"
-                  minWidth="100%"
-                  placeholder="Select Reason..."
-                ></app-custom-dropdown>
+            <!-- Row 2 (When Return to Supplier): Select Stock Item below the top row -->
+            <div *ngIf="adjustForm.adjustmentType === 'return_to_supplier'" class="form-group mb-0">
+              <div class="flex items-center justify-between mb-1">
+                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
+                  Select Stock Item <span class="text-[#DC2626] font-black">*</span>
+                </label>
+                <span *ngIf="isLoadingVendorItems" class="text-[10px] text-[#7C3AED] font-semibold flex items-center gap-1 animate-pulse">
+                  <span class="material-symbols-outlined text-xs">sync</span>
+                  <span>Fetching vendor items...</span>
+                </span>
+              </div>
+              <app-custom-dropdown
+                [options]="adjustStockItemOptions"
+                [(ngModel)]="adjustForm.stockId"
+                (ngModelChange)="onAdjustItemChange()"
+                name="stockIdReturn"
+                [searchable]="true"
+                minWidth="100%"
+                [placeholder]="adjustForm.vendorId ? (isLoadingVendorItems ? 'Loading vendor items...' : (adjustStockItemOptions.length ? 'Select Stock Item...' : 'No stock items for this vendor')) : 'Select a Supplier / Vendor above first...'"
+              ></app-custom-dropdown>
+              
+              <!-- Helper Messages for Return to Supplier Selection -->
+              <div *ngIf="!adjustForm.vendorId" class="mt-1 flex items-center gap-1.5 text-[11px] text-[#7C3AED] font-medium">
+                <span class="material-symbols-outlined" style="font-size: 15px;">info</span>
+                <span>Please select a Supplier / Vendor above to view purchased stock items available for return.</span>
+              </div>
+              <div *ngIf="adjustForm.vendorId && !isLoadingVendorItems && adjustStockItemOptions.length === 0" class="mt-1 flex items-center gap-1.5 text-[11px] text-[#DC2626] font-medium">
+                <span class="material-symbols-outlined" style="font-size: 15px;">warning</span>
+                <span>No stock items with positive available balance found for this vendor.</span>
               </div>
             </div>
 
-            <!-- What is actually on hand for the chosen item. The dropdown shows
-                 this per option, but not once collapsed, so an operator writing
-                 off stock could not see what there was to write off. -->
+            <!-- Dual-Metric Card for Return to Supplier: Vendor Purchased vs Current Available Stock -->
+            <div *ngIf="adjustForm.adjustmentType === 'return_to_supplier' && selectedVendorReturnItem" class="p-3.5 bg-[#FAF5FF] border border-[#DDD6FE] rounded-xl text-xs space-y-2.5 w-full">
+              <div class="flex items-center justify-between font-bold text-[#6B21A8]">
+                <span class="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                  <span class="material-symbols-outlined text-[#7C3AED]" style="font-size: 16px;">local_shipping</span>
+                  <span>Vendor Purchase & Stock Availability</span>
+                </span>
+                <span class="text-[10px] bg-[#EDE9FE] text-[#5B21B6] border border-[#DDD6FE] px-2 py-0.5 rounded-md font-mono font-bold">
+                  {{ selectedVendorReturnItem.stock_code }}
+                </span>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-3 pt-0.5">
+                <div class="p-2.5 bg-white border border-[#E9D5FF] rounded-lg shadow-2xs">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-[#6B7280] block">
+                      Vendor Total Supplied
+                    </span>
+                    <span *ngIf="selectedVendorReturnItem.previously_returned_quantity > 0" class="text-[9px] font-bold text-[#DC2626] bg-[#FEE2E2] px-1.5 py-0.2 rounded border border-[#FCA5A5]">
+                      -{{ selectedVendorReturnItem.previously_returned_quantity }} ret
+                    </span>
+                  </div>
+                  <span class="font-mono font-black text-sm text-[#6B21A8]">
+                    {{ selectedVendorReturnItem.vendor_total_quantity | number:'1.0-3' }} {{ selectedVendorReturnItem.unit_type }}s
+                  </span>
+                  <div class="text-[9px] text-[#7C3AED] font-semibold mt-0.5 flex items-center justify-between pt-0.5 border-t border-[#F3E8FF]">
+                    <span>Net Returnable:</span>
+                    <span class="font-mono font-bold">{{ selectedVendorReturnItem.vendor_returnable_quantity | number:'1.0-3' }} {{ selectedVendorReturnItem.unit_type }}s</span>
+                  </div>
+                </div>
+
+                <div class="p-2.5 bg-white border border-[#E9D5FF] rounded-lg shadow-2xs">
+                  <span class="text-[10px] uppercase tracking-wider font-bold text-[#6B7280] block mb-1">
+                    Current Available Stock
+                  </span>
+                  <span class="font-mono font-black text-sm text-[#16A34A]">
+                    {{ selectedVendorReturnItem.current_available_stock | number:'1.0-3' }} {{ selectedVendorReturnItem.unit_type }}s
+                  </span>
+                  <span class="text-[9px] text-[#9CA3AF] block mt-0.5 font-medium">from stock_movements ledger</span>
+                </div>
+              </div>
+
+              <div class="pt-1.5 border-t border-[#E9D5FF] flex items-center justify-between text-[11px] font-semibold text-[#5B21B6]">
+                <span class="flex items-center gap-1">
+                  <span>Max Return Allowed:</span>
+                  <span class="text-[10px] text-[#6B7280] font-normal">(Min of Vendor Supplied & Available Stock)</span>
+                </span>
+                <span class="font-mono font-black text-[#16A34A] bg-[#DCFCE7] border border-[#86EFAC] px-2.5 py-0.5 rounded text-xs">
+                  {{ adjustMaxQuantity | number:'1.0-3' }} {{ selectedVendorReturnItem.unit_type }}s
+                </span>
+              </div>
+            </div>
+
+            <!-- What is actually on hand for other adjustment types -->
             <div
-              *ngIf="adjustSelectedItem"
+              *ngIf="adjustForm.adjustmentType !== 'return_to_supplier' && adjustSelectedItem"
               class="flex items-center justify-between py-2 px-3.5 bg-[var(--bg-app)] border border-[var(--card-border)] rounded-xl text-xs shadow-xs w-full"
             >
               <span class="text-[var(--text-muted)] font-semibold flex items-center gap-2">
@@ -1427,9 +1564,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 </div>
                 <span
                   class="text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap border"
-                  [ngClass]="adjustIsIncrease ? 'text-[#16A34A] bg-[#DCFCE7] border-[#86EFAC]' : 'text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]'"
+                  [ngClass]="adjustForm.adjustmentType === 'return_to_supplier'
+                    ? 'text-[#7C3AED] bg-[#EDE9FE] border-[#DDD6FE]'
+                    : (adjustIsIncrease
+                        ? 'text-[#16A34A] bg-[#DCFCE7] border-[#86EFAC]'
+                        : 'text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]')"
                 >
-                  {{ adjustIsIncrease ? 'Adds to stock' : 'Removes from stock' }}
+                  {{ adjustForm.adjustmentType === 'return_to_supplier'
+                      ? 'Vendor Loss (Removes from stock)'
+                      : (adjustIsIncrease ? 'Stock Gain (Adds to stock)' : 'Company Loss (Removes from stock)') }}
                 </span>
               </div>
 
@@ -1506,44 +1649,50 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 </span>
               </div>
 
-              <!-- Cost Grid: Unit Price is entered, Total Cost is derived
-                   from it — Total = Adjustment Quantity x Unit Price. -->
-              <div class="grid grid-cols-2 gap-4 items-end">
+              <!-- Cost Grid: Total Cost / Price is editable (left), Unit Price is derived/read-only (right) -->
+              <div class="grid grid-cols-2 gap-4 items-start">
+                <!-- Left: Total Cost / Price (Editable) -->
                 <div class="form-group mb-0">
-                  <div class="flex items-center justify-between mb-0">
-                    <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Unit Price (₹)</label>
-                    <span class="text-[9px] text-[var(--text-muted)] font-bold bg-[var(--bg-app)] px-2 py-0.5 rounded border border-[var(--card-border)] whitespace-nowrap">
-                      Item average
-                    </span>
-                  </div>
-                  <input
-                    title="Unit Price (₹)"
-                    type="number"
-                    min="0"
-                    step="any"
-                    [(ngModel)]="adjustForm.unitPrice"
-                    name="unitPrice"
-                    class="form-control font-mono font-bold text-[var(--text-main)] w-full"
-                    placeholder="0.0000"
-                  />
-                </div>
-                <div class="form-group mb-0">
-                  <div class="flex items-center justify-between mb-0">
+                  <div class="flex items-center justify-between mb-1">
                     <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Total Cost / Price (₹)</label>
                     <span class="text-[9px] text-[var(--primary)] font-bold bg-[var(--primary-light)] px-2 py-0.5 rounded border border-[var(--card-border)] whitespace-nowrap">
-                      Auto-calculated
+                      Input value
                     </span>
                   </div>
                   <input
                     title="Total Cost / Price (₹)"
                     type="number"
-                    [value]="adjustCalculatedTotalCost"
+                    min="0"
+                    step="any"
+                    [(ngModel)]="adjustForm.totalPrice"
                     name="totalPrice"
-                    class="form-control font-mono font-bold bg-[var(--bg-app)] text-[var(--text-muted)] cursor-not-allowed border-[var(--card-border)] w-full"
+                    class="form-control font-mono font-bold text-[var(--text-main)] w-full"
                     placeholder="0.00"
+                  />
+                </div>
+
+                <!-- Right: Unit Price (Disabled / Read-only) -->
+                <div class="form-group mb-0">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Unit Price (₹)</label>
+                    <span class="text-[9px] text-[var(--text-muted)] font-bold bg-[var(--bg-app)] px-2 py-0.5 rounded border border-[var(--card-border)] whitespace-nowrap">
+                      Auto-calculated
+                    </span>
+                  </div>
+                  <input
+                    title="Unit Price (₹)"
+                    type="number"
+                    [value]="adjustUnitPrice"
+                    name="unitPrice"
+                    class="form-control font-mono font-bold bg-[var(--bg-app)] text-[var(--text-muted)] cursor-not-allowed border-[var(--card-border)] w-full"
+                    placeholder="0.0000"
                     disabled
                     readonly
                   />
+                  <div class="text-[10px] text-[var(--text-muted)] mt-1 font-mono flex items-center justify-between px-1">
+                    <span>Item avg: {{ (adjustSelectedItem?.average_unit_price || 0) | appCurrency:'1.0-4' }}</span>
+                    <span>Rate / unit</span>
+                  </div>
                 </div>
               </div>
 
@@ -1565,30 +1714,92 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     {{ adjustUnitPrice | appCurrency:'1.0-4' }} =
                   </span>
                   <span class="font-mono font-black text-sm px-2.5 py-0.5 rounded-md border text-[var(--primary)] bg-[var(--primary-light)] border-[var(--card-border)]">
-                    {{ adjustCalculatedTotalCost | appCurrency:'1.0-2' }}
+                    {{ (adjustForm.totalPrice || 0) | appCurrency:'1.0-2' }}
                   </span>
                 </span>
               </div>
 
-              <!-- What this entry will do to the item's weighted average cost -->
+              <!-- Remaining / Resulting Total Cost Display with equation below Total Cost / Price Sum -->
+              <div
+                *ngIf="adjustSelectedItem"
+                class="flex items-center justify-between py-2 px-3.5 bg-[var(--bg-app)] border border-[var(--card-border)] rounded-xl text-xs shadow-xs w-full"
+              >
+                <span class="text-[var(--text-muted)] font-semibold flex items-center gap-2">
+                  <span
+                    class="material-symbols-outlined"
+                    [ngClass]="adjustIsIncrease ? 'text-[#16A34A]' : 'text-[#DC2626]'"
+                    style="font-size: 18px;"
+                  >{{ adjustIsIncrease ? 'trending_up' : 'trending_down' }}</span>
+                  <span class="uppercase tracking-wider font-bold">
+                    {{ adjustIsIncrease ? 'Total Cost After Adjustment:' : 'Remaining Total Cost:' }}
+                  </span>
+                </span>
+                <span class="flex items-center gap-2">
+                  <span class="font-mono text-xs text-[var(--text-muted)]">
+                    {{ adjustItemTotalCost | appCurrency:'1.0-2' }}
+                    {{ adjustIsIncrease ? '+' : '−' }}
+                    {{ (adjustForm.totalPrice || 0) | appCurrency:'1.0-2' }} =
+                  </span>
+                  <span
+                    class="font-mono font-black text-sm px-2.5 py-0.5 rounded-md border"
+                    [ngClass]="adjustResultingTotalCost < 0
+                      ? 'text-[#DC2626] bg-[#FEE2E2] border-[#FCA5A5]'
+                      : (adjustIsIncrease
+                          ? 'text-[#16A34A] bg-[#DCFCE7] border-[#86EFAC]'
+                          : 'text-[#9A3412] bg-[#FFF7ED] border-[#FED7AA]')"
+                  >
+                    {{ adjustResultingTotalCost | appCurrency:'1.0-2' }}
+                  </span>
+                </span>
+              </div>
+
+              <!-- What this entry will do: Vendor Loss vs Company Loss vs Stock Addition -->
               <div
                 class="p-3.5 rounded-xl border text-xs leading-relaxed"
-                [ngClass]="adjustIsIncrease ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]' : 'bg-[#FFF7ED] border-[#FED7AA] text-[#9A3412]'"
+                [ngClass]="adjustForm.adjustmentType === 'return_to_supplier'
+                  ? 'bg-[#F5F3FF] border-[#DDD6FE] text-[#5B21B6]'
+                  : (adjustIsIncrease
+                      ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]'
+                      : 'bg-[#FFF7ED] border-[#FED7AA] text-[#9A3412]')"
               >
-                <span *ngIf="adjustIsIncrease">
-                  Stock is being added, so this cost <strong>re-averages</strong> the item's unit cost, exactly like a purchase entry.
-                  Leave the total at 0 to add at the current average instead.
-                </span>
-                <span *ngIf="!adjustIsIncrease">
-                  Stock is being removed at the existing average of
-                  <strong class="font-mono">{{ (adjustSelectedItem?.average_unit_price || 0) | appCurrency:'1.0-4' }}</strong>.
-                  Any cost entered here is recorded as the write-off value and does <strong>not</strong> change the item's unit cost.
-                </span>
+                <!-- 1. Return to Supplier = Vendor Loss -->
+                <div *ngIf="adjustForm.adjustmentType === 'return_to_supplier'" class="flex items-start gap-2.5">
+                  <span class="material-symbols-outlined text-lg mt-0.5 text-[#7C3AED]">local_shipping</span>
+                  <div>
+                    <strong class="font-bold">Vendor Loss (Return to Supplier):</strong>
+                    Goods are returned to the vendor for credit / replacement at the rate of
+                    <strong class="font-mono font-bold">{{ (adjustUnitPrice || adjustSelectedItem?.average_unit_price || 0) | appCurrency:'1.0-4' }}</strong>.
+                    This removal is accounted as a <strong>Vendor Loss</strong> and does not count as internal company shrinkage.
+                  </div>
+                </div>
+
+                <!-- 2. Stock Addition = Stock Gain -->
+                <div *ngIf="adjustForm.adjustmentType !== 'return_to_supplier' && adjustIsIncrease" class="flex items-start gap-2.5">
+                  <span class="material-symbols-outlined text-lg mt-0.5 text-[#16A34A]">trending_up</span>
+                  <div>
+                    <strong class="font-bold">Stock Addition (Gain):</strong>
+                    Stock is being added, so this cost <strong>re-averages</strong> the item's unit cost, exactly like a purchase entry.
+                    Leave the total at 0 to add at the current average instead.
+                  </div>
+                </div>
+
+                <!-- 3. Wastage / Decrease / Audit = Company Loss -->
+                <div *ngIf="adjustForm.adjustmentType !== 'return_to_supplier' && !adjustIsIncrease" class="flex items-start gap-2.5">
+                  <span class="material-symbols-outlined text-lg mt-0.5 text-[#DC2626]">warning</span>
+                  <div>
+                    <strong class="font-bold">Company Loss (Internal Shrinkage / Wastage):</strong>
+                    Stock is being removed at the existing average of
+                    <strong class="font-mono font-bold">{{ (adjustSelectedItem?.average_unit_price || 0) | appCurrency:'1.0-4' }}</strong>.
+                    Any cost entered here is recorded as internal <strong>Company Loss</strong> (write-off) and does <strong>not</strong> change the item's unit cost.
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-0 block">Mandatory Audit Reason</label>
+              <label class="form-label text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1 block">
+                Mandatory Audit Reason <span class="text-[#DC2626] font-black">*</span>
+              </label>
               <input
                 title="Mandatory Audit Reason"
                 type="text"
@@ -1611,8 +1822,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               <button
                 type="submit"
                 class="action-btn btn-gradient-purple"
-                [disabled]="adjustOverMax"
-                [title]="adjustOverMax ? 'Cannot remove more than the available stock' : 'Apply Adjustment'"
+                [disabled]="adjustOverMax || !adjustForm.stockId || adjustCalculatedTotalQty <= 0 || (adjustForm.adjustmentType === 'return_to_supplier' && !adjustForm.vendorId)"
+                [title]="adjustOverMax ? 'Cannot return or remove more than available stock' : 'Apply Adjustment'"
               >
                 Apply Adjustment ✓
               </button>
@@ -1958,6 +2169,238 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
           </div>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 11. MODAL: VIEW STOCK MOVEMENT AUDIT DETAILS                    -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showMovementViewModal && selectedMovementForView">
+        <div class="modal-content shadow-2xl max-w-lg">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge" [ngClass]="{
+                'is-success': selectedMovementForView.movement_type === 'in',
+                'is-danger': selectedMovementForView.movement_type === 'out' || selectedMovementForView.movement_type === 'wastage',
+                '!bg-purple-100 !text-purple-700': selectedMovementForView.movement_type === 'return' || selectedMovementForView.movement_type === 'adjustment'
+              }">
+                <span class="material-symbols-outlined text-2xl">
+                  {{ selectedMovementForView.movement_type === 'in' ? 'add_circle' : (selectedMovementForView.movement_type === 'return' ? 'reply' : (selectedMovementForView.movement_type === 'wastage' ? 'delete' : 'history')) }}
+                </span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Stock Movement Details</h3>
+                <p class="text-xs text-[#6B7280] font-mono mt-0.5">
+                  Ref: {{ selectedMovementForView.reference_id || 'ID #' + selectedMovementForView.id }} • {{ selectedMovementForView.reference_type }}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="showMovementViewModal = false; selectedMovementForView = null"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <!-- Grid 1: Item & Movement Type -->
+            <div class="grid grid-cols-2 gap-3 p-3 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl">
+              <div>
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Stock Item</span>
+                <strong class="text-[#2E1065] text-sm">{{ selectedMovementForView.stock_item_name }}</strong>
+                <div class="font-mono text-[10px] text-[#7E22CE]">{{ selectedMovementForView.stock_code }}</div>
+              </div>
+              <div>
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Movement Type</span>
+                <span
+                  class="badge uppercase font-bold text-[10px] mt-1 inline-block"
+                  [ngClass]="{
+                    'badge-success': selectedMovementForView.movement_type === 'in',
+                    'badge-danger': selectedMovementForView.movement_type === 'out',
+                    'badge-warning': selectedMovementForView.movement_type === 'adjustment',
+                    'badge-info': selectedMovementForView.movement_type === 'return',
+                    'bg-rose-100 text-rose-800 border border-rose-200': selectedMovementForView.movement_type === 'wastage'
+                  }"
+                >
+                  {{ selectedMovementForView.movement_type }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Grid 2: Quantity & Financial Impact -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl">
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Quantity Moved</span>
+                <span
+                  class="font-mono font-black text-base"
+                  [ngClass]="selectedMovementForView.quantity > 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'"
+                >
+                  {{ selectedMovementForView.quantity > 0 ? '+' + (selectedMovementForView.quantity | number:'1.0-3') : (selectedMovementForView.quantity | number:'1.0-3') }}
+                  {{ selectedMovementForView.unit_type }}
+                </span>
+                <div class="text-[10px] text-[#6B7280] font-mono mt-0.5">
+                  Unit Cost: {{ selectedMovementForView.unit_price | appCurrency:'1.0-4' }}
+                </div>
+              </div>
+
+              <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl">
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Financial Impact</span>
+                <span class="font-mono font-black text-base text-[#2E1065]">
+                  {{ selectedMovementForView.total_value | appCurrency:'1.0-2' }}
+                </span>
+                <div class="text-[10px] text-[#7E22CE] font-mono mt-0.5">
+                  Balance: <strong>{{ selectedMovementForView.balance_quantity | number:'1.0-3' }} {{ selectedMovementForView.unit_type }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grid 3: Metadata & Author -->
+            <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl space-y-2">
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <span class="text-[#6B7280] block text-[10px] font-bold uppercase">Date & Time</span>
+                  <span class="font-mono text-[#2E1065]">{{ selectedMovementForView.movement_date | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                </div>
+                <div>
+                  <span class="text-[#6B7280] block text-[10px] font-bold uppercase">Recorded By</span>
+                  <span class="font-semibold text-[#6B21A8]">{{ selectedMovementForView.created_by_name || 'System Auto' }}</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-[#F3E8FF]" *ngIf="selectedMovementForView.notes">
+                <span class="text-[#6B7280] block text-[10px] font-bold uppercase mb-0.5">Audit Reason & Notes</span>
+                <p class="text-[#2E1065] bg-[#F9FAFB] p-2 rounded-lg border border-[#E5E7EB] font-mono text-[11px] leading-relaxed break-words">
+                  {{ selectedMovementForView.notes }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end pt-4 mt-3 border-t border-[#E9D5FF]">
+            <button
+              type="button"
+              (click)="showMovementViewModal = false; selectedMovementForView = null"
+              class="action-btn btn-gradient-purple"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 12. MODAL: VIEW PURCHASE ENTRY LEDGER DETAILS                   -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showEntryViewModal && selectedEntryForView">
+        <div class="modal-content shadow-2xl max-w-lg">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge is-success">
+                <span class="material-symbols-outlined text-2xl">shopping_cart_checkout</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Purchase Entry Details</h3>
+                <p class="text-xs text-[#6B7280] font-mono mt-0.5">
+                  Entry #: {{ selectedEntryForView.entry_number }}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="showEntryViewModal = false; selectedEntryForView = null"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <!-- Grid 1: Basic Info -->
+            <div class="grid grid-cols-2 gap-3 p-3 bg-[#FAF5FF] border border-[#E9D5FF] rounded-xl">
+              <div>
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Stock Item</span>
+                <strong class="text-[#2E1065] text-sm">{{ selectedEntryForView.stock_item_name }}</strong>
+                <div class="font-mono text-[10px] text-[#7E22CE]">{{ selectedEntryForView.stock_code }}</div>
+              </div>
+              <div>
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Source & Supplier</span>
+                <span class="stock-source-chip mt-1 inline-flex" [class.is-vendor]="selectedEntryForView.supplier === 'Vendor'">
+                  <span class="material-symbols-outlined text-[13px]">{{ selectedEntryForView.supplier === 'Vendor' ? 'local_shipping' : 'inventory_2' }}</span>
+                  {{ selectedEntryForView.supplier || 'Initial Setup' }}
+                </span>
+                <div *ngIf="selectedEntryForView.vendor_name" class="text-[11px] font-semibold text-[#2E1065] mt-1">
+                  {{ selectedEntryForView.vendor_name }} <span *ngIf="selectedEntryForView.vendor_code" class="text-[#7E22CE] font-mono">({{ selectedEntryForView.vendor_code }})</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grid 2: Formula & Calculation -->
+            <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl space-y-2">
+              <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Formula & Quantities</span>
+              <div class="flex items-center justify-between p-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg font-mono">
+                <span class="text-[#4B5563]">
+                  <strong>{{ selectedEntryForView.quantity }}</strong> base × <strong>{{ selectedEntryForView.multiplier }}</strong> mult
+                </span>
+                <span class="font-black text-sm text-[#16A34A] bg-[#DCFCE7] px-2 py-0.5 rounded border border-[#86EFAC]">
+                  +{{ selectedEntryForView.total_quantity | number:'1.0-3' }} {{ selectedEntryForView.unit_type }}s
+                </span>
+              </div>
+            </div>
+
+            <!-- Grid 3: Pricing & Unit Cost -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl">
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Total Batch Price</span>
+                <span class="font-mono font-black text-base text-[#2E1065]">
+                  {{ selectedEntryForView.total_price | appCurrency:'1.0-2' }}
+                </span>
+              </div>
+              <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl">
+                <span class="text-[#6B7280] block text-[10px] uppercase font-bold">Resulting Unit Cost</span>
+                <span class="font-mono font-black text-base text-[#7E22CE]">
+                  {{ selectedEntryForView.unit_price | appCurrency:'1.0-4' }}
+                </span>
+                <span class="text-[10px] text-[#6B7280] block">/ {{ selectedEntryForView.unit_type }}</span>
+              </div>
+            </div>
+
+            <!-- Grid 4: Meta & Notes -->
+            <div class="p-3 bg-white border border-[#E9D5FF] rounded-xl space-y-2">
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <span class="text-[#6B7280] block text-[10px] font-bold uppercase">Entry Date</span>
+                  <span class="font-mono text-[#2E1065]">{{ selectedEntryForView.entry_date | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <div>
+                  <span class="text-[#6B7280] block text-[10px] font-bold uppercase">Recorded By</span>
+                  <span class="font-semibold text-[#6B21A8]">{{ selectedEntryForView.created_by_name || 'System' }}</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-[#F3E8FF]" *ngIf="selectedEntryForView.notes">
+                <span class="text-[#6B7280] block text-[10px] font-bold uppercase mb-0.5">Notes</span>
+                <p class="text-[#2E1065] bg-[#F9FAFB] p-2 rounded-lg border border-[#E5E7EB] font-mono text-[11px] leading-relaxed break-words">
+                  {{ selectedEntryForView.notes }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end pt-4 mt-3 border-t border-[#E9D5FF]">
+            <button
+              type="button"
+              (click)="showEntryViewModal = false; selectedEntryForView = null"
+              class="action-btn btn-gradient-purple"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [
@@ -1974,6 +2417,11 @@ export class StockComponent implements OnInit {
   private productService = inject(ProductService);
   private notify = inject(NotificationService);
   private router = inject(Router);
+
+  public selectedMovementForView: StockMovement | null = null;
+  public showMovementViewModal = false;
+  public selectedEntryForView: StockEntry | null = null;
+  public showEntryViewModal = false;
 
   public activeTab: 'MASTER' | 'ENTRIES' | 'MOVEMENTS' | 'LOW_STOCK' = 'MASTER';
 
@@ -2049,6 +2497,17 @@ export class StockComponent implements OnInit {
     ];
   }
 
+  /** Vendors list formatted for the Return to Supplier picker. */
+  get adjustVendorPickerOptions(): DropdownOption[] {
+    return this.vendors.map((v) => ({
+      value: v.id,
+      label: v.name,
+      description: v.contact_person ? `Contact: ${v.contact_person}${v.phone ? ` (${v.phone})` : ''}` : (v.category || v.phone || undefined),
+      icon: 'local_shipping',
+      badge: v.vendor_code,
+    }));
+  }
+
   public unitFilterOptions: DropdownOption[] = [
     { value: '', label: 'All Units', icon: 'apps' },
     { value: 'piece', label: 'Piece (pcs)', icon: 'category' },
@@ -2064,17 +2523,15 @@ export class StockComponent implements OnInit {
     { value: 'all', label: 'All Movement Types', icon: 'history' },
     { value: 'in', label: 'IN (Purchases / Additions)', icon: 'add_circle' },
     { value: 'out', label: 'OUT (Sales / Deductions)', icon: 'remove_circle' },
-    { value: 'adjustment', label: 'ADJUSTMENT (Audit Correction)', icon: 'tune' },
     { value: 'wastage', label: 'WASTAGE (Kitchen Loss)', icon: 'delete' },
     { value: 'return', label: 'RETURN', icon: 'reply' },
   ];
 
   public adjustmentTypeOptions: DropdownOption[] = [
-    { value: 'adjustment', label: 'Manual Adjustment', icon: 'tune', description: 'Correction from physical audit' },
-    { value: 'wastage', label: 'Kitchen Wastage / Spoilage', icon: 'delete', description: 'Trimming loss, spoiled, expired' },
-    { value: 'return_to_supplier', label: 'Return to Supplier', icon: 'reply', description: 'Goods sent back to vendor — removes from stock' },
-    { value: 'INCREASE', label: 'INCREASE (+ Audit)', icon: 'arrow_upward', description: 'Found excess stock on audit' },
-    { value: 'DECREASE', label: 'DECREASE (- Audit)', icon: 'arrow_downward', description: 'Stock deficit adjustment' },
+    { value: 'DECREASE', label: 'DECREASE (- Audit)', icon: 'arrow_downward', description: 'Stock deficit adjustment — Company Loss' },
+    { value: 'INCREASE', label: 'INCREASE (+ Audit)', icon: 'arrow_upward', description: 'Found excess stock on audit — Stock Gain' },
+    { value: 'wastage', label: 'Kitchen Wastage / Spoilage', icon: 'delete', description: 'Trimming loss, spoiled, expired — Company Loss' },
+    { value: 'return_to_supplier', label: 'Return to Supplier', icon: 'reply', description: 'Goods sent back to vendor — Vendor Loss / Credit' },
   ];
 
   get stockItemOptions(): DropdownOption[] {
@@ -2085,6 +2542,114 @@ export class StockComponent implements OnInit {
       badge: `${item.unit_type}`,
       icon: 'inventory_2',
     }));
+  }
+
+  public vendorReturnStockItems: Array<{
+    id: number;
+    name: string;
+    stock_code: string;
+    unit_type: StockUnitType;
+    average_unit_price: number;
+    vendor_total_quantity: number;
+    previously_returned_quantity: number;
+    vendor_returnable_quantity: number;
+    current_available_stock: number;
+    max_return_allowed: number;
+  }> = [];
+  public isLoadingVendorItems = false;
+
+  get selectedVendorReturnItem() {
+    if (this.adjustForm.adjustmentType === 'return_to_supplier' && this.adjustForm.stockId) {
+      return this.vendorReturnStockItems.find((i) => i.id === Number(this.adjustForm.stockId));
+    }
+    return undefined;
+  }
+
+  /**
+   * Filtered stock items for the adjustment modal:
+   * 1. For Return to Supplier: ONLY show stock items associated with the chosen vendor in stock_vendor_purchase with returnable stock > 0.
+   * 2. For removals (Wastage, DECREASE), only items with current_quantity > 0 are shown.
+   * 3. For INCREASE (+ Audit), all stock items are available.
+   */
+  get adjustStockItemOptions(): DropdownOption[] {
+    if (this.adjustForm.adjustmentType === 'return_to_supplier') {
+      if (!this.adjustForm.vendorId) {
+        return [];
+      }
+      return this.vendorReturnStockItems.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.stock_code})`,
+        description: `Supplied: ${Number(item.vendor_total_quantity).toFixed(2)} | Ret. Allowed: ${Number(item.max_return_allowed || item.vendor_returnable_quantity).toFixed(2)} ${item.unit_type}s`,
+        badge: `${item.unit_type}`,
+        icon: 'inventory_2',
+      }));
+    }
+
+    let items = this.stockItems;
+
+    // For removals, filter to items with available pieces > 0
+    if (!this.adjustIsIncrease) {
+      items = items.filter((item) => Number(item.current_quantity || 0) > 0);
+    }
+
+    return items.map((item) => ({
+      value: item.id,
+      label: `${item.name} (${item.stock_code})`,
+      description: `Available: ${item.current_quantity} ${item.unit_type}s · Rate: ₹${Number(item.average_unit_price || 0).toFixed(2)}`,
+      badge: `${item.unit_type}`,
+      icon: 'inventory_2',
+    }));
+  }
+
+  onAdjustReasonTypeChange(): void {
+    if (this.adjustForm.adjustmentType === 'return_to_supplier') {
+      if (this.adjustForm.vendorId) {
+        this.onAdjustVendorChange();
+      } else {
+        this.vendorReturnStockItems = [];
+        this.adjustForm.stockId = null;
+      }
+    } else {
+      this.vendorReturnStockItems = [];
+    }
+    this.onAdjustFormQuantityChange();
+  }
+
+  onAdjustVendorChange(): void {
+    if (this.adjustForm.adjustmentType === 'return_to_supplier') {
+      if (this.adjustForm.vendorId) {
+        const vendorId = Number(this.adjustForm.vendorId);
+        this.isLoadingVendorItems = true;
+        this.stockService.getVendorReturnItems(vendorId).subscribe({
+          next: (res) => {
+            this.isLoadingVendorItems = false;
+            this.vendorReturnStockItems = res.success && res.data ? res.data : [];
+            if (this.adjustForm.stockId && !this.vendorReturnStockItems.some((i) => i.id === Number(this.adjustForm.stockId))) {
+              this.adjustForm.stockId = null;
+            }
+            this.onAdjustItemChange();
+          },
+          error: () => {
+            this.isLoadingVendorItems = false;
+            this.vendorReturnStockItems = [];
+            this.adjustForm.stockId = null;
+            this.onAdjustItemChange();
+          },
+        });
+        return;
+      } else {
+        this.vendorReturnStockItems = [];
+        this.adjustForm.stockId = null;
+        this.onAdjustItemChange();
+        return;
+      }
+    }
+
+    const validOptions = this.adjustStockItemOptions;
+    if (this.adjustForm.stockId && !validOptions.some((o) => o.value === Number(this.adjustForm.stockId))) {
+      this.adjustForm.stockId = null;
+      this.onAdjustItemChange();
+    }
   }
 
   // Modals state
@@ -2108,7 +2673,8 @@ export class StockComponent implements OnInit {
 
   public adjustForm: any = {
     stockId: null,
-    adjustmentType: 'adjustment',
+    adjustmentType: 'DECREASE',
+    vendorId: null,
     quantity: 1,
     multiplier: 1,
     totalPrice: 0,
@@ -2122,19 +2688,27 @@ export class StockComponent implements OnInit {
     return this.stockItems.find((i) => i.id === Number(this.adjustForm.stockId));
   }
 
+  /** Current available quantity based on mode (from stock_movements for vendor return) */
+  get adjustAvailableQuantity(): number {
+    if (this.adjustForm.adjustmentType === 'return_to_supplier' && this.selectedVendorReturnItem) {
+      return Number(this.selectedVendorReturnItem.current_available_stock || 0);
+    }
+    return Number(this.adjustSelectedItem?.current_quantity || 0);
+  }
+
   /**
    * What the item will hold once this adjustment is applied — the reason type
    * decides whether the calculated total is added or taken away.
    */
   get adjustResultingQty(): number {
-    const available = Number(this.adjustSelectedItem?.current_quantity || 0);
+    const available = this.adjustAvailableQuantity;
     const change = Number(this.adjustCalculatedTotalQty || 0);
     return this.adjustIsIncrease ? available + change : available - change;
   }
 
   /** Removing more than is on hand would drive the ledger negative. */
   get adjustExceedsAvailable(): boolean {
-    return !!this.adjustSelectedItem && !this.adjustIsIncrease && this.adjustResultingQty < 0;
+    return !this.adjustIsIncrease && this.adjustResultingQty < 0;
   }
 
   /**
@@ -2147,15 +2721,19 @@ export class StockComponent implements OnInit {
   }
 
   /**
-   * Cap for the quantity box. A reason that removes stock cannot take out more
-   * than is on hand; one that adds has no ceiling. Returns null when there is
-   * nothing to cap, which leaves the input unbounded.
+   * Cap for the quantity box. For Return to Supplier, it cannot exceed the
+   * vendor's net returnable quantity (Supplied - Returned) nor the current available stock.
    */
   get adjustMaxQuantity(): number | null {
     if (this.adjustIsIncrease || this.allowNegativeStock) return null;
-    const item = this.adjustSelectedItem;
-    if (!item) return null;
-    return Number(item.current_quantity || 0);
+    if (this.adjustForm.adjustmentType === 'return_to_supplier') {
+      if (this.selectedVendorReturnItem) {
+        const vendorReturnable = Number(this.selectedVendorReturnItem.vendor_returnable_quantity ?? this.selectedVendorReturnItem.vendor_total_quantity ?? 0);
+        const availableStock = Number(this.selectedVendorReturnItem.current_available_stock ?? 0);
+        return Math.min(vendorReturnable, availableStock);
+      }
+    }
+    return this.adjustAvailableQuantity;
   }
 
   /** True when the box is capped and the typed amount is over that cap. */
@@ -2192,30 +2770,47 @@ export class StockComponent implements OnInit {
     return qty * mult;
   }
 
-  /**
-   * The rate this adjustment is valued at. Seeded from the item's weighted
-   * average when an item is picked, and editable so stock coming in at a
-   * different price can still be recorded — that is what re-averages the item.
-   */
-  get adjustUnitPrice(): number {
-    const typed = Number(this.adjustForm.unitPrice);
-    if (Number.isFinite(typed) && typed >= 0) return typed;
-    return Number(this.adjustSelectedItem?.average_unit_price) || 0;
+  /** Total Cost of the item's current stock (Total Quantity * Average Unit Price) */
+  get adjustItemTotalCost(): number {
+    if (!this.adjustSelectedItem) return 0;
+    const val = Number(this.adjustSelectedItem.current_value);
+    if (Number.isFinite(val) && val > 0) return val;
+    return +(Number(this.adjustSelectedItem.current_quantity || 0) * Number(this.adjustSelectedItem.average_unit_price || 0)).toFixed(2);
   }
 
   /**
-   * Total Cost / Price = Adjustment Quantity x Unit Price.
-   *
-   * This used to run the other way — the operator typed a total and the unit
-   * rate was derived from it — which meant the rate moved every time the
-   * quantity changed. Quantity and rate are now the two inputs and the total
-   * is the result, which is the way the figure is actually arrived at.
-   *
-   * Rounded to 2dp for money while the rate itself keeps 4dp, matching the
-   * DECIMAL(14,2) / DECIMAL(14,4) columns behind them.
+   * Resulting Total Cost after adjustment:
+   * Adds to stock: Total Cost + Total Cost / Price (e.g. 500 + 100 = 600)
+   * Removes from stock: Total Cost − Total Cost / Price (e.g. 500 - 100 = 400)
    */
+  get adjustResultingTotalCost(): number {
+    const totalCost = this.adjustItemTotalCost;
+    const enteredPrice = Number(this.adjustForm.totalPrice) || 0;
+    return this.adjustIsIncrease
+      ? +(totalCost + enteredPrice).toFixed(2)
+      : +(totalCost - enteredPrice).toFixed(2);
+  }
+
+  get adjustRemainingTotalCost(): number {
+    return this.adjustResultingTotalCost;
+  }
+
+  /**
+   * Unit Price (₹) derived from Total Cost / Price divided by Adjustment Quantity.
+   * If Adjustment Quantity is 0, falls back to the item's average unit price.
+   */
+  get adjustUnitPrice(): number {
+    const totalQty = this.adjustCalculatedTotalQty;
+    const enteredTotal = Number(this.adjustForm.totalPrice);
+    if (totalQty > 0 && Number.isFinite(enteredTotal) && enteredTotal >= 0) {
+      return +(enteredTotal / totalQty).toFixed(4);
+    }
+    return Number(this.adjustSelectedItem?.average_unit_price) || 0;
+  }
+
   get adjustCalculatedTotalCost(): number {
-    return +(this.adjustCalculatedTotalQty * this.adjustUnitPrice).toFixed(2);
+    const entered = Number(this.adjustForm.totalPrice);
+    return Number.isFinite(entered) && entered >= 0 ? entered : 0;
   }
 
   /** Kept for the payload: the rate the backend should value the movement at. */
@@ -2224,6 +2819,10 @@ export class StockComponent implements OnInit {
   }
 
   onAdjustFormQuantityChange(): void {
+    const validOptions = this.adjustStockItemOptions;
+    if (this.adjustForm.stockId && !validOptions.some((o) => o.value === Number(this.adjustForm.stockId))) {
+      this.adjustForm.stockId = null;
+    }
     // A removal cannot exceed what is on hand, so the typed figure is clamped
     // as it is entered rather than only being refused on submit. Adding has no
     // ceiling, and a store that allows a negative balance is left alone.
@@ -2234,18 +2833,16 @@ export class StockComponent implements OnInit {
         this.adjustForm.quantity = max;
       }
     }
-    // Total Cost is derived from quantity x unit price, so nothing else needs
-    // recomputing here — the getter reads both.
+    const avg = Number(this.adjustSelectedItem?.average_unit_price) || 0;
+    this.adjustForm.totalPrice = +(this.adjustCalculatedTotalQty * avg).toFixed(2);
   }
 
   /**
-   * Seeds the rate from the newly chosen item's weighted average, so the
-   * total is right the moment an item is picked. The operator can still type
-   * a different rate for stock arriving at a new price.
+   * Seeds the Total Cost / Price from the newly chosen item's average unit price x quantity.
    */
   onAdjustItemChange(): void {
-    const avg = Number(this.adjustSelectedItem?.average_unit_price);
-    this.adjustForm.unitPrice = Number.isFinite(avg) ? +avg.toFixed(4) : 0;
+    const avg = Number(this.adjustSelectedItem?.average_unit_price) || 0;
+    this.adjustForm.totalPrice = +(this.adjustCalculatedTotalQty * avg).toFixed(2);
     this.onAdjustFormQuantityChange();
   }
 
@@ -2402,10 +2999,23 @@ export class StockComponent implements OnInit {
     this.purchaseForm.stockId = item.id;
     const recQty = Number(item.suggested_reorder_quantity) || Number(item.reorder_quantity) || 10;
     this.purchaseForm.quantity = recQty;
-    this.purchaseForm.multiplier = 1;
+    const latestEntry = this.stockEntries.find((e) => e.stock_id === item.id || (e as any).stock_item_id === item.id);
+    const autoMultiplier = item.default_multiplier || latestEntry?.multiplier || item.multiplier || 1;
+    this.purchaseForm.multiplier = Number(autoMultiplier) || 1;
     const unitPrice = Number(item.average_unit_price) || 0;
     this.purchaseForm.totalPrice = Math.round((recQty * unitPrice) * 100) / 100;
     this.showPurchaseModal = true;
+  }
+
+  onPurchaseStockItemChange(): void {
+    if (this.purchaseForm.stockId) {
+      const stock = this.stockItems.find((s) => s.id === Number(this.purchaseForm.stockId));
+      if (stock) {
+        const latestEntry = this.stockEntries.find((e) => e.stock_id === stock.id || (e as any).stock_item_id === stock.id);
+        const autoMultiplier = stock.default_multiplier || latestEntry?.multiplier || (stock as any).multiplier || 1;
+        this.purchaseForm.multiplier = Number(autoMultiplier) || 1;
+      }
+    }
   }
 
   loadAllProducts(): void {
@@ -2585,6 +3195,16 @@ export class StockComponent implements OnInit {
   }
 
   // ── Modals Trigger Actions ──────────────────────────────────────────
+  viewMovementDetail(move: StockMovement): void {
+    this.selectedMovementForView = move;
+    this.showMovementViewModal = true;
+  }
+
+  viewEntryDetail(entry: StockEntry): void {
+    this.selectedEntryForView = entry;
+    this.showEntryViewModal = true;
+  }
+
   openPurchaseModal(): void {
     this.purchaseForm = {
       stockId: null,
@@ -2599,12 +3219,14 @@ export class StockComponent implements OnInit {
   }
 
   quickPurchaseEntry(item: StockItem): void {
+    const latestEntry = this.stockEntries.find((e) => e.stock_id === item.id || (e as any).stock_item_id === item.id);
+    const autoMultiplier = item.default_multiplier || latestEntry?.multiplier || (item as any).multiplier || 1;
     this.purchaseForm = {
       stockId: item.id,
       quantity: null,
-      multiplier: 1,
+      multiplier: Number(autoMultiplier) || 1,
       totalPrice: null,
-      vendorId: 0,
+      vendorId: item.default_vendor_id || 0,
       notes: '',
       entryDate: new Date().toISOString().split('T')[0],
     };
@@ -2614,7 +3236,8 @@ export class StockComponent implements OnInit {
   openAdjustModal(): void {
     this.adjustForm = {
       stockId: null,
-      adjustmentType: 'adjustment',
+      adjustmentType: 'DECREASE',
+      vendorId: null,
       quantity: 1,
       multiplier: 1,
       totalPrice: 0,
@@ -2628,7 +3251,8 @@ export class StockComponent implements OnInit {
   quickAdjust(item: StockItem): void {
     this.adjustForm = {
       stockId: item.id,
-      adjustmentType: 'adjustment',
+      adjustmentType: 'DECREASE',
+      vendorId: null,
       quantity: 1,
       multiplier: 1,
       totalPrice: 0,
@@ -2699,7 +3323,11 @@ export class StockComponent implements OnInit {
 
   submitAdjust(): void {
     if (!this.adjustForm.stockId) {
-      this.notify.error('Please select a stock item master');
+      this.notify.error('Please select a stock item');
+      return;
+    }
+    if (this.adjustForm.adjustmentType === 'return_to_supplier' && !this.adjustForm.vendorId) {
+      this.notify.error('Please select a supplier / vendor to return items to');
       return;
     }
     if (!this.adjustForm.reason) {
@@ -2715,10 +3343,16 @@ export class StockComponent implements OnInit {
     // Mirrors the server check in StockService.adjustStock. Only reasons that
     // remove stock are capped; adding has no ceiling.
     if (this.adjustOverMax) {
-      const unit = this.adjustSelectedItem?.unit_type || 'units';
-      this.notify.error(
-        `Cannot remove ${this.adjustCalculatedTotalQty} ${unit} — only ${this.adjustMaxQuantity} ${unit} available.`
-      );
+      const unit = this.adjustSelectedItem?.unit_type || this.selectedVendorReturnItem?.unit_type || 'units';
+      if (this.adjustForm.adjustmentType === 'return_to_supplier' && this.selectedVendorReturnItem) {
+        this.notify.error(
+          `Cannot return ${this.adjustCalculatedTotalQty} ${unit}. Maximum return allowed for vendor is ${this.adjustMaxQuantity} ${unit} (Vendor Net Returnable: ${this.selectedVendorReturnItem.vendor_returnable_quantity}, Available Stock: ${this.selectedVendorReturnItem.current_available_stock}).`
+        );
+      } else {
+        this.notify.error(
+          `Cannot remove ${this.adjustCalculatedTotalQty} ${unit} — available stock is ${this.adjustAvailableQuantity} ${unit}.`
+        );
+      }
       return;
     }
 
@@ -2727,15 +3361,12 @@ export class StockComponent implements OnInit {
       adjustmentType: this.adjustForm.adjustmentType,
       quantity: Number(this.adjustForm.quantity) || 0,
       multiplier: 1,
+      totalPrice: Number(this.adjustForm.totalPrice) || 0,
       reason: this.adjustForm.reason,
       notes: this.adjustForm.notes,
+      vendorId: this.adjustForm.vendorId ? Number(this.adjustForm.vendorId) : undefined,
     };
 
-    // Only the rate is sent. adjustStock prefers `totalPrice` when present and
-    // divides it back by the quantity, which re-introduces rounding — a rate
-    // of 12.3456 over 7 units came back as 12.3457 once the total had been
-    // rounded to 2dp. Sending the rate alone keeps it exact, and the server
-    // multiplies it out to the same total.
     const unitPrice = this.adjustCalculatedUnitCost;
     if (Number.isFinite(unitPrice) && unitPrice > 0) {
       payload.unitPrice = unitPrice;

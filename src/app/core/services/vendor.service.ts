@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ApiResponse, Vendor, VendorPurchase, VendorPayment, VendorStats } from '../models';
+import { ApiResponse, Vendor, VendorPayment, VendorStats } from '../models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -59,38 +59,12 @@ export class VendorService {
     return this.http.delete<ApiResponse<{ success: boolean; message: string }>>(`${this.API_URL}/${id}`);
   }
 
-  public getPurchases(vendorId: number, page = 1, limit = 50): Observable<ApiResponse<VendorPurchase[]>> {
-    const params = new HttpParams().set('page', page.toString()).set('limit', limit.toString());
-    return this.http.get<ApiResponse<VendorPurchase[]>>(`${this.API_URL}/${vendorId}/purchases`, { params });
-  }
-
-  public recordPurchase(vendorId: number, data: {
-    invoice_number: string;
-    order_date: string;
-    due_date?: string;
-    total_amount: number;
-    paid_amount?: number;
-    items_summary?: string;
-    notes?: string;
-  }): Observable<ApiResponse<Vendor>> {
-    return this.http.post<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/purchases`, data);
-  }
-
-  public updatePurchase(vendorId: number, purchaseId: number, data: Partial<VendorPurchase>): Observable<ApiResponse<Vendor>> {
-    return this.http.put<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/purchases/${purchaseId}`, data);
-  }
-
-  public deletePurchase(vendorId: number, purchaseId: number): Observable<ApiResponse<Vendor>> {
-    return this.http.delete<ApiResponse<Vendor>>(`${this.API_URL}/${vendorId}/purchases/${purchaseId}`);
-  }
-
   public getPayments(vendorId: number, page = 1, limit = 50): Observable<ApiResponse<VendorPayment[]>> {
     const params = new HttpParams().set('page', page.toString()).set('limit', limit.toString());
     return this.http.get<ApiResponse<VendorPayment[]>>(`${this.API_URL}/${vendorId}/payments`, { params });
   }
 
   public recordPayment(vendorId: number, data: {
-    purchase_id?: number;
     payment_number?: string;
     payment_date: string;
     amount: number;

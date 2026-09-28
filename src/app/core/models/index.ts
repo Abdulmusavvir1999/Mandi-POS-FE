@@ -76,8 +76,9 @@ export interface ProductVariant {
   stock_item_code?: string;
   stock_item_unit?: string;
   stock_item_quantity?: number;
+  stock_consumption?: number;
+  stockConsumption?: number;
   selling_price: number;
-  stock_consumption: number;
   display_order?: number;
   is_default?: boolean | number;
   status?: 'ACTIVE' | 'INACTIVE';
@@ -515,6 +516,7 @@ export interface StockItem {
   stock_code: string;
   name: string;
   unit_type: StockUnitType;
+  default_multiplier?: number;
   current_quantity: number;
   current_value: number;
   average_unit_price: number;
@@ -574,6 +576,7 @@ export interface StockMovement {
   id: number;
   uuid: string;
   stock_id: number;
+  stock_vendor_purchase_id?: number | null;
   stock_item_name?: string;
   stock_code?: string;
   unit_type?: StockUnitType;
@@ -625,8 +628,6 @@ export interface ApiResponse<T = any> {
 export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 export type PaymentTermsType = 'COD' | 'ADVANCE' | 'NET_7' | 'NET_15' | 'NET_30' | 'NET_45' | 'NET_60' | 'DUE_ON_RECEIPT' | 'PAY_ANYTIME';
 export type PreferredPaymentMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'UPI' | 'CASH' | 'PAY_LATER' | 'CREDIT_TERMS';
-export type PurchasePaymentStatus = 'PAID' | 'PARTIAL' | 'UNPAID' | 'OVERDUE';
-export type PurchaseDeliveryStatus = 'RECEIVED' | 'PENDING' | 'CANCELLED';
 
 export interface Vendor {
   id: number;
@@ -670,10 +671,7 @@ export interface Vendor {
   payment_terms?: PaymentTermsType | string;
   tax_category?: string;
   branch_name?: string | null;
-  total_purchases_amount?: number;
   total_paid_amount?: number;
-  total_purchases_count?: number;
-  last_purchase_date?: string | null;
   last_payment_date?: string | null;
   rating?: number;
   delivery_speed_rating?: number;
@@ -689,33 +687,13 @@ export interface Vendor {
   updated_at?: string;
   is_deleted?: number | boolean;
 
-  purchases?: VendorPurchase[];
   payments?: VendorPayment[];
-}
-
-export interface VendorPurchase {
-  id: number;
-  uuid: string;
-  vendor_id: number;
-  invoice_number: string;
-  order_date: string;
-  due_date?: string | null;
-  total_amount: number;
-  paid_amount: number;
-  balance_amount: number;
-  payment_status: PurchasePaymentStatus;
-  delivery_status: PurchaseDeliveryStatus;
-  items_summary?: string | null;
-  notes?: string | null;
-  created_at?: string;
 }
 
 export interface VendorPayment {
   id: number;
   uuid: string;
   vendor_id: number;
-  purchase_id?: number | null;
-  invoice_number?: string | null;
   payment_number: string;
   payment_date: string;
   amount: number;
@@ -729,13 +707,10 @@ export interface VendorStats {
   totalVendors: number;
   activeVendors: number;
   totalOutstanding: number;
-  totalPurchases: number;
   avgRating: string;
   avgOnTime: string;
   avgQuality: string;
   avgFulfillment: string;
-  overdueCount: number;
-  overdueAmount: number;
   categories: { name: string; count: number }[];
 }
 
@@ -744,8 +719,14 @@ export interface VendorStats {
 // -------------------------------------------------------------
 export interface ProductAddon {
   id: number;
+  mapping_id?: number;
   name: string;
   price: number;
+  default_price?: number;
+  amount?: number;
+  is_free?: 'Free' | 'Amount';
+  free_limit?: number | null;
+  free_quantity?: number | null;
   cost_price?: number;
   image_url?: string | null;
   is_available: boolean | number;
@@ -756,6 +737,16 @@ export interface ProductAddon {
   created_at?: string;
   updated_at?: string;
   selected?: boolean;
+}
+
+export interface ProductAddonMapping {
+  addon_id: number;
+  is_free: 'Free' | 'Amount';
+  amount?: number;
+  free_limit?: number | null;
+  name?: string;
+  category?: string;
+  default_price?: number;
 }
 
 export interface ComboDealItem {
