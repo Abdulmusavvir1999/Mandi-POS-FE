@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrderService } from '../../core/services/order.service';
@@ -6,6 +6,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { Order, OrderStatus, OrderType, OrderItem } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { OrderStatusPipe } from '../../shared/pipes/order-status.pipe';
 import {
   CustomDropdownComponent,
   DropdownOption,
@@ -16,7 +17,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppCurrencyPipe, CustomDropdownComponent, PageLoaderComponent, ActionLoadingDirective],
+  imports: [CommonModule, FormsModule, AppCurrencyPipe, OrderStatusPipe, CustomDropdownComponent, PageLoaderComponent, ActionLoadingDirective],
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.css'],
 })
@@ -32,7 +33,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   public settingsService = inject(SettingsService);
 
   public orders: Order[] = [];
-  public selectedStatusTab: 'ALL' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' = 'ALL';
+  public selectedStatusTab: 'ALL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' = 'ALL';
   public selectedOrderType: 'ALL' | OrderType = 'ALL';
   public selectedTable: string = 'ALL';
   public searchQuery: string = '';
@@ -67,29 +68,17 @@ export class OrdersComponent implements OnInit, OnDestroy {
   public isDrawerOpen = false;
 
   // Local item-level check state for kitchen preparation tracking
-  public checkedItems = new Set<string>();
 
-  // Live timer tick updated every second
-  public currentTime = signal<number>(Date.now());
-  private clockTimer: any = null;
   private autoRefreshTimer: any = null;
   private previousPendingCount = 0;
 
   ngOnInit(): void {
     this.loadOrders();
-    this.startClock();
     this.startAutoRefresh();
   }
 
   ngOnDestroy(): void {
-    if (this.clockTimer) clearInterval(this.clockTimer);
     if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
-  }
-
-  private startClock(): void {
-    this.clockTimer = setInterval(() => {
-      this.currentTime.set(Date.now());
-    }, 1000);
   }
 
   private startAutoRefresh(): void {
@@ -110,8 +99,8 @@ export class OrdersComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         if (res.success && res.data) {
           const newOrders = res.data;
-          // Check if new pending orders arrived and trigger chime
-          const currentPendingCount = newOrders.filter((o) => o.status === 'PENDING').length;
+          // Chime when a new ticket reaches Processing
+          const currentPendingCount = newOrders.filter((o) => this.isProcessing(o)).length;
           if (this.previousPendingCount > 0 && currentPendingCount > this.previousPendingCount && this.soundEnabled) {
             this.playOrderChime();
           }
@@ -144,32 +133,40 @@ export class OrdersComponent implements OnInit, OnDestroy {
   // FILTERED LISTS & METRICS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  public get pendingOrders(): Order[] {
-    return this.applySecondaryFilters(this.orders.filter((o) => o.status === 'PENDING'));
+  /**
+   * A dine-in tab the kitchen has served but the table has not paid yet: it
+   * shows as Ready here, while the order stays open for the bill in POS.
+   */
+  public isServedTab(o: Order): boolean {
+    return o.status === 'IN_PROGRESS' && o.kitchen_status === 'READY';
+  }
+
+  /**
+   * Processing: sent to the kitchen and not yet completed. There is no
+   * separate "new" stage; an old PENDING order is shown here too.
+   */
+  public isProcessing(o: Order): boolean {
+    return (o.status === 'IN_PROGRESS' || o.status === 'PENDING') && !this.isServedTab(o);
   }
 
   public get inProgressOrders(): Order[] {
-    return this.applySecondaryFilters(this.orders.filter((o) => o.status === 'IN_PROGRESS'));
+    return this.applySecondaryFilters(this.orders.filter((o) => this.isProcessing(o)));
   }
 
   public get completedOrders(): Order[] {
-    return this.applySecondaryFilters(this.orders.filter((o) => o.status === 'COMPLETED'));
+    return this.applySecondaryFilters(this.orders.filter((o) => o.status === 'COMPLETED' || this.isServedTab(o)));
   }
 
   public get cancelledOrders(): Order[] {
     return this.applySecondaryFilters(this.orders.filter((o) => o.status === 'CANCELLED'));
   }
 
-  public get pendingCount(): number {
-    return this.orders.filter((o) => o.status === 'PENDING').length;
-  }
-
   public get inProgressCount(): number {
-    return this.orders.filter((o) => o.status === 'IN_PROGRESS').length;
+    return this.orders.filter((o) => this.isProcessing(o)).length;
   }
 
   public get completedCount(): number {
-    return this.orders.filter((o) => o.status === 'COMPLETED').length;
+    return this.orders.filter((o) => o.status === 'COMPLETED' || this.isServedTab(o)).length;
   }
 
   public get cancelledCount(): number {
@@ -177,7 +174,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   public get totalActiveCount(): number {
-    return this.pendingCount + this.inProgressCount;
+    return this.inProgressCount;
   }
 
   public get availableTables(): string[] {
@@ -226,101 +223,8 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TIMERS & URGENCY CALCULATIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  public getElapsedMinutes(createdAt: string): number {
-    if (!createdAt) return 0;
-    const start = new Date(createdAt).getTime();
-    const now = this.currentTime();
-    return Math.max(0, Math.floor((now - start) / 60000));
-  }
-
-  public getElapsedFormatted(createdAt: string): string {
-    if (!createdAt) return '00:00';
-    const start = new Date(createdAt).getTime();
-    const now = this.currentTime();
-    const diffSec = Math.max(0, Math.floor((now - start) / 1000));
-    const mins = Math.floor(diffSec / 60);
-    const secs = diffSec % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  public getUrgencyClass(createdAt: string, status: OrderStatus): string {
-    if (status === 'COMPLETED' || status === 'CANCELLED') return 'timer-normal';
-    const mins = this.getElapsedMinutes(createdAt);
-    if (mins >= 20) return 'timer-overdue';
-    if (mins >= 10) return 'timer-warning';
-    return 'timer-normal';
-  }
-
-  public getUrgencyLabel(createdAt: string, status: OrderStatus): string {
-    if (status === 'COMPLETED') return 'Fulfilled';
-    if (status === 'CANCELLED') return 'Cancelled';
-    const mins = this.getElapsedMinutes(createdAt);
-    const timeStr = this.getElapsedFormatted(createdAt);
-    if (mins >= 20) return `🔥 DELAYED ${timeStr}`;
-    if (status === 'PENDING') return `Waiting ${timeStr}`;
-    if (status === 'IN_PROGRESS') return `Cooking ${timeStr}`;
-    return timeStr;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ITEM-LEVEL CHECKLIST FOR KITCHEN
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  public getItemKey(orderId: number, itemId: number): string {
-    return `${orderId}_${itemId}`;
-  }
-
-  public isItemChecked(orderId: number, itemId: number): boolean {
-    return this.checkedItems.has(this.getItemKey(orderId, itemId));
-  }
-
-  public toggleItemChecked(orderId: number, itemId: number, event?: Event): void {
-    if (event) {
-      event.stopPropagation();
-    }
-    const key = this.getItemKey(orderId, itemId);
-    if (this.checkedItems.has(key)) {
-      this.checkedItems.delete(key);
-    } else {
-      this.checkedItems.add(key);
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // ORDER ACTIONS & LIFECYCLE
   // ═══════════════════════════════════════════════════════════════════════════
-
-  public startCooking(order: Order, event?: Event): void {
-    if (event) event.stopPropagation();
-    this.orderService.startOrder(order.id).subscribe({
-      next: () => {
-        this.notify.success(`Order #${order.order_number} moved to Cooking`);
-        this.loadOrders(false);
-      },
-      error: (err) => {
-        this.notify.error(err?.error?.message || 'Failed to start order');
-      },
-    });
-  }
-
-  public markReady(order: Order, event?: Event): void {
-    if (event) event.stopPropagation();
-    this.orderService.completeOrder(order.id).subscribe({
-      next: () => {
-        this.notify.success(`Order #${order.order_number} marked Ready & Fulfilled`);
-        this.loadOrders(false);
-        if (this.selectedOrderDetails?.id === order.id) {
-          this.closeDrawer();
-        }
-      },
-      error: (err) => {
-        this.notify.error(err?.error?.message || 'Failed to complete order');
-      },
-    });
-  }
 
   public cancelOrder(order: Order, event?: Event): void {
     if (event) event.stopPropagation();

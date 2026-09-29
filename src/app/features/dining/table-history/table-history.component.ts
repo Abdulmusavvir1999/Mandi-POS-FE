@@ -6,15 +6,17 @@ import { DiningService, TableHistoryPage, TableHistorySummary } from '../../../c
 import { DiningTable } from '../../../core/models';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
+import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../../shared/styles/default-action-buttons.styles';
 
 type Period = 'today' | '7d' | '30d' | 'all' | 'custom';
-type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
+type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'CANCELLED';
 
 @Component({
   selector: 'app-table-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, AppCurrencyPipe, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, AppCurrencyPipe, PageLoaderComponent, CustomDropdownComponent, DatePickerComponent],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -133,19 +135,37 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
             </div>
 
             <div class="th-dates" *ngIf="period === 'custom'">
-              <input type="date" class="form-control" [(ngModel)]="from" (change)="applyFilters()" [max]="to || ''" />
+              <app-date-picker
+                [(ngModel)]="from"
+                (valueChange)="applyFilters()"
+                [max]="to || ''"
+                [clearable]="false"
+                label="From date"
+                placeholder="From"
+                minWidth="160px"
+              ></app-date-picker>
               <span>to</span>
-              <input type="date" class="form-control" [(ngModel)]="to" (change)="applyFilters()" [min]="from || ''" />
+              <app-date-picker
+                [(ngModel)]="to"
+                (valueChange)="applyFilters()"
+                [min]="from || ''"
+                [clearable]="false"
+                label="To date"
+                placeholder="To"
+                minWidth="160px"
+              ></app-date-picker>
             </div>
 
             <div class="th-toolbar-right">
-              <select class="form-control th-select" [(ngModel)]="status" (change)="applyFilters()" aria-label="Status">
-                <option value="">All statuses</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="IN_PROGRESS">In progress</option>
-                <option value="PENDING">Pending</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+              <div class="th-select">
+                <app-custom-dropdown
+                  [options]="statusOptions"
+                  [(ngModel)]="status"
+                  (ngModelChange)="applyFilters()"
+                  placeholder="All statuses"
+                  minWidth="100%"
+                ></app-custom-dropdown>
+              </div>
               <div class="th-search">
                 <span class="material-symbols-outlined">search</span>
                 <input
@@ -174,7 +194,14 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let h of rows; trackBy: trackByOrder">
+                <tr
+                  *ngFor="let h of rows; trackBy: trackByOrder"
+                  class="th-row-link"
+                  tabindex="0"
+                  (click)="openDetail(h.order_id)"
+                  (keydown.enter)="openDetail(h.order_id)"
+                  title="View order details"
+                >
                   <td>
                     <span class="th-order">{{ h.order_number }}</span>
                     <small class="th-muted" *ngIf="h.bill_number">Bill {{ h.bill_number }}</small>
@@ -184,7 +211,7 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
                     <small class="th-muted">{{ asDate(h.order_start_time) | date: 'h:mm a' }}<ng-container *ngIf="h.order_end_time"> – {{ asDate(h.order_end_time) | date: 'h:mm a' }}</ng-container></small>
                   </td>
                   <td>
-                    <a *ngIf="h.customer_id; else walkIn" [routerLink]="['/customers', h.customer_id]" class="th-link">{{ h.customer_name }}</a>
+                    <a *ngIf="h.customer_id; else walkIn" [routerLink]="['/customers', h.customer_id]" class="th-link" (click)="$event.stopPropagation()">{{ h.customer_name }}</a>
                     <ng-template #walkIn><span class="th-muted-strong">Walk-in</span></ng-template>
                     <small class="th-muted" *ngIf="h.customer_phone">{{ h.customer_phone }}</small>
                   </td>
@@ -196,7 +223,12 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
                     <small class="th-muted" *ngIf="h.payment_status">{{ h.payment_status | titlecase }}</small>
                   </td>
                   <td>{{ h.staff_name || '—' }}</td>
-                  <td><span class="th-pill" [ngClass]="'st-' + (h.order_status || '').toLowerCase()">{{ orderStatusLabel(h.order_status) }}</span></td>
+                  <td>
+                    <span *ngIf="h.order_status === 'COMPLETED' && !h.bill_number; else statusPill" class="th-pill st-cancelled" title="Completed without a bill - no payment was taken">Not billed</span>
+                    <ng-template #statusPill>
+                      <span class="th-pill" [ngClass]="'st-' + (h.order_status || '').toLowerCase()">{{ orderStatusLabel(h.order_status) }}</span>
+                    </ng-template>
+                  </td>
                   <td class="num"><strong>{{ h.total_amount | appCurrency: '1.2-2' }}</strong></td>
                 </tr>
               </tbody>
@@ -232,6 +264,93 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
           </div>
         </div>
       </ng-container>
+
+      <!-- ═══ Order details ═══ -->
+      <div class="modal-backdrop" *ngIf="detailOpen">
+        <div class="modal-content td-modal">
+          <div class="td-head">
+            <span class="td-icon"><span class="material-symbols-outlined">receipt_long</span></span>
+            <div class="td-head-text">
+              <h3>{{ detail?.order?.order_number || 'Order' }}</h3>
+              <p *ngIf="detail?.order as o">
+                {{ asDate(o.created_at) | date: 'd MMM yyyy, h:mm a' }}
+                <ng-container *ngIf="detail?.bill"> – {{ asDate(detail.bill.created_at) | date: 'h:mm a' }}</ng-container>
+                <ng-container *ngIf="o.table_number"> · {{ o.table_number }}</ng-container>
+              </p>
+            </div>
+            <span *ngIf="detail?.order" class="th-pill" [ngClass]="'st-' + (detail.order.status || '').toLowerCase()">{{ orderStatusLabel(detail.order.status) }}</span>
+            <button type="button" class="modal-close-btn" (click)="closeDetail()" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="td-loading" *ngIf="detailLoading">Loading order…</div>
+
+          <ng-container *ngIf="detail && !detailLoading">
+            <div class="td-info">
+              <div><span>Customer</span><strong>{{ detail.order.customer_name || 'Walk-in' }}</strong><small *ngIf="detail.order.customer_phone">{{ detail.order.customer_phone }}</small></div>
+              <div><span>Staff</span><strong>{{ detail.order.staff_name || '—' }}</strong></div>
+              <div><span>Turn time</span><strong>{{ duration(detailMinutes) }}</strong></div>
+              <div><span>KOTs</span><strong>{{ detailRounds.length }}</strong></div>
+            </div>
+
+            <div class="td-warn" *ngIf="detail.order.status === 'COMPLETED' && !detail.bill">
+              <span class="material-symbols-outlined">warning</span>
+              Marked completed but never billed. No payment was taken for this order.
+            </div>
+            <div class="td-warn" *ngIf="detail.bill?.is_voided">
+              <span class="material-symbols-outlined">block</span>
+              Bill voided<ng-container *ngIf="detail.bill.void_reason">: {{ detail.bill.void_reason }}</ng-container>
+            </div>
+
+            <div class="td-rounds">
+              <section class="td-round" *ngFor="let r of detailRounds">
+                <header>
+                  <span class="td-round-tag">{{ r.round ? 'KOT ' + r.round : 'Items' }}</span>
+                  <span class="td-round-time" *ngIf="r.time">{{ asDate(r.time) | date: 'h:mm a' }}</span>
+                  <span class="td-round-sum">{{ r.total | appCurrency: '1.2-2' }}</span>
+                </header>
+                <div class="td-line" *ngFor="let l of r.lines">
+                  <span class="td-qty">{{ l.quantity }}×</span>
+                  <span class="td-name">
+                    <strong>{{ l.product_name }}<ng-container *ngIf="l.variant_name"> ({{ l.variant_name }})</ng-container></strong>
+                    <small *ngIf="l.selected_addons?.length">+ {{ addonList(l.selected_addons) }}</small>
+                    <small *ngIf="l.notes" class="is-note">Note: {{ l.notes }}</small>
+                  </span>
+                  <span class="td-free" *ngIf="l.is_complimentary">FREE</span>
+                  <span class="td-amt">{{ l.subtotal | appCurrency: '1.2-2' }}</span>
+                </div>
+              </section>
+              <div class="td-empty" *ngIf="!detailRounds.length">No items on this order.</div>
+            </div>
+
+            <div class="td-bill" *ngIf="detail.bill as b">
+              <div class="td-bill-head">
+                <strong>Bill {{ b.bill_number }}</strong>
+                <span>{{ b.payment_method }} · {{ (b.payment_status || '') | titlecase }}<ng-container *ngIf="b.cashier_name"> · {{ b.cashier_name }}</ng-container></span>
+              </div>
+              <div class="td-bill-row"><span>Subtotal</span><span>{{ b.subtotal | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row" *ngIf="num(b.discount_amount) > 0"><span>Discount</span><span>− {{ b.discount_amount | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row" *ngIf="num(b.coupon_discount) > 0"><span>Coupon {{ b.coupon_code }}</span><span>− {{ b.coupon_discount | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row" *ngIf="num(b.service_charge_amount) > 0"><span>Service charge</span><span>+ {{ b.service_charge_amount | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row" *ngIf="num(b.surcharge_amount) > 0"><span>Surcharge</span><span>+ {{ b.surcharge_amount | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row"><span>Tax (GST)</span><span>{{ b.tax_amount | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row is-total"><span>Total</span><span>{{ b.total_amount | appCurrency: '1.2-2' }}</span></div>
+              <div class="td-bill-row is-sub" *ngIf="b.payment_method === 'CASH' && b.cash_tendered">
+                <span>Tendered {{ b.cash_tendered | appCurrency: '1.2-2' }}</span>
+                <span>Change {{ (b.change_returned || 0) | appCurrency: '1.2-2' }}</span>
+              </div>
+            </div>
+            <div class="td-bill td-bill-none" *ngIf="!detail.bill">
+              <div class="td-bill-row is-total"><span>Order total (no bill)</span><span>{{ detail.order.total_amount | appCurrency: '1.2-2' }}</span></div>
+            </div>
+          </ng-container>
+
+          <div class="td-foot">
+            <button type="button" class="action-btn btn-outline-purple" (click)="closeDetail()">Close</button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [
@@ -374,7 +493,7 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
       .th-dates { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted, #6B7280); }
       .th-dates .form-control { width: 150px; min-height: 36px; padding: 0.35rem 0.6rem; }
       .th-toolbar-right { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
-      .th-select { width: 150px; min-height: 38px; padding: 0.4rem 0.7rem; font-size: 12.5px; }
+      .th-select { width: 190px; }
       .th-search { position: relative; }
       .th-search .material-symbols-outlined {
         position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
@@ -458,6 +577,83 @@ type StatusFilter = '' | 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'CANCELLED';
 
       .th-panel .pagination-footer-bar { border-top: 1px solid var(--card-border, #E9D5FF); }
 
+      .th-row-link { cursor: pointer; }
+      .th-row-link:focus-visible td { outline: none; background: color-mix(in srgb, var(--primary, #7E22CE) 10%, transparent); }
+
+      /* Order details popup */
+      .td-modal { width: min(94vw, 620px); max-width: 620px; }
+      .td-head {
+        display: flex; align-items: center; gap: 12px;
+        padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+      .td-head-text { flex: 1; min-width: 0; }
+      .td-head-text h3 {
+        margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text-main, #2E1065);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .td-head-text p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted, #6B7280); }
+      .td-icon {
+        width: 44px; height: 44px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 12px; color: #FFFFFF;
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
+      }
+      .td-loading, .td-empty { padding: 28px; text-align: center; font-size: 13px; color: var(--text-muted, #6B7280); }
+
+      .td-info { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+      .td-info > div {
+        display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 10px 12px; border-radius: 12px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 5%, var(--card-bg, #FFFFFF));
+      }
+      .td-info span { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted, #6B7280); }
+      .td-info strong { font-size: 13.5px; font-weight: 800; color: var(--text-main, #2E1065); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .td-info small { font-size: 11px; color: var(--text-muted, #6B7280); }
+
+      .td-warn {
+        display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 9px 12px; border-radius: 12px;
+        font-size: 12.5px; font-weight: 700; color: var(--danger, #EF4444);
+        background: color-mix(in srgb, var(--danger, #EF4444) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--danger, #EF4444) 35%, transparent);
+      }
+      .td-warn .material-symbols-outlined { font-size: 18px; }
+
+      .td-rounds { max-height: 36vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+      .td-round { border: 1px solid var(--card-border, #E9D5FF); border-radius: 14px; overflow: hidden; }
+      .td-round header {
+        display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+        background: color-mix(in srgb, #F59E0B 10%, var(--card-bg, #FFFFFF));
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+      .td-round-tag { padding: 2px 9px; border-radius: 9999px; font-size: 11px; font-weight: 900; color: #F59E0B; background: color-mix(in srgb, #F59E0B 18%, transparent); }
+      .td-round-time { font-size: 12px; color: var(--text-muted, #6B7280); }
+      .td-round-sum { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--text-main, #2E1065); }
+      .td-line { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; }
+      .td-line + .td-line { border-top: 1px solid color-mix(in srgb, var(--card-border, #E9D5FF) 70%, transparent); }
+      .td-qty { min-width: 2.2rem; font-size: 13px; font-weight: 900; color: var(--primary, #7E22CE); }
+      .td-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .td-name strong { font-size: 13px; font-weight: 700; color: var(--text-main, #2E1065); }
+      .td-name small { font-size: 11.5px; color: var(--text-muted, #6B7280); }
+      .td-name small.is-note { color: #F59E0B; font-weight: 600; }
+      .td-free { padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 800; color: #10B981; background: color-mix(in srgb, #10B981 15%, transparent); }
+      .td-amt { font-size: 13px; font-weight: 800; color: var(--text-main, #2E1065); white-space: nowrap; }
+
+      .td-bill {
+        margin-top: 12px; padding: 12px 14px; border-radius: 14px;
+        border: 1px solid color-mix(in srgb, var(--primary, #7E22CE) 30%, var(--card-border, #E9D5FF));
+        background: color-mix(in srgb, var(--primary, #7E22CE) 7%, var(--card-bg, #FFFFFF));
+      }
+      .td-bill-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+      .td-bill-head strong { font-size: 13px; font-weight: 900; color: var(--text-main, #2E1065); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .td-bill-head span { font-size: 12px; color: var(--text-muted, #6B7280); }
+      .td-bill-row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 12.5px; color: var(--text-muted, #6B7280); }
+      .td-bill-row.is-total {
+        margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--card-border, #E9D5FF);
+        font-size: 15px; font-weight: 900; color: var(--text-main, #2E1065);
+      }
+      .td-bill-row.is-sub { font-size: 11.5px; }
+      .td-foot { display: flex; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--card-border, #E9D5FF); }
+      @media (max-width: 560px) { .td-info { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
       @media (max-width: 1100px) {
         .th-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
@@ -480,6 +676,13 @@ export class TableHistoryComponent implements OnInit, OnDestroy {
     { key: '30d', label: '30 days' },
     { key: 'all', label: 'All time' },
     { key: 'custom', label: 'Custom' },
+  ];
+
+  public readonly statusOptions: DropdownOption[] = [
+    { value: '', label: 'All statuses', icon: 'list', description: 'Every session on this table' },
+    { value: 'COMPLETED', label: 'Completed', icon: 'check_circle', description: 'Billed and paid' },
+    { value: 'IN_PROGRESS', label: 'Processing', icon: 'restaurant', description: 'In the kitchen, not billed yet' },
+    { value: 'CANCELLED', label: 'Cancelled', icon: 'cancel', description: 'Closed without a bill' },
   ];
 
   public tableId = 0;
@@ -626,6 +829,66 @@ export class TableHistoryComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dining']);
   }
 
+  // ─── Order details popup ───
+  public detailOpen = false;
+  public detailLoading = false;
+  public detail: any = null;
+  public detailRounds: { round: number | null; time: string | null; total: number; lines: any[] }[] = [];
+  private detailSeq = 0;
+
+  openDetail(orderId: number): void {
+    const seq = ++this.detailSeq;
+    this.detailOpen = true;
+    this.detailLoading = true;
+    this.detail = null;
+    this.detailRounds = [];
+    this.diningService.getHistoryDetail(orderId).subscribe({
+      next: (res) => {
+        if (seq !== this.detailSeq) return;
+        this.detailLoading = false;
+        if (!res.success) return;
+        this.detail = res.data;
+        const byRound = new Map<number, { round: number | null; time: string | null; total: number; lines: any[] }>();
+        for (const l of res.data.items || []) {
+          const key = Number(l.kot_round) || 0;
+          let g = byRound.get(key);
+          if (!g) {
+            g = { round: l.kot_round ?? null, time: l.created_at || null, total: 0, lines: [] };
+            byRound.set(key, g);
+          }
+          g.lines.push(l);
+          g.total += Number(l.subtotal) || 0;
+        }
+        this.detailRounds = Array.from(byRound.values());
+      },
+      error: () => {
+        if (seq === this.detailSeq) this.detailLoading = false;
+      },
+    });
+  }
+
+  closeDetail(): void {
+    this.detailSeq++;
+    this.detailOpen = false;
+    this.detail = null;
+  }
+
+  /** Seated to billed (or to the last update when there is no bill). */
+  get detailMinutes(): number {
+    const start = this.asDate(this.detail?.order?.created_at);
+    const end = this.asDate(this.detail?.bill?.created_at || this.detail?.order?.updated_at);
+    if (!start || !end) return 0;
+    return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+  }
+
+  addonList(addons: any[]): string {
+    return (addons || []).map((a) => a?.name).filter(Boolean).join(', ');
+  }
+
+  num(v: unknown): number {
+    return Number(v) || 0;
+  }
+
   periodLabel(): string {
     return this.periods.find((p) => p.key === this.period)?.label || '';
   }
@@ -661,8 +924,8 @@ export class TableHistoryComponent implements OnInit, OnDestroy {
     switch (s) {
       case 'COMPLETED': return 'Completed';
       case 'CANCELLED': return 'Cancelled';
-      case 'IN_PROGRESS': return 'In progress';
-      case 'PENDING': return 'Pending';
+      case 'IN_PROGRESS':
+      case 'PENDING': return 'Processing';
       default: return s || '—';
     }
   }

@@ -9,6 +9,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
+import { OrderStatusPipe } from '../../../shared/pipes/order-status.pipe';
 import { StaffTrackFiltersComponent } from '../staff-track-filters.component';
 import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
@@ -28,6 +29,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
     RouterLink,
     PageLoaderComponent,
     AppCurrencyPipe,
+    OrderStatusPipe,
     StaffTrackFiltersComponent,ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
@@ -181,7 +183,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               <tr *ngFor="let t of myCurrentTables()">
                 <td><span class="font-bold text-xs">{{ t.tableNumber }}</span> <span class="st-muted">{{ t.tableName }}</span></td>
                 <td><span class="font-mono text-xs">{{ t.order?.orderNumber || '—' }}</span></td>
-                <td><span class="badge" [ngClass]="orderStatusClass(t.order?.status)">{{ humanise(t.order?.status) }}</span></td>
+                <td><span class="badge" [ngClass]="orderStatusClass(t.order?.status)">{{ t.order?.status | orderStatus }}</span></td>
                 <td style="text-align: right;">{{ t.order ? (t.order.totalAmount | appCurrency) : '—' }}</td>
                 <td style="text-align: right;">{{ t.order ? duration(t.order.openSeconds) : '—' }}</td>
               </tr>
@@ -221,7 +223,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
                 <td><span class="font-mono font-bold text-xs">{{ o.orderNumber }}</span></td>
                 <td>{{ o.table?.tableNumber || '—' }}</td>
                 <td>{{ o.customerName || 'Walk-In' }}</td>
-                <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ humanise(o.status) }}</span></td>
+                <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ o.status | orderStatus }}</span></td>
                 <td><span class="badge" [ngClass]="paymentBadgeClass(o.paymentStatus)">{{ humanise(o.paymentStatus) }}</span></td>
                 <td style="text-align: right;" class="font-bold">{{ o.totalAmount | appCurrency }}</td>
                 <td class="st-muted">{{ o.createdAt | date : 'dd MMM, HH:mm' }}</td>

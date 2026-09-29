@@ -13,6 +13,7 @@ import { CustomerService } from '../../core/services/customer.service';
 import { DiningService } from '../../core/services/dining.service';
 import { Order, OrderType, PaymentMethod, Product } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { OrderStatusPipe } from '../../shared/pipes/order-status.pipe';
 import {
   CustomDropdownComponent,
   DropdownOption,
@@ -43,6 +44,7 @@ interface DraftLine {
     CommonModule,
     FormsModule,
     AppCurrencyPipe,
+    OrderStatusPipe,
     CustomDropdownComponent,
     DatePickerComponent,
     BackOfficeResultComponent,ActionLoadingDirective],
@@ -223,7 +225,7 @@ interface DraftLine {
               </td>
 
               <td>
-                <span class="bo-status-pill" [ngClass]="statusClass(order.status)">{{ order.status }}</span>
+                <span class="bo-status-pill" [ngClass]="statusClass(order.status)">{{ order.status | orderStatus }}</span>
               </td>
 
               <td>
@@ -548,7 +550,7 @@ interface DraftLine {
               </p>
             </div>
           </div>
-          <span class="bo-status-pill" [ngClass]="statusClass(detailsOrder.status)">{{ detailsOrder.status }}</span>
+          <span class="bo-status-pill" [ngClass]="statusClass(detailsOrder.status)">{{ detailsOrder.status | orderStatus }}</span>
         </div>
 
         <div class="bo-detail-grid">
@@ -973,8 +975,7 @@ export class BackOfficeOrdersComponent implements OnInit {
 
   public statusOptions: DropdownOption[] = [
     { value: '', label: 'All Statuses', icon: 'filter_list' },
-    { value: 'PENDING', label: 'Pending', icon: 'schedule' },
-    { value: 'IN_PROGRESS', label: 'In Progress', icon: 'sync' },
+    { value: 'IN_PROGRESS', label: 'Processing', icon: 'sync' },
     { value: 'COMPLETED', label: 'Completed', icon: 'check_circle' },
     { value: 'CANCELLED', label: 'Cancelled', icon: 'cancel' },
   ];
@@ -1097,7 +1098,6 @@ export class BackOfficeOrdersComponent implements OnInit {
   public statusClass(status: string): string {
     switch (status) {
       case 'PENDING':
-        return 'is-pending';
       case 'IN_PROGRESS':
         return 'is-progress';
       case 'COMPLETED':

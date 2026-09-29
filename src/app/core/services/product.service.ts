@@ -4,6 +4,20 @@ import { Observable } from 'rxjs';
 import { Product, ApiResponse } from '../models';
 import { environment } from '../../../environments/environment';
 
+export interface DishSalesStat {
+  orders: number;
+  quantity: number;
+  revenue: number;
+  last_sold_at: string | null;
+}
+
+export interface DishSalesSummary {
+  /** Stock this dish's own (non-voided) sales have taken, per stock item. */
+  stock_used?: Array<{ stock_id: number; quantity: number }>;
+  variants: Array<DishSalesStat & { variant_name: string }>;
+  total: DishSalesStat;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -33,6 +47,11 @@ export class ProductService {
 
   public getProductById(id: number): Observable<ApiResponse<Product>> {
     return this.http.get<ApiResponse<Product>>(`${this.API_URL}/${id}`);
+  }
+
+  /** Orders and portions sold for a dish, per portion name (voided/deleted bills excluded). */
+  public getSalesSummary(productId: number): Observable<ApiResponse<DishSalesSummary>> {
+    return this.http.post<ApiResponse<DishSalesSummary>>(`${this.API_URL}/sales-summary`, { productId });
   }
 
   /** Uploads a dish photo as a data URL and returns its stored path. */

@@ -10,6 +10,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { OrderStatusPipe, orderStatusLabel } from '../../shared/pipes/order-status.pipe';
 import { StaffTrackFiltersComponent } from './staff-track-filters.component';
 import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 
@@ -38,6 +39,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
     PageLoaderComponent,
     CustomDropdownComponent,
     AppCurrencyPipe,
+    OrderStatusPipe,
     StaffTrackFiltersComponent,ActionLoadingDirective],
   template: `
     <div class="module-page-wrapper">
@@ -383,7 +385,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                       <span class="st-muted" *ngIf="!t.order">—</span>
                     </td>
                     <td style="text-align: right;">{{ t.order ? (t.order.totalAmount | appCurrency) : '—' }}</td>
-                    <td><span class="badge" [ngClass]="orderStatusClass(t.order?.status)">{{ t.order ? humanise(t.order.status) : humanise(t.status) }}</span></td>
+                    <td><span class="badge" [ngClass]="orderStatusClass(t.order?.status)">{{ t.order ? (t.order.status | orderStatus) : humanise(t.status) }}</span></td>
                     <td class="st-muted">{{ t.order ? (t.order.lastActivityAt | date : 'HH:mm') : '—' }}</td>
                   </tr>
                   <tr *ngIf="!isTabLoading && (live?.currentTables?.length || 0) === 0">
@@ -459,7 +461,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
           <div class="st-section-head">
             <div>
               <div class="st-section-title">Live Order Tracking</div>
-              <div class="st-section-sub">Every order still pending or in progress.</div>
+              <div class="st-section-sub">Every order still processing.</div>
             </div>
             <span class="results-counter-pill">{{ live?.openOrders?.length || 0 }}</span>
           </div>
@@ -484,7 +486,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                   <td>{{ o.table ? o.table.tableNumber : '—' }}</td>
                   <td>{{ o.customerName || 'Walk-In' }}</td>
                   <td>{{ o.createdBy ? o.createdBy.name : 'Not recorded' }}</td>
-                  <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ humanise(o.status) }}</span></td>
+                  <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ o.status | orderStatus }}</span></td>
                   <td><span class="badge" [ngClass]="paymentBadgeClass(o.paymentStatus)">{{ humanise(o.paymentStatus) }}</span></td>
                   <td style="text-align: right;" class="font-bold">{{ o.totalAmount | appCurrency }}</td>
                   <td class="st-muted">{{ o.createdAt | date : 'dd MMM, HH:mm' }}</td>
@@ -604,7 +606,7 @@ type TabKey = 'overview' | 'live' | 'performance' | 'orders' | 'revenue' | 'tabl
                   <td>{{ o.settledBy ? o.settledBy.name : '—' }}</td>
                   <td>{{ o.table ? o.table.tableNumber : '—' }}</td>
                   <td>{{ o.customerName || 'Walk-In' }}</td>
-                  <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ humanise(o.status) }}</span></td>
+                  <td><span class="badge" [ngClass]="orderStatusClass(o.status)">{{ o.status | orderStatus }}</span></td>
                   <td><span class="badge" [ngClass]="paymentBadgeClass(o.paymentStatus)">{{ humanise(o.paymentStatus) }}</span></td>
                   <td style="text-align: right;" class="font-bold">{{ o.totalAmount | appCurrency }}</td>
                   <td class="st-muted">{{ o.createdAt | date : 'dd MMM, HH:mm' }}</td>
@@ -1853,7 +1855,7 @@ export class StaffTrackComponent implements OnInit {
         name = 'staff-orders';
         rows = this.orders.map((o) => ({
           Order: o.orderNumber, TakenBy: o.createdBy?.name || '', SettledBy: o.settledBy?.name || '',
-          Table: o.table?.tableNumber || '', Customer: o.customerName || '', Status: o.status,
+          Table: o.table?.tableNumber || '', Customer: o.customerName || '', Status: orderStatusLabel(o.status),
           Payment: o.paymentStatus, Amount: o.totalAmount, Created: o.createdAt,
           DurationSeconds: o.durationSeconds ?? '',
         }));

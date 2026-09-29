@@ -243,6 +243,9 @@ export interface DiningTable {
   elapsed_minutes?: number;
   cleaning_minutes?: number;
   order_current_total?: number;
+  /** Status of current_order_id's order, and how many lines it has (an open tab when IN_PROGRESS with lines). */
+  order_status?: string | null;
+  order_item_count?: number;
   display_order: number;
 }
 
@@ -393,6 +396,8 @@ export interface OfflineOrder {
 export interface Order {
   id: number;
   order_number: string;
+  /** READY when the kitchen has served an open dine-in tab; the order stays open until billed. */
+  kitchen_status?: string | null;
   customer_id?: number | null;
   customer_name?: string;
   customer_phone?: string;

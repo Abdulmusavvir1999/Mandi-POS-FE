@@ -8,6 +8,8 @@ import { CustomerService } from '../../../core/services/customer.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { Customer, DiningTable } from '../../../core/models';
 import { PageLoaderComponent } from '../../../shared/components/page-loader/page-loader.component';
+import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
+import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { DEFAULT_ACTION_BUTTON_CSS } from '../../../shared/styles/default-action-buttons.styles';
 
 type Range = 'today' | 'tomorrow' | 'week' | 'upcoming' | 'past' | 'date';
@@ -23,7 +25,7 @@ interface DayGroup {
 @Component({
   selector: 'app-reservations',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageLoaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PageLoaderComponent, CustomDropdownComponent, DatePickerComponent],
   template: `
     <div class="module-page-wrapper">
       <app-page-loader
@@ -130,13 +132,16 @@ interface DayGroup {
                 (click)="setRange(r.key)"
               >{{ r.label }}</button>
             </div>
-            <input
+            <app-date-picker
               *ngIf="range === 'date'"
-              type="date"
-              class="form-control rv-date"
+              class="rv-date"
               [(ngModel)]="pickedDate"
-              (change)="setRange('date')"
-            />
+              (valueChange)="setRange('date')"
+              [clearable]="false"
+              label="Reservation date"
+              placeholder="Pick a date"
+              minWidth="170px"
+            ></app-date-picker>
             <div class="rv-search">
               <span class="material-symbols-outlined">search</span>
               <input
@@ -311,20 +316,25 @@ interface DayGroup {
 
               <div class="rv-field">
                 <label>Assign table</label>
-                <select class="form-control" name="b_table" [(ngModel)]="form.tableId">
-                  <option [ngValue]="null">Assign on arrival</option>
-                  <option *ngFor="let t of bookableTables" [ngValue]="t.id">
-                    {{ t.table_number }} · {{ t.capacity }} seats · {{ t.section }}
-                  </option>
-                </select>
+                <app-custom-dropdown
+                  [options]="tableOptions"
+                  [(ngModel)]="form.tableId"
+                  name="b_table"
+                  placeholder="Assign on arrival"
+                  minWidth="100%"
+                ></app-custom-dropdown>
                 <small class="rv-hint" *ngIf="!bookableTables.length">No free table seats {{ form.guestCount }}. Assign on arrival.</small>
               </div>
               <div class="rv-field">
                 <label>Preferred section</label>
-                <select class="form-control" name="b_section" [(ngModel)]="form.preferredSection">
-                  <option value="">Any section</option>
-                  <option *ngFor="let s of sections" [value]="s">{{ s }}</option>
-                </select>
+                <app-custom-dropdown
+                  [options]="sectionOptions"
+                  [(ngModel)]="form.preferredSection"
+                  (ngModelChange)="onSectionChange()"
+                  name="b_section"
+                  placeholder="Any section"
+                  minWidth="100%"
+                ></app-custom-dropdown>
               </div>
 
               <div class="rv-field rv-span">
@@ -920,6 +930,54 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     const set = new Set<string>(this.defaultSections);
     this.tables.forEach((t) => t.section && set.add(t.section));
     return Array.from(set);
+  }
+
+  /*
+   * Dropdown option lists are cached and rebuilt only when what they depend
+   * on changes: a getter returning a fresh array each check would make the
+   * dropdown re-render on every change detection.
+   */
+  private tableOptionsKey = "";
+  private tableOptionsCache: DropdownOption[] = [];
+  private sectionOptionsKey = "";
+  private sectionOptionsCache: DropdownOption[] = [];
+
+  get tableOptions(): DropdownOption[] {
+    const list = this.bookableTables;
+    const key = list.map((t) => t.id).join(",");
+    if (key !== this.tableOptionsKey || !this.tableOptionsCache.length) {
+      this.tableOptionsKey = key;
+      this.tableOptionsCache = [
+        { value: null, label: "Assign on arrival", icon: "schedule", description: "Pick a table when the guests come in" },
+        ...list.map((t) => ({
+          value: t.id,
+          label: t.table_number,
+          icon: "table_restaurant",
+          description: t.capacity + " seats · " + (t.section || "No section"),
+        })),
+      ];
+    }
+    return this.tableOptionsCache;
+  }
+
+  get sectionOptions(): DropdownOption[] {
+    const list = this.sections;
+    const key = list.join("|");
+    if (key !== this.sectionOptionsKey) {
+      this.sectionOptionsKey = key;
+      this.sectionOptionsCache = [
+        { value: "", label: "Any section", icon: "select_all", description: "No preference" },
+        ...list.map((s) => ({ value: s, label: s, icon: "location_on" })),
+      ];
+    }
+    return this.sectionOptionsCache;
+  }
+
+  /** A table picked for another section no longer fits the preference. */
+  onSectionChange(): void {
+    if (this.form.tableId && !this.bookableTables.some((t) => t.id === this.form.tableId)) {
+      this.form.tableId = null;
+    }
   }
 
   get bookableTables(): DiningTable[] {

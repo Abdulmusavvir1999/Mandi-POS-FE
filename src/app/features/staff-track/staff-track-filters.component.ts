@@ -250,8 +250,7 @@ export class StaffTrackFiltersComponent implements OnInit {
 
   public orderStatusOptions: DropdownOption[] = [
     { value: '', label: 'All Order Status', icon: 'dataset' },
-    { value: 'PENDING', label: 'Pending', icon: 'schedule' },
-    { value: 'IN_PROGRESS', label: 'In Progress', icon: 'skillet' },
+    { value: 'IN_PROGRESS', label: 'Processing', icon: 'skillet' },
     { value: 'COMPLETED', label: 'Completed', icon: 'check_circle' },
     { value: 'CANCELLED', label: 'Cancelled', icon: 'cancel' },
   ];

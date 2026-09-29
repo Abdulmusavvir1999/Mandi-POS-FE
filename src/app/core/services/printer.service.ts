@@ -181,6 +181,7 @@ export class PrinterService {
 
       <div class="border-t" style="font-size: 11px;">
         <div class="flex"><span>Paid Via:</span><span><strong>${bill.payment_method || bill.paymentMethod}</strong></span></div>
+        ${(bill.payments || []).length > 1 ? (bill.payments || []).map((p: any) => `<div class="flex"><span>&nbsp;&nbsp;${p.payment_method || p.method}</span><span>₹${Number(p.amount || 0).toFixed(0)}</span></div>`).join('') : ''}
         ${bill.cash_tendered || bill.cashTendered ? `<div class="flex"><span>Cash Tendered:</span><span>₹${Number(bill.cash_tendered || bill.cashTendered).toFixed(0)}</span></div>` : ''}
         ${bill.change_returned || bill.changeReturned ? `<div class="flex"><span>Change Returned:</span><span>₹${Number(bill.change_returned || bill.changeReturned).toFixed(0)}</span></div>` : ''}
       </div>

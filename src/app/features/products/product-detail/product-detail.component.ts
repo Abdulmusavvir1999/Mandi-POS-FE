@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { ProductService } from '../../../core/services/product.service';
+import { ProductService, DishSalesStat, DishSalesSummary } from '../../../core/services/product.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { Product, ProductVariant } from '../../../core/models';
@@ -192,6 +192,7 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
               </span>
             </h2>
             <span class="detail-section-note" *ngIf="!isMultiMode">
+              <ng-container *ngIf="sales?.total?.orders"><strong>{{ sales!.total.orders | number:'1.0-0' }}</strong> {{ sales!.total.orders === 1 ? 'order' : 'orders' }} · </ng-container>
               Portions possible from <strong>{{ availableQuantity | number:'1.0-3' }} {{ unit }}</strong> in stock
             </span>
           </div>
@@ -201,12 +202,13 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
             <table class="saas-data-table">
               <thead>
                 <tr>
-                  <th style="width: 20%;">Portion</th>
-                  <th style="width: 34%;">Stock used per portion</th>
-                  <th style="width: 12%;">Stock cost</th>
+                  <th style="width: 18%;">Portion</th>
+                  <th style="width: 28%;">Stock used per portion</th>
+                  <th style="width: 11%;">Stock cost</th>
                   <th style="width: 10%;">Price</th>
-                  <th style="width: 12%;">Margin</th>
-                  <th style="width: 12%; text-align: right;">Can make now</th>
+                  <th style="width: 11%;">Margin</th>
+                  <th style="width: 10%; text-align: right;">Orders</th>
+                  <th style="width: 16%; text-align: right;">Portions <span class="th-sub">Total − Used = Left</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -238,10 +240,26 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
                     </span>
                   </td>
                   <td class="font-mono" style="text-align: right;">
-                    <span class="inline-flex items-center justify-end gap-1.5">
-                      <span [class.text-danger]="readyOf(v) <= 0" class="font-bold">{{ readyOf(v) | number:'1.0-0' }}</span>
-                      <span class="cell-unit">portions</span>
+                    <span class="orders-cell" [class.is-none]="!salesOf(v).orders" [title]="salesOf(v).orders ? (salesOf(v).quantity + ' portions sold on ' + salesOf(v).orders + ' bills') : 'Not ordered yet'">
+                      <strong>{{ salesOf(v).orders | number:'1.0-0' }}</strong>
+                      <span class="cell-unit">{{ salesOf(v).orders === 1 ? 'order' : 'orders' }}</span>
                     </span>
+                    <small class="orders-sold" *ngIf="salesOf(v).quantity">{{ salesOf(v).quantity | number:'1.0-0' }} sold</small>
+                  </td>
+                  <td class="font-mono" style="text-align: right;">
+                    <ng-container *ngIf="runwayOf(v) as r">
+                      <span
+                        class="runway"
+                        [title]="r.known ? r.used + ' used by sales of this dish, ' + r.left + ' left in stock - ' + r.total + ' in all' : 'Sales not loaded yet'"
+                      >
+                        <span class="runway-total">{{ r.total | number:'1.0-1' }}</span>
+                        <span class="runway-op">−</span>
+                        <span class="runway-used">{{ r.used | number:'1.0-1' }}</span>
+                        <span class="runway-op">=</span>
+                        <strong class="runway-left" [class.text-danger]="r.left <= 0">{{ r.left | number:'1.0-0' }}</strong>
+                        <span class="cell-unit">portions</span>
+                      </span>
+                    </ng-container>
                   </td>
                 </tr>
               </tbody>
@@ -251,8 +269,9 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
           <p class="section-note" *ngIf="isMultiMode && hasVariants">
             <span class="material-symbols-outlined">info</span>
             <span>
-              Selling one portion takes <strong>every</strong> item on its list. <strong>Can make now</strong> is set by the item that runs out first —
-              restock that one to sell more.
+              Selling one portion takes <strong>every</strong> item on its list. <strong>Used</strong> is the stock this dish's own sales have
+              taken (all sizes), shown in that portion's size; <strong>Left</strong> is what can be made now, set by the item that runs out
+              first; <strong>Total</strong> = Left + Used.
             </span>
           </p>
 
@@ -260,11 +279,12 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
             <table class="saas-data-table">
               <thead>
                 <tr>
-                  <th style="width: 24%;">Dish Variant</th>
-                  <th style="width: 26%;">Stock Source</th>
-                  <th style="width: 16%; text-align: center;">Stock Usage</th>
-                  <th style="width: 16%;">Price</th>
-                  <th style="width: 18%; text-align: right;">Remaining Stock</th>
+                  <th style="width: 22%;">Dish Variant</th>
+                  <th style="width: 22%;">Stock Source</th>
+                  <th style="width: 14%; text-align: center;">Stock Usage</th>
+                  <th style="width: 13%;">Price</th>
+                  <th style="width: 13%; text-align: right;">Orders</th>
+                  <th style="width: 18%; text-align: right;">Remaining Stock <span class="th-sub">Total − Used = Left</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -285,12 +305,26 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
                   </td>
                   <td class="font-mono font-bold">{{ v.selling_price | appCurrency:'1.0-2' }}</td>
                   <td class="font-mono" style="text-align: right;">
-                    <span class="inline-flex items-center justify-end gap-1.5">
-                      <span [class.text-danger]="servingsPossible(v) <= 0" class="font-bold">
-                        {{ servingsPossible(v) | number:'1.0-0' }}
-                      </span>
-                      <span class="cell-unit">portions</span>
+                    <span class="orders-cell" [class.is-none]="!salesOf(v).orders" [title]="salesOf(v).orders ? (salesOf(v).quantity + ' portions sold on ' + salesOf(v).orders + ' bills') : 'Not ordered yet'">
+                      <strong>{{ salesOf(v).orders | number:'1.0-0' }}</strong>
+                      <span class="cell-unit">{{ salesOf(v).orders === 1 ? 'order' : 'orders' }}</span>
                     </span>
+                    <small class="orders-sold" *ngIf="salesOf(v).quantity">{{ salesOf(v).quantity | number:'1.0-0' }} sold</small>
+                  </td>
+                  <td class="font-mono" style="text-align: right;">
+                    <ng-container *ngIf="runwayOf(v) as r">
+                      <span
+                        class="runway"
+                        [title]="r.known ? r.used + ' used by sales of this dish, ' + r.left + ' left in stock - ' + r.total + ' in all' : 'Sales not loaded yet'"
+                      >
+                        <span class="runway-total">{{ r.total | number:'1.0-1' }}</span>
+                        <span class="runway-op">−</span>
+                        <span class="runway-used">{{ r.used | number:'1.0-1' }}</span>
+                        <span class="runway-op">=</span>
+                        <strong class="runway-left" [class.text-danger]="r.left <= 0">{{ r.left | number:'1.0-0' }}</strong>
+                        <span class="cell-unit">portions</span>
+                      </span>
+                    </ng-container>
                   </td>
                 </tr>
               </tbody>
@@ -300,7 +334,10 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
           <p class="section-note" *ngIf="!isMultiMode && hasVariants">
             <span class="material-symbols-outlined">info</span>
             <span>
-              <strong>Remaining Stock</strong> is calculated as <strong>Total Stock ÷ Stock Usage</strong> per portion — indicating how many full servings can be prepared from the current balance of {{ availableQuantity | number:'1.0-3' }} {{ unit }}.
+              <strong>Remaining Stock</strong> reads <strong>Total − Used = Left</strong> for this dish only: Used is the stock this dish's sales
+              have taken (all its sizes share it), shown in that portion's size; Left is what the current balance of
+              {{ availableQuantity | number:'1.0-3' }} {{ unit }} still makes (balance ÷ stock usage); Total = Left + Used.
+              Other dishes using the same stock are not counted.
             </span>
           </p>
 
@@ -600,6 +637,12 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
         display: inline-block;
       }
 
+      /* Orders per portion */
+      .orders-cell { display: inline-flex; align-items: baseline; justify-content: flex-end; }
+      .orders-cell strong { font-weight: 800; color: var(--primary, #7E22CE); }
+      .orders-cell.is-none strong { color: var(--text-muted, #6B7280); font-weight: 600; }
+      .orders-sold { display: block; margin-top: 2px; font-size: 0.6875rem; color: var(--text-muted, #6B7280); }
+
       .metric-note { font-size: 0.625rem; color: var(--text-muted, #6B7280); }
 
       .detail-section-head {
@@ -668,6 +711,14 @@ import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stoc
       }
 
       .text-danger { color: var(--danger, #DC2626); font-weight: 800; }
+
+      /* Remaining stock: Total − Used = Left */
+      .runway { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 0.3rem; white-space: nowrap; }
+      .runway-total { color: var(--text-main, #2E1065); font-weight: 700; }
+      .runway-used { color: var(--warning, #D97706); font-weight: 700; }
+      .runway-op { color: var(--text-muted, #6B7280); font-weight: 600; }
+      .runway-left { color: var(--text-main, #2E1065); font-size: 0.95rem; }
+      .th-sub { display: block; margin-top: 2px; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.02em; text-transform: none; color: var(--text-muted, #6B7280); }
 
       /* Multi Stock: a portion's list as chips, red when that item is short */
       .recipe-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
@@ -1243,6 +1294,25 @@ export class ProductDetailComponent implements OnInit {
     return this.unit;
   }
 
+  /**
+   * Remaining Stock as Total - Used = Left, per portion, for this dish only:
+   * Used is the stock this dish's own sales (every size, voids excluded)
+   * have taken, expressed in this portion's size; Left is what the current
+   * balance still makes; Total is Left + Used. Other dishes that share the
+   * same stock item do not count towards Used. Multi Stock measures it on
+   * the item that runs out first, the one that sets Left.
+   */
+  runwayOf(variant: ProductVariant): { total: number; used: number; left: number; known: boolean } {
+    const left = this.isMultiMode ? this.readyOf(variant) : this.servingsPossible(variant);
+    const lines = (variant.stocks || []).filter((s) => Number(s.stock_consumption) > 0);
+    const line = this.isMultiMode ? limitingStock(variant) : lines[0];
+    if (!line) return { total: left, used: 0, left, known: !!this.sales };
+
+    const usedStock = this.sales?.stock_used?.find((u) => u.stock_id === line.stock_id)?.quantity ?? 0;
+    const used = Math.round((usedStock / Number(line.stock_consumption)) * 10) / 10;
+    return { total: Math.round((left + used) * 10) / 10, used, left, known: !!this.sales };
+  }
+
   /** How many portions the current stock balance can cover (overall stock / stock usage). */
   servingsPossible(variant?: ProductVariant): number {
     const stock = this.variantStock(variant);
@@ -1272,8 +1342,27 @@ export class ProductDetailComponent implements OnInit {
     this.load(id);
   }
 
+  // ─── Orders per portion ───
+  public sales: DishSalesSummary | null = null;
+
+  /** Sales for a portion, matched by name (portion ids change when the dish is saved). */
+  salesOf(v?: ProductVariant): DishSalesStat {
+    const name = (v?.name || '').trim().toLowerCase();
+    const hit = this.sales?.variants.find((s) => (s.variant_name || '').trim().toLowerCase() === name);
+    return hit || { orders: 0, quantity: 0, revenue: 0, last_sold_at: null };
+  }
+
+  private loadSales(id: number): void {
+    this.productService.getSalesSummary(id).subscribe({
+      next: (res) => (this.sales = res.success ? res.data : null),
+      // Optional panel: the page works without it.
+      error: () => (this.sales = null),
+    });
+  }
+
   private load(id: number): void {
     this.isLoading = true;
+    this.loadSales(id);
     this.productService.getProductById(id).subscribe({
       next: (res) => {
         this.isLoading = false;

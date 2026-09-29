@@ -94,6 +94,13 @@ import { ActionLoadingDirective } from '../../directives/action-loading.directiv
                 <span>Paid via {{ printData?.bill?.payment_method }}:</span>
                 <span class="font-bold">{{ printData?.bill?.total_amount | appCurrency:'1.2-2' }}</span>
               </div>
+              <!-- A split bill lists each part -->
+              <ng-container *ngIf="(printData?.bill?.payments?.length || 0) > 1">
+                <div *ngFor="let p of printData?.bill?.payments" class="flex justify-between text-[10px] text-gray-600 pl-2">
+                  <span>{{ p.payment_method }}</span>
+                  <span>{{ p.amount | appCurrency:'1.2-2' }}</span>
+                </div>
+              </ng-container>
             </div>
 
             <!-- Footer Message -->

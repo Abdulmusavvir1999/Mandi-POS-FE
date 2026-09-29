@@ -125,6 +125,10 @@ export class DiningService {
     return this.http.put<ApiResponse<DiningTable>>(`${this.API_URL}/${id}/seat`, { guestCount, orderId });
   }
 
+  public getHistoryDetail(orderId: number): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/history/detail`, { orderId });
+  }
+
   public getTableHistoryPage(filters: TableHistoryFilters): Observable<ApiResponse<TableHistoryPage>> {
     return this.http.post<ApiResponse<TableHistoryPage>>(`${this.API_URL}/history`, filters);
   }

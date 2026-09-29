@@ -49,6 +49,7 @@ import {
 } from '../../core/models';
 import { ReceiptModalComponent } from '../../shared/components/receipt-modal/receipt-modal.component';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { OrderStatusPipe } from '../../shared/pipes/order-status.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
 import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../core/utils/multi-stock.util';
@@ -56,7 +57,7 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe, PageLoaderComponent, ActionLoadingDirective],
+  imports: [CommonModule, FormsModule, RouterLink, ReceiptModalComponent, AppCurrencyPipe, OrderStatusPipe, PageLoaderComponent, ActionLoadingDirective],
   template: `
     <div
       class="pos-fullscreen-container"
@@ -753,7 +754,7 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
                         'pill-cancelled': ord.status === 'CANCELLED'
                       }"
                     >
-                      {{ ord.status === 'IN_PROGRESS' ? 'Pending' : (ord.status | titlecase) }}
+                      {{ ord.status | orderStatus }}
                     </span>
                   </td>
                 </tr>
@@ -1198,26 +1199,53 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
             </span>
           </div>
 
-          <!-- Payment Methods Selector (5 Methods) -->
+          <!-- Payment Modes: pick one, or two to split the bill -->
           <div>
-            <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Payment Mode</label>
-            <div class="grid grid-cols-5 gap-2">
+            <div class="pay-mode-head">
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block">Payment Mode</label>
+              <span class="pay-mode-hint">{{ isSplitPayment ? 'Split across 2 modes' : 'Tap a second mode to split' }}</span>
+            </div>
+            <div class="pay-mode-grid">
               <button
                 type="button"
-                *ngFor="let method of ['CASH', 'UPI', 'CARD', 'ONLINE', 'OTHER']"
-                (click)="selectedPaymentMethod = method"
-                class="py-2.5 px-2 rounded-xl font-bold transition-all text-xs border text-center"
-                [ngClass]="selectedPaymentMethod === method ? 'bg-[#7E22CE] text-white border-transparent shadow-sm' : 'bg-[#FAF5FF] text-[#2E1065] border-[#E9D5FF] hover:bg-[#F3E8FF]'"
+                *ngFor="let method of paymentMethodOptions"
+                (click)="togglePaymentMethod(method)"
+                class="pay-mode-btn"
+                [class.is-selected]="hasMethod(method)"
+                [class.is-locked]="!hasMethod(method) && selectedMethods.length >= 2"
+                [attr.aria-pressed]="hasMethod(method)"
               >
+                <span class="material-symbols-outlined" *ngIf="hasMethod(method)">check_circle</span>
                 {{ method }}
               </button>
             </div>
           </div>
 
+          <!-- Split: how much each mode takes -->
+          <div *ngIf="isSplitPayment" class="pay-split">
+            <div class="pay-split-row" *ngFor="let m of selectedMethods">
+              <span class="pay-split-method">{{ m }}</span>
+              <input
+                type="number"
+                min="0"
+                [title]="m + ' amount'"
+                class="form-control font-mono font-bold"
+                [ngModel]="splitAmounts[m]"
+                (ngModelChange)="onSplitAmountChange(m, $event)"
+              />
+            </div>
+            <div class="pay-split-foot" [class.is-off]="splitRemaining !== 0">
+              <span>{{ splitRemaining === 0 ? 'Split matches the total' : (splitRemaining > 0 ? 'Still to allocate' : 'Over the total by') }}</span>
+              <strong>{{ (splitRemaining < 0 ? -splitRemaining : splitRemaining) | appCurrency:'1.2-2' }}</strong>
+            </div>
+          </div>
+
           <!-- Cash Tendered & Quick Change Counter -->
-          <div *ngIf="selectedPaymentMethod === 'CASH'" class="space-y-3 p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF]">
+          <div *ngIf="hasMethod('CASH')" class="space-y-3 p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF]">
             <div>
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Cash Tendered (₹)</label>
+              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
+                Cash Tendered (₹)<ng-container *ngIf="isSplitPayment"> · for the {{ cashDue | appCurrency:'1.2-2' }} cash part</ng-container>
+              </label>
               <input
                 title="Amount Tendered"
                 type="number"
@@ -1225,18 +1253,6 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
                 (ngModelChange)="calcChange()"
                 class="form-control text-xl font-mono font-bold text-emerald-700 w-full"
               />
-            </div>
-
-            <!-- Quick Cash Denominations -->
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                *ngFor="let amt of [cartService.grandTotal(), 100, 200, 500, 2000]"
-                (click)="setTendered(amt)"
-                class="flex-1 min-w-[55px] py-1.5 text-xs font-mono font-bold rounded-lg bg-white border border-[#DDD6FE] text-[#6B21A8] hover:bg-[#F3E8FF] text-center"
-              >
-                {{ amt | appCurrency:'1.0-0' }}
-              </button>
             </div>
 
             <!-- Change Return -->
@@ -1249,7 +1265,7 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
           </div>
 
           <!-- UPI QR Code & Reference -->
-          <div *ngIf="selectedPaymentMethod === 'UPI'" class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
+          <div *ngIf="hasMethod('UPI')" class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
             <div class="flex items-center justify-between">
               <div>
                 <span class="text-xs font-bold uppercase tracking-wider text-purple-900">UPI Digital Payment</span>
@@ -1272,7 +1288,7 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
           </div>
 
           <!-- Online Channel Selection (Swiggy, Zomato, Direct) -->
-          <div *ngIf="selectedPaymentMethod === 'ONLINE'" class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
+          <div *ngIf="hasMethod('ONLINE')" class="p-3.5 rounded-xl bg-[#FAF5FF] border border-[#E9D5FF] space-y-3">
             <div>
               <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">Online Delivery / Aggregator Channel</label>
               <div class="grid grid-cols-3 gap-2">
@@ -1300,9 +1316,9 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
           </div>
 
           <!-- Card / Other Reference -->
-          <div *ngIf="selectedPaymentMethod === 'CARD' || selectedPaymentMethod === 'OTHER'" class="form-group mb-0">
+          <div *ngIf="hasMethod('CARD') || hasMethod('OTHER')" class="form-group mb-0">
             <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-1 block">
-              {{ selectedPaymentMethod === 'CARD' ? 'Card Last 4 Digits / Auth Approval Code' : 'Transaction Reference # (Optional)' }}
+              {{ hasMethod('CARD') ? 'Card Last 4 Digits / Auth Approval Code' : 'Transaction Reference # (Optional)' }}
             </label>
             <input
               title="Transaction Reference"
@@ -1339,7 +1355,7 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
           </button>
           <button
             (click)="executeCheckout()"
-            [disabled]="isCheckingOut"
+            [disabled]="isCheckingOut || !canCompletePayment"
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined text-[18px]">
@@ -4985,6 +5001,60 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
       box-shadow: none;
     }
 
+    /* ─── Payment modes & split ─── */
+    .pay-mode-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .pay-mode-hint { font-size: 0.7rem; font-weight: 600; color: var(--text-muted, #6B7280); }
+    .pay-mode-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.5rem; }
+    .pay-mode-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      padding: 0.65rem 0.4rem;
+      border-radius: 12px;
+      border: 1.5px solid var(--card-border, #E9D5FF);
+      background: color-mix(in srgb, var(--primary, #7E22CE) 6%, var(--card-bg, #FFFFFF));
+      color: var(--text-main, #2E1065);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+    .pay-mode-btn .material-symbols-outlined { font-size: 15px; }
+    .pay-mode-btn:hover { border-color: color-mix(in srgb, var(--primary, #7E22CE) 55%, var(--card-border, #E9D5FF)); transform: translateY(-1px); }
+    .pay-mode-btn.is-selected {
+      color: #FFFFFF;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
+      box-shadow: 0 6px 14px -8px var(--primary, #7E22CE);
+    }
+    .pay-mode-btn.is-locked { opacity: 0.45; }
+
+    .pay-split {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.85rem;
+      border-radius: 12px;
+      border: 1px solid color-mix(in srgb, var(--primary, #7E22CE) 30%, var(--card-border, #E9D5FF));
+      background: color-mix(in srgb, var(--primary, #7E22CE) 7%, var(--card-bg, #FFFFFF));
+    }
+    .pay-split-row { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 0.6rem; }
+    .pay-split-method { font-size: 0.75rem; font-weight: 900; letter-spacing: 0.05em; color: var(--primary, #7E22CE); }
+    .pay-split-row .form-control { font-size: 1.05rem; }
+    .pay-split-foot {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 0.5rem;
+      border-top: 1px dashed var(--card-border, #E9D5FF);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #10B981;
+    }
+    .pay-split-foot.is-off { color: var(--danger, #EF4444); }
+    @media (max-width: 560px) { .pay-mode-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
     /* ─── Send to Kitchen confirmation ─── */
     .kot-confirm-modal { width: min(92vw, 520px); max-width: 520px; }
     .kot-confirm-icon { color: #F59E0B; background: color-mix(in srgb, #F59E0B 16%, transparent); }
@@ -6088,7 +6158,9 @@ export class PosComponent implements OnInit, AfterViewInit {
   public onlineProvider = 'Swiggy';
   public upiVpa = '.pos@okaxis';
   public autoPrintReceipt = true;
-  public autoPrintKot = true;
+  // Unticked by default: dine-in rounds already went to the kitchen with
+  // Send to Kitchen, so a KOT at payment is the exception, not the rule.
+  public autoPrintKot = false;
 
   // Customer inputs
   public customerPhone = '';
@@ -7610,11 +7682,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       serviceChargeAmount: this.cartService.serviceChargeAmount(),
       surchargeAmount: this.cartService.surchargeAmount(),
       couponCode: this.cartService.couponCode(),
-      paymentMethod: this.selectedPaymentMethod,
-      paymentAmount: this.tenderedAmount || this.cartService.grandTotal(),
-      paymentReference: this.paymentReference,
-      cashTendered: this.selectedPaymentMethod === 'CASH' ? this.tenderedAmount : undefined,
-      changeReturned: this.selectedPaymentMethod === 'CASH' ? this.changeDue : undefined,
+      ...this.paymentFields(),
       items: pending.map((i) => this.toCheckoutLine(i)),
     };
 
@@ -7667,23 +7735,121 @@ export class PosComponent implements OnInit, AfterViewInit {
     });
   }
 
-  openPaymentModal(): void {
-    this.tenderedAmount = this.cartService.grandTotal();
-    this.changeDue = 0;
-    this.showPaymentModal = true;
+  // ─── Payment modes: one, or a split across at most two ───
+  public readonly paymentMethodOptions = ['CASH', 'UPI', 'CARD', 'ONLINE', 'OTHER'];
+  public selectedMethods: string[] = ['CASH'];
+  public splitAmounts: Record<string, number> = {};
+
+  get isSplitPayment(): boolean {
+    return this.selectedMethods.length === 2;
   }
 
-  setTendered(amount: number): void {
-    this.tenderedAmount = amount;
+  hasMethod(m: string): boolean {
+    return this.selectedMethods.includes(m);
+  }
+
+  /** Cash the drawer is owed: the cash part of a split, or the whole bill. */
+  get cashDue(): number {
+    if (!this.hasMethod('CASH')) return 0;
+    return this.isSplitPayment ? Number(this.splitAmounts['CASH']) || 0 : this.cartService.grandTotal();
+  }
+
+  get splitTotal(): number {
+    return this.selectedMethods.reduce((sum, m) => sum + (Number(this.splitAmounts[m]) || 0), 0);
+  }
+
+  /** What is still to allocate on a split (negative when over). */
+  get splitRemaining(): number {
+    return Math.round((this.cartService.grandTotal() - this.splitTotal) * 100) / 100;
+  }
+
+  get canCompletePayment(): boolean {
+    if (!this.isSplitPayment) return true;
+    const allPositive = this.selectedMethods.every((m) => (Number(this.splitAmounts[m]) || 0) > 0);
+    return allPositive && Math.abs(this.splitRemaining) < 0.01 && (!this.hasMethod('CASH') || this.tenderedAmount >= this.cashDue);
+  }
+
+  togglePaymentMethod(m: string): void {
+    if (this.hasMethod(m)) {
+      if (this.selectedMethods.length === 1) return; // always one mode
+      this.selectedMethods = this.selectedMethods.filter((x) => x !== m);
+    } else if (this.selectedMethods.length >= 2) {
+      this.notify.info('You can combine at most 2 payment modes. Remove one first.');
+      return;
+    } else {
+      this.selectedMethods = [...this.selectedMethods, m];
+    }
+    this.selectedPaymentMethod = this.selectedMethods[0];
+    this.resetSplit();
+  }
+
+  /** Two modes start as an even split; one mode takes the whole bill. */
+  private resetSplit(): void {
+    const total = this.cartService.grandTotal();
+    this.splitAmounts = {};
+    if (this.isSplitPayment) {
+      const [a, b] = this.selectedMethods;
+      const first = Math.round((total / 2) * 100) / 100;
+      this.splitAmounts[a] = first;
+      this.splitAmounts[b] = Math.round((total - first) * 100) / 100;
+    }
+    this.tenderedAmount = this.hasMethod('CASH') ? this.cashDue : total;
     this.calcChange();
   }
 
+  /** Typing one part fills the other with the rest of the bill. */
+  onSplitAmountChange(m: string, value: number): void {
+    const total = this.cartService.grandTotal();
+    const v = Math.max(0, Math.min(total, Number(value) || 0));
+    this.splitAmounts[m] = v;
+    const other = this.selectedMethods.find((x) => x !== m);
+    if (other) this.splitAmounts[other] = Math.round((total - v) * 100) / 100;
+    if (this.hasMethod('CASH')) this.tenderedAmount = this.cashDue;
+    this.calcChange();
+  }
+
+  openPaymentModal(): void {
+    this.selectedMethods = [this.selectedPaymentMethod && this.selectedPaymentMethod !== 'SPLIT' ? this.selectedPaymentMethod : 'CASH'];
+    this.resetSplit();
+    this.changeDue = 0;
+    this.autoPrintKot = false;
+    this.showPaymentModal = true;
+  }
+
   calcChange(): void {
-    this.changeDue = Math.max(0, this.tenderedAmount - this.cartService.grandTotal());
+    this.changeDue = this.hasMethod('CASH') ? Math.max(0, this.tenderedAmount - this.cashDue) : 0;
+  }
+
+  /**
+   * The payment part of a checkout request. A split sends each part in
+   * `payments`; the bill's method reads e.g. "CASH+UPI".
+   */
+  private paymentFields() {
+    const total = this.cartService.grandTotal();
+    const cash = this.hasMethod('CASH');
+    const payments = this.isSplitPayment
+      ? this.selectedMethods.map((m) => ({
+          method: m,
+          amount: Number(this.splitAmounts[m]) || 0,
+          reference: m === 'CASH' ? undefined : this.paymentReference || undefined,
+        }))
+      : undefined;
+    return {
+      paymentMethod: this.isSplitPayment ? this.selectedMethods.join('+') : this.selectedMethods[0],
+      paymentAmount: this.isSplitPayment ? total : this.tenderedAmount || total,
+      paymentReference: this.paymentReference,
+      cashTendered: cash ? this.tenderedAmount : undefined,
+      changeReturned: cash ? this.changeDue : undefined,
+      payments,
+    };
   }
 
   // ── Checkout Execution (Online + Offline POS) ──
   executeCheckout(): void {
+    if (!this.canCompletePayment) {
+      this.notify.error('The split amounts must add up to the total, and cash tendered must cover the cash part.');
+      return;
+    }
     const tab = this.cartService.openTab();
     if (tab) {
       this.checkoutOpenTab(tab);
@@ -7709,8 +7875,12 @@ export class PosComponent implements OnInit, AfterViewInit {
     }));
 
     // ── OFFLINE CHECKOUT ROUTE ──
-    // ── OFFLINE CHECKOUT ROUTE ──
     if (!this.offlinePos.isOnline()) {
+      if (this.isSplitPayment) {
+        this.isCheckingOut = false;
+        this.notify.error('A split payment needs a connection to the server. Use one payment mode offline.');
+        return;
+      }
       const syncId = `OFFLINE-ORD-${Date.now()}`;
       const offlineOrder = this.offlinePos.enqueueOfflineOrder({
         offlineSyncId: syncId,
@@ -7810,11 +7980,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       serviceChargeAmount: this.cartService.serviceChargeAmount(),
       surchargeAmount: this.cartService.surchargeAmount(),
       couponCode: this.cartService.couponCode(),
-      paymentMethod: this.selectedPaymentMethod,
-      paymentAmount: this.tenderedAmount || this.cartService.grandTotal(),
-      paymentReference: this.paymentReference,
-      cashTendered: this.selectedPaymentMethod === 'CASH' ? this.tenderedAmount : undefined,
-      changeReturned: this.selectedPaymentMethod === 'CASH' ? this.changeDue : undefined,
+      ...this.paymentFields(),
       items: this.cartService.items().map((i) => ({
         productId: i.product.id,
         variantId: i.variant?.id ?? null,

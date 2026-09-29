@@ -190,9 +190,10 @@
   width: 100%;
 }
 
+/* Three cards: Processing, Total active, Completed. */
 @media (min-width: 1024px) {
   .kds-metrics-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -442,15 +443,16 @@
 
 @media (min-width: 768px) and (max-width: 1199px) {
   .kds-pipeline-grid {
-    grid-template-columns: repeat(3, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
     overflow-x: auto;
     padding-bottom: 0.5rem;
   }
 }
 
+/* Two columns: Processing and Completed. */
 @media (min-width: 1200px) {
   .kds-pipeline-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -523,17 +525,30 @@
   color: var(--text-main, #0F172A);
 }
 
+/* Column count: each badge takes its colour from the theme, as text on a
+   tint of itself, so the number reads in light and dark mode alike. The
+   old fixed dark text vanished on the dark theme's translucent tints. */
 .col-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6875rem;
-  font-weight: 900;
-  padding: 0.15rem 0.55rem;
+  --badge-color: var(--primary, #7E22CE);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 0.5rem;
   border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--badge-color);
+  background: color-mix(in srgb, var(--badge-color) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 45%, transparent);
 }
 
-.badge-new { background: var(--warning-light, #FEF3C7); color: #92400E; }
-.badge-cooking { background: #DBEAFE; color: #1E40AF; }
-.badge-completed { background: var(--success-light, #DCFCE7); color: #166534; }
+.badge-new { --badge-color: var(--warning, #D97706); }
+.badge-cooking { --badge-color: #3B82F6; }
+.badge-completed { --badge-color: var(--success, #16A34A); }
 
 /* Cards Container */
 .col-cards-container {
@@ -698,45 +713,14 @@
   border-radius: 4px;
 }
 
-/* Preparation Timer Bar */
-.order-timer-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 8px;
-  font-size: 0.725rem;
-}
-
-.timer-normal {
-  background: var(--bg-app, #F8FAFC);
-  color: var(--text-muted, #64748B);
-  border: 1px solid var(--card-border, #E2E8F0);
-}
-
-.timer-warning {
-  background: var(--warning-light, #FEF3C7);
-  color: var(--warning, #B45309);
-  border: 1px solid #FCD34D;
-}
-
-.timer-overdue {
-  background: var(--danger-light, #FEE2E2);
-  color: var(--danger, #DC2626);
-  border: 1px solid #FCA5A5;
-  animation: overduePulse 2s infinite;
-}
-
-@keyframes overduePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--danger-rgb, 220, 38, 38), 0.4); }
-  50% { box-shadow: 0 0 0 4px rgba(var(--danger-rgb, 220, 38, 38), 0.15); }
-}
-
-.item-count-pill {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: inherit;
-  opacity: 0.85;
+/* A dine-in tab the kitchen served; the table has not paid yet. */
+.served-tab-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #D97706;
+  background: rgba(245, 158, 11, 0.14);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
 }
 
 /* Order Items List */
@@ -758,31 +742,6 @@
 
 .order-item-row:hover {
   background: var(--bg-app, #F8FAFC);
-}
-
-.order-item-row.is-checked {
-  opacity: 0.55;
-  text-decoration: line-through;
-}
-
-.item-check-box {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1.5px solid var(--card-border, #CBD5E1);
-  background: var(--card-bg, #ffffff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-
-.item-check-box.checked {
-  background: var(--success, #16A34A);
-  border-color: var(--success, #16A34A);
-  color: #ffffff;
 }
 
 .item-qty {
@@ -883,9 +842,17 @@
   background: linear-gradient(135deg, var(--warning, #D97706) 0%, var(--warning, #B45309) 100%);
 }
 
-.btn-mark-ready {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+/* Cooking card footer: no Mark Ready - the order completes when it is paid */
+.awaiting-payment-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3B82F6;
 }
+
+.awaiting-payment-note .material-symbols-outlined { font-size: 16px; }
 
 .secondary-actions-group {
   display: flex;
@@ -1053,16 +1020,6 @@
   border-radius: 8px;
   background: var(--card-bg, #ffffff);
   border: 1px solid var(--card-border, #E2E8F0);
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.drawer-item-row:hover {
-  border-color: var(--primary, #7E22CE);
-}
-
-.drawer-item-row.is-item-checked {
-  opacity: 0.6;
 }
 
 /* Timeline Stepper */
@@ -1191,8 +1148,3 @@
   color: var(--success, #16A34A);
 }
 
-/* Ticket age counter - monospaced by its sibling classes, sized here. */
-.timer-text {
-  font-size: 0.75rem;
-  letter-spacing: -0.01em;
-}

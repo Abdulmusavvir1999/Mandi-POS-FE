@@ -1124,7 +1124,17 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <span>Open in POS Register →</span>
               </button>
 
+              <!-- An unbilled tab keeps the table: bill it (or cancel the tab in POS) first. -->
+              <div class="manage-tab-lock" *ngIf="hasUnbilledTab(selectedManageTable)">
+                <span class="material-symbols-outlined">lock</span>
+                <span>
+                  <strong>{{ selectedManageTable?.order_item_count }} {{ selectedManageTable?.order_item_count === 1 ? 'item' : 'items' }} not billed yet.</strong>
+                  Generate the bill in POS to free this table.
+                </span>
+              </div>
+
               <button
+                *ngIf="!hasUnbilledTab(selectedManageTable)"
                 type="button"
                 (click)="cleanTable(selectedManageTable!.id)"
                 class="w-full action-btn btn-outline-purple justify-center text-cyan-700"
@@ -1143,6 +1153,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </button>
 
               <button
+                *ngIf="!hasUnbilledTab(selectedManageTable)"
                 type="button"
                 (click)="openTableOptions(selectedManageTable!); showManageModal = false;"
                 class="w-full action-btn btn-outline-danger justify-center"
@@ -1502,6 +1513,21 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
         font-weight: 600;
         color: var(--text-muted, #6B7280);
       }
+
+      .manage-tab-lock {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--text-muted, #6B7280);
+        border: 1px dashed color-mix(in srgb, #F59E0B 55%, var(--card-border, #E9D5FF));
+        background: color-mix(in srgb, #F59E0B 8%, transparent);
+      }
+      .manage-tab-lock .material-symbols-outlined { font-size: 17px; color: #F59E0B; }
+      .manage-tab-lock strong { color: var(--text-main, #2E1065); font-weight: 800; }
 
       /* ─── Current order details ─── */
       .od-modal { width: min(94vw, 600px); max-width: 600px; }
@@ -3023,6 +3049,17 @@ export class DiningComponent implements OnInit, OnDestroy {
     } else {
       this.openSeatModal(table);
     }
+  }
+
+  /**
+   * The table has an order with items that is not billed. Cleaning and
+   * release are hidden then - the server refuses both, since the guests
+   * would never be billed.
+   */
+  hasUnbilledTab(table?: DiningTable | null): boolean {
+    if (!table?.current_order_id) return false;
+    const open = table.order_status === 'IN_PROGRESS' || table.order_status === 'PENDING';
+    return open && Number(table.order_item_count) > 0;
   }
 
   // ─── Current order details (the table's open tab) ───
