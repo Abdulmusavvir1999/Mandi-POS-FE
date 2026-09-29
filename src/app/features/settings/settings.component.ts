@@ -145,6 +145,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- TOP EXECUTIVE HEADER & PERSISTENT ACTION BAR                    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="settings-header-sticky">
       <div class="settings-header-card">
         <div class="header-info-group">
           <div class="header-icon-badge">
@@ -183,6 +184,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
             <span>{{ isSaving ? 'Saving Changes...' : 'Save Configuration' }}</span>
           </button>
         </div>
+      </div>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -4650,10 +4652,29 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       /* Top Header Card */
       /* Sticky: it now carries the only Save on the page, so it has to stay
          reachable however far down a customize tab the user has scrolled. */
-      .settings-header-card {
+      /* The page scrolls inside the layout's main, which is padded 0.75rem,
+         then 1rem from 640px (md:p-6 never applies: styles.css declares
+         sm:p-4 after it, both !important), and a sticky box stops at that
+         padding - so the
+         header used to pin 12-24px below the top with fields scrolling past
+         above it. This strip pulls itself up over the padding, pins at the
+         very top edge and paints the page background there, which also fills
+         in behind the card's rounded corners. */
+      .settings-header-sticky {
+        --main-pad: 0.75rem;
         position: sticky;
-        top: 0;
+        top: calc(-1 * var(--main-pad));
         z-index: 30;
+        margin-top: calc(-1 * var(--main-pad));
+        padding-top: var(--main-pad);
+        background: var(--bg-app, #FAF5FF);
+      }
+
+      @media (min-width: 640px) {
+        .settings-header-sticky { --main-pad: 1rem; }
+      }
+
+      .settings-header-card {
         background: var(--card-bg, #ffffff);
         border: 1.5px solid var(--card-border, #E9D5FF);
         border-left: 4px solid var(--primary, #7E22CE);
@@ -7539,6 +7560,35 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         border-left: 4px solid var(--sidebar-active-accent, #C084FC);
       }
 
+      /* "Active preset" notice under the preset grid: text left, Fine-Tune
+         button right, wrapping under the text on narrow screens. */
+      .preset-active-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.25rem;
+        padding: 1rem 1.25rem;
+        background: var(--card-bg, #ffffff);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        border-radius: 14px;
+      }
+
+      .preset-active-banner > .flex {
+        flex: 1 1 320px;
+        min-width: 0;
+      }
+
+      .preset-active-banner p {
+        margin: 0.2rem 0 0;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .preset-active-banner > .action-btn {
+        flex-shrink: 0;
+      }
+
       .dark-toggle-icon-box {
         width: 40px;
         height: 40px;
@@ -7779,7 +7829,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
       .token-label {
         font-size: 0.75rem;
         font-weight: 700;
-        color: var(--text-main, #2E1065);
+        color: var(--label-color, #2E1065);
       }
 
       .hex-badge {
@@ -8078,7 +8128,7 @@ type BrandingSlotKey = 'logo' | 'login' | 'favicon';
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-main, #2E1065);
+        color: var(--label-color, #2E1065);
       }
 
       .control-input, .control-select, .control-textarea {

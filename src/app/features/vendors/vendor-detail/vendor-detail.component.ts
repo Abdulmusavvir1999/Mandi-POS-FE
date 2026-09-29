@@ -1548,7 +1548,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'b
       }
 
       .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-      .form-label { font-size: 0.8125rem; font-weight: 700; color: var(--text-main, #334155); }
+      .form-label { font-size: 0.8125rem; font-weight: 700; color: var(--label-color, #334155); }
       .form-control {
         width: 100%;
         height: 2.625rem;

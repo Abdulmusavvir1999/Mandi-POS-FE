@@ -431,7 +431,7 @@ export class CustomersComponent implements OnInit {
   startPosOrder(customer: Customer): void {
     this.cartService.selectedCustomer.set(customer);
     this.notify.success(`Customer ${customer.name} attached to new POS ticket`);
-    this.router.navigate(['/pos']);
+    this.router.navigate(['/pos'], { state: { keepCart: true } });
   }
 
   // --- Add / Edit Customer Form & Actions ---

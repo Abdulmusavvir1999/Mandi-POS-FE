@@ -670,6 +670,9 @@ export class ThemeService {
     root.style.setProperty('--text-main', mainTextColor);
     root.style.setProperty('--text-muted', isDark ? 'rgba(226, 232, 240, 0.78)' : '#64748B');
     root.style.setProperty('--text-dim', isDark ? 'rgba(148, 163, 184, 0.65)' : '#94A3B8');
+    // Form/field labels: the palette's own text color, softened so a label
+    // sits one step below the value it names but still reads on any preset.
+    root.style.setProperty('--label-color', this.adjustColorOpacity(mainTextColor, isDark ? 0.82 : 0.78));
 
     // Semantic Status Colors
     root.style.setProperty('--success', p.success);

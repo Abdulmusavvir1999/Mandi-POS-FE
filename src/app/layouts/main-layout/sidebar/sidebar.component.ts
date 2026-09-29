@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, HostBinding, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { CartService } from '../../../core/services/cart.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -165,7 +166,7 @@ export type { NavItem, NavSection };
                     *ngIf="canAccess(item)"
                     [routerLink]="item.route"
                     [queryParams]="item.queryParams || null"
-                    (click)="onNavItemClick()"
+                    (click)="onNavItemClick(item.route)"
                     (mouseenter)="showTip($event, itemName(item))"
                     (mouseleave)="hideTip()"
                     (focus)="showTip($event, itemName(item))"
@@ -283,6 +284,8 @@ export class SidebarComponent {
   public settingsService = inject(SettingsService);
   public sidebarLayout = inject(SidebarLayoutService);
   private notify = inject(NotificationService);
+  private router = inject(Router);
+  private cartService = inject(CartService);
 
   public searchQuery = signal('');
   public tooltip = signal<{ label: string; top: number } | null>(null);
@@ -391,7 +394,8 @@ export class SidebarComponent {
     );
   }
 
-  public onNavItemClick(): void {
+  public onNavItemClick(route?: string): void {
+    if (route === '/pos') this.cartService.onPosMenuClick(this.router.url);
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       this.closeMobileDrawer.emit();
     }

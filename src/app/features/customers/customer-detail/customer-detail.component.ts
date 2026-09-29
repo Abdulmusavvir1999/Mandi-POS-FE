@@ -1361,7 +1361,7 @@ type CustomerTab = 'analytics' | 'history' | 'notes' | 'timeline' | 'profile';
     .form-label {
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--text-main, #334155);
+      color: var(--label-color, #334155);
     }
     .form-control {
       padding: 0.6rem 0.875rem;
@@ -1535,7 +1535,7 @@ export class CustomerDetailComponent implements OnInit {
     if (!this.customer) return;
     this.cartService.selectedCustomer.set(this.customer);
     this.notify.success(`Customer ${this.customer.name} attached to new POS ticket`);
-    this.router.navigate(['/pos']);
+    this.router.navigate(['/pos'], { state: { keepCart: true } });
   }
 
   public openEditModal(): void {

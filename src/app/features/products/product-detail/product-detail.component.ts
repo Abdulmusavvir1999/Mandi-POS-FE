@@ -7,6 +7,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { Product, ProductVariant } from '../../../core/models';
 import { AppCurrencyPipe } from '../../../shared/pipes/app-currency.pipe';
 import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
+import { limitingStock, portionsAvailable } from '../../../core/utils/multi-stock.util';
 
 /**
  * Product View — strictly read-only.
@@ -92,7 +93,62 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
         <!-- ═══════════════════════════════════════════════════════════ -->
         <!-- 3. STOCK SUMMARY                                            -->
         <!-- ═══════════════════════════════════════════════════════════ -->
-        <div class="detail-metric-grid">
+        <!-- Multi Stock: no single item, so summarize the portions instead -->
+        <div class="detail-metric-grid" *ngIf="isMultiMode">
+          <div class="detail-metric" [class.is-warning]="defaultReady <= 0">
+            <span class="metric-label">Ready to Sell (Default)</span>
+            <span class="metric-value font-mono">
+              {{ defaultReady | number:'1.0-0' }}
+              <span class="metric-unit">portions</span>
+            </span>
+            <span class="metric-note metric-note-clip" [title]="defaultVariant?.name || ''">
+              of <strong>{{ defaultVariant?.name }}</strong>
+              <ng-container *ngIf="otherPortionCount > 0"> · {{ otherPortionCount }} more {{ otherPortionCount === 1 ? 'size' : 'sizes' }} below</ng-container>
+            </span>
+          </div>
+
+          <div class="detail-metric">
+            <span class="metric-label">Stock Items Used</span>
+            <span class="metric-value font-mono">
+              {{ multiStockCount }}
+              <span class="metric-unit">{{ multiStockCount === 1 ? 'item' : 'items' }}</span>
+            </span>
+            <span class="metric-note metric-note-clip" [title]="stockNames">{{ stockNames || 'None set' }}</span>
+          </div>
+
+          <div class="detail-metric" [class.is-warning]="stockRunway.length > 0 && stockRunway[0].portions <= 0">
+            <span class="metric-label">Stock Runs Out — soonest first</span>
+            <div class="limit-list" *ngIf="stockRunway.length; else noLimit">
+              <div class="limit-row limit-head">
+                <span>#</span>
+                <span>Item</span>
+                <span>Limits</span>
+                <span class="is-right">Left</span>
+                <span class="is-right">Can make</span>
+              </div>
+              <div
+                class="limit-row"
+                *ngFor="let r of stockRunway; let ri = index"
+                [title]="r.limits.length ? r.name + ' runs out first for portion ' + r.limits.join(', ') : r.name + ' does not limit any portion'"
+              >
+                <span class="portion-no">{{ ri + 1 }}</span>
+                <span class="limit-stock" [class.text-danger]="r.portions <= 0">{{ r.name }}</span>
+                <span class="limit-tags">
+                  <span class="limit-tag" *ngFor="let n of r.limits">P{{ n }}</span>
+                  <span class="limit-none" *ngIf="!r.limits.length">—</span>
+                </span>
+                <span class="limit-left is-right">{{ r.balance | number:'1.0-3' }} {{ r.unit }}</span>
+                <span class="limit-ready is-right" [class.text-danger]="r.portions <= 0">{{ r.portions | number:'1.0-0' }}</span>
+              </div>
+            </div>
+            <span class="metric-note" *ngIf="stockRunway.length">
+              <span class="limit-tag">P1</span> = runs out first for portion 1 (see table below)
+            </span>
+            <ng-template #noLimit><span class="metric-value">—</span></ng-template>
+          </div>
+        </div>
+
+        <div class="detail-metric-grid" *ngIf="!isMultiMode">
           <div class="detail-metric">
             <span class="metric-label">Current Stock</span>
             <span class="metric-value font-mono">
@@ -132,15 +188,75 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               <span class="material-symbols-outlined">lunch_dining</span>
               <span>Stock &amp; Variant Details</span>
               <span class="mode-chip" *ngIf="hasVariants">
-                {{ isEachMode ? 'Each portion has its own source' : 'Common source' }}
+                {{ isMultiMode ? 'Multi Stock — several items per portion' : isEachMode ? 'Each portion has its own source' : 'Common source' }}
               </span>
             </h2>
-            <span class="detail-section-note">
+            <span class="detail-section-note" *ngIf="!isMultiMode">
               Portions possible from <strong>{{ availableQuantity | number:'1.0-3' }} {{ unit }}</strong> in stock
             </span>
           </div>
 
-          <div class="table-responsive-wrapper" *ngIf="hasVariants">
+          <!-- Multi Stock: each portion's full list -->
+          <div class="table-responsive-wrapper" *ngIf="isMultiMode && hasVariants">
+            <table class="saas-data-table">
+              <thead>
+                <tr>
+                  <th style="width: 20%;">Portion</th>
+                  <th style="width: 34%;">Stock used per portion</th>
+                  <th style="width: 12%;">Stock cost</th>
+                  <th style="width: 10%;">Price</th>
+                  <th style="width: 12%;">Margin</th>
+                  <th style="width: 12%; text-align: right;">Can make now</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of product.variants">
+                  <td>
+                    <span class="variant-name">{{ v.name }}</span>
+                    <span class="variant-default" *ngIf="v.is_default">Default</span>
+                  </td>
+                  <td>
+                    <div class="recipe-chips">
+                      <span
+                        class="recipe-chip"
+                        *ngFor="let s of v.stocks"
+                        [class.is-short]="s.current_quantity !== undefined && s.current_quantity < s.stock_consumption"
+                        [title]="s.stock_name + ': ' + (s.current_quantity ?? 0) + ' ' + (s.unit_type || '') + ' in stock'"
+                      >
+                        <strong>{{ s.stock_name }}</strong>
+                        <span class="font-mono">× {{ s.stock_consumption | number:'1.0-3' }} {{ s.unit_type }}</span>
+                      </span>
+                      <span class="recipe-chip is-short" *ngIf="!v.stocks?.length">No stock items set</span>
+                    </div>
+                  </td>
+                  <td class="font-mono">{{ portionCost(v) | appCurrency:'1.2-2' }}</td>
+                  <td class="font-mono font-bold">{{ v.selling_price | appCurrency:'1.0-2' }}</td>
+                  <td>
+                    <span class="margin-pill" [class.is-profit]="portionMargin(v) > 0" [class.is-loss]="portionMargin(v) < 0">
+                      {{ portionMargin(v) < 0 ? '−' : '' }}{{ absValue(portionMargin(v)) | appCurrency:'1.0-2' }}
+                      <span *ngIf="Number(v.selling_price) > 0">· {{ marginPercentOf(v) | number:'1.0-0' }}%</span>
+                    </span>
+                  </td>
+                  <td class="font-mono" style="text-align: right;">
+                    <span class="inline-flex items-center justify-end gap-1.5">
+                      <span [class.text-danger]="readyOf(v) <= 0" class="font-bold">{{ readyOf(v) | number:'1.0-0' }}</span>
+                      <span class="cell-unit">portions</span>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="section-note" *ngIf="isMultiMode && hasVariants">
+            <span class="material-symbols-outlined">info</span>
+            <span>
+              Selling one portion takes <strong>every</strong> item on its list. <strong>Can make now</strong> is set by the item that runs out first —
+              restock that one to sell more.
+            </span>
+          </p>
+
+          <div class="table-responsive-wrapper" *ngIf="!isMultiMode && hasVariants">
             <table class="saas-data-table">
               <thead>
                 <tr>
@@ -181,7 +297,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
             </table>
           </div>
 
-          <p class="section-note" *ngIf="hasVariants">
+          <p class="section-note" *ngIf="!isMultiMode && hasVariants">
             <span class="material-symbols-outlined">info</span>
             <span>
               <strong>Remaining Stock</strong> is calculated as <strong>Total Stock ÷ Stock Usage</strong> per portion — indicating how many full servings can be prepared from the current balance of {{ availableQuantity | number:'1.0-3' }} {{ unit }}.
@@ -191,6 +307,72 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
           <p class="empty-note" *ngIf="!hasVariants">
             No variants assigned. This product sells as a single item.
           </p>
+        </div>
+
+        <!-- Multi Stock: every stock item behind this dish, with its balance -->
+        <div class="table-container-card" *ngIf="isMultiMode && stockRows.length > 0">
+          <div class="detail-section-head">
+            <h2 class="detail-section-title">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span>Stock Items On Hand</span>
+            </h2>
+            <span class="detail-section-note stock-legend">
+              <span class="legend-swatch"></span> Runs out first for that portion
+            </span>
+          </div>
+
+          <div class="table-responsive-wrapper">
+            <table class="saas-data-table stock-matrix">
+              <thead>
+                <tr>
+                  <th class="sm-item" rowspan="2">Stock item</th>
+                  <th class="sm-num" rowspan="2">In stock</th>
+                  <th class="sm-num" rowspan="2">Low alert</th>
+                  <th class="sm-num" rowspan="2">Avg cost / unit</th>
+                  <th class="sm-group" [attr.colspan]="product.variants?.length || 1">Quantity each portion takes</th>
+                </tr>
+                <tr>
+                  <th class="sm-portion" *ngFor="let v of product.variants; let pi = index" [title]="v.name">
+                    <span class="portion-no">{{ pi + 1 }}</span>
+                    <span class="portion-head-name">{{ v.name }}</span>
+                    <span class="variant-default" *ngIf="v.is_default">Default</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of stockRows" [class.row-warning]="row.isLow">
+                  <td>
+                    <span class="source-name">{{ row.name }}</span>
+                    <span class="source-code" *ngIf="row.code">{{ row.code }}</span>
+                    <span class="limit-badge is-muted" *ngIf="row.inactive">Inactive</span>
+                  </td>
+                  <td class="font-mono font-bold">
+                    <span [class.text-danger]="row.isLow">{{ row.balance | number:'1.0-3' }}</span>
+                    <span class="cell-unit">{{ row.unit }}</span>
+                  </td>
+                  <td class="font-mono">
+                    <span class="status-mini" [class.is-low]="row.isLow">
+                      {{ row.isLow ? 'Low' : 'OK' }}
+                    </span>
+                    <span class="cell-unit">at {{ row.minAlert | number:'1.0-3' }}</span>
+                  </td>
+                  <td class="font-mono">{{ row.avgCost | appCurrency:'1.2-2' }}</td>
+                  <td
+                    *ngFor="let v of product.variants"
+                    class="sm-cell"
+                    [class.is-limiting]="row.limits.has(v.id)"
+                    [title]="row.limits.has(v.id) ? row.name + ' runs out first for ' + v.name : ''"
+                  >
+                    <ng-container *ngIf="row.uses.get(v.id) as qty; else notUsed">
+                      <span class="sm-qty">{{ qty | number:'1.0-3' }} <span class="cell-unit">{{ row.unit }}</span></span>
+                      <span class="sm-enough">enough for {{ enoughFor(row.balance, qty) | number:'1.0-0' }}</span>
+                    </ng-container>
+                    <ng-template #notUsed><span class="sm-none">Not used</span></ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════ -->
@@ -220,11 +402,13 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               </div>
               <div class="detail-row">
                 <dt>Unit</dt>
-                <dd>{{ unit }}</dd>
+                <dd>{{ isMultiMode ? 'Per stock item' : unit }}</dd>
               </div>
               <div class="detail-row">
                 <dt>Stock Ledger Code</dt>
-                <dd class="font-mono">{{ product.linked_stock_code || 'Not linked' }}</dd>
+                <dd [class.font-mono]="!isMultiMode">
+                  {{ isMultiMode ? 'Multi Stock — set per portion' : (product.linked_stock_code || 'Not linked') }}
+                </dd>
               </div>
               <div class="detail-row">
                 <dt>Status</dt>
@@ -257,7 +441,32 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               </h2>
             </div>
 
-            <dl class="detail-list">
+            <!-- Multi Stock: each portion has its own price, so one row each -->
+            <div class="table-responsive-wrapper" *ngIf="isMultiMode && hasVariants">
+              <table class="saas-data-table pricing-table">
+                <thead>
+                  <tr>
+                    <th>Portion</th>
+                    <th style="text-align: right;">Price</th>
+                    <th style="text-align: right;">Tax ({{ product.tax_rate }}%)</th>
+                    <th style="text-align: right;">Incl. tax</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let v of product.variants">
+                    <td>
+                      <span class="variant-name">{{ v.name }}</span>
+                      <span class="variant-default" *ngIf="v.is_default">Default</span>
+                    </td>
+                    <td class="font-mono font-bold" style="text-align: right;">{{ v.selling_price | appCurrency:'1.0-2' }}</td>
+                    <td class="font-mono" style="text-align: right;">{{ taxOf(v.selling_price) | appCurrency:'1.0-2' }}</td>
+                    <td class="font-mono font-bold" style="text-align: right;">{{ inclTaxOf(v.selling_price) | appCurrency:'1.0-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <dl class="detail-list" *ngIf="!isMultiMode || !hasVariants">
               <div class="detail-row">
                 <dt>Selling Price</dt>
                 <dd class="font-mono font-bold">{{ product.selling_price | appCurrency:'1.0-2' }}</dd>
@@ -359,7 +568,14 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
         box-shadow: 0 2px 10px -4px rgba(0, 0, 0, 0.1);
       }
 
-      .detail-metric.is-warning { border-color: #FCA5A5; background: #FEF2F2; }
+      .detail-metric.is-warning {
+        border-color: rgba(var(--danger-rgb, 220, 38, 38), 0.45);
+        background: rgba(var(--danger-rgb, 220, 38, 38), 0.1);
+      }
+      .detail-metric.is-warning .metric-label,
+      .detail-metric.is-warning .metric-value,
+      .detail-metric.is-warning .metric-note { color: var(--danger, #DC2626); }
+      .detail-metric.is-warning .metric-unit { color: var(--danger, #DC2626); opacity: 0.8; }
 
       .metric-label {
         font-size: 0.625rem;
@@ -452,6 +668,234 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
       }
 
       .text-danger { color: var(--danger, #DC2626); font-weight: 800; }
+
+      /* Multi Stock: a portion's list as chips, red when that item is short */
+      .recipe-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+      .recipe-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        color: var(--text-muted, #6B7280);
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+        white-space: nowrap;
+      }
+
+      .recipe-chip strong { color: var(--text-main, #2E1065); font-weight: 700; }
+
+      .recipe-chip.is-short {
+        color: var(--danger, #DC2626);
+        background: var(--danger-light, rgba(220, 38, 38, 0.1));
+        border-color: color-mix(in srgb, var(--danger, #DC2626) 35%, transparent);
+      }
+
+      .recipe-chip.is-short strong { color: var(--danger, #DC2626); }
+
+      .metric-note-clip {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .metric-note strong { color: var(--text-main, #2E1065); }
+
+      .margin-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.72rem;
+        font-weight: 800;
+        white-space: nowrap;
+        color: var(--text-muted, #6B7280);
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .margin-pill.is-profit {
+        color: var(--success, #10B981);
+        background: var(--success-light, rgba(16, 185, 129, 0.12));
+        border-color: color-mix(in srgb, var(--success, #10B981) 35%, transparent);
+      }
+
+      .margin-pill.is-loss {
+        color: var(--danger, #DC2626);
+        background: var(--danger-light, rgba(220, 38, 38, 0.1));
+        border-color: color-mix(in srgb, var(--danger, #DC2626) 35%, transparent);
+      }
+
+      .limit-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.15rem;
+        margin-left: 0.4rem;
+        padding: 0.05rem 0.45rem 0.05rem 0.25rem;
+        border-radius: 999px;
+        font-size: 0.6rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--warning, #D97706);
+        background: var(--warning-light, rgba(217, 119, 6, 0.12));
+        border: 1px solid color-mix(in srgb, var(--warning, #D97706) 35%, transparent);
+        vertical-align: middle;
+      }
+
+      .limit-badge .material-symbols-outlined { font-size: 12px; }
+
+      .limit-badge.is-muted {
+        color: var(--text-muted, #6B7280);
+        background: var(--bg-app, #FAF5FF);
+        border-color: var(--card-border, #E9D5FF);
+      }
+
+      .status-mini {
+        display: inline-block;
+        margin-right: 0.35rem;
+        padding: 0.05rem 0.45rem;
+        border-radius: 999px;
+        font-size: 0.62rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--success, #10B981);
+        background: var(--success-light, rgba(16, 185, 129, 0.12));
+      }
+
+      .status-mini.is-low {
+        color: var(--danger, #DC2626);
+        background: var(--danger-light, rgba(220, 38, 38, 0.1));
+      }
+
+      .row-warning td { background: color-mix(in srgb, var(--danger, #DC2626) 5%, transparent); }
+
+      /* Runs-out-first card: one line per portion */
+      .limit-list { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.15rem; }
+
+      /* Fixed columns so every row lines up: # | item | limits | left | can make */
+      .limit-row {
+        display: grid;
+        grid-template-columns: 20px minmax(0, 1fr) 64px 84px 64px;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+      }
+
+      .limit-head span {
+        font-size: 0.58rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .limit-row .is-right { text-align: right; }
+
+      .limit-tags { display: flex; flex-wrap: wrap; gap: 0.2rem; }
+
+      .limit-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.05rem 0.35rem;
+        border-radius: 6px;
+        font-size: 0.6rem;
+        font-weight: 800;
+        color: var(--warning, #D97706);
+        background: var(--warning-light, rgba(217, 119, 6, 0.14));
+        border: 1px solid color-mix(in srgb, var(--warning, #D97706) 40%, transparent);
+      }
+
+      .limit-none { color: var(--text-muted, #6B7280); opacity: 0.6; }
+
+      .limit-stock { font-weight: 800; color: var(--text-main, #2E1065); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .limit-left { color: var(--text-muted, #6B7280); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.7rem; }
+      .limit-ready { font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-main, #2E1065); }
+
+      /* Portion number badge, shared by the card and the matrix header */
+      .portion-no {
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: #FFFFFF;
+        background: var(--primary, #7E22CE);
+      }
+
+      /* Stock matrix: rows = stock items, columns = portions */
+      .stock-legend { display: inline-flex; align-items: center; gap: 0.4rem; }
+
+      .legend-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        background: var(--warning-light, rgba(217, 119, 6, 0.15));
+        border: 1.5px solid var(--warning, #D97706);
+      }
+
+      .stock-matrix th.sm-group {
+        text-align: center;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .stock-matrix th.sm-portion {
+        min-width: 150px;
+        max-width: 220px;
+        vertical-align: top;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .stock-matrix th.sm-portion > * { vertical-align: middle; }
+
+      .portion-head-name {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin: 0.25rem 0 0.15rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        line-height: 1.3;
+        color: var(--text-main, #2E1065);
+      }
+
+      .stock-matrix th.sm-item { min-width: 150px; }
+      .stock-matrix th.sm-num { white-space: nowrap; }
+
+      .stock-matrix td.sm-cell {
+        border-left: 1px dashed var(--card-border, #E9D5FF);
+        white-space: nowrap;
+      }
+
+      .stock-matrix td.sm-cell.is-limiting {
+        background: var(--warning-light, rgba(217, 119, 6, 0.12));
+        box-shadow: inset 0 0 0 1.5px var(--warning, #D97706);
+      }
+
+      .sm-qty { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; color: var(--text-main, #2E1065); }
+      .sm-enough { display: block; font-size: 0.68rem; color: var(--text-muted, #6B7280); }
+      .is-limiting .sm-enough { color: var(--warning, #D97706); font-weight: 800; }
+      .sm-none { font-size: 0.7rem; color: var(--text-muted, #6B7280); opacity: 0.7; font-style: italic; }
+
+      .pricing-table th,
+      .pricing-table td { padding-left: 0.85rem; padding-right: 0.85rem; }
+
+      .metric-value-text {
+        font-size: 1.05rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
       .servings-pill {
         display: inline-flex;
@@ -575,6 +1019,155 @@ export class ProductDetailComponent implements OnInit {
     return this.product?.variant_stock_mode === 'EACH';
   }
 
+  get isMultiMode(): boolean {
+    return this.product?.variant_stock_mode === 'MULTI';
+  }
+
+  /** Template access to Number() for the Multi Stock rows. */
+  readonly Number = Number;
+
+  /** Portions other than the default, for the "N more sizes below" hint. */
+  get otherPortionCount(): number {
+    return Math.max(0, (this.product?.variants?.length || 0) - 1);
+  }
+
+  /** Distinct stock item names across every portion, in first-seen order. */
+  get stockNames(): string {
+    return this.stockRows.map((r) => r.name).join(', ');
+  }
+
+  /**
+   * One row per stock item behind a Multi Stock dish: its balance and alert,
+   * what each portion takes of it, and the portions it runs out first for.
+   * Rebuilt only when the product object changes.
+   */
+  get stockRows() {
+    if (this.stockRowsFor === this.product) return this.stockRowsCache;
+    const rows = new Map<number, {
+      id: number; name: string; code: string; unit: string; balance: number; minAlert: number;
+      avgCost: number; inactive: boolean; isLow: boolean;
+      /** variant id -> quantity one portion of it takes */
+      uses: Map<number, number>;
+      /** variant ids this item runs out first for */
+      limits: Set<number>;
+    }>();
+    for (const v of this.product?.variants || []) {
+      const limiting = limitingStock(v);
+      for (const s of v.stocks || []) {
+        let row = rows.get(s.stock_id);
+        if (!row) {
+          const balance = Number(s.current_quantity) || 0;
+          const minAlert = Number(s.min_stock_alert) || 0;
+          row = {
+            id: s.stock_id,
+            name: s.stock_name || `Stock #${s.stock_id}`,
+            code: s.stock_code || '',
+            unit: s.unit_type || 'units',
+            balance,
+            minAlert,
+            avgCost: Number(s.average_unit_price) || 0,
+            inactive: s.stock_status === 'inactive',
+            isLow: balance <= minAlert,
+            uses: new Map(),
+            limits: new Set(),
+          };
+          rows.set(s.stock_id, row);
+        }
+        row.uses.set(v.id, Number(s.stock_consumption) || 0);
+        if (limiting && limiting.stock_id === s.stock_id) row.limits.add(v.id);
+      }
+    }
+    this.stockRowsFor = this.product;
+    this.stockRowsCache = [...rows.values()];
+    return this.stockRowsCache;
+  }
+  private stockRowsFor: Product | null = null;
+  private stockRowsCache: any[] = [];
+
+  /**
+   * Every stock item the dish uses, soonest to run out first: the fewest
+   * portions it can supply across the portions that use it, and the numbers
+   * of the portions it is the limiting item for (numbered like the portion
+   * columns in the table below).
+   */
+  get stockRunway() {
+    const variants = this.product?.variants || [];
+    return this.stockRows
+      .map((row) => {
+        let portions = Infinity;
+        const limits: number[] = [];
+        variants.forEach((v, i) => {
+          const qty = row.uses.get(v.id);
+          if (qty) portions = Math.min(portions, this.enoughFor(row.balance, qty));
+          if (row.limits.has(v.id)) limits.push(i + 1);
+        });
+        return { name: row.name, unit: row.unit, balance: row.balance, portions: Number.isFinite(portions) ? portions : 0, limits };
+      })
+      .sort((a, b) => a.portions - b.portions);
+  }
+
+  /** Portions this balance alone could supply at this quantity each. */
+  enoughFor(balance: number, perPortion: number): number {
+    return perPortion > 0 ? Math.max(0, Math.floor(balance / perPortion)) : 0;
+  }
+
+  portionMargin(variant: ProductVariant): number {
+    return (Number(variant.selling_price) || 0) - this.portionCost(variant);
+  }
+
+  marginPercentOf(variant: ProductVariant): number {
+    const price = Number(variant.selling_price) || 0;
+    return price > 0 ? (this.portionMargin(variant) / price) * 100 : 0;
+  }
+
+  absValue(n: number): number {
+    return Math.abs(n);
+  }
+
+  taxOf(price: number | string): number {
+    const rate = Number(this.product?.tax_rate) || 0;
+    return Math.round((((Number(price) || 0) * rate) / 100) * 100) / 100;
+  }
+
+  inclTaxOf(price: number | string): number {
+    return Math.round(((Number(price) || 0) + this.taxOf(price)) * 100) / 100;
+  }
+
+  /** Multi Stock: distinct stock items across every portion's list. */
+  get multiStockCount(): number {
+    const ids = new Set<number>();
+    for (const v of this.product?.variants || []) {
+      for (const s of v.stocks || []) ids.add(s.stock_id);
+    }
+    return ids.size;
+  }
+
+  get defaultVariant(): ProductVariant | undefined {
+    const variants = this.product?.variants || [];
+    return variants.find((v) => Number(v.is_default) === 1) || variants[0];
+  }
+
+  get defaultReady(): number {
+    return portionsAvailable(this.defaultVariant);
+  }
+
+  /** The item on the default portion's list that runs out first. */
+  get defaultLimiting() {
+    return limitingStock(this.defaultVariant);
+  }
+
+  readyOf(variant: ProductVariant): number {
+    return portionsAvailable(variant);
+  }
+
+  /** Multi Stock: the portion's list priced at each item's average cost. */
+  portionCost(variant: ProductVariant): number {
+    return (variant.stocks || []).reduce(
+      (sum, s) => sum + (Number(s.stock_consumption) || 0) * (Number(s.average_unit_price) || 0),
+      0
+    );
+  }
+
   /**
    * A portion draws from its own stock item in EACH mode, otherwise from the
    * dish's common one. Falls back to the dish name so the column is never blank.
@@ -612,7 +1205,7 @@ export class ProductDetailComponent implements OnInit {
   get minAlert(): number {
     const linked = Number(this.product?.linked_min_alert);
     if (Number.isFinite(linked)) return linked;
-    return Number(this.product?.min_stock_alert) || Number(this.product?.low_stock_threshold) || 0;
+    return Number(this.product?.min_stock_alert) || 0;
   }
 
   get isLowStock(): boolean {

@@ -2,11 +2,12 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { DiningService } from '../../core/services/dining.service';
+import { DiningService, DiningTab, DiningTabLine } from '../../core/services/dining.service';
 import { CartService } from '../../core/services/cart.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { DiningTable, TableStatus, TableReservation, TableHistoryItem } from '../../core/models';
+import { CustomerService } from '../../core/services/customer.service';
+import { Customer, DiningTable, TableStatus, TableReservation } from '../../core/models';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { CustomDropdownComponent, DropdownOption } from '../../shared/components/custom-dropdown/custom-dropdown.component';
 import { DiningLayoutService } from '../../core/services/dining-layout.service';
@@ -644,18 +645,16 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 [class.is-reserved]="table.status === 'RESERVED'"
                 [class.is-cleaning]="table.status === 'CLEANING'"
                 [class.is-blocked]="table.status === 'UNAVAILABLE'"
+                [title]="table.table_number"
               >
-                {{ table.table_number }}
+                <span class="cardlist-badge-cap">{{ tableBadgeCap(table) }}</span>
+                <span class="cardlist-badge-code">{{ tableBadgeCode(table) }}</span>
               </span>
-              <div>
-                <span class="cardlist-section">{{ table.section }}</span>
-                <div class="cardlist-seats">👥 {{ table.status === 'OCCUPIED' ? (table.active_guest_count || table.capacity) + '/' + table.capacity : table.capacity }} Seats</div>
-              </div>
             </div>
 
             <div class="cardlist-mid-col">
               <div class="cardlist-title-row">
-                <span class="cardlist-name">{{ table.name }}</span>
+                <span class="cardlist-name">{{ table.name || table.table_number }}</span>
                 <span
                   class="list-status-pill"
                   [class.is-free]="table.status === 'AVAILABLE'"
@@ -668,42 +667,55 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 </span>
               </div>
 
+              <div class="cardlist-meta">
+                <span class="cardlist-section" *ngIf="table.section">
+                  <span class="material-symbols-outlined">location_on</span>{{ table.section }}
+                </span>
+                <span class="cardlist-seats">
+                  <span class="material-symbols-outlined">group</span>
+                  {{ table.status === 'OCCUPIED' ? (table.active_guest_count || table.capacity) + '/' + table.capacity : table.capacity }} Seats
+                </span>
+
+                <ng-container [ngSwitch]="table.status">
+                  <ng-container *ngSwitchCase="'OCCUPIED'">
+                    <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(table)">
+                      <span class="material-symbols-outlined">timer</span>{{ tableElapsedMinutes(table) }}m seated
+                    </span>
+                    <span class="cardlist-note">
+                      {{ table.customer_name ? 'Party: ' + table.customer_name : 'Party of ' + (table.active_guest_count || table.capacity) }}
+                    </span>
+                  </ng-container>
+                  <ng-container *ngSwitchCase="'CLEANING'">
+                    <span class="timer-pill timer-warn">
+                      <span class="material-symbols-outlined">cleaning_services</span>Bussing ({{ tableCleaningMinutes(table) }}m)
+                    </span>
+                    <button type="button" class="cardlist-link" (click)="finishCleaning(table.id); $event.stopPropagation()">Mark Clean ✓</button>
+                  </ng-container>
+                  <ng-container *ngSwitchCase="'RESERVED'">
+                    <span class="timer-pill timer-safe">
+                      <span class="material-symbols-outlined">event</span>Reserved
+                    </span>
+                    <span class="cardlist-note">
+                      {{ table.reservation_customer || 'Guest' }} · {{ table.reservation_guests || table.capacity }} guests
+                    </span>
+                  </ng-container>
+                  <span class="cardlist-note" *ngSwitchCase="'AVAILABLE'">Laid and ready for the next party</span>
+                  <span class="cardlist-note" *ngSwitchCase="'UNAVAILABLE'">Out of service</span>
+                </ng-container>
+              </div>
+
               <div class="cardlist-dwell-bar" *ngIf="table.status === 'OCCUPIED'">
                 <i
                   *ngFor="let lit of dwellTicks(table); trackBy: trackByIndex"
                   [class.on]="lit"
                 ></i>
               </div>
-              <div class="flex items-center gap-2 mt-0.5" *ngIf="table.status === 'OCCUPIED'">
-                <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(table)">
-                  ⏱️ {{ tableElapsedMinutes(table) }}m seated
-                </span>
-                <span class="text-xs text-slate-600">
-                  {{ table.customer_name ? 'Party: ' + table.customer_name : 'Party of ' + (table.active_guest_count || table.capacity) }}
-                </span>
-              </div>
-              <div class="flex items-center gap-2 mt-0.5" *ngIf="table.status === 'CLEANING'">
-                <span class="timer-pill timer-warn">🧹 Bussing ({{ tableCleaningMinutes(table) }}m)</span>
-                <span class="text-xs text-cyan-700 font-semibold cursor-pointer underline" (click)="finishCleaning(table.id); $event.stopPropagation()">Mark Clean ✓</span>
-              </div>
-              <div class="flex items-center gap-2 mt-0.5" *ngIf="table.status === 'RESERVED'">
-                <span class="timer-pill timer-safe">📅 Reserved</span>
-                <span class="text-xs text-indigo-800 font-semibold">
-                  {{ table.reservation_customer || 'Guest' }} · {{ table.reservation_guests || table.capacity }} guests
-                </span>
-              </div>
-              <span class="text-xs text-slate-500" *ngIf="table.status === 'AVAILABLE'">
-                Laid and ready · Seats up to {{ table.capacity }}
-              </span>
-              <span class="text-xs text-slate-500" *ngIf="table.status === 'UNAVAILABLE'">
-                Out of service
-              </span>
             </div>
 
             <div class="cardlist-right-col">
-              <div *ngIf="table.status === 'OCCUPIED'">
+              <div class="cardlist-bill" *ngIf="table.status === 'OCCUPIED'">
                 <div class="cardlist-bill-amount">{{ table.order_current_total | appCurrency:'1.2-2' }}</div>
-                <span class="text-xs text-slate-400" *ngIf="table.order_number">{{ table.order_number }}</span>
+                <span class="cardlist-note" *ngIf="table.order_number">{{ table.order_number }}</span>
               </div>
               <button
                 type="button"
@@ -773,9 +785,14 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   [(ngModel)]="tableForm.tableNumber"
                   name="tableNumber"
                   class="form-control font-mono text-sm w-full"
+                  [class.is-duplicate]="tableNumberClash"
                   placeholder="e.g. T-07"
                   required
                 />
+                <span class="field-dup-hint" *ngIf="tableNumberClash as clash">
+                  <span class="material-symbols-outlined">error</span>
+                  Already used by {{ clash.name || clash.table_number }}
+                </span>
               </div>
               <div class="form-group mb-0">
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider mb-0 block">
@@ -787,9 +804,14 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   [(ngModel)]="tableForm.name"
                   name="name"
                   class="form-control text-sm w-full"
+                  [class.is-duplicate]="tableNameClash"
                   placeholder="e.g. VIP Majlis 1"
                   required
                 />
+                <span class="field-dup-hint" *ngIf="tableNameClash as clash">
+                  <span class="material-symbols-outlined">error</span>
+                  Already used by table {{ clash.table_number }}
+                </span>
               </div>
             </div>
 
@@ -864,177 +886,6 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 6. TABLE RESERVATIONS DRAWER                                    -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="drawer-backdrop" *ngIf="showReservationDrawer" (click)="showReservationDrawer = false">
-        <div class="drawer-panel" (click)="$event.stopPropagation()">
-          <div class="drawer-header">
-            <div class="flex items-center gap-3">
-              <span class="drawer-icon-bubble bg-purple-tint">
-                <span class="material-symbols-outlined text-purple-700 text-xl">event_seat</span>
-              </span>
-              <div>
-                <h3 class="drawer-title">Table Reservations</h3>
-                <p class="drawer-subtitle">{{ reservations.length }} total bookings · {{ confirmedReservationsCount }} confirmed</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button type="button" (click)="openNewReservationModal()" class="action-btn btn-gradient-purple btn-sm">
-                <span class="material-symbols-outlined text-base">add</span>
-                <span>New Booking</span>
-              </button>
-              <button type="button" (click)="showReservationDrawer = false" class="modal-close-btn" title="Close">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="drawer-body">
-            <div *ngIf="reservations.length === 0" class="empty-state-box p-8 text-center">
-              <span class="material-symbols-outlined text-4xl text-purple-300">calendar_today</span>
-              <div class="font-bold text-sm text-[#2E1065] mt-2">No Reservations Found</div>
-              <p class="text-xs text-slate-500 mt-1">Book tables ahead for VIP guests, family dinners, and large parties.</p>
-              <button type="button" (click)="openNewReservationModal()" class="action-btn btn-gradient-purple btn-sm mt-3 inline-flex">
-                <span class="material-symbols-outlined text-base">add</span>
-                <span>Create Reservation</span>
-              </button>
-            </div>
-
-            <div *ngFor="let res of reservations" class="reservation-card" [class.is-seated]="res.status === 'SEATED'">
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="res-code-badge">{{ res.reservation_code }}</span>
-                    <span class="font-bold text-sm text-[#2E1065]">{{ res.customer_name }}</span>
-                  </div>
-                  <div class="text-xs text-slate-500 mt-0.5">📞 {{ res.customer_phone }}</div>
-                </div>
-                <span class="status-chip" [ngClass]="{
-                  'chip-confirmed': res.status === 'CONFIRMED',
-                  'chip-seated': res.status === 'SEATED',
-                  'chip-cancelled': res.status === 'CANCELLED'
-                }">
-                  ● {{ res.status }}
-                </span>
-              </div>
-
-              <div class="reservation-meta-row mt-2.5">
-                <span class="meta-tag">📅 {{ res.reservation_time | date:'medium' }}</span>
-                <span class="meta-tag">👥 {{ res.guest_count }} Guests</span>
-                <span class="meta-tag" *ngIf="res.table_number">🪑 Table {{ res.table_number }} ({{ res.table_section }})</span>
-                <span class="meta-tag" *ngIf="!res.table_number">📍 Prefers: {{ res.preferred_section || 'Any Section' }}</span>
-              </div>
-
-              <div *ngIf="res.special_requests" class="text-xs text-slate-600 bg-purple-50/70 p-2 rounded-lg mt-2 border border-purple-100">
-                💬 <i>"{{ res.special_requests }}"</i>
-              </div>
-
-              <div class="reservation-actions-row mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between" *ngIf="res.status === 'CONFIRMED'">
-                <button
-                  type="button"
-                  (click)="seatReservation(res)"
-                  class="action-btn btn-gradient-purple btn-sm"
-                >
-                  <span class="material-symbols-outlined text-base">how_to_reg</span>
-                  <span>Seat Guests</span>
-                </button>
-                <button
-                  type="button"
-                  (click)="cancelReservation(res.id)"
-                  class="action-btn btn-outline-danger btn-sm"
-                >
-                  Cancel Booking
-                </button>
-              </div>
-
-              <div class="mt-2 text-xs text-emerald-700 font-medium" *ngIf="res.status === 'SEATED'">
-                ✓ Seated at Table {{ res.table_number || 'Floor' }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 7. TABLE DINING HISTORY MODAL                                   -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop" *ngIf="showHistoryModal">
-        <div class="modal-content p-6 md:p-7 w-full max-w-2xl shadow-2xl">
-          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined text-2xl text-purple-700">history</span>
-              </span>
-              <div>
-                <h3 class="text-xl font-black text-[#2E1065] leading-tight">
-                  Dining History · Table {{ selectedHistoryTable?.table_number }}
-                </h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">
-                  {{ selectedHistoryTable?.name }} ({{ selectedHistoryTable?.section }}) · {{ selectedHistoryTable?.capacity }} Seats
-                </p>
-              </div>
-            </div>
-            <button type="button" (click)="showHistoryModal = false" class="modal-close-btn" title="Close">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <!-- History Quick KPIs -->
-          <div class="grid grid-cols-3 gap-3 mb-4">
-            <div class="p-3 rounded-xl bg-purple-50 border border-purple-100 text-center">
-              <div class="text-xs text-purple-700 font-semibold">Total Sessions</div>
-              <div class="text-lg font-black text-[#2E1065] font-mono">{{ tableHistory.length }}</div>
-            </div>
-            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
-              <div class="text-xs text-emerald-700 font-semibold">Total Revenue</div>
-              <div class="text-lg font-black text-emerald-800 font-mono">{{ tableHistoryTotalRevenue | appCurrency:'1.0-0' }}</div>
-            </div>
-            <div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-center">
-              <div class="text-xs text-blue-700 font-semibold">Avg Turn Time</div>
-              <div class="text-lg font-black text-blue-800 font-mono">{{ tableHistoryAvgDuration }} mins</div>
-            </div>
-          </div>
-
-          <!-- History Table -->
-          <div class="max-h-72 overflow-y-auto border border-slate-200 rounded-xl">
-            <div *ngIf="tableHistory.length === 0" class="p-8 text-center text-xs text-slate-500">
-              No completed dining sessions recorded on this table yet.
-            </div>
-            <table *ngIf="tableHistory.length > 0" class="w-full text-left text-xs border-collapse">
-              <thead class="bg-purple-50/70 border-b border-purple-100 text-[#4B5563] font-bold sticky top-0">
-                <tr>
-                  <th class="p-2.5">Order #</th>
-                  <th class="p-2.5">Date & Time</th>
-                  <th class="p-2.5">Guests</th>
-                  <th class="p-2.5">Turn Time</th>
-                  <th class="p-2.5">Bill Total</th>
-                  <th class="p-2.5">Server</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr *ngFor="let h of tableHistory" class="hover:bg-purple-50/40">
-                  <td class="p-2.5 font-bold font-mono text-purple-900">{{ h.order_number }}</td>
-                  <td class="p-2.5 text-slate-600">{{ h.order_date | date:'short' }}</td>
-                  <td class="p-2.5 font-semibold">👥 {{ h.guest_count || '—' }}</td>
-                  <td class="p-2.5">
-                    <span class="timer-pill timer-safe">⏱️ {{ h.duration_minutes }}m</span>
-                  </td>
-                  <td class="p-2.5 font-bold font-mono text-slate-900">{{ h.total_amount | appCurrency:'1.2-2' }}</td>
-                  <td class="p-2.5 text-slate-600">{{ h.waiter_name || 'Staff' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="flex justify-end pt-4 mt-4 border-t border-[#E9D5FF]">
-            <button type="button" (click)="showHistoryModal = false" class="action-btn btn-outline-purple">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- 8. SEAT GUESTS MODAL                                            -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div class="modal-backdrop" *ngIf="showSeatModal">
@@ -1049,7 +900,9 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   Seat Table {{ tableToSeat?.table_number }}
                 </h3>
                 <p class="text-xs text-[var(--text-muted)] mt-0.5">
-                  {{ tableToSeat?.name }} · Capacity: {{ tableToSeat?.capacity }} seats
+                  <ng-container *ngIf="tableToSeat?.name && tableToSeat?.name !== tableToSeat?.table_number">{{ tableToSeat?.name }} · </ng-container>
+                  <ng-container *ngIf="tableToSeat?.section">{{ tableToSeat?.section }} · </ng-container>
+                  {{ tableToSeat?.capacity }} seats
                 </p>
               </div>
             </div>
@@ -1105,16 +958,52 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
             <!-- Customer Details (optional) -->
             <div class="grid grid-cols-2 gap-3">
-              <div class="form-group mb-0">
+              <div class="form-group mb-0 cust-search">
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
                   Customer Name
                 </label>
-                <input
-                  type="text"
-                  [(ngModel)]="seatForm.customerName"
-                  placeholder="e.g. John Doe"
-                  class="form-control text-xs w-full"
-                />
+                <div class="cust-search-field" [class.is-linked]="seatCustomer">
+                  <span class="material-symbols-outlined cust-search-icon">{{ seatCustomer ? 'how_to_reg' : 'search' }}</span>
+                  <input
+                    type="text"
+                    [ngModel]="seatForm.customerName"
+                    (ngModelChange)="onSeatCustomerInput($event)"
+                    (focus)="custSearchOpen = custResults.length > 0"
+                    (blur)="closeCustSearchSoon()"
+                    (keydown)="onCustSearchKey($event)"
+                    placeholder="Search name or phone"
+                    autocomplete="off"
+                    class="form-control text-xs w-full"
+                  />
+                  <button
+                    *ngIf="seatCustomer"
+                    type="button"
+                    class="cust-search-clear"
+                    title="Unlink customer"
+                    (click)="clearSeatCustomer()"
+                  >
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+
+                <div class="cust-search-menu" *ngIf="custSearchOpen">
+                  <button
+                    type="button"
+                    *ngFor="let c of custResults; let i = index"
+                    class="cust-search-item"
+                    [class.is-active]="i === custActiveIndex"
+                    (mousedown)="pickSeatCustomer(c); $event.preventDefault()"
+                  >
+                    <span class="cust-search-avatar">{{ (c.name || '?').charAt(0).toUpperCase() }}</span>
+                    <span class="cust-search-text">
+                      <strong>{{ c.name }}</strong>
+                      <small>{{ c.phone || 'No phone' }}<ng-container *ngIf="c.total_visits"> · {{ c.total_visits }} visits</ng-container></small>
+                    </span>
+                  </button>
+                </div>
+                <p class="cust-search-hint" *ngIf="!seatCustomer && custNoMatch">
+                  No saved customer. A new one is created if you add a phone number.
+                </p>
               </div>
               <div class="form-group mb-0">
                 <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
@@ -1123,6 +1012,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <input
                   type="tel"
                   [(ngModel)]="seatForm.customerPhone"
+                  [readonly]="!!seatCustomer"
                   placeholder="Phone number"
                   class="form-control text-xs w-full"
                 />
@@ -1177,44 +1067,49 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             </button>
           </div>
 
-          <div class="space-y-3.5">
+          <div class="manage-stack">
             <!-- Active Dine-in Live Timer KPI -->
-            <div class="p-3.5 rounded-xl bg-purple-50/60 border border-purple-100 flex items-center justify-between">
-              <div>
-                <div class="text-xs text-purple-700 font-semibold">Active Dine-in Turn Time</div>
-                <div class="text-base font-black text-[#2E1065] mt-0.5 flex items-center gap-1.5">
-                  <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(selectedManageTable)">
-                    ⏱️ {{ tableElapsedMinutes(selectedManageTable) }} mins
-                  </span>
-                  <span class="text-xs font-normal text-slate-500">
-                    ({{ turnoverTier(selectedManageTable) === 'over' ? 'Turnover Overdue' : turnoverTier(selectedManageTable) === 'warn' ? 'Approaching Turn Limit' : 'In Progress' }})
-                  </span>
+            <div class="turn-card" [ngClass]="'tier-' + turnoverTier(selectedManageTable)">
+              <div class="turn-card-main">
+                <div class="turn-card-label">
+                  <span class="material-symbols-outlined">timer</span>Seated for
                 </div>
+                <div class="turn-card-time">{{ formatDuration(tableElapsedMinutes(selectedManageTable)) }}</div>
+                <span class="turn-card-status">
+                  <i></i>{{ turnoverTier(selectedManageTable) === 'over' ? 'Turnover overdue' : turnoverTier(selectedManageTable) === 'warn' ? 'Approaching turn limit' : 'On track' }}
+                </span>
               </div>
-              <div class="text-right">
-                <div class="text-xs text-slate-500">Active Guests</div>
-                <div class="text-base font-bold text-slate-800">
-                  👥 {{ selectedManageTable?.active_guest_count || selectedManageTable?.capacity }}
+              <div class="turn-card-guests">
+                <span class="material-symbols-outlined">group</span>
+                <strong>{{ selectedManageTable?.active_guest_count || selectedManageTable?.capacity }}</strong>
+                <small>Guests</small>
+              </div>
+              <div class="turn-card-meter">
+                <div class="turn-card-track">
+                  <span [style.width.%]="turnProgress(selectedManageTable)"></span>
+                </div>
+                <div class="turn-card-scale">
+                  <span>0m</span>
+                  <span *ngIf="tableElapsedMinutes(selectedManageTable) > TURN_LIMIT_MINUTES">
+                    {{ formatDuration(tableElapsedMinutes(selectedManageTable) - TURN_LIMIT_MINUTES) }} over
+                  </span>
+                  <span>Turn limit {{ TURN_LIMIT_MINUTES }}m</span>
                 </div>
               </div>
             </div>
 
             <!-- Current Order & Running Bill -->
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div>
-                <div class="text-xs text-slate-500 font-medium">Active Order</div>
-                <div class="font-bold text-sm font-mono text-purple-900">
-                  {{ selectedManageTable?.order_number || 'Manual Dine-In Party' }}
-                </div>
-                <div class="text-xs text-slate-500" *ngIf="selectedManageTable?.customer_name">
-                  Guest: {{ selectedManageTable?.customer_name }}
-                </div>
+            <div class="order-card">
+              <div class="order-card-info">
+                <span class="order-card-label">Active Order</span>
+                <span class="order-card-number">{{ selectedManageTable?.order_number || 'Manual dine-in party' }}</span>
+                <span class="order-card-guest" *ngIf="selectedManageTable?.customer_name">
+                  <span class="material-symbols-outlined">person</span>{{ selectedManageTable?.customer_name }}
+                </span>
               </div>
-              <div class="text-right">
-                <div class="text-xs text-slate-500">Running Total</div>
-                <div class="text-lg font-black font-mono text-slate-900">
-                  {{ selectedManageTable?.order_current_total | appCurrency:'1.2-2' }}
-                </div>
+              <div class="order-card-total">
+                <span class="order-card-label">Running Total</span>
+                <strong>{{ selectedManageTable?.order_current_total | appCurrency:'1.2-2' }}</strong>
               </div>
             </div>
 
@@ -1240,11 +1135,11 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
               <button
                 type="button"
-                (click)="openHistory(selectedManageTable!); showManageModal = false;"
+                (click)="openOrderDetails(selectedManageTable!)"
                 class="w-full action-btn btn-outline-purple justify-center"
               >
-                <span class="material-symbols-outlined">history</span>
-                <span>View Past Orders on this Table</span>
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span>View Current Order Details</span>
               </button>
 
               <button
@@ -1261,143 +1156,105 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 10. NEW RESERVATION MODAL                                       -->
+      <!-- CURRENT ORDER DETAILS (the table's open tab, round by round)    -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="modal-backdrop modal-over-drawer" *ngIf="showNewReservationModal">
-        <div class="modal-content p-6 md:p-7 w-full max-w-lg shadow-2xl">
-          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
-            <div class="flex items-center gap-3">
-              <span class="modal-icon-badge">
-                <span class="material-symbols-outlined text-2xl text-purple-700">event_seat</span>
-              </span>
-              <div>
-                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Create Table Reservation</h3>
-                <p class="text-xs text-[var(--text-muted)] mt-0.5">Advance booking for upcoming dining guests</p>
-              </div>
+      <div class="modal-backdrop od-backdrop" *ngIf="orderDetailsTable">
+        <div class="modal-content od-modal">
+          <div class="od-head">
+            <span class="od-icon"><span class="material-symbols-outlined">receipt_long</span></span>
+            <div class="od-head-text">
+              <h3>{{ orderDetails?.order?.order_number || 'Current Order' }}</h3>
+              <p>
+                {{ orderDetailsTable.table_number }}
+                <ng-container *ngIf="orderDetailsTable.section"> · {{ orderDetailsTable.section }}</ng-container>
+                <ng-container *ngIf="orderDetails?.order"> · started {{ asLocalDate(orderDetails!.order!.created_at) | date: 'h:mm a' }}</ng-container>
+              </p>
             </div>
-            <button type="button" (click)="showNewReservationModal = false" class="modal-close-btn" title="Close">
+            <button type="button" class="modal-close-btn" (click)="closeOrderDetails()" title="Close">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form (ngSubmit)="saveReservation()" class="space-y-3.5">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Customer Name *
-                </label>
-                <input
-                  type="text"
-                  [(ngModel)]="reservationForm.customer_name"
-                  name="r_cust_name"
-                  placeholder="e.g. Mohammed Farooq"
-                  class="form-control text-sm w-full"
-                  required
-                />
-              </div>
+          <div class="od-loading" *ngIf="orderDetailsLoading && !orderDetails">Loading order…</div>
 
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  [(ngModel)]="reservationForm.customer_phone"
-                  name="r_cust_phone"
-                  placeholder="e.g. +91 99887 76655"
-                  class="form-control text-sm w-full"
-                  required
-                />
-              </div>
+          <ng-container *ngIf="orderDetails">
+            <div class="od-stats" *ngIf="orderDetails.order">
+              <div><span>KOTs sent</span><strong>{{ orderDetails.rounds }}</strong></div>
+              <div><span>Items</span><strong>{{ orderDetails.items.length }}</strong></div>
+              <div><span>Portions</span><strong>{{ orderDetailsQty }}</strong></div>
+              <div><span>Guests</span><strong>{{ orderDetails.table.active_guest_count || '—' }}</strong></div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Reservation Date & Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  [(ngModel)]="reservationForm.reservation_time"
-                  name="r_res_time"
-                  class="form-control text-sm w-full"
-                  required
-                />
-              </div>
-
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Party Size (Covers) *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  [(ngModel)]="reservationForm.guest_count"
-                  name="r_guest_count"
-                  class="form-control font-mono text-sm w-full"
-                  required
-                />
-              </div>
+            <div class="od-rounds" *ngIf="orderDetails.items.length">
+              <section class="od-round" *ngFor="let r of orderDetailsRounds">
+                <header>
+                  <span class="od-round-tag">KOT {{ r.round || '—' }}</span>
+                  <span class="od-round-time" *ngIf="r.time">{{ asLocalDate(r.time) | date: 'h:mm a' }}</span>
+                  <span class="od-round-sum">{{ r.total | appCurrency: '1.2-2' }}</span>
+                </header>
+                <div class="od-line" *ngFor="let l of r.lines">
+                  <span class="od-qty">{{ l.quantity }}×</span>
+                  <span class="od-name">
+                    <strong>{{ l.product_name }}<ng-container *ngIf="l.variant_name"> ({{ l.variant_name }})</ng-container></strong>
+                    <small *ngIf="l.selected_addons?.length">+ {{ addonList(l.selected_addons) }}</small>
+                    <small *ngIf="l.notes" class="is-note">Note: {{ l.notes }}</small>
+                  </span>
+                  <span class="od-free" *ngIf="l.is_complimentary">FREE</span>
+                  <span class="od-amt">
+                    {{ l.subtotal | appCurrency: '1.2-2' }}
+                    <small *ngIf="l.quantity > 1">{{ l.unit_price | appCurrency: '1.2-2' }} each</small>
+                  </span>
+                </div>
+              </section>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Assign Table (Optional)
-                </label>
-                <select class="form-control text-sm w-full" [(ngModel)]="reservationForm.table_id" name="r_table_id">
-                  <option [ngValue]="null">-- Assign on Arrival / Any Table --</option>
-                  <option *ngFor="let t of tables" [ngValue]="t.id">
-                    {{ t.table_number }} - {{ t.name }} ({{ t.capacity }} seats, {{ t.section }})
-                  </option>
-                </select>
+            <div class="od-empty" *ngIf="!orderDetails.items.length">
+              <span class="material-symbols-outlined">restaurant_menu</span>
+              <strong>Nothing ordered yet</strong>
+              <p>Open the POS for this table and use Send to Kitchen to start the order.</p>
+            </div>
+
+            <div class="od-total" *ngIf="orderDetails.items.length">
+              <div>
+                <span>Running subtotal</span>
+                <small>Tax, discounts and charges are added on the final bill</small>
               </div>
-
-              <div class="form-group mb-0">
-                <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                  Preferred Section
-                </label>
-                <input
-                  type="text"
-                  [(ngModel)]="reservationForm.preferred_section"
-                  name="r_pref_section"
-                  placeholder="e.g. VIP Majlis"
-                  list="diningSectionOptions"
-                  class="form-control text-sm w-full"
-                />
-              </div>
+              <strong>{{ orderDetails.subtotal | appCurrency: '1.2-2' }}</strong>
             </div>
+          </ng-container>
 
-            <div class="form-group mb-0">
-              <label class="form-label text-xs font-bold text-[#4B5563] uppercase tracking-wider block mb-1">
-                Special Requests / Dietary Notes
-              </label>
-              <textarea
-                [(ngModel)]="reservationForm.special_requests"
-                name="r_special_reqs"
-                rows="2"
-                placeholder="e.g. Birthday celebration, High chair requested, Window view"
-                class="form-control text-sm w-full"
-              ></textarea>
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-4 border-t border-[#E9D5FF]">
-              <button type="button" (click)="showNewReservationModal = false" class="action-btn btn-outline-purple">
-                Cancel
-              </button>
-              <button type="submit" class="action-btn btn-gradient-purple">
-                Confirm Reservation ✓
-              </button>
-            </div>
-          </form>
+          <div class="od-foot">
+            <button type="button" class="action-btn btn-outline-purple" (click)="closeOrderDetails()">Close</button>
+            <button type="button" class="action-btn btn-gradient-purple" (click)="openOrderDetailsInPos()">
+              <span class="material-symbols-outlined">point_of_sale</span>
+              <span>Open in POS</span>
+            </button>
+          </div>
         </div>
       </div>
+
     </div>
   `,
   styles: [
     DINING_LAYOUT_CSS,
     DEFAULT_ACTION_BUTTON_CSS,
     `
+      /* Add / Edit Table: duplicate table number or display name */
+      .form-control.is-duplicate {
+        border-color: var(--danger, #DC2626) !important;
+        box-shadow: 0 0 0 3px rgba(var(--danger-rgb, 220, 38, 38), 0.15) !important;
+      }
+      .field-dup-hint {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--danger, #DC2626);
+      }
+      .field-dup-hint .material-symbols-outlined { font-size: 14px; }
+
       .icon-purple {
         color: var(--primary, #7E22CE);
       }
@@ -1439,7 +1296,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
         padding: 0.3rem;
         border-radius: 9999px;
         border: 1.5px solid var(--card-border, #E9D5FF);
-        background: color-mix(in srgb, var(--primary, #7E22CE) 5%, #FFFFFF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 6%, var(--card-bg, #FFFFFF));
         box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
       }
 
@@ -1482,7 +1339,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       .guest-stepper-btn:disabled {
         cursor: not-allowed;
         color: var(--text-dim, #9CA3AF);
-        background: color-mix(in srgb, var(--primary, #7E22CE) 8%, #FFFFFF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 12%, var(--card-bg, #FFFFFF));
         box-shadow: none;
       }
 
@@ -1520,6 +1377,13 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       }
 
       .guest-capacity-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 9999px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 6%, var(--card-bg, #FFFFFF));
         font-size: 0.75rem;
         font-weight: 600;
         color: var(--text-muted, #6B7280);
@@ -1528,6 +1392,334 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       .guest-capacity-hint strong {
         font-weight: 800;
         color: var(--primary, #7E22CE);
+      }
+
+      /* ─── Seat modal: customer lookup ───
+         The list sits in the flow rather than floating: .modal-content
+         scrolls (overflow-y: auto) and would clip an absolute dropdown. */
+      .cust-search-field {
+        position: relative;
+      }
+      .cust-search-field .form-control {
+        padding-left: 2.1rem;
+        padding-right: 2.1rem;
+      }
+      .cust-search-icon {
+        position: absolute;
+        left: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 17px;
+        color: var(--text-muted, #6B7280);
+        pointer-events: none;
+      }
+      .cust-search-field.is-linked .form-control {
+        border-color: color-mix(in srgb, var(--success, #10B981) 55%, var(--card-border, #E9D5FF));
+      }
+      .cust-search-field.is-linked .cust-search-icon { color: var(--success, #10B981); }
+      .cust-search-clear {
+        position: absolute;
+        right: 0.4rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1.6rem;
+        height: 1.6rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 9999px;
+        background: transparent;
+        color: var(--text-muted, #6B7280);
+        cursor: pointer;
+      }
+      .cust-search-clear:hover {
+        background: color-mix(in srgb, var(--text-muted, #6B7280) 15%, transparent);
+        color: var(--text-main, #2E1065);
+      }
+      .cust-search-clear .material-symbols-outlined { font-size: 16px; }
+
+      .cust-search-menu {
+        margin-top: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #FFFFFF);
+        box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.45);
+      }
+      .cust-search-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.45rem 0.55rem;
+        border: none;
+        border-radius: 9px;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .cust-search-item:hover,
+      .cust-search-item.is-active {
+        background: color-mix(in srgb, var(--primary, #7E22CE) 14%, transparent);
+      }
+      .cust-search-avatar {
+        width: 1.9rem;
+        height: 1.9rem;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #FFFFFF;
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
+      }
+      .cust-search-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .cust-search-text strong {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cust-search-text small {
+        font-size: 0.7rem;
+        color: var(--text-muted, #6B7280);
+      }
+      .cust-search-hint {
+        margin-top: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted, #6B7280);
+      }
+
+      /* ─── Current order details ─── */
+      .od-modal { width: min(94vw, 600px); max-width: 600px; }
+      .od-head {
+        display: flex; align-items: center; gap: 12px;
+        padding-bottom: 16px; margin-bottom: 16px;
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+      .od-head-text { flex: 1; min-width: 0; }
+      .od-head-text h3 {
+        margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--text-main, #2E1065);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .od-head-text p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted, #6B7280); }
+      .od-icon {
+        width: 44px; height: 44px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 12px; color: #FFFFFF;
+        background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
+      }
+      .od-loading { padding: 32px; text-align: center; font-size: 13px; color: var(--text-muted, #6B7280); }
+
+      .od-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+      .od-stats > div {
+        display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--primary, #7E22CE) 5%, var(--card-bg, #FFFFFF));
+      }
+      .od-stats span { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted, #6B7280); }
+      .od-stats strong { font-size: 1.15rem; font-weight: 900; color: var(--text-main, #2E1065); }
+
+      .od-rounds { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+      .od-round { border: 1px solid var(--card-border, #E9D5FF); border-radius: 14px; overflow: hidden; }
+      .od-round header {
+        display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+        background: color-mix(in srgb, #F59E0B 10%, var(--card-bg, #FFFFFF));
+        border-bottom: 1px solid var(--card-border, #E9D5FF);
+      }
+      .od-round-tag {
+        padding: 2px 9px; border-radius: 9999px; font-size: 11px; font-weight: 900;
+        color: #F59E0B; background: color-mix(in srgb, #F59E0B 18%, transparent);
+      }
+      .od-round-time { font-size: 12px; color: var(--text-muted, #6B7280); }
+      .od-round-sum { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--text-main, #2E1065); }
+      .od-line { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; }
+      .od-line + .od-line { border-top: 1px solid color-mix(in srgb, var(--card-border, #E9D5FF) 70%, transparent); }
+      .od-qty { min-width: 2.2rem; font-size: 13px; font-weight: 900; color: var(--primary, #7E22CE); font-variant-numeric: tabular-nums; }
+      .od-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .od-name strong { font-size: 13px; font-weight: 700; color: var(--text-main, #2E1065); }
+      .od-name small { font-size: 11.5px; color: var(--text-muted, #6B7280); }
+      .od-name small.is-note { color: #F59E0B; font-weight: 600; }
+      .od-free {
+        padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 800;
+        color: #10B981; background: color-mix(in srgb, #10B981 15%, transparent);
+      }
+      .od-amt { display: flex; flex-direction: column; align-items: flex-end; font-size: 13px; font-weight: 800; color: var(--text-main, #2E1065); white-space: nowrap; }
+      .od-amt small { font-size: 10.5px; font-weight: 500; color: var(--text-muted, #6B7280); }
+
+      .od-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 32px 16px; text-align: center; color: var(--text-muted, #6B7280); }
+      .od-empty .material-symbols-outlined { font-size: 32px; color: var(--primary, #7E22CE); }
+      .od-empty strong { font-size: 14px; color: var(--text-main, #2E1065); }
+      .od-empty p { margin: 0; font-size: 12.5px; }
+
+      .od-total {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        margin-top: 14px; padding: 12px 14px; border-radius: 14px;
+        background: color-mix(in srgb, var(--primary, #7E22CE) 10%, var(--card-bg, #FFFFFF));
+        border: 1px solid color-mix(in srgb, var(--primary, #7E22CE) 30%, var(--card-border, #E9D5FF));
+      }
+      .od-total > div { display: flex; flex-direction: column; }
+      .od-total span { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-main, #2E1065); }
+      .od-total small { font-size: 11px; color: var(--text-muted, #6B7280); }
+      .od-total strong { font-size: 1.4rem; font-weight: 900; color: var(--primary, #7E22CE); font-variant-numeric: tabular-nums; }
+
+      .od-foot {
+        display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 14px;
+        border-top: 1px solid var(--card-border, #E9D5FF);
+      }
+      @media (max-width: 560px) { .od-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+      /* ─── Manage Table modal: turn-time + order cards ─── */
+      .manage-stack > * + * { margin-top: 0.75rem; }
+
+      .turn-card {
+        --tier: #10B981;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem 1rem;
+        padding: 1rem 1.1rem;
+        border-radius: 14px;
+        border: 1px solid color-mix(in srgb, var(--tier) 35%, var(--card-border, #E9D5FF));
+        background: linear-gradient(135deg,
+          color-mix(in srgb, var(--tier) 12%, var(--card-bg, #FFFFFF)) 0%,
+          var(--card-bg, #FFFFFF) 70%);
+      }
+      .turn-card.tier-warn { --tier: var(--warning, #F59E0B); }
+      .turn-card.tier-over { --tier: var(--danger, #EF4444); }
+
+      .turn-card-label,
+      .order-card-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted, #6B7280);
+      }
+      .turn-card-label .material-symbols-outlined { font-size: 15px; color: var(--tier); }
+
+      .turn-card-time {
+        margin: 2px 0 6px;
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: var(--tier);
+      }
+
+      .turn-card-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--tier);
+        background: color-mix(in srgb, var(--tier) 15%, transparent);
+      }
+      .turn-card-status i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--tier);
+      }
+      .turn-card.tier-over .turn-card-status i { animation: timer-pulse 1.5s infinite; }
+
+      .turn-card-guests {
+        align-self: start;
+        min-width: 68px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        padding: 0.55rem 0.75rem;
+        border-radius: 12px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #FFFFFF);
+      }
+      .turn-card-guests .material-symbols-outlined { font-size: 18px; color: var(--primary, #7E22CE); }
+      .turn-card-guests strong { font-size: 1.35rem; font-weight: 900; line-height: 1.1; color: var(--text-main, #2E1065); }
+      .turn-card-guests small { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted, #6B7280); }
+
+      .turn-card-meter { grid-column: 1 / -1; }
+      .turn-card-track {
+        height: 6px;
+        border-radius: 9999px;
+        overflow: hidden;
+        background: color-mix(in srgb, var(--tier) 15%, transparent);
+      }
+      .turn-card-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--tier);
+        transition: width 0.4s ease;
+      }
+      .turn-card-scale {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--text-muted, #6B7280);
+      }
+      .turn-card-scale span:nth-child(2):not(:last-child) { color: var(--tier); font-weight: 800; }
+
+      .order-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1.1rem;
+        border-radius: 14px;
+        border: 1px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #FFFFFF);
+      }
+      .order-card-info,
+      .order-card-total {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+      .order-card-total { align-items: flex-end; flex-shrink: 0; }
+      .order-card-number {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--text-main, #2E1065);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .order-card-guest {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 11.5px;
+        color: var(--text-muted, #6B7280);
+      }
+      .order-card-guest .material-symbols-outlined { font-size: 14px; }
+      .order-card-total strong {
+        font-size: 1.25rem;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-main, #2E1065);
       }
 
       /* ─── Occupancy meter on the KPI strip ─── */
@@ -2279,154 +2471,6 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
         background: #ECFEFF;
         color: #0891B2;
       }
-
-      /* Modals opened from inside a drawer.
-         New Booking / Create Reservation is reached only through the
-         reservations drawer's own buttons, and .modal-backdrop's z-index of
-         1000 puts it behind the drawer that opened it. It goes above the
-         drawer, and below the shared confirmation dialog (100000) so a
-         confirm raised from the form still lands on top. */
-      .modal-over-drawer {
-        z-index: 10000;
-      }
-
-      /* Sliding Drawers */
-      .drawer-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 9998;
-        background: rgba(15, 23, 42, 0.45);
-        backdrop-filter: blur(4px);
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      .drawer-panel {
-        width: 100%;
-        max-width: 440px;
-        height: 100%;
-        background: #ffffff;
-        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
-        display: flex;
-        flex-direction: column;
-        animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      @keyframes drawerSlideIn {
-        from { transform: translateX(100%); }
-        to   { transform: translateX(0); }
-      }
-
-      .drawer-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1.15rem 1.35rem;
-        background: var(--bg-app, #FAF5FF);
-        border-bottom: 1.5px solid var(--card-border, #E9D5FF);
-      }
-
-      .drawer-title {
-        font-family: 'Outfit', sans-serif;
-        font-size: 1.05rem;
-        font-weight: 800;
-        color: var(--text-main, #2E1065);
-        margin: 0;
-      }
-
-      .drawer-subtitle {
-        font-size: 0.72rem;
-        color: var(--text-muted, #6B7280);
-        margin: 0.15rem 0 0;
-      }
-
-      .drawer-icon-bubble {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .drawer-body {
-        flex: 1;
-        /* A flex item is floored at its content height unless told otherwise,
-           which would make this pane grow instead of scroll. */
-        min-height: 0;
-        overflow-y: auto;
-        padding: 1.1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
-      }
-
-      .btn-sm {
-        padding: 0.35rem 0.75rem;
-        font-size: 0.75rem;
-      }
-
-      /* Reservation Cards */
-      .reservation-card {
-        background: #ffffff;
-        border: 1.5px solid var(--card-border, #E9D5FF);
-        border-radius: 14px;
-        padding: 0.85rem 1rem;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-        transition: all 0.2s ease;
-      }
-
-      .reservation-card:hover {
-        border-color: #C084FC;
-        box-shadow: 0 6px 16px rgba(var(--primary-rgb, 126, 34, 206), 0.08);
-      }
-
-      .reservation-card.is-seated {
-        opacity: 0.65;
-        background: #F9FAFB;
-      }
-
-      .res-code-badge {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.75rem;
-        font-weight: 900;
-        color: #4F46E5;
-        background: #EEF2FF;
-        border: 1.5px solid #C7D2FE;
-        border-radius: 8px;
-        padding: 0.15rem 0.45rem;
-      }
-
-      .status-chip {
-        font-size: 0.65rem;
-        font-weight: 800;
-        padding: 0.2rem 0.55rem;
-        border-radius: 9999px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-
-      .chip-confirmed { background: #EEF2FF; color: #4F46E5; }
-      .chip-seated { background: #ECFDF5; color: #059669; }
-      .chip-cancelled { background: #FEF2F2; color: var(--danger, #DC2626); }
-
-      .reservation-meta-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-      }
-
-      .meta-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.7rem;
-        color: var(--text-muted, #4B5563);
-        background: #F3F4F6;
-        padding: 0.2rem 0.5rem;
-        border-radius: 6px;
-        font-weight: 500;
-      }
     `,
   ],
 })
@@ -2437,6 +2481,7 @@ export class DiningComponent implements OnInit, OnDestroy {
   public diningLayout = inject(DiningLayoutService);
   private diningService = inject(DiningService);
   private cartService = inject(CartService);
+  private customerService = inject(CustomerService);
   private router = inject(Router);
   private notify = inject(NotificationService);
 
@@ -2446,18 +2491,13 @@ export class DiningComponent implements OnInit, OnDestroy {
   public selectedSection: string | null = null;
 
   public reservations: TableReservation[] = [];
-  public tableHistory: TableHistoryItem[] = [];
-  public selectedHistoryTable: DiningTable | null = null;
   public selectedManageTable: DiningTable | null = null;
   public tableToSeat: DiningTable | null = null;
 
   public showTableModal = false;
   public editingTableId: number | null = null;
-  public showReservationDrawer = false;
-  public showHistoryModal = false;
   public showSeatModal = false;
   public showManageModal = false;
-  public showNewReservationModal = false;
 
   public seatForm = {
     guestCount: 2,
@@ -2465,17 +2505,8 @@ export class DiningComponent implements OnInit, OnDestroy {
     customerPhone: '',
   };
 
-  public reservationForm: any = {
-    customer_name: '',
-    customer_phone: '',
-    guest_count: 4,
-    reservation_time: '',
-    table_id: null as number | null,
-    preferred_section: '',
-    special_requests: '',
-  };
-
   private nowMs = Date.now();
+  private tablesLoadedAtMs = Date.now();
   private clockTimer: ReturnType<typeof setInterval> | null = null;
 
   /** Fixed floor plan areas — a table always belongs to one of these six. */
@@ -2524,16 +2555,6 @@ export class DiningComponent implements OnInit, OnDestroy {
     return this.tables.filter((t) => t.status === 'AVAILABLE');
   }
 
-  public get tableHistoryTotalRevenue(): number {
-    return this.tableHistory.reduce((sum, h) => sum + (Number(h.total_amount) || 0), 0);
-  }
-
-  public get tableHistoryAvgDuration(): number {
-    if (!this.tableHistory.length) return 0;
-    const total = this.tableHistory.reduce((sum, h) => sum + (Number(h.duration_minutes) || 0), 0);
-    return Math.round(total / this.tableHistory.length);
-  }
-
   public get totalSeats(): number {
     return this.tables.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
   }
@@ -2560,6 +2581,29 @@ export class DiningComponent implements OnInit, OnDestroy {
 
   public trackByTableId(_index: number, table: DiningTable): number {
     return table.id;
+  }
+
+  /**
+   * Short code for the Card List badge: "Table - 1" / "T-01" -> "1" / "01".
+   * Falls back to the first four characters when there is no number in it.
+   */
+  public tableBadgeCode(table: any): string {
+    const raw = String(table?.table_number ?? '').trim();
+    const digits = raw.match(/\d+[A-Za-z]?$/);
+    if (digits) return digits[0];
+    const stripped = raw.replace(/^table\s*[-–:#]?\s*/i, '');
+    return (stripped || raw).slice(0, 4).toUpperCase();
+  }
+
+  // Caption above the badge number: the part of the table number before its
+  // trailing digits ("AC Hall - 1" -> "AC Hall"), so "AC Hall - 1" and
+  // "Table - 1" no longer render as two identical "TABLE 1" badges.
+  public tableBadgeCap(table: any): string {
+    const raw = String(table?.table_number ?? '').trim();
+    const digits = raw.match(/\d+[A-Za-z]?$/);
+    if (!digits) return 'Table';
+    const prefix = raw.slice(0, raw.length - digits[0].length).replace(/[\s\-–:#]+$/, '').trim();
+    return prefix || 'Table';
   }
 
   public trackByIndex(index: number): number {
@@ -2633,10 +2677,17 @@ export class DiningComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Minutes since the table list loaded. The server's elapsed/cleaning
+  // minutes are a snapshot from that moment; adding this keeps them counting
+  // up without trusting the browser's timezone to match the server's.
+  private minutesSinceLoad(): number {
+    return Math.max(0, Math.floor((this.nowMs - this.tablesLoadedAtMs) / 60000));
+  }
+
   public tableElapsedMinutes(table?: DiningTable | null): number {
     if (!table) return 0;
     if (table.elapsed_minutes !== undefined && table.elapsed_minutes !== null) {
-      return table.elapsed_minutes;
+      return Number(table.elapsed_minutes) + this.minutesSinceLoad();
     }
     const started = this.startedAt(table);
     if (!started) return 0;
@@ -2646,7 +2697,7 @@ export class DiningComponent implements OnInit, OnDestroy {
   public tableCleaningMinutes(table?: DiningTable | null): number {
     if (!table) return 0;
     if (table.cleaning_minutes !== undefined && table.cleaning_minutes !== null) {
-      return table.cleaning_minutes;
+      return Number(table.cleaning_minutes) + this.minutesSinceLoad();
     }
     if (!table.cleaning_started_at) return 0;
     const started = new Date(table.cleaning_started_at).getTime();
@@ -2654,9 +2705,24 @@ export class DiningComponent implements OnInit, OnDestroy {
     return Math.max(0, Math.floor((this.nowMs - started) / 60000));
   }
 
+  public readonly TURN_LIMIT_MINUTES = 75;
+
+  // 330 -> "5h 30m", 45 -> "45m"
+  public formatDuration(mins: number): string {
+    const total = Math.max(0, Math.floor(mins || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (!h) return m + 'm';
+    return m ? h + 'h ' + m + 'm' : h + 'h';
+  }
+
+  public turnProgress(table?: DiningTable | null): number {
+    return Math.min(100, (this.tableElapsedMinutes(table) / this.TURN_LIMIT_MINUTES) * 100);
+  }
+
   public turnoverTier(table?: DiningTable | null): 'safe' | 'warn' | 'over' {
     const mins = this.tableElapsedMinutes(table);
-    if (mins > 75) return 'over';
+    if (mins > this.TURN_LIMIT_MINUTES) return 'over';
     if (mins >= 45) return 'warn';
     return 'safe';
   }
@@ -2680,6 +2746,9 @@ export class DiningComponent implements OnInit, OnDestroy {
   public minutesSeated(table: DiningTable): number | null {
     const started = this.startedAt(table);
     if (started === null) return null;
+    if (table.status === 'OCCUPIED' && table.elapsed_minutes !== undefined && table.elapsed_minutes !== null) {
+      return this.tableElapsedMinutes(table);
+    }
     return Math.max(0, Math.floor((this.nowMs - started) / 60000));
   }
 
@@ -2736,6 +2805,8 @@ export class DiningComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         if (res.success) {
           this.tables = res.data;
+          this.tablesLoadedAtMs = Date.now();
+          this.nowMs = this.tablesLoadedAtMs;
           this.extractSections();
           this.filterTables();
         }
@@ -2782,25 +2853,127 @@ export class DiningComponent implements OnInit, OnDestroy {
       customerName: '',
       customerPhone: '',
     };
+    this.clearSeatCustomer();
     this.showSeatModal = true;
+  }
+
+  // ─── Seat modal: customer lookup ───
+  public seatCustomer: Customer | null = null;
+  public custResults: Customer[] = [];
+  public custSearchOpen = false;
+  public custNoMatch = false;
+  public custActiveIndex = -1;
+  private custSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private custSearchSeq = 0;
+
+  public onSeatCustomerInput(value: string): void {
+    this.seatForm.customerName = value;
+    // Editing the name after picking someone unlinks them; the phone was theirs.
+    if (this.seatCustomer) {
+      this.seatCustomer = null;
+      this.seatForm.customerPhone = '';
+    }
+    if (this.custSearchTimer) clearTimeout(this.custSearchTimer);
+    const term = (value || '').trim();
+    if (term.length < 2) {
+      this.custResults = [];
+      this.custSearchOpen = false;
+      this.custNoMatch = false;
+      return;
+    }
+    this.custSearchTimer = setTimeout(() => this.runCustomerSearch(term), 250);
+  }
+
+  private runCustomerSearch(term: string): void {
+    const seq = ++this.custSearchSeq;
+    this.customerService.getCustomers(1, 6, term).subscribe({
+      next: (res) => {
+        // A slower, older request must not overwrite newer results.
+        if (seq !== this.custSearchSeq || this.seatCustomer) return;
+        this.custResults = res.success ? res.data || [] : [];
+        this.custActiveIndex = this.custResults.length ? 0 : -1;
+        this.custSearchOpen = this.custResults.length > 0;
+        this.custNoMatch = this.custResults.length === 0;
+      },
+      error: () => {},
+    });
+  }
+
+  public onCustSearchKey(event: KeyboardEvent): void {
+    if (!this.custSearchOpen || !this.custResults.length) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.custActiveIndex = (this.custActiveIndex + 1) % this.custResults.length;
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.custActiveIndex = (this.custActiveIndex - 1 + this.custResults.length) % this.custResults.length;
+    } else if (event.key === 'Enter' && this.custActiveIndex >= 0) {
+      event.preventDefault();
+      this.pickSeatCustomer(this.custResults[this.custActiveIndex]);
+    } else if (event.key === 'Escape') {
+      this.custSearchOpen = false;
+    }
+  }
+
+  public pickSeatCustomer(c: Customer): void {
+    this.seatCustomer = c;
+    this.seatForm.customerName = c.name;
+    this.seatForm.customerPhone = c.phone || '';
+    this.custSearchOpen = false;
+    this.custNoMatch = false;
+  }
+
+  public clearSeatCustomer(): void {
+    if (this.custSearchTimer) clearTimeout(this.custSearchTimer);
+    this.custSearchSeq++;
+    this.seatCustomer = null;
+    this.custResults = [];
+    this.custSearchOpen = false;
+    this.custNoMatch = false;
+    this.custActiveIndex = -1;
+    if (this.seatForm) {
+      this.seatForm.customerName = '';
+      this.seatForm.customerPhone = '';
+    }
+  }
+
+  public closeCustSearchSoon(): void {
+    setTimeout(() => (this.custSearchOpen = false), 120);
   }
 
   confirmSeatTable(startPosOrder: boolean = true): void {
     if (!this.tableToSeat) return;
     const table = this.tableToSeat;
     const count = Number(this.seatForm.guestCount) || table.capacity;
+    const name = this.seatForm.customerName.trim();
+    const phone = this.seatForm.customerPhone.trim();
 
-    this.diningService.seatGuests(table.id, count).subscribe({
-      next: () => {
-        this.notify.success(`Table ${table.table_number} seated with ${count} guests`);
-        this.showSeatModal = false;
-        this.loadTables();
-        if (startPosOrder) {
-          this.startOrderForTable(table, count);
-        }
-      },
-      error: () => {},
-    });
+    const seat = (customer: Customer | null) =>
+      this.diningService.seatGuests(table.id, count).subscribe({
+        next: () => {
+          this.notify.success(`Table ${table.table_number} seated with ${count} guests`);
+          this.showSeatModal = false;
+          this.loadTables();
+          if (startPosOrder) {
+            this.startOrderForTable(table, count);
+            // After startOrderForTable so the POS opens with this guest attached.
+            if (customer) this.cartService.selectedCustomer.set(customer);
+          }
+        },
+        error: () => {},
+      });
+
+    if (this.seatCustomer) {
+      seat(this.seatCustomer);
+    } else if (name && phone) {
+      // New guest with a phone number: save them so the order can be linked.
+      this.customerService.createCustomer({ name, phone }).subscribe({
+        next: (res) => seat(res?.data || null),
+        error: () => {},
+      });
+    } else {
+      seat(null);
+    }
   }
 
   openManageModal(table: DiningTable): void {
@@ -2852,99 +3025,74 @@ export class DiningComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ─── Current order details (the table's open tab) ───
+  public orderDetailsTable: DiningTable | null = null;
+  public orderDetails: DiningTab | null = null;
+  public orderDetailsLoading = false;
+  public orderDetailsRounds: { round: number | null; time: string | null; total: number; lines: DiningTabLine[] }[] = [];
+
+  get orderDetailsQty(): number {
+    return (this.orderDetails?.items || []).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
+  }
+
+  openOrderDetails(table: DiningTable): void {
+    this.showManageModal = false;
+    this.orderDetailsTable = table;
+    this.orderDetails = null;
+    this.orderDetailsRounds = [];
+    this.orderDetailsLoading = true;
+    this.diningService.getTab(table.id).subscribe({
+      next: (res) => {
+        this.orderDetailsLoading = false;
+        if (!res.success || this.orderDetailsTable?.id !== table.id) return;
+        this.orderDetails = res.data;
+        const byRound = new Map<number, { round: number | null; time: string | null; total: number; lines: DiningTabLine[] }>();
+        for (const l of res.data.items) {
+          const key = Number(l.kot_round) || 0;
+          let g = byRound.get(key);
+          if (!g) {
+            g = { round: l.kot_round, time: l.created_at || null, total: 0, lines: [] };
+            byRound.set(key, g);
+          }
+          g.lines.push(l);
+          g.total += Number(l.subtotal) || 0;
+        }
+        this.orderDetailsRounds = Array.from(byRound.values());
+      },
+      error: () => (this.orderDetailsLoading = false),
+    });
+  }
+
+  closeOrderDetails(): void {
+    this.orderDetailsTable = null;
+    this.orderDetails = null;
+  }
+
+  openOrderDetailsInPos(): void {
+    const table = this.orderDetails?.table || this.orderDetailsTable;
+    this.closeOrderDetails();
+    if (table) this.startOrderForTable(table);
+  }
+
+  addonList(addons: any[]): string {
+    return (addons || []).map((a) => a?.name).filter(Boolean).join(', ');
+  }
+
+  // "2026-09-29 12:38:00" is local DB time; parse as local, not UTC.
+  asLocalDate(value?: string | null): Date | null {
+    if (!value) return null;
+    const d = new Date(String(value).trim().replace(' ', 'T'));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   openHistory(table: DiningTable, event?: Event): void {
     if (event) event.stopPropagation();
-    this.selectedHistoryTable = table;
-    this.diningService.getTableHistory(table.id).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.tableHistory = res.data;
-          this.showHistoryModal = true;
-        }
-      },
-      error: () => {},
-    });
+    this.showManageModal = false;
+    this.router.navigate(['/dining/tables', table.id, 'history']);
   }
 
   openReservationsDrawer(): void {
-    this.loadReservations();
-    this.showReservationDrawer = true;
-  }
-
-  openNewReservationModal(): void {
-    const d = new Date();
-    d.setHours(d.getHours() + 2);
-    d.setMinutes(0);
-    const timeStr = d.toISOString().slice(0, 16);
-
-    this.reservationForm = {
-      customer_name: '',
-      customer_phone: '',
-      guest_count: 4,
-      reservation_time: timeStr,
-      table_id: null,
-      preferred_section: this.selectedSection || '',
-      special_requests: '',
-    };
-    this.showNewReservationModal = true;
-  }
-
-  saveReservation(): void {
-    if (!this.reservationForm.customer_name || !this.reservationForm.customer_phone || !this.reservationForm.reservation_time) {
-      this.notify.error('Please enter customer name, phone number, and reservation time');
-      return;
-    }
-    this.diningService.createReservation(this.reservationForm).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.notify.success(`Reservation ${res.data.reservation_code} confirmed!`);
-          this.showNewReservationModal = false;
-          this.loadReservations();
-          this.loadTables();
-        }
-      },
-      error: () => {},
-    });
-  }
-
-  seatReservation(reservation: TableReservation): void {
-    let targetTableId = reservation.table_id;
-    if (!targetTableId) {
-      const match = this.tables.find((t) => t.status === 'AVAILABLE' && t.capacity >= reservation.guest_count);
-      if (!match) {
-        this.notify.error('No available table found with sufficient capacity. Please free a table first.');
-        return;
-      }
-      targetTableId = match.id;
-    }
-
-    this.diningService.seatReservation(reservation.id, targetTableId).subscribe({
-      next: () => {
-        this.notify.success(`Reservation ${reservation.reservation_code} seated!`);
-        this.loadReservations();
-        this.loadTables();
-      },
-      error: () => {},
-    });
-  }
-
-  cancelReservation(reservationId: number): void {
-    this.notify.confirm({
-      title: 'Cancel Reservation',
-      message: 'Are you sure you want to cancel this booking?',
-      confirmText: 'Cancel Booking',
-      isDestructive: true,
-      onConfirm: () => {
-        this.diningService.cancelReservation(reservationId).subscribe({
-          next: () => {
-            this.notify.info('Reservation cancelled');
-            this.loadReservations();
-            this.loadTables();
-          },
-          error: () => {},
-        });
-      },
-    });
+    this.router.navigate(['/dining/reservations']);
   }
 
   startOrderForTable(table: DiningTable, guestCount?: number): void {
@@ -2953,7 +3101,7 @@ export class DiningComponent implements OnInit, OnDestroy {
       ...table,
       active_guest_count: guestCount || table.active_guest_count || table.capacity,
     });
-    this.router.navigate(['/pos']);
+    this.router.navigate(['/pos'], { state: { keepCart: true } });
   }
 
   openTableOptions(table: DiningTable): void {
@@ -3004,9 +3152,36 @@ export class DiningComponent implements OnInit, OnDestroy {
     return match ? String(match.value) : String(this.sectionOptions[0].value);
   }
 
+  /** Another table (not the one being edited) whose value matches, ignoring case and spaces. */
+  private findTableClash(field: 'table_number' | 'name', value: unknown): DiningTable | null {
+    const key = String(value ?? '').trim().toLowerCase();
+    if (!key) return null;
+    return this.tables.find(
+      (t) => t.id !== this.editingTableId && String(t[field] ?? '').trim().toLowerCase() === key
+    ) || null;
+  }
+
+  get tableNumberClash(): DiningTable | null {
+    return this.findTableClash('table_number', this.tableForm.tableNumber);
+  }
+
+  get tableNameClash(): DiningTable | null {
+    return this.findTableClash('name', this.tableForm.name);
+  }
+
   saveTable(): void {
+    this.tableForm.tableNumber = String(this.tableForm.tableNumber ?? '').trim();
+    this.tableForm.name = String(this.tableForm.name ?? '').trim();
     if (!this.tableForm.tableNumber || !this.tableForm.name) {
       this.notify.error('Please enter table number and name');
+      return;
+    }
+    if (this.tableNumberClash || this.tableNameClash) {
+      this.notify.error(
+        this.tableNumberClash
+          ? 'Table number "' + this.tableForm.tableNumber + '" is already in use'
+          : 'Display name "' + this.tableForm.name + '" is already in use'
+      );
       return;
     }
 

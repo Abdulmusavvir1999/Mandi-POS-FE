@@ -82,7 +82,27 @@ export interface ProductVariant {
   display_order?: number;
   is_default?: boolean | number;
   status?: 'ACTIVE' | 'INACTIVE';
+  /** Multi Stock recipe: every stock item one sale of this portion draws. */
+  stocks?: ProductVariantStock[];
 }
+
+/** One line of a Multi Stock portion's recipe, as the API returns it. */
+export interface ProductVariantStock {
+  stock_id: number;
+  /** Stock units drawn per portion sold, in the stock item's own unit. */
+  stock_consumption: number;
+  stock_name?: string;
+  stock_code?: string;
+  unit_type?: string;
+  current_quantity?: number;
+  average_unit_price?: number;
+  min_stock_alert?: number;
+  /** Balance after the item's latest stock-in - the "full" mark for its bar. */
+  last_restock_quantity?: number | null;
+  stock_status?: 'active' | 'inactive';
+}
+
+export type VariantStockMode = 'COMMON' | 'EACH' | 'MULTI';
 
 export interface Product {
   id: number;
@@ -97,19 +117,21 @@ export interface Product {
   tax_rate: number;
   stock_quantity: number;
   current_stock: number;
-  low_stock_threshold: number;
-  min_stock_alert?: number;
+  /** Low-stock level of the linked stock item (stocks.min_stock_alert). */
+  min_stock_alert?: number | null;
   is_available: number | boolean;
   status: 'ACTIVE' | 'INACTIVE';
   /** Portions this dish is sold in. Empty means it sells as a single item. */
   variants?: ProductVariant[];
   /** Balance of the linked stock ledger item, which variants consume from. */
   linked_stock_quantity?: number;
+  /** Ledger balance right after its latest stock-in (list endpoint only). */
+  last_restock_quantity?: number | null;
   linked_unit_type?: string;
   linked_stock_code?: string;
   /** Dish-level (COMMON mode) source, and which mode the editor is in. */
   stock_id?: number | null;
-  variant_stock_mode?: 'COMMON' | 'EACH';
+  variant_stock_mode?: VariantStockMode;
   resolved_stock_id?: number | null;
   linked_avg_cost?: number;
   linked_min_alert?: number;
@@ -276,9 +298,18 @@ export interface CartItem {
   subtotal: number;
   isComplimentary?: boolean;
   complimentaryReason?: string;
-  itemType?: 'PRODUCT' | 'COMBO';
+  /** PRODUCT is a dish; COMBO and ADDON lines name their row in comboId / addonId. */
+  itemType?: 'PRODUCT' | 'COMBO' | 'ADDON';
   comboId?: number;
+  addonId?: number;
   selectedAddons?: ProductAddon[];
+  /**
+   * Already sent to the kitchen on the table's open tab. Read-only in the
+   * cart: it is billed from the order, not resent, and its price is fixed.
+   */
+  sentToKitchen?: boolean;
+  orderItemId?: number;
+  kotRound?: number;
 }
 
 export interface PosDayClosing {
@@ -749,14 +780,15 @@ export interface ProductAddonMapping {
   default_price?: number;
 }
 
+/** One line of a combo: an add-on and how many of it one combo serves. */
 export interface ComboDealItem {
   id?: number;
   combo_id?: number;
-  product_id: number;
-  product_name?: string;
-  sku?: string;
-  selling_price?: number;
-  variant_id?: number | null;
+  addon_id: number;
+  addon_name?: string;
+  addon_image?: string | null;
+  addon_price?: number;
+  addon_stock_id?: number | null;
   quantity: number;
   display_order?: number;
 }

@@ -31,6 +31,16 @@ export class CartService {
   public couponDiscount = signal<number>(0);
 
   public orderNotes = signal<string>('');
+
+  /**
+   * The selected table's unbilled order, when it has one. Its lines sit in
+   * the cart marked sentToKitchen; everything else is still to be sent.
+   */
+  public openTab = signal<{ orderId: number; orderNumber: string; rounds: number; tableId: number } | null>(null);
+
+  /** Lines not yet sent to the kitchen - what Send to Kitchen sends. */
+  public pendingItems = computed(() => this.itemsSignal().filter((i) => !i.sentToKitchen));
+  public sentItems = computed(() => this.itemsSignal().filter((i) => i.sentToKitchen));
   public taxRate = signal<number>(0);
   public isTaxEnabled = signal<boolean>(true);
   /**
@@ -144,7 +154,8 @@ export class CartService {
     const lineId = CartService.lineKey(product.id, variant?.id ?? null);
 
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.lineId === lineId);
+    // A sent line is closed: another portion of the same dish is a new line.
+    const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
 
     if (index >= 0) {
       const existing = currentItems[index];
@@ -179,8 +190,9 @@ export class CartService {
     quantity = 1,
     notes?: string,
     selectedAddons?: ProductAddon[],
-    itemType: 'PRODUCT' | 'COMBO' = 'PRODUCT',
-    comboDealId?: number
+    itemType: 'PRODUCT' | 'COMBO' | 'ADDON' = 'PRODUCT',
+    comboDealId?: number,
+    addonId?: number
   ): boolean {
     if (product.status !== 'ACTIVE' && itemType === 'PRODUCT') {
       return false;
@@ -195,10 +207,10 @@ export class CartService {
     const unitPrice = basePrice + addonsCost;
 
     const addonIds = (selectedAddons || []).map((a) => a.id).sort((a, b) => a - b);
-    const lineId = `${itemType}:${product.id}:${variant?.id ?? 'base'}:${addonIds.join('-') || 'none'}${comboDealId ? ':' + comboDealId : ''}`;
+    const lineId = `${itemType}:${product.id}:${variant?.id ?? 'base'}:${addonIds.join('-') || 'none'}${comboDealId ? ':' + comboDealId : ''}${addonId ? ':a' + addonId : ''}`;
 
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.lineId === lineId);
+    const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
 
     if (index >= 0) {
       const existing = currentItems[index];
@@ -221,6 +233,7 @@ export class CartService {
         isComplimentary: false,
         itemType,
         comboId: itemType === 'COMBO' ? comboDealId : undefined,
+        addonId: itemType === 'ADDON' ? addonId : undefined,
         selectedAddons: selectedAddons ? [...selectedAddons] : [],
       });
     }
@@ -232,7 +245,7 @@ export class CartService {
 
   public setComplimentary(lineId: string, isComplimentary: boolean, reason?: string): void {
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.lineId === lineId);
+    const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
     if (index >= 0) {
       const item = currentItems[index];
       currentItems[index] = {
@@ -247,7 +260,7 @@ export class CartService {
 
   public setItemNotes(lineId: string, notes: string): void {
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.lineId === lineId);
+    const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
     if (index >= 0) {
       currentItems[index] = {
         ...currentItems[index],
@@ -264,7 +277,7 @@ export class CartService {
     }
 
     const currentItems = [...this.itemsSignal()];
-    const index = currentItems.findIndex((i) => i.lineId === lineId);
+    const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
 
     if (index >= 0) {
       const item = currentItems[index];
@@ -292,7 +305,22 @@ export class CartService {
   }
 
   public removeItem(lineId: string): void {
-    this.itemsSignal.update((list) => list.filter((i) => i.lineId !== lineId));
+    // Sent lines leave only through the tab (DiningService.removeTabLine).
+    this.itemsSignal.update((list) => list.filter((i) => i.lineId !== lineId || i.sentToKitchen));
+  }
+
+  /**
+   * Puts a table's open tab into the cart: its sent lines replace any sent
+   * lines already there, and lines not yet sent are kept. Pass null to drop
+   * the tab (another table, takeaway, or the tab was billed/cancelled).
+   */
+  public loadTab(
+    tab: { orderId: number; orderNumber: string; rounds: number; tableId: number } | null,
+    lines: CartItem[] = []
+  ): void {
+    this.openTab.set(tab);
+    const pending = this.itemsSignal().filter((i) => !i.sentToKitchen);
+    this.itemsSignal.set(tab ? [...lines, ...pending] : pending);
   }
 
   public applyCoupon(code: string, discount?: number): boolean {
@@ -342,6 +370,16 @@ export class CartService {
     this.surchargeAmount.set(Math.max(0, amount));
   }
 
+  /**
+   * The POS menu link was clicked. Arriving from another page, the POS clears
+   * the cart itself on load; already on the POS the router ignores a same-URL
+   * link, so the click clears it here. Either way a menu click is a new ticket.
+   */
+  public onPosMenuClick(currentUrl: string): void {
+    const path = (currentUrl || '').split('?')[0].split('#')[0];
+    if (path === '/pos') this.clearCart();
+  }
+
   public clearCart(): void {
     this.itemsSignal.set([]);
     this.discountValue.set(0);
@@ -353,7 +391,39 @@ export class CartService {
     this.orderNotes.set('');
     this.selectedCustomer.set(null);
     this.selectedTable.set(null);
+    this.openTab.set(null);
     this.orderType.set('TAKEAWAY');
+  }
+
+  /**
+   * A saved combo or add-on line has no dish behind it. It is rebuilt with the
+   * stand-in product the POS uses when adding one (ids offset to 90000 for
+   * combos, 70000 for add-ons), so it prices and checks out as it did.
+   */
+  private static savedLineKind(item: any): { itemType: 'PRODUCT' | 'COMBO' | 'ADDON'; comboId?: number; addonId?: number } {
+    const type = String(item.itemType || item.item_type || 'PRODUCT').toUpperCase();
+    const comboId = Number(item.comboId || item.combo_id) || undefined;
+    const addonId = Number(item.addonId || item.addon_id) || undefined;
+    if (type === 'COMBO' && comboId) return { itemType: 'COMBO', comboId };
+    if (type === 'ADDON' && addonId) return { itemType: 'ADDON', addonId };
+    return { itemType: 'PRODUCT' };
+  }
+
+  private static standInFor(kind: { itemType: string; comboId?: number; addonId?: number }, name: string, price: number): Product {
+    const id = kind.itemType === 'COMBO' ? 90000 + (kind.comboId as number) : 70000 + (kind.addonId as number);
+    return {
+      id,
+      name,
+      selling_price: price,
+      cost_price: 0,
+      category_id: 0,
+      category_name: kind.itemType === 'COMBO' ? 'Combo Meals' : 'Add-ons',
+      status: 'ACTIVE',
+      sku: kind.itemType === 'COMBO' ? `COMBO-${kind.comboId}` : `ADDON-${kind.addonId}`,
+      tax_rate: 0,
+      stock_quantity: 999,
+      current_stock: 999,
+    } as Product;
   }
 
   public restoreFromDraft(draft: any, allProducts: Product[]): void {
@@ -389,6 +459,22 @@ export class CartService {
     if (draft.items && Array.isArray(draft.items)) {
       const cartItems: CartItem[] = [];
       for (const item of draft.items) {
+        const kind = CartService.savedLineKind(item);
+        if (kind.itemType !== 'PRODUCT') {
+          const price = Number(item.unit_price) || 0;
+          cartItems.push({
+            lineId: `${kind.itemType}:${kind.comboId ?? kind.addonId}`,
+            product: CartService.standInFor(kind, item.product_name, price),
+            variant: null,
+            quantity: item.quantity,
+            unitPrice: price,
+            subtotal: item.quantity * price,
+            notes: item.notes,
+            isComplimentary: false,
+            ...kind,
+          });
+          continue;
+        }
         const prod = allProducts.find((p) => p.id === item.product_id) || {
           id: item.product_id,
           name: item.product_name,
@@ -399,7 +485,6 @@ export class CartService {
           tax_rate: 5,
           stock_quantity: item.current_stock || 10,
           current_stock: item.current_stock || 10,
-          low_stock_threshold: 5,
           is_available: 1,
           status: 'ACTIVE',
         };
@@ -467,6 +552,24 @@ export class CartService {
     if (bill.items && Array.isArray(bill.items)) {
       const cartItems: CartItem[] = [];
       for (const item of bill.items) {
+        const kind = CartService.savedLineKind(item);
+        if (kind.itemType !== 'PRODUCT') {
+          const price = Number(item.unitPrice || item.unit_price) || 0;
+          const comp = Boolean(item.isComplimentary || item.is_complimentary);
+          cartItems.push({
+            lineId: `${kind.itemType}:${kind.comboId ?? kind.addonId}`,
+            product: CartService.standInFor(kind, item.productName || item.product_name, price),
+            variant: null,
+            quantity: item.quantity,
+            unitPrice: price,
+            subtotal: item.quantity * (comp ? 0 : price),
+            notes: item.notes,
+            isComplimentary: comp,
+            complimentaryReason: item.complimentaryReason || item.complimentary_reason,
+            ...kind,
+          });
+          continue;
+        }
         const prodId = item.productId || item.product_id;
         const prod = allProducts.find((p) => p.id === prodId) || {
           id: prodId,
@@ -478,7 +581,6 @@ export class CartService {
           tax_rate: 5,
           stock_quantity: 10,
           current_stock: 10,
-          low_stock_threshold: 5,
           is_available: 1,
           status: 'ACTIVE',
         };

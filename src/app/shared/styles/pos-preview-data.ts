@@ -36,7 +36,7 @@ const dish = (
   tax_rate: 5,
   stock_quantity: current_stock,
   current_stock,
-  low_stock_threshold: 5,
+  min_stock_alert: 5,
   is_available: 1,
   status: 'ACTIVE',
   linked_unit_type: 'plate',

@@ -545,7 +545,18 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
               </strong>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block">Low Stock Alert Level</span>
+              <span class="text-[var(--text-muted)] alert-label-row">
+                <span>Low Stock Alert Level</span>
+                <button
+                  type="button"
+                  class="alert-edit-btn"
+                  (click)="openAlertModal()"
+                  title="Edit low stock alert level"
+                  aria-label="Edit low stock alert level"
+                >
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+              </span>
               <strong class="text-sm font-mono text-[#DC2626]">{{ stockItem.min_stock_alert }} {{ stockItem.unit_type }}s</strong>
             </div>
             <div>
@@ -1494,8 +1505,103 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
           </div>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- MODAL: EDIT LOW STOCK ALERT LEVEL                               -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="modal-backdrop" *ngIf="showAlertModal && stockItem">
+        <div class="modal-content shadow-2xl max-w-md">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#E9D5FF]">
+            <div class="flex items-center gap-3">
+              <span class="modal-icon-badge">
+                <span class="material-symbols-outlined text-2xl">notifications_active</span>
+              </span>
+              <div>
+                <h3 class="text-xl font-black text-[#2E1065] leading-tight">Low Stock Alert Level</h3>
+                <p class="text-xs text-[#6B7280] font-mono mt-0.5">{{ stockItem.name }} ({{ stockItem.stock_code }})</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="showAlertModal = false"
+              class="modal-close-btn"
+              title="Close"
+              aria-label="Close"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form (ngSubmit)="saveAlertLevel()">
+            <div class="form-group mb-0">
+              <label class="form-label text-xs font-bold uppercase tracking-wider mb-1 block" for="alertLevelInput">
+                Alert when stock falls to ({{ stockItem.unit_type }})
+              </label>
+              <input
+                id="alertLevelInput"
+                title="Low stock alert level"
+                type="number"
+                min="0"
+                step="any"
+                [(ngModel)]="alertLevelInput"
+                name="alertLevel"
+                class="form-control font-mono font-bold text-sm w-full"
+                required
+              />
+              <p class="alert-modal-hint">
+                The item shows as low stock once its balance is at or below this level.
+                Current stock: <strong>{{ stockItem.current_quantity }} {{ stockItem.unit_type }}</strong>.
+              </p>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-5 mt-3 border-t border-[#E9D5FF]">
+              <button type="button" (click)="showAlertModal = false" class="action-btn btn-outline-purple">
+                Cancel
+              </button>
+              <button type="submit" [disabled]="!isAlertLevelValid" class="action-btn btn-gradient-purple">
+                Save Alert Level ✓
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-  `
+  `,
+  styles: [
+    `
+      .alert-label-row {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+      }
+      .alert-edit-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        padding: 0;
+        border-radius: 0.375rem;
+        border: 1px solid var(--card-border, #e9d5ff);
+        background: transparent;
+        color: var(--primary, #7e22ce);
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .alert-edit-btn:hover {
+        background: var(--primary-light, #f3e8ff);
+        border-color: var(--primary, #7e22ce);
+      }
+      .alert-edit-btn .material-symbols-outlined {
+        font-size: 0.875rem;
+      }
+      .alert-modal-hint {
+        margin: 0.5rem 0 0;
+        font-size: 0.6875rem;
+        color: var(--text-muted, #64748b);
+      }
+    `,
+  ],
 })
 export class StockDetailComponent implements OnInit {
   public isLoading = false;
@@ -1533,6 +1639,39 @@ export class StockDetailComponent implements OnInit {
 
   public showPurchaseModal = false;
   public showAdjustModal = false;
+
+  // ── Low stock alert level (edited from the Master Item Specifications tab) ──
+  public showAlertModal = false;
+  public alertLevelInput: number | null = null;
+
+  public get isAlertLevelValid(): boolean {
+    const v = this.alertLevelInput;
+    return v !== null && v !== undefined && String(v) !== '' && Number.isFinite(Number(v)) && Number(v) >= 0;
+  }
+
+  openAlertModal(): void {
+    if (!this.stockItem) return;
+    this.alertLevelInput = Number(this.stockItem.min_stock_alert) || 0;
+    this.showAlertModal = true;
+  }
+
+  saveAlertLevel(): void {
+    if (!this.stockItem || !this.isAlertLevelValid) {
+      this.notify.error('Enter an alert level of 0 or more');
+      return;
+    }
+    const level = Number(this.alertLevelInput);
+    this.stockService.updateStockItem(this.stockItem.id, { minStockAlert: level }).subscribe({
+      next: (res) => {
+        this.stockItem = { ...this.stockItem, min_stock_alert: res.data?.min_stock_alert ?? level };
+        this.showAlertModal = false;
+        this.notify.success(`Low stock alert set to ${level} ${this.stockItem.unit_type}`);
+      },
+      error: (err) => {
+        this.notify.error(err?.error?.message || 'Failed to update the low stock alert level');
+      },
+    });
+  }
 
   // ── Vendors (a purchase entry links to a real vendor record) ────────
   private vendorService = inject(VendorService);

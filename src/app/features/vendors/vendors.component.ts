@@ -2242,7 +2242,7 @@ type ActiveTab = 'profile' | 'contact' | 'tax' | 'payment_terms' | 'credit' | 'b
     .form-label {
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--text-muted, #475569);
+      color: var(--label-color, #475569);
     }
     .form-control {
       border: 1px solid var(--card-border, #CBD5E1);

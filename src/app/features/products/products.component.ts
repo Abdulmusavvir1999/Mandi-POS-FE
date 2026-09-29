@@ -15,6 +15,34 @@ import { DISH_LAYOUT_CSS } from '../../shared/styles/dish-layout.styles';
 
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
+import { dishPortionsAvailable, isMultiStock, limitingStock, portionsAvailable } from '../../core/utils/multi-stock.util';
+
+/** One Multi Stock list row's figures - see ProductsComponent.multiInfo(). */
+interface MultiRowItem {
+  name: string;
+  code: string;
+  unit: string;
+  balance: number;
+  minAlert: number;
+  isLow: boolean;
+  /** Bar scale: balance after the latest stock-in, else a threshold-based mark. */
+  fullMark: number;
+  /** 0-100: balance on that scale, and where the low-alert line sits. */
+  percent: number;
+  alertPercent: number;
+  /** What each portion takes of it, how many that alone allows, and whether it runs out first there. */
+  uses: { portion: string; quantity: number; enough: number; limits: boolean }[];
+}
+
+interface MultiRowInfo {
+  ready: number;
+  defaultName: string;
+  cost: number;
+  items: MultiRowItem[];
+  /** The item lowest on its own scale - drives the row's single bar. */
+  scarcest: MultiRowItem | null;
+  lowNames: string;
+}
 @Component({
   selector: 'app-products',
   standalone: true,
@@ -520,12 +548,12 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <ul *ngIf="c.items?.length" class="offer-items">
                   <li *ngFor="let item of c.items">
                     <span class="offer-qty font-mono">{{ item.quantity }}&times;</span>
-                    <span class="offer-item-name">{{ item.product_name || 'Dish' }}</span>
+                    <span class="offer-item-name">{{ item.addon_name || 'Add-on' }}</span>
                   </li>
                 </ul>
                 <p *ngIf="!c.items?.length" class="offer-warn">
-                  The description names dishes but none are attached — this combo
-                  will not price or deduct stock correctly.
+                  No add-ons are attached — this combo will not deduct stock for
+                  what it serves.
                 </p>
               </div>
 
@@ -713,6 +741,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               <tr
                 *ngFor="let p of paginatedProducts"
                 class="clickable-row"
+                [class.is-low-stock-row]="stockLevelOf(p) !== 'ok'"
                 (click)="goToView(p)"
                 title="Open dish view page"
               >
@@ -781,29 +810,58 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     {{ p.selling_price | appCurrency:'1.0-0' }}
                   </div>
                   <div class="text-[10px] text-[#6B7280] font-mono">
-                    Cost: {{ p.cost_price | appCurrency:'1.0-0' }}
+                    Cost: {{ (isMulti(p) ? multiInfo(p).cost : p.cost_price) | appCurrency:'1.0-0' }}
                   </div>
                 </td>
 
                 <!-- Stock Level & Progress Bar -->
                 <td>
-                  <div class="space-y-1 max-w-[120px]">
-                    <div class="flex items-center justify-between text-[11px]">
-                      <span class="font-mono font-bold text-[#2E1065]">{{ stockOf(p) }} units</span>
-                      <span class="text-[#6B7280] text-[9px]">Min: {{ p.low_stock_threshold }}</span>
+                  <!-- Multi Stock: portions of the default size, and each item's balance -->
+                  <div class="stock-cell" *ngIf="isMulti(p); else singleStock" [ngClass]="'is-' + stockLevelOf(p)">
+                    <div class="stock-cell-top">
+                      <span class="stock-cell-qty font-mono" [title]="'Portions of ' + multiInfo(p).defaultName + ' current stock can make'">
+                        {{ multiInfo(p).ready }} portions
+                      </span>
+                      <button
+                        type="button"
+                        class="multi-items-btn"
+                        [class.has-low]="!!multiInfo(p).lowNames"
+                        (click)="$event.stopPropagation(); openStockItems(p)"
+                        title="See every stock item this dish uses"
+                      >
+                        <span class="material-symbols-outlined">stacks</span>
+                        {{ multiInfo(p).items.length }} {{ multiInfo(p).items.length === 1 ? 'item' : 'items' }}
+                      </button>
                     </div>
-                    <div class="w-full bg-[#E9D5FF] rounded-full h-1.5 overflow-hidden">
+                    <!-- One bar: the scarcest item, so the row reads like a single-stock row -->
+                    <div class="stock-cell-track" [title]="multiInfo(p).scarcest ? multiInfo(p).scarcest!.name + ' is the lowest' : ''">
+                      <div class="stock-cell-fill" [style.width.%]="multiInfo(p).scarcest?.percent ?? 0"></div>
+                    </div>
+                    <span class="stock-cell-flag" *ngIf="stockLevelOf(p) !== 'ok'">
+                      <span class="material-symbols-outlined">warning</span>
+                      <ng-container *ngIf="stockLevelOf(p) === 'out'; else lowItems">Out of stock</ng-container>
+                      <ng-template #lowItems>Low: {{ multiInfo(p).lowNames }}</ng-template>
+                    </span>
+                  </div>
+
+                  <ng-template #singleStock>
+                  <div class="stock-cell" [ngClass]="'is-' + stockLevelOf(p)">
+                    <div class="stock-cell-top">
+                      <span class="stock-cell-qty font-mono">{{ stockOf(p) }} units</span>
+                      <span class="stock-cell-min">Min: {{ alertOf(p) }}</span>
+                    </div>
+                    <div class="stock-cell-track">
                       <div
-                        class="h-full rounded-full transition-all duration-300"
-                        [style.width.%]="calcStockPercent(stockOf(p), p.low_stock_threshold)"
-                        [ngClass]="{
-                          '!bg-[#DC2626]': stockOf(p) <= 0,
-                          '!bg-[#EA580C]': stockOf(p) > 0 && stockOf(p) <= p.low_stock_threshold,
-                          '!bg-[#16A34A]': stockOf(p) > p.low_stock_threshold
-                        }"
+                        class="stock-cell-fill"
+                        [style.width.%]="calcStockPercent(p)"
                       ></div>
                     </div>
+                    <span class="stock-cell-flag" *ngIf="stockLevelOf(p) !== 'ok'">
+                      <span class="material-symbols-outlined">warning</span>
+                      {{ stockLevelOf(p) === 'out' ? 'Out of stock' : 'Low stock' }}
+                    </span>
                   </div>
+                  </ng-template>
                 </td>
 
                 <!-- Actions -->
@@ -904,6 +962,62 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
         </div>
       </div>
 
+      <!-- Multi Stock: every stock item behind a dish, each with its own bar -->
+      <div class="modal-backdrop" *ngIf="stockItemsProduct as sp" (click)="closeStockItems()">
+        <div class="modal-content shadow-2xl max-w-lg stock-items-modal" (click)="$event.stopPropagation()">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-purple-200">
+            <div class="sim-title">
+              <h3>{{ sp.name }}</h3>
+              <p>
+                {{ multiInfo(sp).items.length }} stock items ·
+                <strong>{{ multiInfo(sp).ready }} portions</strong> of {{ multiInfo(sp).defaultName }} ready now
+              </p>
+            </div>
+            <button type="button" (click)="closeStockItems()" class="modal-close-btn" title="Close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="sim-list">
+            <div class="sim-item" *ngFor="let s of multiInfo(sp).items" [class.is-low]="s.isLow" [class.is-out]="s.balance <= 0">
+              <div class="sim-row">
+                <div class="sim-name">
+                  <strong>{{ s.name }}</strong>
+                  <span class="sim-code" *ngIf="s.code">{{ s.code }}</span>
+                </div>
+                <span class="sim-state">{{ s.balance <= 0 ? 'Out' : s.isLow ? 'Low' : 'OK' }}</span>
+              </div>
+
+              <div class="sim-bar" [title]="s.balance + ' ' + s.unit + ' of ' + s.fullMark + ' ' + s.unit">
+                <div class="sim-bar-fill" [style.width.%]="s.percent"></div>
+                <span class="sim-bar-alert" *ngIf="s.minAlert > 0" [style.left.%]="s.alertPercent" [title]="'Low alert at ' + s.minAlert + ' ' + s.unit"></span>
+              </div>
+
+              <div class="sim-row sim-meta">
+                <span><strong class="font-mono">{{ s.balance | number:'1.0-3' }}</strong> / {{ s.fullMark | number:'1.0-3' }} {{ s.unit }}</span>
+                <span>Low alert at <strong class="font-mono">{{ s.minAlert | number:'1.0-3' }}</strong></span>
+              </div>
+
+              <div class="sim-uses">
+                <span class="sim-use" *ngFor="let u of s.uses" [class.is-limiting]="u.limits">
+                  {{ u.portion }}: <strong class="font-mono">{{ u.quantity | number:'1.0-3' }} {{ s.unit }}</strong>
+                  · enough for {{ u.enough }}
+                  <span class="sim-use-flag" *ngIf="u.limits">runs out first</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-purple-100">
+            <button type="button" class="action-btn btn-outline-purple" (click)="closeStockItems()">Close</button>
+            <button type="button" class="action-btn btn-gradient-purple" (click)="closeStockItems(); goToView(sp)">
+              <span class="material-symbols-outlined">visibility</span>
+              <span>Open dish</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Add-on Modal -->
       <div class="modal-backdrop" *ngIf="showAddonModal">
         <div class="modal-content shadow-2xl max-w-md">
@@ -973,7 +1087,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               </div>
               <div>
                 <label class="form-label text-xs font-bold text-gray-700 uppercase">Original Price (₹)</label>
-                <input type="number" step="any" min="0" [(ngModel)]="comboForm.original_price" name="comboOrigPrice" class="form-control text-sm font-mono" placeholder="Sum of dishes" />
+                <input type="number" step="any" min="0" [(ngModel)]="comboForm.original_price" name="comboOrigPrice" class="form-control text-sm font-mono" placeholder="Sum of add-ons" />
               </div>
             </div>
             <div>
@@ -991,22 +1105,22 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <!-- Included Items Section -->
             <div class="offer-items-block">
               <div class="offer-items-head">
-                <span class="offer-items-label">Included Dishes</span>
-                <button type="button" (click)="addComboItem()" class="add-dish-btn">
+                <span class="offer-items-label">Included Add-ons</span>
+                <button type="button" (click)="addComboItem()" class="add-dish-btn" [disabled]="!addonsList.length">
                   <span class="material-symbols-outlined">add_circle</span>
-                  <span>Add Dish</span>
+                  <span>Add Add-on</span>
                 </button>
               </div>
 
               <div class="offer-items-rows">
                 <div *ngFor="let item of comboForm.items; let idx = index" class="offer-item-row">
                   <select
-                    [(ngModel)]="item.product_id"
-                    name="comboItemProd_{{idx}}"
+                    [(ngModel)]="item.addon_id"
+                    name="comboItemAddon_{{idx}}"
                     class="form-control offer-item-dish"
-                    aria-label="Dish"
+                    aria-label="Add-on"
                   >
-                    <option *ngFor="let p of products" [value]="p.id">{{ p.name }} (₹{{ p.selling_price }})</option>
+                    <option *ngFor="let a of addonsList" [ngValue]="a.id">{{ a.name }} ({{ a.price | appCurrency }})</option>
                   </select>
                   <input
                     type="number"
@@ -1020,15 +1134,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     type="button"
                     (click)="removeComboItem(idx)"
                     class="offer-item-remove"
-                    title="Remove dish"
-                    aria-label="Remove dish"
+                    title="Remove add-on"
+                    aria-label="Remove add-on"
                   >
                     <span class="material-symbols-outlined">delete</span>
                   </button>
                 </div>
 
                 <p *ngIf="!comboForm.items?.length" class="offer-items-empty">
-                  No dishes yet — use Add Dish to build the bundle.
+                  {{ addonsList.length ? 'No add-ons yet — use Add Add-on to build the bundle.' : 'Create add-ons first; a combo is built from them.' }}
                 </p>
               </div>
             </div>
@@ -1043,6 +1157,177 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
   `,
   styles: [
     `
+      /* ─── Stock level cell (low / out of stock flag) ─── */
+      .stock-cell { display: flex; flex-direction: column; gap: 0.3rem; max-width: 140px; }
+      .stock-cell-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 11px; }
+      .stock-cell-qty { font-weight: 700; color: var(--text-main, #2E1065); }
+      .stock-cell-min { font-size: 9px; color: var(--text-muted, #6B7280); }
+      .stock-cell-track {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(var(--primary-rgb, 126, 34, 206), 0.15);
+      }
+      .stock-cell-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.3s ease;
+        background: var(--success, #16A34A);
+      }
+      .stock-cell.is-low .stock-cell-fill { background: var(--warning, #EA580C); }
+      .stock-cell.is-out .stock-cell-fill { background: var(--danger, #DC2626); }
+      .stock-cell.is-low .stock-cell-qty { color: var(--warning, #EA580C); }
+      .stock-cell.is-out .stock-cell-qty { color: var(--danger, #DC2626); }
+
+      /* Multi Stock row: the "N items" button that opens the stock dialog */
+      .multi-items-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--primary, #7E22CE) 45%, var(--card-border, #E9D5FF));
+        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+        color: var(--primary, #7E22CE);
+        font-family: inherit;
+        font-size: 9.5px;
+        font-weight: 800;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.15s ease, transform 0.15s ease;
+      }
+
+      .multi-items-btn .material-symbols-outlined { font-size: 12px; }
+      .multi-items-btn:hover { background: color-mix(in srgb, var(--primary, #7E22CE) 22%, transparent); transform: translateY(-1px); }
+
+      .multi-items-btn.has-low {
+        border-color: color-mix(in srgb, var(--warning, #EA580C) 55%, transparent);
+        background: var(--warning-light, rgba(234, 88, 12, 0.12));
+        color: var(--warning, #EA580C);
+      }
+
+      /* Stock items dialog: one card per item, each with its own range bar */
+      .stock-items-modal { width: min(560px, calc(100vw - 32px)); }
+
+      .sim-title h3 { margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text-main, #2E1065); }
+      .sim-title p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted, #6B7280); }
+      .sim-title p strong { color: var(--text-main, #2E1065); }
+
+      .sim-list { display: flex; flex-direction: column; gap: 0.6rem; max-height: min(60vh, 520px); overflow-y: auto; padding-right: 2px; }
+
+      .sim-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        padding: 0.75rem 0.85rem;
+        border-radius: 14px;
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #ffffff);
+        --sim-color: var(--success, #10B981);
+      }
+
+      .sim-item.is-low { --sim-color: var(--warning, #EA580C); border-color: color-mix(in srgb, var(--warning, #EA580C) 40%, var(--card-border, #E9D5FF)); }
+      .sim-item.is-out { --sim-color: var(--danger, #DC2626); border-color: color-mix(in srgb, var(--danger, #DC2626) 45%, var(--card-border, #E9D5FF)); }
+
+      .sim-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+      .sim-name { display: flex; align-items: baseline; gap: 0.45rem; min-width: 0; }
+      .sim-name strong { font-size: 0.85rem; color: var(--text-main, #2E1065); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .sim-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.66rem; color: var(--text-muted, #6B7280); }
+
+      .sim-state {
+        padding: 0.05rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.62rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--sim-color);
+        background: color-mix(in srgb, var(--sim-color) 14%, transparent);
+      }
+
+      .sim-bar {
+        position: relative;
+        height: 10px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--text-muted, #6B7280) 18%, transparent);
+        overflow: visible;
+      }
+
+      .sim-bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--sim-color);
+        transition: width 0.3s ease;
+      }
+
+      /* Low-alert marker: a thin line across the bar */
+      .sim-bar-alert {
+        position: absolute;
+        top: -3px;
+        bottom: -3px;
+        width: 2px;
+        margin-left: -1px;
+        border-radius: 2px;
+        background: var(--text-main, #2E1065);
+        opacity: 0.55;
+      }
+
+      .sim-meta { font-size: 0.7rem; color: var(--text-muted, #6B7280); }
+      .sim-meta strong { color: var(--text-main, #2E1065); }
+
+      .sim-uses { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+
+      .sim-use {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.68rem;
+        color: var(--text-muted, #6B7280);
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .sim-use strong { color: var(--text-main, #2E1065); }
+
+      .sim-use.is-limiting {
+        border-color: color-mix(in srgb, var(--warning, #EA580C) 45%, transparent);
+        background: var(--warning-light, rgba(234, 88, 12, 0.1));
+      }
+
+      .sim-use-flag {
+        margin-left: 0.15rem;
+        font-size: 0.58rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--warning, #EA580C);
+      }
+      .stock-cell-flag {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .stock-cell-flag .material-symbols-outlined { font-size: 11px; }
+      .stock-cell.is-low .stock-cell-flag {
+        color: var(--warning, #EA580C);
+        background: rgba(var(--warning-rgb, 234, 88, 12), 0.12);
+        border: 1px solid rgba(var(--warning-rgb, 234, 88, 12), 0.3);
+      }
+      .stock-cell.is-out .stock-cell-flag {
+        color: var(--danger, #DC2626);
+        background: rgba(var(--danger-rgb, 220, 38, 38), 0.12);
+        border: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.3);
+      }
+      tr.is-low-stock-row > td:first-child { box-shadow: inset 3px 0 0 var(--warning, #EA580C); }
+
       /* ─── Breadcrumb row + the catalog's other record types ─── */
       .breadcrumbs-strip {
         display: flex;
@@ -2200,7 +2485,7 @@ export class ProductsComponent implements OnInit {
         combo_price: combo.combo_price,
         original_price: combo.original_price || combo.combo_price,
         image_url: combo.image_url || '',
-        items: combo.items ? [...combo.items] : [],
+        items: (combo.items || []).map((i) => ({ addon_id: i.addon_id, quantity: i.quantity })),
       }
       : {
         name: '',
@@ -2209,14 +2494,14 @@ export class ProductsComponent implements OnInit {
         combo_price: 299,
         original_price: 350,
         image_url: '',
-        items: this.products.length > 0 ? [{ product_id: this.products[0].id, quantity: 1 }] : [],
+        items: this.addonsList.length > 0 ? [{ addon_id: this.addonsList[0].id, quantity: 1 }] : [],
       };
     this.showComboModal = true;
   }
 
   addComboItem(): void {
-    if (this.products.length > 0) {
-      this.comboForm.items.push({ product_id: this.products[0].id, quantity: 1 });
+    if (this.addonsList.length > 0) {
+      this.comboForm.items.push({ addon_id: this.addonsList[0].id, quantity: 1 });
     }
   }
 
@@ -2227,6 +2512,10 @@ export class ProductsComponent implements OnInit {
   saveCombo(): void {
     if (!this.comboForm.name) {
       this.notify.error('Please enter combo deal name');
+      return;
+    }
+    if ((this.comboForm.items || []).some((i: any) => !i.addon_id || !(Number(i.quantity) >= 1))) {
+      this.notify.error('Every combo line needs an add-on and a quantity of at least 1');
       return;
     }
     const obs = this.editingCombo
@@ -2272,6 +2561,9 @@ export class ProductsComponent implements OnInit {
    * to the old column for rows that have no ledger item.
    */
   stockOf(p: Product): number {
+    // Multi Stock has no single ledger item: count the most portions any one
+    // size can make from the items on its list.
+    if (isMultiStock(p)) return dishPortionsAvailable(p);
     // A product with no ledger row comes back with linked_stock_quantity NULL,
     // and Number(null) is 0 — which is finite, so a plain isFinite check
     // swallowed the fallback and reported every such dish as out of stock.
@@ -2284,17 +2576,111 @@ export class ProductsComponent implements OnInit {
     return Number(p.current_stock) || 0;
   }
 
+  /**
+   * The dish's low-stock level: its stock item's min_stock_alert, edited in
+   * the Stock Ledger. A dish with no stock item has none (0).
+   */
+  alertOf(p: Product): number {
+    return Number(p.min_stock_alert) || 0;
+  }
+
   /** True only when the dish genuinely has nothing left. */
   isOutOfStock(p: Product): boolean {
     return this.stockOf(p) <= 0;
   }
+
+  isMulti(p: Product): boolean {
+    return isMultiStock(p);
+  }
+
+  /** The dish whose stock items dialog is open, or null. */
+  public stockItemsProduct: Product | null = null;
+
+  openStockItems(p: Product): void {
+    this.stockItemsProduct = p;
+  }
+
+  closeStockItems(): void {
+    this.stockItemsProduct = null;
+  }
+
+  /**
+   * Low stock. A Multi Stock dish has no single alert level, so it is low
+   * when any item on its lists is at or below that item's own alert - the
+   * same rule a single-stock dish meets when its one item is low.
+   */
+  isLowOf(p: Product): boolean {
+    if (isMultiStock(p)) return this.stockOf(p) <= 0 || this.multiInfo(p).items.some((s) => s.isLow);
+    return this.stockOf(p) <= this.alertOf(p);
+  }
+
+  /**
+   * Multi Stock figures for one list row, worked out once per loaded product:
+   * the default portion's ready count and stock cost, and every item behind
+   * the dish with its balance and low state.
+   */
+  multiInfo(p: Product): MultiRowInfo {
+    const hit = this.multiInfoCache.get(p);
+    if (hit) return hit;
+
+    const variants = p.variants || [];
+    const def = variants.find((v) => Number(v.is_default) === 1) || variants[0];
+    const items = new Map<number, MultiRowItem>();
+    for (const v of variants) {
+      const limiting = limitingStock(v);
+      for (const s of v.stocks || []) {
+        let item = items.get(s.stock_id);
+        if (!item) {
+          const balance = Number(s.current_quantity) || 0;
+          const minAlert = Number(s.min_stock_alert) || 0;
+          // Same scale as the single-stock bar: what is left of the latest
+          // stock-in, else three times the alert level.
+          const restocked = Number(s.last_restock_quantity) || 0;
+          const fullMark = restocked > 0 ? Math.max(restocked, balance) : Math.max(minAlert * 3 || 30, balance);
+          item = {
+            name: s.stock_name || `Stock #${s.stock_id}`,
+            code: s.stock_code || '',
+            unit: s.unit_type || '',
+            balance,
+            minAlert,
+            isLow: balance <= minAlert,
+            fullMark,
+            percent: fullMark > 0 ? Math.min(100, Math.max(0, (balance / fullMark) * 100)) : 0,
+            alertPercent: fullMark > 0 ? Math.min(100, Math.max(0, (minAlert / fullMark) * 100)) : 0,
+            uses: [],
+          };
+          items.set(s.stock_id, item);
+        }
+        const qty = Number(s.stock_consumption) || 0;
+        item.uses.push({
+          portion: v.name,
+          quantity: qty,
+          enough: qty > 0 ? Math.max(0, Math.floor(item.balance / qty)) : 0,
+          limits: !!limiting && limiting.stock_id === s.stock_id,
+        });
+      }
+    }
+    // Lowest first, so the dialog reads as a restock list.
+    const list = [...items.values()].sort((a, b) => a.percent - b.percent);
+    const info: MultiRowInfo = {
+      ready: portionsAvailable(def),
+      defaultName: def?.name || 'the default portion',
+      cost: (def?.stocks || []).reduce((sum, s) => sum + (Number(s.stock_consumption) || 0) * (Number(s.average_unit_price) || 0), 0),
+      items: list,
+      scarcest: list[0] || null,
+      lowNames: list.filter((s) => s.isLow).map((s) => s.name).join(', '),
+    };
+    this.multiInfoCache.set(p, info);
+    return info;
+  }
+  private multiInfoCache = new WeakMap<Product, MultiRowInfo>();
 
   get activeCount(): number {
     return this.products.filter((p) => p.status === 'ACTIVE').length;
   }
 
   get lowStockCount(): number {
-    return this.products.filter((p) => this.stockOf(p) <= p.low_stock_threshold).length;
+    return this.products.filter((p) => this.isLowOf(p)).length;
   }
 
   get stockHealthPercent(): number {
@@ -2336,13 +2722,13 @@ export class ProductsComponent implements OnInit {
     if (this.activeNavTab === 'active') {
       list = list.filter((p) => p.status === 'ACTIVE');
     } else if (this.activeNavTab === 'low_stock') {
-      list = list.filter((p) => this.stockOf(p) <= p.low_stock_threshold);
+      list = list.filter((p) => this.isLowOf(p));
     }
 
     if (this.stockFilter === 'LOW') {
-      list = list.filter((p) => this.stockOf(p) <= p.low_stock_threshold);
+      list = list.filter((p) => this.isLowOf(p));
     } else if (this.stockFilter === 'IN_STOCK') {
-      list = list.filter((p) => this.stockOf(p) > p.low_stock_threshold);
+      list = list.filter((p) => !this.isLowOf(p));
     }
 
     if (this.sortBy === 'price_asc') {
@@ -2392,8 +2778,21 @@ export class ProductsComponent implements OnInit {
     return Math.min(this.safePage * this.pageSize, this.filteredProducts.length);
   }
 
-  calcStockPercent(curr: number, threshold: number): number {
-    const max = threshold * 3 || 30;
+  /** Same rule the Low Stock tab and filter use: at or below the threshold is low. */
+  stockLevelOf(p: any): 'out' | 'low' | 'ok' {
+    if (this.stockOf(p) <= 0) return 'out';
+    return this.isLowOf(p) ? 'low' : 'ok';
+  }
+
+  /**
+   * Stock bar fill: what is left of the ledger item's latest stock-in, so an
+   * untouched purchase reads full. Dishes with no stock-in history fall back
+   * to a threshold-based scale.
+   */
+  calcStockPercent(p: Product): number {
+    const curr = this.stockOf(p);
+    const restocked = Number(p.last_restock_quantity) || 0;
+    const max = restocked > 0 ? Math.max(restocked, curr) : (this.alertOf(p) * 3 || 30);
     return Math.min(100, Math.max(0, (curr / max) * 100));
   }
 

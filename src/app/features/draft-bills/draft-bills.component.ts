@@ -758,7 +758,7 @@ export class DraftBillsComponent implements OnInit {
         if (res.success) {
           this.cartService.restoreFromDraft(res.data, this.products);
           this.notify.success(`Draft ${res.data.draft_number} resumed`);
-          this.router.navigate(['/pos']);
+          this.router.navigate(['/pos'], { state: { keepCart: true } });
         }
       },
       error: () => {

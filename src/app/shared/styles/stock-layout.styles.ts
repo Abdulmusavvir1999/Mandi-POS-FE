@@ -727,7 +727,35 @@ export const STOCK_LAYOUT_CSS = `
   .stock-card-bar-fill {
     height: 100%;
     border-radius: 999px;
+    background: var(--stock-healthy-color, var(--success, #16A34A));
   }
+  .stock-card-health-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--stock-healthy-color, var(--success, #16A34A));
+  }
+  .stock-card-health-label .material-symbols-outlined { font-size: 14px; }
+
+  /* Low / out-of-stock cards: tinted border, progress panel, qty, label and bar */
+  .stock-card-item.is-low { --stock-health: var(--stock-warning-color, var(--warning, #EA580C)); }
+  .stock-card-item.is-out { --stock-health: var(--stock-critical-color, var(--danger, #DC2626)); }
+  .stock-card-item.is-low,
+  .stock-card-item.is-out {
+    border-color: color-mix(in srgb, var(--stock-health) 55%, transparent);
+    box-shadow: inset 3px 0 0 var(--stock-health), 0 4px 12px rgba(15, 23, 42, 0.04);
+  }
+  .stock-card-item.is-low .stock-card-progress,
+  .stock-card-item.is-out .stock-card-progress {
+    background: color-mix(in srgb, var(--stock-health) 10%, transparent);
+    border-color: color-mix(in srgb, var(--stock-health) 35%, transparent);
+  }
+  .stock-card-item.is-low .stock-card-big-qty,
+  .stock-card-item.is-out .stock-card-big-qty,
+  .stock-card-item.is-low .stock-card-health-label,
+  .stock-card-item.is-out .stock-card-health-label { color: var(--stock-health); }
+  .stock-card-item.is-low .stock-card-bar-fill,
+  .stock-card-item.is-out .stock-card-bar-fill { background: var(--stock-health); }
 
   .stock-card-values {
     display: grid;

@@ -94,6 +94,20 @@ export const routes: Routes = [
         data: { permission: 'dining.manage' },
       },
       {
+        path: 'dining/reservations',
+        loadComponent: () =>
+          import('./features/dining/reservations/reservations.component').then((m) => m.ReservationsComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'dining.manage' },
+      },
+      {
+        path: 'dining/tables/:id/history',
+        loadComponent: () =>
+          import('./features/dining/table-history/table-history.component').then((m) => m.TableHistoryComponent),
+        canActivate: [roleGuard],
+        data: { permission: 'dining.manage' },
+      },
+      {
         path: 'queue',
         loadComponent: () =>
           import('./features/queue/queue.component').then((m) => m.QueueComponent),

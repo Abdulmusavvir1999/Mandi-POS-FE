@@ -783,7 +783,7 @@ type ProfileTab = 'personal' | 'security' | 'permissions';
     .field-label {
       font-size: 0.78rem;
       font-weight: 700;
-      color: #374151;
+      color: var(--label-color, #374151);
       display: flex;
       align-items: center;
       gap: 0.35rem;

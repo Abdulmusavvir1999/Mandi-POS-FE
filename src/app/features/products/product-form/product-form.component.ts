@@ -7,7 +7,7 @@ import { CategoryService } from '../../../core/services/category.service';
 import { StockService } from '../../../core/services/stock.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SettingsService } from '../../../core/services/settings.service';
-import { Category, Product, ProductVariant, StockItem, ProductAddon, ProductAddonMapping } from '../../../core/models';
+import { Category, Product, ProductVariant, StockItem, ProductAddon, ProductAddonMapping, VariantStockMode } from '../../../core/models';
 import { CustomDropdownComponent, DropdownOption } from '../../../shared/components/custom-dropdown/custom-dropdown.component';
 import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
 
@@ -295,9 +295,16 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
                 <span class="material-symbols-outlined">lunch_dining</span>
                 <span>Dish Variants</span>
               </h2>
-              <p class="form-hint !max-w-[50ch]">
-                Stock is not entered here. Each portion declares how much of this dish's
-                linked stock item one sale consumes — e.g. Full uses 4, Half uses 2.
+              <p class="form-hint variant-mode-hint" [ngSwitch]="form.variantStockMode">
+                <ng-container *ngSwitchCase="'EACH'">
+                  Each portion uses <strong>its own single stock item</strong> — e.g. Full uses Mutton, Half uses Chicken.
+                </ng-container>
+                <ng-container *ngSwitchCase="'MULTI'">
+                  Each portion uses <strong>several stock items at once</strong> — e.g. Full uses Mutton 2 + Chicken 4 + Rice 1.
+                </ng-container>
+                <ng-container *ngSwitchDefault>
+                  Every portion uses <strong>one shared stock item</strong> — set how much each portion takes, e.g. Full uses 4, Half uses 2.
+                </ng-container>
               </p>
             </div>
             <div class="variant-header-controls">
@@ -322,10 +329,20 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
                   <span class="material-symbols-outlined">list</span>
                   <span>Each Stock</span>
                 </button>
+                <button
+                  type="button"
+                  class="mode-btn"
+                  [class.is-active]="form.variantStockMode === 'MULTI'"
+                  (click)="setStockMode('MULTI')"
+                  title="Each portion uses several stock items at once"
+                >
+                  <span class="material-symbols-outlined">stacks</span>
+                  <span>Multi Stock</span>
+                </button>
               </div>
 
               <button
-                *ngIf="form.variants.length > 0"
+                *ngIf="form.variants.length > 0 && form.variantStockMode !== 'MULTI'"
                 type="button"
                 class="action-btn btn-outline-danger !py-1.5 !px-3 !text-xs shrink-0"
                 (click)="clearAllVariants()"
@@ -341,7 +358,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
                 (click)="addVariant()"
               >
                 <span class="material-symbols-outlined">add</span>
-                <span>Add Variant</span>
+                <span>{{ form.variantStockMode === 'MULTI' ? 'Add Portion' : 'Add Variant' }}</span>
               </button>
             </div>
           </div>
@@ -363,8 +380,245 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
             </p>
           </div>
 
+          <!-- MULTI: every portion lists all the stock items it uses -->
+          <div class="multi-stock" *ngIf="form.variantStockMode === 'MULTI'">
+            <div class="multi-howto">
+              <span class="material-symbols-outlined">tips_and_updates</span>
+              <span>
+                Selling <strong>1 portion</strong> takes <strong>every</strong> stock item listed on it, at the quantity shown.
+                A sale is blocked if any one of them runs short.
+              </span>
+            </div>
+
+            <div
+              class="portion-card"
+              *ngFor="let v of form.variants; let i = index"
+              [class.is-default]="v.isDefault"
+            >
+              <!-- Portion basics -->
+              <div class="portion-head">
+                <span class="portion-index" [title]="'Portion ' + (i + 1)">{{ i + 1 }}</span>
+
+                <div class="portion-field portion-name">
+                  <label class="form-label" [for]="'mName' + i">Portion name</label>
+                  <input
+                    [id]="'mName' + i"
+                    type="text"
+                    [(ngModel)]="v.name"
+                    [name]="'variantName' + i"
+                    placeholder="e.g. Full, Half, Regular"
+                    class="form-control text-sm"
+                    [class.is-invalid]="triedSave && !(v.name || '').trim()"
+                  />
+                </div>
+
+                <div class="portion-field portion-order">
+                  <label class="form-label" [for]="'mOrder' + i">Order</label>
+                  <input
+                    [id]="'mOrder' + i"
+                    type="number"
+                    min="1"
+                    step="1"
+                    [(ngModel)]="v.displayOrder"
+                    (ngModelChange)="onDisplayOrderChange($event, i)"
+                    [name]="'variantOrder' + i"
+                    class="form-control font-mono font-bold text-sm text-center"
+                    [class.is-invalid]="isDuplicateOrder(v.displayOrder, i)"
+                    title="Position on the POS (must be unique)"
+                  />
+                </div>
+
+                <div class="portion-actions">
+                  <button
+                    type="button"
+                    class="default-toggle-btn"
+                    [class.is-default]="v.isDefault"
+                    (click)="setDefaultVariant(i)"
+                    [title]="v.isDefault ? 'Default portion on the POS' : 'Make this the default portion'"
+                  >
+                    <span class="material-symbols-outlined">{{ v.isDefault ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
+                    <span>{{ v.isDefault ? 'Default' : 'Set Default' }}</span>
+                  </button>
+                  <button
+                    *ngIf="form.variants.length > 1"
+                    type="button"
+                    class="action-icon-btn is-danger"
+                    (click)="removeVariant(i)"
+                    title="Remove this portion"
+                  >
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Recipe: the stock items one portion takes -->
+              <div class="recipe">
+                <div class="recipe-title">
+                  <span class="material-symbols-outlined">stacks</span>
+                  <span>Stock used by 1 {{ (v.name || '').trim() || 'portion' }}</span>
+                  <span class="recipe-count">{{ v.stocks.length }} {{ v.stocks.length === 1 ? 'item' : 'items' }}</span>
+                </div>
+
+                <div class="recipe-head" *ngIf="v.stocks.length > 0">
+                  <span></span>
+                  <span>Stock item</span>
+                  <span>Qty per portion</span>
+                  <span>In stock · cost</span>
+                  <span></span>
+                </div>
+
+                <div class="recipe-line" *ngFor="let line of v.stocks; let j = index">
+                  <span class="recipe-num">{{ j + 1 }}</span>
+
+                  <div class="recipe-stock" [class.is-invalid]="triedSave && !line.stockId">
+                    <app-custom-dropdown
+                      [options]="lineStockOptions(i, j)"
+                      [(ngModel)]="line.stockId"
+                      [name]="'mStock' + i + '_' + j"
+                      [searchable]="true"
+                      placeholder="Pick a stock item…"
+                      minWidth="100%"
+                    ></app-custom-dropdown>
+                  </div>
+
+                  <div class="recipe-qty">
+                    <input
+                      type="number"
+                      min="0.001"
+                      step="any"
+                      [(ngModel)]="line.quantity"
+                      [name]="'mQty' + i + '_' + j"
+                      placeholder="0"
+                      class="form-control font-mono font-bold text-sm text-center"
+                      [class.is-invalid]="triedSave && !(Number(line.quantity) > 0)"
+                      title="How much of this stock item one portion uses"
+                    />
+                    <span class="recipe-unit">{{ stockFor(line.stockId)?.unit_type || 'unit' }}</span>
+                  </div>
+
+                  <div class="recipe-meta">
+                    <ng-container *ngIf="stockFor(line.stockId) as s; else pickHint">
+                      <span [class.is-short]="Number(line.quantity) > 0 && Number(s.current_quantity) < Number(line.quantity)">
+                        {{ Number(s.current_quantity) | number: '1.0-3' }} {{ s.unit_type }}
+                      </span>
+                      <span class="recipe-cost">{{ settingsService.currencySymbol() }}{{ lineCost(line) | number: '1.2-2' }}</span>
+                    </ng-container>
+                    <ng-template #pickHint><span class="recipe-muted">Pick an item</span></ng-template>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="action-icon-btn is-danger"
+                    (click)="removeRecipeLine(v, j)"
+                    [disabled]="v.stocks.length === 1"
+                    [title]="v.stocks.length === 1 ? 'A portion needs at least one stock item' : 'Remove this stock item'"
+                  >
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+
+                <button type="button" class="recipe-add" (click)="addRecipeLine(v)">
+                  <span class="material-symbols-outlined">add</span>
+                  <span>Add stock item</span>
+                </button>
+              </div>
+
+              <!-- Costing: the whole portion's cost, price and profit in one place -->
+              <div class="portion-costing">
+                <!-- 1. Total stock cost, with each item's share -->
+                <div class="cost-tile">
+                  <span class="cost-tile-label">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    Total stock cost
+                  </span>
+                  <span class="cost-tile-value">{{ settingsService.currencySymbol() }}{{ portionCost(v) | number: '1.2-2' }}</span>
+                  <div class="cost-breakdown" *ngIf="costedLines(v).length > 0; else noCost">
+                    <div class="cost-breakdown-row" *ngFor="let line of costedLines(v)">
+                      <span class="cost-breakdown-name">
+                        {{ stockFor(line.stockId)?.name }}
+                        <span class="cost-breakdown-qty">× {{ Number(line.quantity) | number: '1.0-3' }} {{ stockFor(line.stockId)?.unit_type }}</span>
+                      </span>
+                      <span class="cost-breakdown-amt">{{ settingsService.currencySymbol() }}{{ lineCost(line) | number: '1.2-2' }}</span>
+                    </div>
+                  </div>
+                  <ng-template #noCost><span class="cost-tile-note">Pick stock items above to see the cost</span></ng-template>
+                </div>
+
+                <span class="cost-op" aria-hidden="true">→</span>
+
+                <!-- 2. Selling price (editable) -->
+                <div class="cost-tile is-price">
+                  <label class="cost-tile-label" [for]="'mPrice' + i">
+                    <span class="material-symbols-outlined">sell</span>
+                    Selling price
+                  </label>
+                  <div class="price-input">
+                    <span class="price-input-prefix">{{ settingsService.currencySymbol() }}</span>
+                    <input
+                      [id]="'mPrice' + i"
+                      type="number"
+                      min="0"
+                      step="any"
+                      [(ngModel)]="v.sellingPrice"
+                      [name]="'variantPrice' + i"
+                      placeholder="0.00"
+                      title="What the guest pays for one portion"
+                    />
+                  </div>
+                  <span class="cost-tile-note">What the guest pays for 1 {{ (v.name || '').trim() || 'portion' }}</span>
+                </div>
+
+                <span class="cost-op" aria-hidden="true">=</span>
+
+                <!-- 3. Profit -->
+                <div
+                  class="cost-tile"
+                  [class.is-profit]="portionMargin(v) > 0"
+                  [class.is-loss]="portionMargin(v) < 0"
+                >
+                  <span class="cost-tile-label">
+                    <span class="material-symbols-outlined">{{ portionMargin(v) < 0 ? 'trending_down' : 'trending_up' }}</span>
+                    {{ portionMargin(v) < 0 ? 'Loss per portion' : 'Profit per portion' }}
+                  </span>
+                  <span class="cost-tile-value">
+                    {{ portionMargin(v) < 0 ? '−' : '' }}{{ settingsService.currencySymbol() }}{{ absValue(portionMargin(v)) | number: '1.2-2' }}
+                  </span>
+                  <div class="margin-bar" *ngIf="Number(v.sellingPrice) > 0">
+                    <span class="margin-bar-fill" [style.width.%]="marginBarWidth(v)"></span>
+                  </div>
+                  <span class="cost-tile-note">
+                    <ng-container *ngIf="Number(v.sellingPrice) > 0; else noPrice">
+                      {{ marginPercent(v) | number: '1.0-0' }}% margin{{ portionMargin(v) < 0 ? ' — stock costs more than the price' : '' }}
+                    </ng-container>
+                    <ng-template #noPrice>Enter a selling price</ng-template>
+                  </span>
+                </div>
+
+                <!-- 4. What current stock allows -->
+                <div class="cost-tile is-compact" [class.is-loss]="canMake(v) === 0">
+                  <span class="cost-tile-label">
+                    <span class="material-symbols-outlined">inventory</span>
+                    Can make now
+                  </span>
+                  <span class="cost-tile-value">{{ canMake(v) ?? '—' }}</span>
+                  <span class="cost-tile-note">{{ canMake(v) === null ? 'Pick stock items' : 'portions from current stock' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="empty-variants-box multi-empty" *ngIf="form.variants.length === 0">
+              <span class="material-symbols-outlined text-purple-400 text-3xl">stacks</span>
+              <p class="empty-text">Add a portion, then list every stock item it uses.</p>
+            </div>
+
+            <button type="button" class="add-portion-btn" (click)="addVariant()">
+              <span class="material-symbols-outlined">add_circle</span>
+              <span>{{ form.variants.length === 0 ? 'Add first portion' : 'Add another portion' }}</span>
+            </button>
+          </div>
+
           <!-- Variants Table -->
-          <div class="variants-table-container">
+          <div class="variants-table-container" *ngIf="form.variantStockMode !== 'MULTI'">
             <table class="variant-table">
               <thead>
                 <tr>
@@ -981,6 +1235,436 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
         color: var(--text-muted, #6B7280);
       }
 
+      .variant-header-controls { flex-wrap: wrap; justify-content: flex-end; }
+      .variant-mode-hint { max-width: 62ch; }
+      .variant-mode-hint strong { color: var(--text-main, #2E1065); }
+
+      /* ── Multi Stock: portion cards with their stock lists ─────────── */
+      .multi-stock {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+
+      .multi-howto {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        padding: 0.7rem 0.9rem;
+        border-radius: 12px;
+        background: var(--primary-light, rgba(126, 34, 206, 0.08));
+        border: 1px dashed color-mix(in srgb, var(--primary, #7E22CE) 45%, transparent);
+        color: var(--text-main, #2E1065);
+        font-size: 0.78rem;
+        line-height: 1.5;
+      }
+
+      .multi-howto .material-symbols-outlined {
+        font-size: 18px;
+        color: var(--primary, #7E22CE);
+        flex-shrink: 0;
+      }
+
+      .portion-card {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: var(--card-bg, #ffffff);
+        overflow: hidden;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .portion-card.is-default {
+        border-color: color-mix(in srgb, var(--primary, #7E22CE) 55%, var(--card-border, #E9D5FF));
+        box-shadow: 0 6px 20px -12px rgba(var(--primary-rgb, 126, 34, 206), 0.45);
+      }
+
+      .portion-head {
+        display: grid;
+        grid-template-columns: auto minmax(180px, 1fr) 90px auto;
+        align-items: end;
+        gap: 0.75rem;
+        padding: 0.9rem 1rem;
+        background: var(--bg-app, #FAF5FF);
+        border-bottom: 1.5px solid var(--card-border, #E9D5FF);
+      }
+
+      .portion-index {
+        width: 30px;
+        height: 30px;
+        margin-bottom: 4px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #FFFFFF;
+        background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+      }
+
+      .portion-field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+
+      .portion-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding-bottom: 3px;
+      }
+
+      .recipe {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.9rem 1rem 0.75rem;
+      }
+
+      .recipe-title {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--label-color, var(--text-main, #2E1065));
+      }
+
+      .recipe-title .material-symbols-outlined { font-size: 17px; color: var(--primary, #7E22CE); }
+
+      .recipe-count {
+        margin-left: auto;
+        padding: 0.12rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.66rem;
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+      }
+
+      .recipe-head,
+      .recipe-line {
+        display: grid;
+        grid-template-columns: 26px minmax(180px, 2fr) minmax(150px, 1fr) minmax(130px, 1fr) 34px;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .recipe-head span {
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted, #6B7280);
+      }
+
+      .recipe-line {
+        padding: 0.45rem 0.5rem;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .recipe-line:hover {
+        background: var(--bg-app, #FAF5FF);
+        border-color: var(--card-border, #E9D5FF);
+      }
+
+      .recipe-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+      }
+
+      .recipe-stock { min-width: 0; border-radius: 12px; }
+      .recipe-stock.is-invalid { box-shadow: 0 0 0 2px var(--danger, #EF4444); }
+
+      .recipe-qty {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .recipe-qty input { max-width: 110px; }
+
+      .recipe-unit {
+        min-width: 44px;
+        padding: 0.3rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-align: center;
+        color: var(--text-muted, #6B7280);
+        background: var(--bg-app, #FAF5FF);
+        border: 1px solid var(--card-border, #E9D5FF);
+      }
+
+      .recipe-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        font-size: 0.72rem;
+        color: var(--text-muted, #6B7280);
+        line-height: 1.35;
+      }
+
+      .recipe-meta .is-short { color: var(--danger, #EF4444); font-weight: 800; }
+      .recipe-cost { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; color: var(--text-main, #2E1065); }
+      .recipe-muted { font-style: italic; opacity: 0.8; }
+
+      .recipe-line .action-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      .recipe-add {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-left: 32px;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        border: 1.5px dashed color-mix(in srgb, var(--primary, #7E22CE) 55%, transparent);
+        background: transparent;
+        color: var(--primary, #7E22CE);
+        font-family: inherit;
+        font-size: 0.72rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background-color 0.18s ease, border-style 0.18s ease;
+      }
+
+      .recipe-add .material-symbols-outlined { font-size: 16px; }
+      .recipe-add:hover { background: var(--primary-light, rgba(126, 34, 206, 0.08)); border-style: solid; }
+
+      /* Costing panel: cost → price = profit, plus what stock allows */
+      .portion-costing {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.4fr) auto minmax(190px, 1fr) auto minmax(190px, 1fr) minmax(140px, 0.7fr);
+        align-items: stretch;
+        gap: 0.6rem;
+        padding: 0.9rem 1rem 1rem;
+        border-top: 1px dashed var(--card-border, #E9D5FF);
+        background: color-mix(in srgb, var(--bg-app, #FAF5FF) 55%, transparent);
+      }
+
+      .cost-op {
+        align-self: center;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-muted, #6B7280);
+        opacity: 0.7;
+      }
+
+      .cost-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        min-width: 0;
+        padding: 0.75rem 0.85rem;
+        border-radius: 14px;
+        background: var(--card-bg, #ffffff);
+        border: 1.5px solid var(--card-border, #E9D5FF);
+      }
+
+      .cost-tile-label {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin: 0 !important;
+        font-size: 0.66rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--label-color, var(--text-muted, #6B7280));
+      }
+
+      .cost-tile-label .material-symbols-outlined { font-size: 15px; }
+
+      .cost-tile-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 1.25rem;
+        font-weight: 800;
+        line-height: 1.2;
+        color: var(--text-main, #2E1065);
+      }
+
+      .cost-tile-note {
+        font-size: 0.7rem;
+        color: var(--text-muted, #6B7280);
+        line-height: 1.35;
+      }
+
+      .cost-breakdown {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin-top: 0.15rem;
+        padding-top: 0.4rem;
+        border-top: 1px dashed var(--card-border, #E9D5FF);
+      }
+
+      .cost-breakdown-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.5rem;
+        font-size: 0.72rem;
+      }
+
+      .cost-breakdown-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--text-main, #2E1065);
+        font-weight: 600;
+      }
+
+      .cost-breakdown-qty { color: var(--text-muted, #6B7280); font-weight: 500; }
+
+      .cost-breakdown-amt {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-weight: 700;
+        color: var(--text-main, #2E1065);
+        flex-shrink: 0;
+      }
+
+      /* The one editable tile: highlighted so it reads as "set this" */
+      .cost-tile.is-price {
+        border-color: color-mix(in srgb, var(--primary, #7E22CE) 55%, var(--card-border, #E9D5FF));
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.08));
+      }
+
+      .cost-tile.is-price .cost-tile-label { color: var(--primary, #7E22CE); }
+
+      .price-input {
+        display: flex;
+        align-items: center;
+        border-radius: 10px;
+        border: 1.5px solid var(--card-border, #E9D5FF);
+        background: var(--bg-app, #FAF5FF);
+        overflow: hidden;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .price-input:focus-within {
+        border-color: var(--primary, #7E22CE);
+        box-shadow: 0 0 0 3px var(--primary-light, rgba(126, 34, 206, 0.12));
+      }
+
+      .price-input-prefix {
+        padding: 0 0.6rem;
+        align-self: stretch;
+        display: flex;
+        align-items: center;
+        font-weight: 800;
+        color: var(--primary, #7E22CE);
+        background: var(--primary-light, rgba(126, 34, 206, 0.1));
+      }
+
+      .price-input input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        padding: 0.45rem 0.6rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-main, #2E1065);
+      }
+
+      .cost-tile.is-profit {
+        border-color: color-mix(in srgb, var(--success, #10B981) 40%, var(--card-border, #E9D5FF));
+        background: var(--success-light, rgba(16, 185, 129, 0.08));
+      }
+
+      .cost-tile.is-profit .cost-tile-label,
+      .cost-tile.is-profit .cost-tile-value { color: var(--success, #10B981); }
+
+      .cost-tile.is-loss {
+        border-color: color-mix(in srgb, var(--danger, #EF4444) 40%, var(--card-border, #E9D5FF));
+        background: var(--danger-light, rgba(239, 68, 68, 0.08));
+      }
+
+      .cost-tile.is-loss .cost-tile-label,
+      .cost-tile.is-loss .cost-tile-value { color: var(--danger, #EF4444); }
+
+      .margin-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--text-muted, #6B7280) 18%, transparent);
+        overflow: hidden;
+      }
+
+      .margin-bar-fill {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--text-muted, #6B7280);
+        transition: width 0.25s ease;
+      }
+
+      .cost-tile.is-profit .margin-bar-fill { background: var(--success, #10B981); }
+      .cost-tile.is-loss .margin-bar-fill { background: var(--danger, #EF4444); }
+
+      @media (max-width: 1200px) {
+        .portion-costing { grid-template-columns: 1fr 1fr; }
+        .cost-op { display: none; }
+      }
+
+      @media (max-width: 640px) {
+        .portion-costing { grid-template-columns: 1fr; }
+      }
+
+      .multi-empty {
+        padding: 1.5rem 1rem;
+        border-radius: 14px;
+        border: 1.5px dashed var(--card-border, #E9D5FF);
+      }
+
+      .add-portion-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        width: 100%;
+        padding: 0.8rem 1rem;
+        border-radius: 14px;
+        border: 1.5px dashed color-mix(in srgb, var(--primary, #7E22CE) 50%, var(--card-border, #E9D5FF));
+        background: transparent;
+        color: var(--primary, #7E22CE);
+        font-family: inherit;
+        font-size: 0.8125rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background-color 0.18s ease, border-style 0.18s ease;
+      }
+
+      .add-portion-btn:hover { background: var(--primary-light, rgba(126, 34, 206, 0.08)); border-style: solid; }
+
+      @media (max-width: 900px) {
+        .portion-head { grid-template-columns: auto 1fr 80px; }
+        .portion-actions { grid-column: 2 / -1; justify-content: flex-end; }
+        .recipe-head { display: none; }
+        .recipe-line {
+          grid-template-columns: 26px 1fr 34px;
+          grid-template-areas: 'num stock del' '. qty qty' '. meta meta';
+        }
+        .recipe-num { grid-area: num; }
+        .recipe-stock { grid-area: stock; }
+        .recipe-qty { grid-area: qty; }
+        .recipe-meta { grid-area: meta; flex-direction: row; gap: 0.75rem; }
+        .recipe-line .action-icon-btn { grid-area: del; }
+        .recipe-add { margin-left: 0; }
+      }
+
       /* Action bar spans both columns and stays reachable on long forms */
       .form-action-bar {
         grid-column: 1 / -1;
@@ -1033,12 +1717,28 @@ export class ProductFormComponent implements OnInit {
     taxRate: 5,
     status: 'ACTIVE',
     stockId: null as number | null,
-    variantStockMode: 'COMMON' as 'COMMON' | 'EACH',
+    variantStockMode: 'COMMON' as VariantStockMode,
     variants: [] as any[],
     addonMappings: [] as ProductAddonMapping[],
   };
 
   public stockItems: StockItem[] = [];
+
+  /** Template access to Number() for the Multi Stock arithmetic. */
+  readonly Number = Number;
+
+  /** Set on the first Save attempt, so empty Multi Stock fields show red only after that. */
+  public triedSave = false;
+
+  /**
+   * Stock items a saved recipe names that the active list does not carry (an
+   * item made inactive since), so the form can still show their name, unit
+   * and cost instead of a blank line.
+   */
+  private recipeStockInfo = new Map<number, Partial<StockItem>>();
+
+  /** lineStockOptions() results, reused while a portion's picks stay the same. */
+  private lineOptionsCache = new Map<string, { key: string; options: DropdownOption[] }>();
 
   get stockItemOptions(): DropdownOption[] {
     return this.stockItems.map((s) => ({
@@ -1072,9 +1772,172 @@ export class ProductFormComponent implements OnInit {
    * COMMON — every portion consumes the one stock item chosen for the dish.
    * EACH   — a portion names its own, for a dish whose sizes draw on different
    *          raw materials.
+   * MULTI  — a portion lists several stock items it takes at once.
+   *
+   * Switching carries what is already set across, so nothing has to be
+   * re-entered: into MULTI each portion starts from the item (and quantity)
+   * it drew before; out of MULTI each portion keeps its first item. A
+   * portion's MULTI list is kept while in another mode, so switching back
+   * restores it.
    */
-  setStockMode(mode: 'COMMON' | 'EACH'): void {
+  setStockMode(mode: VariantStockMode): void {
+    const from = this.form.variantStockMode as VariantStockMode;
+    if (from === mode) return;
+
+    if (mode === 'MULTI') {
+      if (this.form.variants.length === 0) {
+        // A Multi Stock dish is always sold by portion; start with one.
+        this.form.variants.push(this.newPortion(1, true, (this.form.name || '').trim() ? 'Regular' : ''));
+      }
+      for (const v of this.form.variants) {
+        this.ensureStocks(v);
+        const hasPicks = v.stocks.some((l: any) => l.stockId);
+        const carried = from === 'EACH' ? v.stockId : this.form.stockId;
+        if (!hasPicks && carried) {
+          v.stocks = [{ stockId: Number(carried), quantity: Number(v.stockConsumption) > 0 ? Number(v.stockConsumption) : 1 }];
+        }
+      }
+    } else if (from === 'MULTI') {
+      const firstOf = (v: any) => (v.stocks || []).find((l: any) => l.stockId) || null;
+      if (mode === 'EACH') {
+        for (const v of this.form.variants) {
+          const first = firstOf(v);
+          if (!v.stockId && first) {
+            v.stockId = first.stockId;
+            v.stockConsumption = Number(first.quantity) || 1;
+          }
+        }
+      } else if (!this.form.stockId) {
+        const first = this.form.variants.map(firstOf).find(Boolean);
+        if (first) this.form.stockId = first.stockId;
+      }
+      // Common and Each sell a dish as one item or as 2+ portions, so a lone
+      // Multi Stock portion becomes the single item.
+      if (this.form.variants.length === 1) {
+        const only = this.form.variants[0];
+        this.form.sellingPrice = Number(only.sellingPrice) || this.form.sellingPrice;
+        if (!this.form.stockId) this.form.stockId = only.stockId || firstOf(only)?.stockId || null;
+        this.form.variants = [];
+        this.notify.info('The single portion became the dish price — add 2 or more portions to sell by size.');
+      }
+    }
+
     this.form.variantStockMode = mode;
+    this.triedSave = false;
+  }
+
+  private newPortion(displayOrder: number, isDefault: boolean, name = ''): any {
+    return {
+      name,
+      stockId: this.form.stockId ?? null,
+      stockConsumption: 1,
+      sellingPrice: Number(this.form.sellingPrice) || 0,
+      displayOrder,
+      isDefault,
+      // Unused outside Multi Stock, where setStockMode fills it on the switch.
+      stocks: [{ stockId: null, quantity: 1 }],
+    };
+  }
+
+  private ensureStocks(v: any): void {
+    if (!Array.isArray(v.stocks)) v.stocks = [];
+    if (v.stocks.length === 0) v.stocks.push({ stockId: null, quantity: 1 });
+  }
+
+  addRecipeLine(v: any): void {
+    if (!Array.isArray(v.stocks)) v.stocks = [];
+    v.stocks.push({ stockId: null, quantity: 1 });
+  }
+
+  removeRecipeLine(v: any, index: number): void {
+    if (v.stocks.length <= 1) return;
+    v.stocks.splice(index, 1);
+  }
+
+  /**
+   * Options for one recipe line: every active stock item except the ones
+   * other lines of the same portion already use, so an item cannot be listed
+   * twice. Cached per line while the portion's picks are unchanged - a fresh
+   * array on every change-detection pass would make the dropdown rebuild.
+   */
+  lineStockOptions(portionIndex: number, lineIndex: number): DropdownOption[] {
+    const v = this.form.variants[portionIndex];
+    const taken = (v?.stocks || [])
+      .filter((_: any, j: number) => j !== lineIndex)
+      .map((l: any) => Number(l.stockId))
+      .filter(Boolean);
+    const own = Number(v?.stocks?.[lineIndex]?.stockId) || 0;
+    const key = `${this.stockItems.length}|${taken.join(',')}|${own}`;
+    const cacheKey = `${portionIndex}_${lineIndex}`;
+    const hit = this.lineOptionsCache.get(cacheKey);
+    if (hit && hit.key === key) return hit.options;
+
+    const options = this.stockItemOptions.filter((o) => !taken.includes(Number(o.value)));
+    // Keep a saved pick that is no longer active visible on its own line.
+    if (own && !options.some((o) => Number(o.value) === own)) {
+      const info = this.recipeStockInfo.get(own);
+      if (info) {
+        options.unshift({
+          value: own,
+          label: `${info.name} (${info.stock_code || 'inactive'})`,
+          icon: 'inventory_2',
+          badge: info.unit_type,
+          description: 'Inactive stock item - pick another one',
+        });
+      }
+    }
+    this.lineOptionsCache.set(cacheKey, { key, options });
+    return options;
+  }
+
+  stockFor(stockId: any): Partial<StockItem> | undefined {
+    const id = Number(stockId);
+    if (!id) return undefined;
+    return this.stockItems.find((s) => s.id === id) || this.recipeStockInfo.get(id);
+  }
+
+  lineCost(line: any): number {
+    const s = this.stockFor(line.stockId);
+    return (Number(line.quantity) || 0) * (Number(s?.average_unit_price) || 0);
+  }
+
+  portionCost(v: any): number {
+    return (v.stocks || []).reduce((sum: number, l: any) => sum + this.lineCost(l), 0);
+  }
+
+  portionMargin(v: any): number {
+    return (Number(v.sellingPrice) || 0) - this.portionCost(v);
+  }
+
+  marginPercent(v: any): number {
+    const price = Number(v.sellingPrice) || 0;
+    return price > 0 ? (this.portionMargin(v) / price) * 100 : 0;
+  }
+
+  absValue(n: number): number {
+    return Math.abs(n);
+  }
+
+  /** Recipe lines that are complete enough to price: an item and a quantity. */
+  costedLines(v: any): any[] {
+    return (v.stocks || []).filter((l: any) => l.stockId && Number(l.quantity) > 0 && this.stockFor(l.stockId));
+  }
+
+  /** Width of the margin bar: the margin as a share of the price, 0-100. */
+  marginBarWidth(v: any): number {
+    return Math.max(0, Math.min(100, Math.abs(this.marginPercent(v))));
+  }
+
+  /**
+   * How many of this portion the current balances can make: the scarcest
+   * item decides. Null until at least one line has an item and a quantity.
+   */
+  canMake(v: any): number | null {
+    const lines = (v.stocks || []).filter((l: any) => l.stockId && Number(l.quantity) > 0);
+    if (lines.length === 0) return null;
+    return Math.max(0, Math.min(
+      ...lines.map((l: any) => Math.floor((Number(this.stockFor(l.stockId)?.current_quantity) || 0) / Number(l.quantity)))
+    ));
   }
 
   public statusOptions: DropdownOption[] = [
@@ -1175,9 +2038,31 @@ export class ProductFormComponent implements OnInit {
             sellingPrice: Number(v.selling_price),
             displayOrder: v.display_order !== undefined && v.display_order !== null ? Number(v.display_order) : idx + 1,
             isDefault: Boolean(Number(v.is_default) === 1),
+            stocks: (v.stocks || []).map((s) => ({ stockId: Number(s.stock_id), quantity: Number(s.stock_consumption) })),
           })),
           addonMappings: [],
         };
+
+        // Keep what the API said about every recipe item, so a line whose item
+        // has since gone inactive still shows its name, unit and cost.
+        this.recipeStockInfo.clear();
+        this.lineOptionsCache.clear();
+        for (const v of p.variants || []) {
+          for (const s of v.stocks || []) {
+            this.recipeStockInfo.set(Number(s.stock_id), {
+              id: Number(s.stock_id),
+              name: s.stock_name,
+              stock_code: s.stock_code,
+              unit_type: s.unit_type as any,
+              current_quantity: Number(s.current_quantity) || 0,
+              average_unit_price: Number(s.average_unit_price) || 0,
+              status: s.stock_status,
+            });
+          }
+        }
+        if (this.form.variantStockMode === 'MULTI') {
+          for (const v of this.form.variants) this.ensureStocks(v);
+        }
 
         if (this.form.variants.length > 0 && !this.form.variants.some((v: any) => v.isDefault)) {
           this.form.variants[0].isDefault = true;
@@ -1210,6 +2095,15 @@ export class ProductFormComponent implements OnInit {
   }
 
   addVariant(): void {
+    if (this.form.variantStockMode === 'MULTI') {
+      // Multi Stock adds one portion at a time; a single portion is valid.
+      const used = new Set(this.form.variants.map((v: any) => Number(v.displayOrder)));
+      let next = 1;
+      while (used.has(next)) next++;
+      this.form.variants.push(this.newPortion(next, this.form.variants.length === 0));
+      return;
+    }
+
     if (this.form.variants.length === 0) {
       // When zero rows, insert 2 variants
       this.form.variants.push(
@@ -1290,7 +2184,9 @@ export class ProductFormComponent implements OnInit {
   }
 
   removeVariant(index: number): void {
-    if (this.form.variants.length <= 2) {
+    const isMulti = this.form.variantStockMode === 'MULTI';
+    if (isMulti && this.form.variants.length <= 1) return;
+    if (!isMulti && this.form.variants.length <= 2) {
       this.clearAllVariants();
       return;
     }
@@ -1306,6 +2202,8 @@ export class ProductFormComponent implements OnInit {
       onConfirm: () => {
         const wasDefault = Boolean(this.form.variants[index]?.isDefault);
         this.form.variants.splice(index, 1);
+        // Lines are cached by position, which just shifted.
+        this.lineOptionsCache.clear();
         if (wasDefault && this.form.variants.length > 0) {
           this.form.variants[0].isDefault = true;
         }
@@ -1451,6 +2349,9 @@ export class ProductFormComponent implements OnInit {
       return;
     }
 
+    const isMulti = this.form.variantStockMode === 'MULTI';
+    this.triedSave = true;
+
     const rawVariants = this.form.variants || [];
     const variants = rawVariants.filter((v: any) => String(v.name || '').trim());
 
@@ -1459,7 +2360,12 @@ export class ProductFormComponent implements OnInit {
       return;
     }
 
-    if (variants.length > 0 && variants.length < 2) {
+    if (isMulti && variants.length === 0) {
+      this.notify.error('Multi Stock needs at least one portion — add one and list the stock items it uses.');
+      return;
+    }
+
+    if (!isMulti && variants.length > 0 && variants.length < 2) {
       this.notify.error('At least 2 variants are required when adding portions (or remove all rows to sell as a single item).');
       return;
     }
@@ -1491,7 +2397,31 @@ export class ProductFormComponent implements OnInit {
       });
     }
 
-    if (this.form.variantStockMode === 'EACH') {
+    if (isMulti) {
+      // Same rules the server applies, checked here so the message names the line.
+      for (const v of variants) {
+        const portion = String(v.name).trim();
+        const lines = (v.stocks || []).filter((l: any) => l.stockId || Number(l.quantity) > 0);
+        if (lines.length === 0) {
+          this.notify.error(`Portion "${portion}" needs at least one stock item.`);
+          return;
+        }
+        if (lines.some((l: any) => !l.stockId)) {
+          this.notify.error(`Portion "${portion}": pick a stock item on every line, or remove the empty line.`);
+          return;
+        }
+        const bad = lines.find((l: any) => !(Number(l.quantity) > 0));
+        if (bad) {
+          this.notify.error(`Portion "${portion}": enter how much ${this.stockFor(bad.stockId)?.name || 'of each item'} one portion uses.`);
+          return;
+        }
+        const ids = lines.map((l: any) => Number(l.stockId));
+        if (new Set(ids).size !== ids.length) {
+          this.notify.error(`Portion "${portion}" lists the same stock item twice — combine it into one line.`);
+          return;
+        }
+      }
+    } else if (this.form.variantStockMode === 'EACH') {
       const missing = variants.find((v: any) => !v.stockId);
       if (missing) {
         this.notify.error(`Portion "${missing.name}" needs a stock master item.`);
@@ -1530,12 +2460,19 @@ export class ProductFormComponent implements OnInit {
 
     const payload = {
       ...this.form,
+      // A Multi Stock dish draws only through its portions (the server clears it too).
+      stockId: isMulti ? null : this.form.stockId,
       variants: variants.map((v: any, idx: number) => ({
         ...v,
         stockConsumption: Number(v.stockConsumption) > 0 ? Number(v.stockConsumption) : 1,
         displayOrder: Number(v.displayOrder) || idx + 1,
         isDefault: Boolean(v.isDefault),
         stockId: this.form.variantStockMode === 'EACH' ? v.stockId : null,
+        stocks: isMulti
+          ? (v.stocks || [])
+              .filter((l: any) => l.stockId)
+              .map((l: any) => ({ stockId: Number(l.stockId), stockConsumption: Number(l.quantity) }))
+          : [],
       })),
     };
 

@@ -7,6 +7,8 @@ import {
   ElementRef,
   inject,
   signal,
+  effect,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +19,7 @@ import { POS_DESIGN_CSS } from '../../shared/styles/pos-design.styles';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { CustomerService } from '../../core/services/customer.service';
-import { DiningService } from '../../core/services/dining.service';
+import { DiningService, DiningTab } from '../../core/services/dining.service';
 import { DraftBillService } from '../../core/services/draft-bill.service';
 import { CheckoutService } from '../../core/services/checkout.service';
 import { BillService } from '../../core/services/bill.service';
@@ -49,6 +51,7 @@ import { ReceiptModalComponent } from '../../shared/components/receipt-modal/rec
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
 import { PageLoaderComponent } from '../../shared/components/page-loader/page-loader.component';
 import { ActionLoadingDirective } from '../../shared/directives/action-loading.directive';
+import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../core/utils/multi-stock.util';
 
 @Component({
   selector: 'app-pos',
@@ -478,7 +481,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   </div>
                   <div class="spec-row">
                     <span class="spec-label">In Stock</span>
-                    <span class="spec-value">{{ availableStock(p) | number:'1.0-0' }} {{ p.linked_unit_type || 'units' }}</span>
+                    <span class="spec-value">{{ availableStock(p) | number:'1.0-0' }} {{ availableStockUnit(p) }}</span>
                   </div>
                   <div class="spec-row">
                     <span class="spec-label">Portions</span>
@@ -574,11 +577,11 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   </span>
                 </div>
 
-                <!-- The bundled dishes, in the spec-panel slot the dish card
+                <!-- The bundled add-ons, in the spec-panel slot the dish card
                      uses for category / stock / portions. -->
                 <div class="dish-specs">
                   <div class="spec-row" *ngFor="let item of combo.items || []">
-                    <span class="spec-label">{{ item.product_name || 'Dish' }}</span>
+                    <span class="spec-label">{{ item.addon_name || 'Add-on' }}</span>
                     <span class="spec-value">&times;{{ item.quantity }}</span>
                   </div>
                   <div class="spec-row" *ngIf="!combo.items || combo.items.length === 0">
@@ -828,7 +831,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             </span>
           </div>
           <div class="flex items-center gap-2">
-            <span class="order-id-tag font-mono">#{{ activeOrderId }}</span>
+            <span class="order-id-tag font-mono">{{ cartService.openTab() ? cartService.openTab()!.orderNumber : '#' + activeOrderId }}</span>
             <button
               type="button"
               class="pos-cart-mobile-close-btn"
@@ -865,6 +868,21 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
           </button>
         </div>
 
+        <!-- OPEN TAB: this table is eating now and pays at the end -->
+        <div class="tab-banner" *ngIf="cartService.openTab() as tab">
+          <span class="material-symbols-outlined tab-banner-icon">receipt_long</span>
+          <div class="tab-banner-text">
+            <strong>Open tab · {{ tab.orderNumber }}</strong>
+            <small>
+              {{ tab.rounds }} {{ tab.rounds === 1 ? 'KOT' : 'KOTs' }} sent
+              <ng-container *ngIf="cartService.pendingItems().length"> · {{ cartService.pendingItems().length }} new not sent</ng-container>
+            </small>
+          </div>
+          <button type="button" class="tab-banner-cancel" (click)="cancelOpenTab()" title="Cancel this tab without a bill">
+            Cancel tab
+          </button>
+        </div>
+
         <!-- CART ITEMS LIST -->
         <div class="cart-items-scroll-pane no-scrollbar">
           <div *ngIf="cartService.items().length === 0" class="cart-empty-wrap">
@@ -880,6 +898,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             *ngFor="let item of cartService.items()"
             class="cart-item-row"
             [class.is-complimentary-row]="item.isComplimentary"
+            [class.is-sent-row]="item.sentToKitchen"
           >
             <div class="cart-item-avatar">
               <span class="item-emoji">{{ getProductEmoji(item.product.name, item.product.category_id) }}</span>
@@ -892,6 +911,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   <span *ngIf="item.variant" class="cart-variant-chip">{{ item.variant.name }}</span>
                 </h4>
                 <span *ngIf="item.itemType === 'COMBO'" class="cart-line-chip is-combo">🍱 COMBO</span>
+                <span *ngIf="item.sentToKitchen" class="cart-sent-chip" title="Already sent to the kitchen">
+                  <span class="material-symbols-outlined">check</span>KOT {{ item.kotRound || '' }}
+                </span>
+                <span *ngIf="cartService.openTab() && !item.sentToKitchen" class="cart-new-chip" title="Not sent to the kitchen yet">NEW</span>
                 <span *ngIf="item.isComplimentary" class="complimentary-badge">
                   ★ FREE (COMP)
                 </span>
@@ -914,7 +937,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
               <!-- Stepper Control & Quick Item Actions -->
               <div class="item-stepper-row flex items-center justify-between mt-1">
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1 cart-sent-qty" *ngIf="item.sentToKitchen">
+                  <span class="stepper-qty-text font-mono font-bold">× {{ item.quantity }}</span>
+                </div>
+                <div class="flex items-center gap-1" *ngIf="!item.sentToKitchen">
                   <button
                     type="button"
                     (click)="cartService.decrement(item.lineId)"
@@ -936,8 +962,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                   {{ (item.isComplimentary ? 0 : item.unitPrice * item.quantity) | appCurrency:'1.2-2' }}
                 </span>
 
-                <!-- Complimentary & Item Note Buttons -->
-                <div class="cart-line-actions">
+                <!-- Complimentary & Item Note Buttons (a sent line is fixed) -->
+                <div class="cart-line-actions" *ngIf="!item.sentToKitchen">
                   <button
                     type="button"
                     (click)="openItemNoteModal(item)"
@@ -964,7 +990,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               type="button"
               (click)="removeCartItem(item)"
               class="cart-item-remove-btn"
-              title="Remove item"
+              [title]="item.sentToKitchen ? 'Remove from tab (already sent to kitchen)' : 'Remove item'"
             >
               <span class="material-symbols-outlined">cancel</span>
             </button>
@@ -1104,7 +1130,22 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 
         <!-- ORDER ACTIONS BOTTOM (Hold Bill + Confirm Order) -->
         <div class="cart-actions-bottom flex items-center gap-2">
+          <!-- Dine-In at a table: send rounds to the kitchen now, pay once at the end. -->
           <button
+            *ngIf="canRunTab"
+            type="button"
+            (click)="openKotConfirm()"
+            [disabled]="cartService.pendingItems().length === 0 || isSendingKot"
+            class="kot-send-btn"
+            title="Send new items to the kitchen and keep the bill open"
+          >
+            <span class="material-symbols-outlined">{{ isSendingKot ? 'progress_activity' : 'soup_kitchen' }}</span>
+            <span>Send to Kitchen</span>
+            <em *ngIf="cartService.pendingItems().length">{{ cartService.pendingItems().length }}</em>
+          </button>
+
+          <button
+            *ngIf="!canRunTab"
             type="button"
             (click)="holdCurrentBill()"
             [disabled]="cartService.items().length === 0"
@@ -1122,7 +1163,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             class="confirm-order-btn flex-1"
           >
             <span class="material-symbols-outlined">point_of_sale</span>
-            <span>Confirm & Pay (F8)</span>
+            <span>{{ cartService.openTab() ? 'Generate Bill & Pay' : 'Confirm & Pay (F8)' }}</span>
           </button>
         </div>
       </div>
@@ -1314,6 +1355,66 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 1b. SEND TO KITCHEN CONFIRMATION                                -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" *ngIf="showKotConfirm">
+      <div class="modal-content kot-confirm-modal">
+        <div class="pos-modal-head">
+          <div class="pos-modal-head-main">
+            <span class="modal-icon-badge kot-confirm-icon">
+              <span class="material-symbols-outlined text-2xl">soup_kitchen</span>
+            </span>
+            <div>
+              <h3 class="pos-modal-title">Send KOT {{ (cartService.openTab()?.rounds || 0) + 1 }} to Kitchen</h3>
+              <p class="pos-modal-head-sub">
+                Table {{ cartService.selectedTable()?.table_number }}
+                <ng-container *ngIf="cartService.openTab() as tab"> · {{ tab.orderNumber }}</ng-container>
+                · bill stays open
+              </p>
+            </div>
+          </div>
+          <button (click)="showKotConfirm = false" class="modal-close-btn" title="Close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="kot-confirm-summary">
+          <span><strong>{{ cartService.pendingItems().length }}</strong> new {{ cartService.pendingItems().length === 1 ? 'item' : 'items' }}</span>
+          <span><strong>{{ kotPendingQty }}</strong> {{ kotPendingQty === 1 ? 'portion' : 'portions' }}</span>
+        </div>
+
+        <ul class="kot-confirm-list">
+          <li *ngFor="let item of cartService.pendingItems()">
+            <span class="kot-confirm-qty">{{ item.quantity }}×</span>
+            <span class="kot-confirm-name">
+              <strong>
+                {{ item.product.name }}
+                <ng-container *ngIf="item.variant"> ({{ item.variant.name }})</ng-container>
+              </strong>
+              <small *ngIf="item.selectedAddons?.length">+ {{ addonNames(item) }}</small>
+              <small *ngIf="item.notes" class="is-note">Note: {{ item.notes }}</small>
+            </span>
+            <span class="kot-confirm-free" *ngIf="item.isComplimentary">FREE</span>
+          </li>
+        </ul>
+
+        <label class="kot-confirm-print">
+          <input type="checkbox" [(ngModel)]="kotConfirmPrint" [disabled]="!printerSettings.kitchenPrinter.enabled" />
+          <span>Print KOT on kitchen printer</span>
+          <small *ngIf="!printerSettings.kitchenPrinter.enabled">(kitchen printer is off in Printer Settings)</small>
+        </label>
+
+        <div class="pos-modal-foot">
+          <button type="button" (click)="showKotConfirm = false" class="action-btn btn-outline-purple">Cancel</button>
+          <button type="button" (click)="confirmSendToKitchen()" [disabled]="isSendingKot" class="action-btn btn-gradient-purple">
+            <span class="material-symbols-outlined text-[18px]">{{ kotConfirmPrint && printerSettings.kitchenPrinter.enabled ? 'print' : 'send' }}</span>
+            <span>{{ isSendingKot ? 'Sending…' : (kotConfirmPrint && printerSettings.kitchenPrinter.enabled ? 'Send & Print KOT' : 'Send to Kitchen') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- 2. DINING TABLE SELECTOR MODAL                                  -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="modal-backdrop" *ngIf="showTableModal">
@@ -1325,7 +1426,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             </span>
             <div>
               <h3 class="text-xl font-black text-[#2E1065] leading-tight">Select Dining Table</h3>
-              <p class="text-xs text-[var(--text-muted)] mt-0.5">Assign current POS order to an available dining table</p>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">Pick a free table to start, or an occupied one to continue its tab</p>
             </div>
           </div>
           <button (click)="showTableModal = false" class="modal-close-btn" title="Close" aria-label="Close">
@@ -1333,30 +1434,42 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
           </button>
         </div>
 
-        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto">
-          <div
-            *ngFor="let table of diningTables"
+        <!-- Occupied tables with a running tab first: that is usually who is ordering again. -->
+        <div class="tp-grid">
+          <button
+            type="button"
+            *ngFor="let table of sortedPickerTables"
             (click)="selectTable(table)"
-            class="p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between"
-            [ngClass]="{
-              'bg-emerald-50 border-emerald-200 hover:bg-emerald-100/70': table.status === 'AVAILABLE',
-              'bg-orange-50 border-orange-200 opacity-75': table.status === 'OCCUPIED',
-              'bg-slate-50 border-slate-200 opacity-50 pointer-events-none': table.status === 'UNAVAILABLE'
-            }"
+            class="tp-card"
+            [ngClass]="'tp-' + (table.status || '').toLowerCase()"
+            [class.is-current]="cartService.selectedTable()?.id === table.id"
+            [disabled]="table.status === 'UNAVAILABLE' || table.status === 'CLEANING'"
           >
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-extrabold text-[#2E1065]">{{ table.table_number }}</span>
-              <span
-                class="text-[9px] py-0.5 px-1.5 rounded-full font-bold uppercase"
-                [ngClass]="table.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
-              >
-                {{ table.status }}
-              </span>
+            <div class="tp-head">
+              <strong>{{ table.table_number }}</strong>
+              <span class="tp-status"><i></i>{{ pickerStatusLabel(table) }}</span>
             </div>
-            <div class="text-[11px] text-[#6B7280] mt-2 font-medium">{{ table.section }}</div>
-            <div class="text-[10px] text-[#9CA3AF] mt-0.5">Cap: {{ table.capacity }} Seats</div>
-          </div>
+            <div class="tp-meta">
+              <span>{{ table.section }}</span>
+              <span>{{ table.status === 'OCCUPIED' && table.active_guest_count ? table.active_guest_count + '/' : '' }}{{ table.capacity }} seats</span>
+            </div>
+
+            <div class="tp-tab" *ngIf="table.status === 'OCCUPIED' && table.order_number">
+              <span class="tp-tab-no">{{ table.order_number }}</span>
+              <span class="tp-tab-total">{{ (table.order_current_total || 0) | appCurrency:'1.0-0' }}</span>
+            </div>
+            <div class="tp-hint">
+              <ng-container [ngSwitch]="table.status">
+                <ng-container *ngSwitchCase="'OCCUPIED'">{{ table.order_number ? 'Tap to continue tab' : 'Seated · no order yet' }}</ng-container>
+                <ng-container *ngSwitchCase="'AVAILABLE'">Tap to start order</ng-container>
+                <ng-container *ngSwitchCase="'RESERVED'">Seat the booking in Dining first</ng-container>
+                <ng-container *ngSwitchCase="'CLEANING'">Being cleaned</ng-container>
+                <ng-container *ngSwitchDefault>Out of service</ng-container>
+              </ng-container>
+            </div>
+          </button>
         </div>
+        <div class="tp-empty" *ngIf="!diningTables.length">No dining tables set up yet. Add them from Dining &amp; Tables.</div>
       </div>
     </div>
 
@@ -4872,6 +4985,209 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       box-shadow: none;
     }
 
+    /* ─── Send to Kitchen confirmation ─── */
+    .kot-confirm-modal { width: min(92vw, 520px); max-width: 520px; }
+    .kot-confirm-icon { color: #F59E0B; background: color-mix(in srgb, #F59E0B 16%, transparent); }
+    .kot-confirm-summary {
+      display: flex;
+      gap: 1rem;
+      margin: -0.5rem 0 0.75rem;
+      font-size: 0.78rem;
+      color: var(--text-muted, #6B7280);
+    }
+    .kot-confirm-summary strong { color: var(--text-main, #2E1065); font-weight: 900; }
+    .kot-confirm-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 42vh;
+      overflow-y: auto;
+      border: 1px solid var(--card-border, #E9D5FF);
+      border-radius: 12px;
+    }
+    .kot-confirm-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.65rem 0.85rem;
+    }
+    .kot-confirm-list li + li { border-top: 1px solid var(--card-border, #E9D5FF); }
+    .kot-confirm-qty {
+      flex: 0 0 auto;
+      min-width: 2.4rem;
+      padding: 2px 6px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: #F59E0B;
+      background: color-mix(in srgb, #F59E0B 14%, transparent);
+    }
+    .kot-confirm-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .kot-confirm-name strong { font-size: 0.85rem; font-weight: 800; color: var(--text-main, #2E1065); }
+    .kot-confirm-name small { font-size: 0.72rem; color: var(--text-muted, #6B7280); }
+    .kot-confirm-name small.is-note { color: #F59E0B; font-weight: 600; }
+    .kot-confirm-free {
+      flex: 0 0 auto;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      color: #10B981;
+      background: color-mix(in srgb, #10B981 15%, transparent);
+    }
+    .kot-confirm-print {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-main, #2E1065);
+      cursor: pointer;
+    }
+    .kot-confirm-print input { width: 16px; height: 16px; accent-color: var(--primary, #7E22CE); }
+    .kot-confirm-print small { font-weight: 500; color: var(--text-muted, #6B7280); }
+
+    /* ─── Table picker (Dine In) ─── */
+    .tp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 2px;
+    }
+    .tp-card {
+      --tone: #10B981;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 13px;
+      border-radius: 14px;
+      border: 1.5px solid color-mix(in srgb, var(--tone) 35%, var(--card-border, #E9D5FF));
+      border-top: 4px solid var(--tone);
+      background: color-mix(in srgb, var(--tone) 7%, var(--card-bg, #FFFFFF));
+      color: var(--text-main, #2E1065);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .tp-card:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -14px var(--tone);
+      border-color: var(--tone);
+    }
+    .tp-card:disabled { cursor: not-allowed; opacity: 0.5; }
+    .tp-card.is-current { box-shadow: 0 0 0 2px var(--primary, #7E22CE); }
+    .tp-occupied { --tone: #F59E0B; }
+    .tp-reserved { --tone: #3B82F6; }
+    .tp-cleaning { --tone: #06B6D4; }
+    .tp-unavailable { --tone: #9CA3AF; }
+
+    .tp-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .tp-head strong { font-size: 0.9rem; font-weight: 900; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tp-status {
+      display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+      padding: 2px 8px; border-radius: 9999px;
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;
+      color: var(--tone); background: color-mix(in srgb, var(--tone) 16%, transparent);
+    }
+    .tp-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--tone); }
+    .tp-meta { display: flex; justify-content: space-between; gap: 6px; font-size: 0.7rem; color: var(--text-muted, #6B7280); }
+    .tp-meta span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tp-tab {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      padding: 6px 8px; border-radius: 9px;
+      background: color-mix(in srgb, var(--tone) 14%, transparent);
+    }
+    .tp-tab-no { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.66rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tp-tab-total { font-size: 0.85rem; font-weight: 900; color: var(--tone); white-space: nowrap; }
+    .tp-hint { font-size: 0.68rem; font-weight: 700; color: var(--tone); }
+    .tp-empty { padding: 28px; text-align: center; font-size: 0.8rem; color: var(--text-muted, #6B7280); }
+
+    /* ─── Open dining tab ─── */
+    .kot-send-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      flex: 1;
+      padding: 0.8rem 0.9rem;
+      border-radius: 9999px;
+      border: 1px solid color-mix(in srgb, #F59E0B 55%, transparent);
+      background: color-mix(in srgb, #F59E0B 18%, transparent);
+      color: #FDE68A;
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.18s ease, transform 0.15s ease;
+    }
+    .kot-send-btn .material-symbols-outlined { font-size: 19px; }
+    .kot-send-btn em {
+      font-style: normal;
+      min-width: 20px;
+      padding: 1px 7px;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 900;
+      color: #1F2937;
+      background: #F59E0B;
+    }
+    .kot-send-btn:hover:not(:disabled) {
+      background: color-mix(in srgb, #F59E0B 28%, transparent);
+      transform: translateY(-1px);
+    }
+    .kot-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .tab-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 0 0 0.5rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 12px;
+      border: 1px solid color-mix(in srgb, #F59E0B 45%, var(--cart-line-strong, rgba(255, 255, 255, 0.2)));
+      background: color-mix(in srgb, #F59E0B 12%, transparent);
+    }
+    .tab-banner-icon { font-size: 20px; color: #F59E0B; }
+    .tab-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .tab-banner-text strong { font-size: 0.78rem; font-weight: 800; color: #FFFFFF; }
+    .tab-banner-text small { font-size: 0.68rem; color: rgba(255, 255, 255, 0.7); }
+    .tab-banner-cancel {
+      padding: 0.3rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid var(--cart-line-strong, rgba(255, 255, 255, 0.2));
+      background: transparent;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-banner-cancel:hover { color: #FCA5A5; border-color: rgba(252, 165, 165, 0.5); }
+
+    .cart-item-row.is-sent-row { opacity: 0.82; }
+    .cart-sent-chip,
+    .cart-new-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 1px 7px;
+      border-radius: 9999px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .cart-sent-chip { color: #6EE7B7; background: rgba(16, 185, 129, 0.16); }
+    .cart-sent-chip .material-symbols-outlined { font-size: 12px; }
+    .cart-new-chip { color: #FDE68A; background: rgba(245, 158, 11, 0.2); }
+    .cart-sent-qty .stepper-qty-text { padding: 0 0.3rem; }
+
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -5723,6 +6039,26 @@ export class PosComponent implements OnInit, AfterViewInit {
   public totalOrdersCount = 0;
   public activeOrderId = Math.floor(1000 + Math.random() * 9000);
 
+  // ─── Open dining tab (order in rounds, pay once) ───
+  public isSendingKot = false;
+  private tabSyncedFor: number | null = null;
+
+  /**
+   * Whenever the Dine-In table changes - picked here, or handed over from the
+   * floor map - load that table's open tab into the cart. Leaving Dine-In or
+   * the table drops the sent lines; new lines stay in the cart.
+   */
+  private readonly tabSync = effect(() => {
+    const table = this.cartService.selectedTable();
+    const dining = this.cartService.orderType() === 'DINING';
+    const tableId = dining && table ? table.id : null;
+    untracked(() => {
+      if (tableId === this.tabSyncedFor) return;
+      this.tabSyncedFor = tableId;
+      this.refreshTab();
+    });
+  });
+
   // Promo code
   public promoCode = '';
   public isPromoApplied = false;
@@ -5796,6 +6132,14 @@ export class PosComponent implements OnInit, AfterViewInit {
   public printerSettings: PrinterConfig = this.printerService.loadConfig();
 
   ngOnInit(): void {
+    // Opening the POS from the menu always starts an empty ticket. Screens that
+    // hand a cart over (a Dining table, a resumed held bill, a customer) pass
+    // keepCart in the navigation state. A table's tab is safe on the server
+    // and loads again when the table is picked.
+    if (!history.state?.keepCart) {
+      this.cartService.clearCart();
+    }
+
     // Read before the dishes land, so the first grid already honours it.
     this.restoreOutOfStockPreference();
     this.loadPosData();
@@ -6142,10 +6486,10 @@ export class PosComponent implements OnInit, AfterViewInit {
     return !!combo.original_price && combo.original_price > combo.combo_price;
   }
 
-  /** Dishes in the bundle, counting quantities — "1  + 2 Daqoos" is 3. */
+  /** Add-ons in the bundle, counting quantities — "1 Laban + 2 Salad" is 3. */
   comboItemCount(combo: ComboDeal): string {
     const n = (combo.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
-    return n === 1 ? '1 dish' : `${n} dishes`;
+    return n === 1 ? '1 item' : `${n} items`;
   }
 
   /** True when the category has a usable thumbnail that has not failed to load. */
@@ -6395,7 +6739,8 @@ export class PosComponent implements OnInit, AfterViewInit {
       description: addon.description || 'Add-on served alongside the order',
     } as Product;
 
-    this.cartService.addItemWithCustomization(standIn, null, 1, undefined, [], 'PRODUCT');
+    // Sold as its own ADDON line: checkout prices it and draws its stock by addonId.
+    this.cartService.addItemWithCustomization(standIn, null, 1, undefined, [], 'ADDON', undefined, addon.id);
     this.notify.success(`Added Add-on: "${addon.name}" to cart!`);
   }
 
@@ -6416,7 +6761,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       description: combo.description || 'Special combo meal package',
     } as Product;
     const notes = combo.items && combo.items.length > 0
-      ? combo.items.map((i) => `${i.quantity}x ${i.product_name || 'Dish'}`).join(', ')
+      ? combo.items.map((i) => `${i.quantity}x ${i.addon_name || 'Add-on'}`).join(', ')
       : undefined;
 
     this.cartService.addItemWithCustomization(
@@ -6488,16 +6833,27 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.closeCustomizationModal();
   }
 
-  /** Stock the dish's linked ledger item still holds. */
+  /**
+   * Stock the dish's linked ledger item still holds. A Multi Stock dish has
+   * no single item, so it reports the most portions any one size can make.
+   */
   public availableStock(product: Product | null): number {
     if (!product) return 0;
+    if (isMultiStock(product)) return dishPortionsAvailable(product);
     const linked = Number(product.linked_stock_quantity);
     return Number.isFinite(linked) ? linked : Number(product.current_stock) || 0;
+  }
+
+  /** Unit for availableStock(): portions for Multi Stock, else the item's unit. */
+  public availableStockUnit(product: Product | null): string {
+    if (isMultiStock(product)) return 'portions';
+    return product?.linked_unit_type || 'units';
   }
 
   /** How many portions of this variant can be prepared from available stock. */
   public stockAfter(product: Product | null, variant?: ProductVariant): number {
     if (!product) return 0;
+    if (isMultiStock(product)) return portionsAvailable(variant);
     const usage = Number(variant?.stock_consumption ?? variant?.stockConsumption) || 1;
     let stock = this.availableStock(product);
     if (variant?.stock_id && variant.stock_item_quantity !== undefined && variant.stock_item_quantity !== null) {
@@ -6540,15 +6896,44 @@ export class PosComponent implements OnInit, AfterViewInit {
     });
   }
 
+  /** Picker order: running tabs first, then free tables, then the rest. */
+  get sortedPickerTables(): DiningTable[] {
+    const rank = (t: DiningTable) =>
+      t.status === 'OCCUPIED' ? 0 : t.status === 'AVAILABLE' ? 1 : t.status === 'RESERVED' ? 2 : 3;
+    return [...this.diningTables].sort((a, b) => rank(a) - rank(b));
+  }
+
+  pickerStatusLabel(t: DiningTable): string {
+    switch (t.status) {
+      case 'OCCUPIED': return t.order_number ? 'Open tab' : 'Occupied';
+      case 'AVAILABLE': return 'Free';
+      case 'RESERVED': return 'Reserved';
+      case 'CLEANING': return 'Cleaning';
+      default: return 'Unavailable';
+    }
+  }
+
   selectTable(table: DiningTable): void {
-    if (table.status === 'UNAVAILABLE') {
-      this.notify.error('Table is currently unavailable');
+    if (table.status === 'UNAVAILABLE' || table.status === 'CLEANING') {
+      this.notify.error(`Table ${table.table_number} is ${table.status === 'CLEANING' ? 'being cleaned' : 'unavailable'}`);
       return;
     }
+    if (table.status === 'RESERVED') {
+      this.notify.error(`Table ${table.table_number} is reserved. Seat the booking from Dining > Reservations first.`);
+      return;
+    }
+    const samePick = this.tabSyncedFor === table.id;
     this.cartService.orderType.set('DINING');
     this.cartService.selectedTable.set(table);
     this.showTableModal = false;
-    this.notify.success(`Table ${table.table_number} selected for Dine-In`);
+    // The tab loads through tabSync when the table changes; picking the same
+    // table again reloads it (another till may have sent a round since).
+    if (samePick) this.refreshTab();
+    this.notify.success(
+      table.status === 'OCCUPIED' && table.order_number
+        ? `Table ${table.table_number}: loading tab ${table.order_number}`
+        : `Table ${table.table_number} selected for Dine-In`
+    );
   }
 
   openCustomerModal(): void {
@@ -6918,8 +7303,200 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.printerService.printKot(dummyKot);
   }
 
+  // ── Open dining tab ──
+  /** True in Dine-In with a table picked: the order can go to the kitchen now and be paid later. */
+  get canRunTab(): boolean {
+    return this.cartService.orderType() === 'DINING' && !!this.cartService.selectedTable();
+  }
+
+  refreshTab(): void {
+    const tableId = this.tabSyncedFor;
+    if (!tableId) {
+      this.cartService.loadTab(null);
+      return;
+    }
+    this.diningService.getTab(tableId).subscribe({
+      next: (res) => {
+        // The table may have changed while this was in flight.
+        if (res.success && tableId === this.tabSyncedFor) this.applyTab(res.data);
+      },
+      error: () => { },
+    });
+  }
+
+  /** Puts a tab from the server into the cart, dropping the given (just-sent) lines. */
+  private applyTab(tab: DiningTab, dropLineIds: string[] = []): void {
+    if (dropLineIds.length) {
+      const drop = new Set(dropLineIds);
+      for (const l of this.cartService.pendingItems()) {
+        if (drop.has(l.lineId)) this.cartService.removeItem(l.lineId);
+      }
+    }
+    if (!tab.order) {
+      this.cartService.loadTab(null);
+      return;
+    }
+    const lines: CartItem[] = tab.items.map((l) => {
+      const known = l.product_id ? this.products.find((p) => p.id === l.product_id) : undefined;
+      const product = { ...(known || {}), id: l.product_id ?? 0, name: l.product_name, status: 'ACTIVE' } as Product;
+      const unitPrice = Number(l.unit_price) || 0;
+      const quantity = Number(l.quantity) || 0;
+      return {
+        lineId: 'tab:' + l.id,
+        product,
+        variant: l.variant_id ? ({ id: l.variant_id, name: l.variant_name } as ProductVariant) : null,
+        quantity,
+        unitPrice,
+        subtotal: unitPrice * quantity,
+        notes: l.notes || undefined,
+        isComplimentary: l.is_complimentary,
+        complimentaryReason: l.complimentary_reason || undefined,
+        itemType: l.item_type || 'PRODUCT',
+        comboId: l.combo_id ?? undefined,
+        addonId: l.addon_id ?? undefined,
+        selectedAddons: l.selected_addons || [],
+        sentToKitchen: true,
+        orderItemId: l.id,
+        kotRound: l.kot_round ?? undefined,
+      };
+    });
+    this.cartService.loadTab(
+      { orderId: tab.order.id, orderNumber: tab.order.order_number, rounds: tab.rounds, tableId: tab.table.id },
+      lines
+    );
+  }
+
+  private toCheckoutLine(i: CartItem) {
+    return {
+      productId: i.product.id,
+      variantId: i.variant?.id ?? null,
+      quantity: i.quantity,
+      isComplimentary: i.isComplimentary,
+      complimentaryReason: i.complimentaryReason,
+      notes: i.notes,
+      itemType: i.itemType,
+      comboId: i.comboId,
+      addonId: i.addonId,
+      selectedAddons: i.selectedAddons,
+    };
+  }
+
+  // Send to Kitchen confirmation
+  public showKotConfirm = false;
+  public kotConfirmPrint = true;
+
+  get kotPendingQty(): number {
+    return this.cartService.pendingItems().reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+  }
+
+  addonNames(item: CartItem): string {
+    return (item.selectedAddons || []).map((a) => a.name).join(', ');
+  }
+
+  /** Checks the send is possible, then shows the new lines for the cashier to confirm. */
+  openKotConfirm(): void {
+    if (!this.canRunTab || !this.cartService.selectedTable()) {
+      this.notify.error('Pick a Dine-In table first');
+      return;
+    }
+    if (!this.cartService.pendingItems().length) {
+      this.notify.info('Nothing new to send. Add items first.');
+      return;
+    }
+    if (!this.offlinePos.isOnline()) {
+      this.notify.error('Sending to the kitchen needs a connection to the server.');
+      return;
+    }
+    this.kotConfirmPrint = this.printerSettings.kitchenPrinter.enabled;
+    this.showKotConfirm = true;
+  }
+
+  confirmSendToKitchen(): void {
+    this.sendToKitchen(this.kotConfirmPrint);
+  }
+
+  /** Sends the new lines to the kitchen on the table's tab and prints their KOT. No payment. */
+  private sendToKitchen(printKot: boolean): void {
+    const table = this.cartService.selectedTable();
+    const pending = this.cartService.pendingItems();
+    if (!table || !pending.length) return;
+
+    const sentLineIds = pending.map((i) => i.lineId);
+    this.isSendingKot = true;
+    this.diningService
+      .sendTabToKitchen({
+        tableId: table.id,
+        items: pending.map((i) => this.toCheckoutLine(i)),
+        customerId: this.cartService.selectedCustomer()?.id ?? null,
+        guestCount: table.active_guest_count || null,
+      })
+      .subscribe({
+        next: (res) => {
+          this.isSendingKot = false;
+          if (!res.success) return;
+          this.showKotConfirm = false;
+          this.applyTab(res.data.tab, sentLineIds);
+          if (res.data.tab?.table) this.cartService.selectedTable.set(res.data.tab.table);
+          if (printKot && this.printerSettings.kitchenPrinter.enabled) {
+            this.printerService.printKot(res.data.kot);
+          }
+          this.notify.success(`KOT ${res.data.round} sent to kitchen for Table ${table.table_number}`);
+        },
+        error: () => (this.isSendingKot = false),
+      });
+  }
+
+  /** Takes a line that was already sent off the tab. */
+  private removeTabLine(item: CartItem): void {
+    if (!item.orderItemId) return;
+    this.notify.confirm({
+      title: 'Remove from tab',
+      message: `${item.product.name} was already sent to the kitchen (KOT ${item.kotRound || '-'}). Remove it from the table's bill?`,
+      confirmText: 'Remove from Tab',
+      cancelText: 'Keep',
+      isDestructive: true,
+      onConfirm: () => {
+        this.diningService.removeTabLine(item.orderItemId!).subscribe({
+          next: (res) => {
+            if (res.success) {
+              this.applyTab(res.data);
+              this.notify.info('Removed from tab');
+            }
+          },
+          error: () => { },
+        });
+      },
+    });
+  }
+
+  /** Closes the table's tab without a bill. */
+  cancelOpenTab(): void {
+    const tab = this.cartService.openTab();
+    if (!tab) return;
+    this.notify.confirm({
+      title: 'Cancel open tab',
+      message: `Cancel ${tab.orderNumber}? Everything sent to the kitchen is dropped without a bill and the table is freed.`,
+      confirmText: 'Cancel Tab',
+      cancelText: 'Keep Tab',
+      isDestructive: true,
+      onConfirm: () => {
+        this.diningService.cancelTab(tab.tableId, 'Cancelled from POS').subscribe({
+          next: () => {
+            this.cartService.loadTab(null);
+            this.notify.info(`${tab.orderNumber} cancelled`);
+          },
+          error: () => { },
+        });
+      },
+    });
+  }
+
   // ── Draft Orders & Holding ──
   holdCurrentBill(): void {
+    if (this.cartService.openTab()) {
+      this.notify.info('This table has an open tab. Use Send to Kitchen to add items to it.');
+      return;
+    }
     const items = this.cartService.items().map((i) => ({
       productId: i.product.id,
       variantId: i.variant?.id ?? null,
@@ -6927,6 +7504,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       notes: i.notes,
       itemType: i.itemType,
       comboId: i.comboId,
+      addonId: i.addonId,
       selectedAddons: i.selectedAddons,
     }));
 
@@ -6969,6 +7547,10 @@ export class PosComponent implements OnInit, AfterViewInit {
   }
 
   removeCartItem(item: CartItem): void {
+    if (item.sentToKitchen) {
+      this.removeTabLine(item);
+      return;
+    }
     const label = item.variant?.name
       ? `${item.product.name} (${item.variant.name})`
       : item.product.name;
@@ -7004,6 +7586,87 @@ export class PosComponent implements OnInit, AfterViewInit {
     });
   }
 
+  /**
+   * Bills a table's whole tab: every round already sent, plus any lines not
+   * sent yet (which get their own KOT). The server takes the sent lines from
+   * the order, so only the new ones go in the request.
+   */
+  private checkoutOpenTab(tab: { orderId: number; orderNumber: string; tableId: number }): void {
+    if (!this.offlinePos.isOnline()) {
+      this.notify.error('Billing an open tab needs a connection to the server.');
+      return;
+    }
+    const pending = this.cartService.pendingItems();
+    const table = this.cartService.selectedTable();
+    this.isCheckingOut = true;
+
+    const payload = {
+      existingOrderId: tab.orderId,
+      customerId: this.cartService.selectedCustomer()?.id,
+      diningTableId: tab.tableId,
+      orderType: 'DINING' as OrderType,
+      discountType: this.cartService.discountType(),
+      discountValue: this.cartService.discountValue(),
+      serviceChargeAmount: this.cartService.serviceChargeAmount(),
+      surchargeAmount: this.cartService.surchargeAmount(),
+      couponCode: this.cartService.couponCode(),
+      paymentMethod: this.selectedPaymentMethod,
+      paymentAmount: this.tenderedAmount || this.cartService.grandTotal(),
+      paymentReference: this.paymentReference,
+      cashTendered: this.selectedPaymentMethod === 'CASH' ? this.tenderedAmount : undefined,
+      changeReturned: this.selectedPaymentMethod === 'CASH' ? this.changeDue : undefined,
+      items: pending.map((i) => this.toCheckoutLine(i)),
+    };
+
+    this.checkoutService.checkout(payload).subscribe({
+      next: (res) => {
+        this.isCheckingOut = false;
+        this.showPaymentModal = false;
+        this.notify.success(`Bill #${res.data.bill_number} settled for ${tab.orderNumber}`);
+
+        // The kitchen already has every earlier round; only unsent lines need a ticket.
+        if (pending.length && this.autoPrintKot && this.printerSettings.kitchenPrinter.enabled) {
+          this.printerService.printKot({
+            kotNumber: `KOT (final) · ${tab.orderNumber}`,
+            orderType: 'DINING',
+            tableNumber: table?.table_number,
+            orderTime: new Date().toISOString(),
+            items: pending.map((i) => ({
+              productName: i.product.name,
+              variantName: i.variant?.name,
+              quantity: i.quantity,
+              notes: i.notes,
+              isComplimentary: i.isComplimentary,
+            })),
+          });
+        }
+
+        this.billService.getPrintData(res.data.id).subscribe({
+          next: (printRes) => {
+            if (printRes.success) {
+              this.lastReceiptData = printRes.data;
+              if (this.autoPrintReceipt && this.printerSettings.receiptPrinter.enabled) {
+                this.printerService.printThermalReceipt(printRes.data);
+              } else {
+                this.showReceiptModal = true;
+              }
+            }
+          },
+          error: () => { },
+        });
+
+        this.cartService.clearCart();
+        this.activeOrderId = Math.floor(1000 + Math.random() * 9000);
+        this.loadProducts();
+        this.loadRecentOrders();
+        this.loadCurrentShiftSummary();
+      },
+      error: () => {
+        this.isCheckingOut = false;
+      },
+    });
+  }
+
   openPaymentModal(): void {
     this.tenderedAmount = this.cartService.grandTotal();
     this.changeDue = 0;
@@ -7021,6 +7684,11 @@ export class PosComponent implements OnInit, AfterViewInit {
 
   // ── Checkout Execution (Online + Offline POS) ──
   executeCheckout(): void {
+    const tab = this.cartService.openTab();
+    if (tab) {
+      this.checkoutOpenTab(tab);
+      return;
+    }
     this.isCheckingOut = true;
 
     const items = this.cartService.items().map((i) => ({
@@ -7036,6 +7704,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       notes: i.notes,
       itemType: i.itemType,
       comboId: i.comboId,
+      addonId: i.addonId,
       selectedAddons: i.selectedAddons,
     }));
 
@@ -7072,7 +7741,21 @@ export class PosComponent implements OnInit, AfterViewInit {
       // Decrement stock in local memory
       items.forEach((item) => {
         const p = this.products.find((prod) => prod.id === item.productId);
-        if (p && p.current_stock !== undefined) {
+        if (p && isMultiStock(p)) {
+          // Take the portion's whole list off every copy of those items on
+          // this screen, so other Multi Stock dishes sharing them update too.
+          const sold = (p.variants || []).find((v) => v.id === item.variantId);
+          for (const line of sold?.stocks || []) {
+            const used = Number(line.stock_consumption) * item.quantity;
+            for (const other of this.products) {
+              for (const v of other.variants || []) {
+                for (const s of v.stocks || []) {
+                  if (s.stock_id === line.stock_id) s.current_quantity = Math.max(0, (Number(s.current_quantity) || 0) - used);
+                }
+              }
+            }
+          }
+        } else if (p && p.current_stock !== undefined) {
           p.current_stock = Math.max(0, Number(p.current_stock) - item.quantity);
         }
       });
@@ -7141,6 +7824,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         notes: i.notes,
         itemType: i.itemType,
         comboId: i.comboId,
+        addonId: i.addonId,
         selectedAddons: i.selectedAddons,
       })),
     };

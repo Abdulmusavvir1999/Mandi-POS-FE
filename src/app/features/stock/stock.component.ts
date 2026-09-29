@@ -391,7 +391,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <div class="stock-wh-bar-bg">
                   <div
                     class="stock-wh-bar-fill"
-                    [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                    [style.width.%]="calcStockPercent(item)"
                     [ngClass]="{
                       '!bg-[#DC2626]': item.current_quantity <= 0,
                       '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
@@ -535,7 +535,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             <div class="stock-kan-bar">
               <div
                 class="stock-kan-bar-fill"
-                [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                [style.width.%]="calcStockPercent(item)"
                 [ngClass]="{
                   '!bg-[#DC2626]': item.current_quantity <= 0,
                   '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
@@ -583,7 +583,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               <div class="stock-list-bar">
                 <div
                   class="stock-list-bar-fill"
-                  [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                  [style.width.%]="calcStockPercent(item)"
                   [ngClass]="{
                     '!bg-[#DC2626]': item.current_quantity <= 0,
                     '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
@@ -638,6 +638,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
             *ngFor="let item of paginatedMasterItems"
             (click)="viewItemHistory(item)"
             class="stock-card-item cursor-pointer"
+            [ngClass]="'is-' + stockHealthOf(item)"
             title="Click to view item details and ledger history"
           >
             <div>
@@ -652,22 +653,15 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
               <div class="stock-card-progress">
                 <div class="stock-card-progress-header">
                   <span class="stock-card-big-qty">{{ item.current_quantity | number:'1.0-3' }} <span style="font-size: 12px; font-weight: 500;">{{ item.unit_type }}</span></span>
-                  <span
-                    class="stock-card-health-label"
-                    [ngClass]="item.current_quantity <= 0 ? 'text-[#DC2626]' : item.is_low_stock ? 'text-[#EA580C]' : 'text-[#16A34A]'"
-                  >
-                    {{ item.current_quantity <= 0 ? 'Out of Stock' : item.is_low_stock ? 'Low Stock' : 'Optimal Stock' }}
+                  <span class="stock-card-health-label">
+                    <span class="material-symbols-outlined" *ngIf="stockHealthOf(item) !== 'ok'">warning</span>
+                    {{ stockHealthOf(item) === 'out' ? 'Out of Stock' : stockHealthOf(item) === 'low' ? 'Low Stock' : 'Optimal Stock' }}
                   </span>
                 </div>
                 <div class="stock-card-bar-bg">
                   <div
                     class="stock-card-bar-fill"
-                    [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
-                    [ngClass]="{
-                      '!bg-[#DC2626]': item.current_quantity <= 0,
-                      '!bg-[#EA580C]': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
-                      '!bg-[#16A34A]': item.current_quantity > item.min_stock_alert
-                    }"
+                    [style.width.%]="calcStockPercent(item)"
                   ></div>
                 </div>
               </div>
@@ -1043,7 +1037,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
                       <div
                         class="h-full transition-all"
-                        [style.width.%]="calcStockPercent(item.current_quantity, item.min_stock_alert)"
+                        [style.width.%]="calcStockPercent(item)"
                         [ngClass]="{
                           'bg-red-500': item.current_quantity <= 0,
                           'bg-amber-500': item.current_quantity > 0 && item.current_quantity <= item.min_stock_alert,
@@ -3182,8 +3176,24 @@ export class StockComponent implements OnInit {
     return Math.min(this.safePage(totalItems) * this.pageSize, totalItems);
   }
 
-  calcStockPercent(curr: number, low: number): number {
-    const max = Math.max(low * 3, 50);
+  /** Card health state; drives the label, bar and card tint colours. */
+  stockHealthOf(item: any): 'out' | 'low' | 'ok' {
+    const qty = Number(item?.current_quantity) || 0;
+    if (qty <= 0) return 'out';
+    return item?.is_low_stock || qty <= Number(item?.min_stock_alert || 0) ? 'low' : 'ok';
+  }
+
+  /**
+   * Stock-level bar fill: what is left of the latest stock-in, so a purchase
+   * nobody has drawn from yet reads full. Rows without a stock-in movement
+   * (alerts feed, older data) fall back to a threshold-based scale.
+   */
+  calcStockPercent(item: any): number {
+    const curr = Number(item?.current_quantity) || 0;
+    const restocked = Number(item?.last_restock_quantity) || 0;
+    const max = restocked > 0
+      ? Math.max(restocked, curr)
+      : Math.max((Number(item?.min_stock_alert) || 0) * 3, 50);
     return Math.min(100, Math.max(0, (curr / max) * 100));
   }
 

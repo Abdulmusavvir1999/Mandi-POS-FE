@@ -1,6 +1,7 @@
 import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { CartService } from '../../../core/services/cart.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { ActionLoadingDirective } from '../../../shared/directives/action-loading.directive';
@@ -28,6 +29,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
       <div class="nav-hub">
         <a
           routerLink="/pos"
+          (click)="cartService.onPosMenuClick(router.url)"
           routerLinkActive="active-hub-pill"
           [routerLinkActiveOptions]="{ exact: true }"
           class="hub-pill"
@@ -436,6 +438,8 @@ export class HeaderComponent {
 
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
+  public router = inject(Router);
+  public cartService = inject(CartService);
   public currentTime = '';
   public currentDate = '';
 

@@ -800,7 +800,7 @@ import { ActionLoadingDirective } from '../../../shared/directives/action-loadin
       .form-label {
         font-size: 0.8125rem;
         font-weight: 700;
-        color: var(--text-main, #334155);
+        color: var(--label-color, #334155);
       }
       .required-label::after {
         content: ' *';

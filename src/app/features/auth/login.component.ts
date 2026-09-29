@@ -76,7 +76,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     name="emailOrUsername"
                     id="usernameInput"
                     class="text-input"
-                    placeholder="admin@projectx.com"
+                    placeholder="Enter your email or username"
                     autocomplete="username"
                     required
                     (focus)="usernameFocused = true"
@@ -424,7 +424,7 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
       .field-label {
         font-size: 0.82rem;
         font-weight: 700;
-        color: var(--text-main, #2E1065);
+        color: var(--label-color, #2E1065);
       }
 
       .field-label-row {
@@ -616,8 +616,8 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
 })
 export class LoginComponent {
   public settingsService = inject(SettingsService);
-  public emailOrUsername = 'admin@projectx.com';
-  public password = 'Super@123';
+  public emailOrUsername = '';
+  public password = '';
   public showPassword = false;
   public isLoading = false;
   public usernameFocused = false;

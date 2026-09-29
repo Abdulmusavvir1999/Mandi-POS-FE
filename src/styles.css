@@ -37,6 +37,7 @@
   --text-main: #2E1065;         /* Deep Violet Text */
   --text-muted: #6B7280;        /* Gray Muted */
   --text-dim: #9CA3AF;
+  --label-color: rgba(46, 16, 101, 0.78); /* --text-main softened; ThemeService overrides */
 
   --error: #DC2626;             /* Red */
   --error-light: rgba(220, 38, 38, 0.12);
@@ -624,7 +625,7 @@ label {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #6B7280);
+  color: var(--label-color, #6B7280);
   margin-bottom: 0.2rem !important;
   line-height: 1.25;
   display: block;
@@ -1163,7 +1164,7 @@ select option {
   margin-bottom: 0.45rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--text-muted, #4B5563);
+  color: var(--label-color, #4B5563);
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
@@ -2259,7 +2260,7 @@ app-custom-dropdown.w-full {
 .modal-label {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--text-muted, #6B7280);
+  color: var(--label-color, #6B7280);
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }

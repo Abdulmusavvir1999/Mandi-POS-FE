@@ -619,26 +619,46 @@ export const DINING_LAYOUT_CSS = `
   .cardlist-left-col {
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-width: 140px;
+    flex-shrink: 0;
   }
   .cardlist-badge {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
-    font-weight: 800;
-    font-family: monospace;
+    gap: 1px;
+    line-height: 1;
     color: #FFFFFF;
     background: linear-gradient(135deg, var(--primary, #7E22CE) 0%, var(--primary-hover, #9333EA) 100%);
     box-shadow: 0 4px 10px rgba(var(--primary-rgb, 126, 34, 206), 0.25);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .cardlist-badge-cap {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    max-width: 50px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cardlist-badge-code {
+    font-size: 20px;
+    font-weight: 900;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   .cardlist-badge.is-free {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+  }
+  .cardlist-badge.is-busy {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
   }
   .cardlist-badge.is-blocked {
     background: linear-gradient(135deg, var(--danger, #EF4444) 0%, var(--danger, #DC2626) 100%);
@@ -647,6 +667,7 @@ export const DINING_LAYOUT_CSS = `
 
   .cardlist-mid-col {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -654,26 +675,58 @@ export const DINING_LAYOUT_CSS = `
   .cardlist-title-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
   }
   .cardlist-name {
-    font-size: 15px;
+    font-size: var(--dining-font-size, 15px);
     font-weight: 800;
-    color: var(--dining-textColor, #0F172A);
+    line-height: 1.2;
+    color: var(--dining-text-color, var(--text-main, #0F172A));
   }
+  .cardlist-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: var(--dining-text-muted, var(--text-muted, #64748B));
+  }
+  .cardlist-meta .material-symbols-outlined,
+  .timer-pill .material-symbols-outlined { font-size: 14px; line-height: 1; }
   .cardlist-section {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: var(--card-hover, #F1F5F9);
-    color: var(--text-muted, #475569);
-  }
-  .cardlist-seats {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     font-size: 11px;
     font-weight: 700;
-    color: var(--text-muted, #64748B);
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--dining-text-color, var(--text-main, #0F172A)) 8%, transparent);
+    color: var(--dining-text-muted, var(--text-muted, #475569));
+  }
+  .cardlist-seats {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dining-text-muted, var(--text-muted, #64748B));
+  }
+  .cardlist-note {
+    font-size: 12px;
+    color: var(--dining-text-muted, var(--text-muted, #64748B));
+  }
+  .cardlist-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: #06B6D4;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   /* 6-Tick Dwell Progress Bar */
@@ -687,7 +740,7 @@ export const DINING_LAYOUT_CSS = `
   .cardlist-dwell-bar i {
     flex: 1;
     height: 5px;
-    background: var(--card-border, #E2E8F0);
+    background: color-mix(in srgb, var(--dining-text-color, var(--text-main, #0F172A)) 12%, transparent);
     border-radius: 2px;
   }
   .cardlist-dwell-bar i.on {
@@ -697,14 +750,20 @@ export const DINING_LAYOUT_CSS = `
   .cardlist-right-col {
     display: flex;
     align-items: center;
-    gap: 16px;
-    text-align: right;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .cardlist-bill {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-right: 6px;
   }
   .cardlist-bill-amount {
     font-size: 17px;
     font-weight: 900;
-    font-family: monospace;
-    color: var(--text-main, #0F172A);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--dining-text-color, var(--text-main, #0F172A));
   }
 
   /* Status Badges & Extensions */
@@ -733,9 +792,9 @@ export const DINING_LAYOUT_CSS = `
     padding: 2px 7px;
     border-radius: 9999px;
   }
-  .timer-safe { background: #ECFDF5; color: #059669; }
-  .timer-warn { background: #FFFBEB; color: var(--warning, #D97706); }
-  .timer-over { background: #FEF2F2; color: var(--danger, #DC2626); animation: timer-pulse 1.5s infinite; }
+  .timer-safe { background: rgba(16, 185, 129, 0.14); color: #10B981; }
+  .timer-warn { background: rgba(245, 158, 11, 0.14); color: var(--warning, #D97706); }
+  .timer-over { background: rgba(239, 68, 68, 0.14); color: var(--danger, #DC2626); animation: timer-pulse 1.5s infinite; }
   @keyframes timer-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
