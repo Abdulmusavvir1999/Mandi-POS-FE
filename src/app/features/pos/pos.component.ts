@@ -9,6 +9,7 @@ import {
   signal,
   effect,
   untracked,
+  DestroyRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,7 +20,7 @@ import { POS_DESIGN_CSS } from '../../shared/styles/pos-design.styles';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { CustomerService } from '../../core/services/customer.service';
-import { DiningService, DiningTab } from '../../core/services/dining.service';
+import { DiningService, DiningTab, ReservationRow } from '../../core/services/dining.service';
 import { DraftBillService } from '../../core/services/draft-bill.service';
 import { CheckoutService } from '../../core/services/checkout.service';
 import { BillService } from '../../core/services/bill.service';
@@ -114,6 +115,18 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
               <span *ngIf="offlinePos.pendingOrders().length > 0" class="draft-badge !bg-amber-500 !text-white">
                 {{ offlinePos.pendingOrders().length }} sync
               </span>
+            </button>
+
+            <!-- Today's bookings -->
+            <button
+              (click)="openBookings()"
+              class="tool-btn btn-bookings"
+              [class.is-due]="bookingsDueSoon > 0"
+              title="Today's bookings - pickups to collect and tables to seat"
+            >
+              <span class="material-symbols-outlined text-[18px]">event_available</span>
+              <span class="tool-label">Bookings</span>
+              <span *ngIf="todayBookings.length > 0" class="draft-badge booking-badge" [class.is-due]="bookingsDueSoon > 0">{{ todayBookings.length }}</span>
             </button>
 
             <!-- Held Drafts -->
@@ -822,6 +835,19 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
           </div>
         </div>
 
+        <!-- Linked booking: says how it will be closed, and can be unlinked -->
+        <div class="cart-booking-strip" *ngIf="cartService.bookingRef() as ref"
+             [class.is-dining]="cartService.orderType() === 'DINING'"
+             [class.needs-table]="cartService.orderType() === 'DINING' && !cartService.selectedTable()">
+          <span class="material-symbols-outlined">event_available</span>
+          <span class="cart-booking-text">
+            <strong>Booking {{ ref.code }}</strong> · {{ ref.customerName }} - {{ bookingStripText }}
+          </span>
+          <button type="button" class="cart-booking-unlink" (click)="unlinkBooking()" title="Unlink this booking from the cart">
+            <span class="material-symbols-outlined">link_off</span>
+          </button>
+        </div>
+
         <!-- CART TITLE & ACTIVE ORDER ID -->
         <div class="cart-title-strip">
           <div class="flex items-center gap-2">
@@ -832,6 +858,18 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
             </span>
           </div>
           <div class="flex items-center gap-2">
+            <button
+              type="button"
+              *ngIf="cartStock.length"
+              class="cart-stock-chip"
+              [class.is-over]="cartStockState === 'over'"
+              [class.is-tight]="cartStockState === 'tight'"
+              (click)="showStockPreview = true"
+              title="Live stock for this cart - what each line takes and what is left"
+            >
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span>{{ cartStockState === 'over' ? 'Over stock' : cartStockState === 'tight' ? 'Low stock' : 'Stock' }}</span>
+            </button>
             <span class="order-id-tag font-mono">{{ cartService.openTab() ? cartService.openTab()!.orderNumber : '#' + activeOrderId }}</span>
             <button
               type="button"
@@ -1173,6 +1211,144 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- 1. SETTLEMENT & PAYMENT MODAL                                   -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Today's bookings -->
+    <div class="modal-backdrop" *ngIf="showBookings" (click)="showBookings = false">
+      <div class="modal-content bk-modal" (click)="$event.stopPropagation()">
+        <div class="bk-head">
+          <span class="bk-head-icon"><span class="material-symbols-outlined">event_available</span></span>
+          <div>
+            <h3>Today's bookings</h3>
+            <p>{{ todayBookings.length }} confirmed · {{ bookingsDueSoon }} due within 30 min</p>
+          </div>
+          <button type="button" class="bk-refresh" (click)="loadBookings()" title="Refresh">
+            <span class="material-symbols-outlined">refresh</span>
+          </button>
+          <button type="button" class="modal-close-btn" (click)="showBookings = false" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="bk-list">
+          <article
+            class="bk-card"
+            *ngFor="let b of todayBookings"
+            [class.is-late]="(b.minutes_until ?? 0) < 0"
+            [class.is-soon]="(b.minutes_until ?? 0) >= 0 && (b.minutes_until ?? 0) <= 30"
+          >
+            <div class="bk-time">
+              <strong>{{ bookingTime(b) }}</strong>
+              <small>{{ bookingWhen(b) }}</small>
+            </div>
+            <div class="bk-main">
+              <div class="bk-name">
+                <strong>{{ b.customer_name }}</strong>
+                <span class="bk-type" [class.is-pickup]="b.booking_type === 'PICKUP'">{{ b.booking_type === 'PICKUP' ? 'Pickup' : 'Table' }}</span>
+              </div>
+              <small class="bk-meta">
+                {{ b.reservation_code }} · {{ b.customer_phone }}
+                <ng-container *ngIf="b.booking_type !== 'PICKUP'"> · {{ b.guest_count }} guests<ng-container *ngIf="b.table_number"> · {{ b.table_number }}</ng-container></ng-container>
+              </small>
+              <small class="bk-dishes" *ngIf="b.items?.length">
+                <span class="material-symbols-outlined">restaurant_menu</span>
+                {{ bookingItemCount(b) }} items · {{ b.items_total || 0 | appCurrency:'1.0-2' }}
+              </small>
+            </div>
+            <div class="bk-actions">
+              <button type="button" class="bk-btn is-primary" *ngIf="b.booking_type === 'PICKUP' && b.items?.length" (click)="collectBooking(b)">
+                <span class="material-symbols-outlined">point_of_sale</span>Collect &amp; bill
+              </button>
+              <button type="button" class="bk-btn is-primary" *ngIf="b.booking_type === 'PICKUP' && !b.items?.length" (click)="markBookingPickedUp(b)">
+                <span class="material-symbols-outlined">shopping_bag</span>Picked up
+              </button>
+              <button type="button" class="bk-btn" *ngIf="b.booking_type !== 'PICKUP'" (click)="seatBooking()" title="Seat on the Reservations page">
+                <span class="material-symbols-outlined">how_to_reg</span>Seat…
+              </button>
+            </div>
+          </article>
+
+          <div class="bk-empty" *ngIf="!todayBookings.length">
+            <span class="material-symbols-outlined">event_busy</span>
+            <strong>No bookings left for today</strong>
+            <p>Confirmed pickups and table bookings for today show here.</p>
+          </div>
+        </div>
+
+        <div class="bk-foot">
+          <button type="button" class="bk-link" (click)="seatBooking()">
+            All reservations <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live stock preview for the cart -->
+    <div class="modal-backdrop" *ngIf="showStockPreview" (click)="showStockPreview = false">
+      <div class="modal-content sp-modal" (click)="$event.stopPropagation()">
+        <div class="sp-head">
+          <span class="sp-head-icon"><span class="material-symbols-outlined">inventory_2</span></span>
+          <div>
+            <h3>Stock for this cart</h3>
+            <p>What each line takes and what is left - updates as the cart changes</p>
+          </div>
+          <span class="sp-live">Live</span>
+          <button type="button" class="modal-close-btn" (click)="showStockPreview = false" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- One line status for the whole cart -->
+        <div class="sp-status" [ngClass]="'is-' + cartStockState">
+          <span class="material-symbols-outlined">{{ cartStockState === 'over' ? 'error' : cartStockState === 'tight' ? 'warning' : 'check_circle' }}</span>
+          <span>
+            <strong>{{ cartStock.length }} stock {{ cartStock.length === 1 ? 'item' : 'items' }}</strong> ·
+            {{ cartStockState === 'over' ? shortLabel + ' short - reduce a line before paying'
+               : cartStockState === 'tight' ? 'fits, but little is left' : 'everything fits' }}
+          </span>
+        </div>
+
+        <div class="sp-list">
+          <section class="sp-item" *ngFor="let s of cartStock" [class.is-over]="s.left < 0" [class.is-empty]="s.left === 0">
+            <header class="sp-item-head">
+              <strong>{{ s.name }}</strong>
+              <span class="sp-unit">{{ s.unit }}</span>
+            </header>
+
+            <div class="sp-stats">
+              <div><small>In stock</small><b>{{ s.total | number: '1.0-3' }}</b></div>
+              <div><small>This cart</small><b class="sp-stat-use">{{ s.total - s.left | number: '1.0-3' }}</b></div>
+              <div><small>Left</small><b class="sp-stat-left">{{ s.left | number: '1.0-3' }}</b></div>
+            </div>
+            <div class="sp-bar"><span class="sp-bar-fill" [style.width.%]="stockBarWidth(s)"></span></div>
+
+            <div class="sp-lines">
+              <div class="sp-line" *ngFor="let u of s.uses">
+                <div class="sp-line-name">
+                  <span>{{ u.dish }}</span>
+                  <small *ngIf="u.portion || u.sent">
+                    {{ u.portion }}<ng-container *ngIf="u.portion && u.sent"> · </ng-container><em *ngIf="u.sent">sent to kitchen</em>
+                  </small>
+                </div>
+                <span class="sp-line-qty">× {{ u.qty }}</span>
+                <span class="sp-line-amt">{{ u.amount | number: '1.0-3' }} {{ s.unit }}</span>
+              </div>
+            </div>
+
+            <p class="sp-note" *ngIf="s.left < 0">
+              <span class="material-symbols-outlined">error</span>Short by {{ -s.left | number: '1.0-3' }} {{ s.unit }}
+            </p>
+            <p class="sp-note sp-note-tight" *ngIf="s.left === 0">
+              <span class="material-symbols-outlined">warning</span>All of it is in this cart
+            </p>
+          </section>
+        </div>
+
+        <p class="sp-foot">
+          <span class="material-symbols-outlined">info</span>
+          Stock is taken when the bill is paid. Combos and add-ons are checked at payment.
+        </p>
+      </div>
+    </div>
+
     <div class="modal-backdrop" *ngIf="showPaymentModal">
       <div class="modal-content p-7 md:p-8 w-full max-w-2xl shadow-2xl">
         <div class="flex items-center justify-between pb-4 mb-5 border-b border-[#E9D5FF]">
@@ -1198,6 +1374,86 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
               {{ cartService.grandTotal() | appCurrency:'1.2-2' }}
             </span>
           </div>
+
+          <!-- Customer for this bill: typed here, optionally saved -->
+          <div class="pay-cust" *ngIf="!cartService.selectedCustomer(); else payCustAttached">
+            <div class="pay-cust-head">
+              <span class="material-symbols-outlined">person</span>
+              <strong>Customer</strong>
+              <small>optional · phone first</small>
+            </div>
+
+            <!-- 1. Phone: the customer's unique key -->
+            <div class="pay-cust-phone">
+              <span class="material-symbols-outlined">call</span>
+              <input
+                type="tel"
+                class="form-control"
+                name="payCustPhone"
+                maxlength="20"
+                inputmode="tel"
+                autocomplete="off"
+                placeholder="Phone number"
+                [class.is-invalid]="!!payCustPhoneError"
+                [(ngModel)]="payCustPhone"
+                (ngModelChange)="onPayCustPhone()"
+                (focus)="payPhoneSuggestOpen = payPhoneSuggestions.length > 0"
+                (blur)="closePayPhoneSuggestSoon()"
+              />
+              <span class="pay-cust-state" [ngClass]="'is-' + payCustLookup">
+                <ng-container [ngSwitch]="payCustLookup">
+                  <ng-container *ngSwitchCase="'checking'"><span class="material-symbols-outlined spin-icon">progress_activity</span>Checking…</ng-container>
+                  <ng-container *ngSwitchCase="'found'"><span class="material-symbols-outlined">how_to_reg</span>Existing customer</ng-container>
+                  <ng-container *ngSwitchCase="'new'"><span class="material-symbols-outlined">person_add</span>New number</ng-container>
+                </ng-container>
+              </span>
+            </div>
+
+            <div class="pay-cust-suggest" *ngIf="payPhoneSuggestOpen && payPhoneSuggestions.length">
+              <button type="button" *ngFor="let c of payPhoneSuggestions" (mousedown)="pickPayPhoneSuggestion(c); $event.preventDefault()">
+                <span class="pay-cust-avatar">{{ (c.name || '?').charAt(0).toUpperCase() }}</span>
+                <span><strong>{{ c.name }}</strong><small>{{ c.phone }}</small></span>
+              </button>
+            </div>
+
+            <!-- 2. Name: filled and locked for an existing customer -->
+            <div class="pay-cust-name" [class.is-locked]="payCustLookup === 'found'">
+              <input
+                type="text"
+                class="form-control"
+                name="payCustName"
+                maxlength="100"
+                autocomplete="off"
+                [placeholder]="payCustLookup === 'found' ? '' : 'Customer name'"
+                [readonly]="payCustLookup === 'found'"
+                [(ngModel)]="payCustName"
+              />
+              <span class="material-symbols-outlined" *ngIf="payCustLookup === 'found'" title="Saved customer - the name comes from Customers">lock</span>
+            </div>
+
+            <!-- 3. Save: only for a number that is not a customer yet -->
+            <p class="pay-cust-match" *ngIf="payCustLookup === 'found'">
+              <span class="material-symbols-outlined">verified</span>
+              Already saved - this bill will be linked to <strong>{{ payCustName }}</strong>
+            </p>
+            <label class="pay-cust-save" [class.is-on]="payCustSave" *ngIf="payCustLookup === 'new'">
+              <input type="checkbox" name="payCustSave" [(ngModel)]="payCustSave" />
+              <span>
+                <strong>Save Customer</strong>
+                <small>{{ payCustSave ? 'Name and phone will be added to Customers' : 'Not saved - the name and phone go on this bill only' }}</small>
+              </span>
+            </label>
+
+            <p class="pay-cust-error" *ngIf="payCustError as err">
+              <span class="material-symbols-outlined">error</span>{{ err }}
+            </p>
+          </div>
+          <ng-template #payCustAttached>
+            <div class="pay-cust is-attached">
+              <span class="material-symbols-outlined">how_to_reg</span>
+              <span>Billing to <strong>{{ cartService.selectedCustomer()?.name }}</strong> · {{ cartService.selectedCustomer()?.phone }}</span>
+            </div>
+          </ng-template>
 
           <!-- Payment Modes: pick one, or two to split the bill -->
           <div>
@@ -1355,7 +1611,7 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
           </button>
           <button
             (click)="executeCheckout()"
-            [disabled]="isCheckingOut || !canCompletePayment"
+            [disabled]="isCheckingOut || !canCompletePayment || !!payCustError"
             class="action-btn btn-gradient-purple"
           >
             <span class="material-symbols-outlined text-[18px]">
@@ -3226,6 +3482,56 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
       background: var(--primary-light, rgba(126, 34, 206, 0.1));
       border-color: var(--card-border, #E9D5FF);
     }
+    .btn-bookings.is-due { border-color: #F59E0B; color: #F59E0B; }
+    .booking-badge { background: #3B82F6; }
+    .booking-badge.is-due { background: #F59E0B; animation: sp-pulse 1.4s infinite; }
+
+    .bk-modal { width: min(620px, calc(100vw - 32px)); }
+    .bk-head { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; margin-bottom: 12px; border-bottom: 1px solid var(--card-border, #E9D5FF); }
+    .bk-head > div { flex: 1; min-width: 0; }
+    .bk-head h3 { margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text-main, #2E1065); }
+    .bk-head p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted, #6B7280); }
+    .bk-head-icon { width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: var(--primary, #7E22CE); background: color-mix(in srgb, var(--primary, #7E22CE) 14%, transparent); }
+    .bk-refresh { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--card-border, #E9D5FF); background: transparent; color: var(--text-muted, #6B7280); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .bk-refresh:hover { color: var(--primary, #7E22CE); border-color: var(--primary, #7E22CE); }
+    .bk-list { display: flex; flex-direction: column; gap: 8px; max-height: min(60vh, 520px); overflow-y: auto; }
+    .bk-card {
+      --bk-tone: #3B82F6;
+      display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 14px; border: 1px solid var(--card-border, #E9D5FF);
+      border-left: 4px solid var(--bk-tone); background: var(--bg-app, #FAF5FF);
+    }
+    .bk-card.is-soon { --bk-tone: #F59E0B; }
+    .bk-card.is-late { --bk-tone: var(--danger, #EF4444); }
+    .bk-time { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+    .bk-time strong { font-size: 14px; font-weight: 900; color: var(--bk-tone); font-variant-numeric: tabular-nums; }
+    .bk-time small { font-size: 10.5px; font-weight: 700; color: var(--text-muted, #6B7280); }
+    .bk-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .bk-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .bk-name strong { font-size: 13.5px; color: var(--text-main, #2E1065); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bk-type { padding: 0 7px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--primary, #7E22CE); background: color-mix(in srgb, var(--primary, #7E22CE) 14%, transparent); }
+    .bk-type.is-pickup { color: #F59E0B; background: color-mix(in srgb, #F59E0B 16%, transparent); }
+    .bk-meta { font-size: 11px; color: var(--text-muted, #6B7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bk-dishes { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--text-main, #2E1065); }
+    .bk-dishes .material-symbols-outlined { font-size: 14px; color: var(--primary, #7E22CE); }
+    .bk-actions { display: flex; gap: 6px; }
+    .bk-btn {
+      display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--card-border, #E9D5FF); background: var(--card-bg, #FFFFFF); color: var(--text-main, #2E1065);
+      font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap;
+    }
+    .bk-btn .material-symbols-outlined { font-size: 16px; }
+    .bk-btn:hover { border-color: var(--primary, #7E22CE); }
+    .bk-btn.is-primary { color: #FFFFFF; border-color: transparent; background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA)); }
+    .bk-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 28px 12px; text-align: center; color: var(--text-muted, #6B7280); }
+    .bk-empty .material-symbols-outlined { font-size: 32px; }
+    .bk-empty strong { color: var(--text-main, #2E1065); }
+    .bk-empty p { margin: 0; font-size: 12px; }
+    .bk-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .bk-link { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 800; color: var(--primary, #7E22CE); cursor: pointer; }
+    .bk-link .material-symbols-outlined { font-size: 16px; }
+    @media (max-width: 560px) { .bk-card { grid-template-columns: 64px minmax(0, 1fr); } .bk-actions { grid-column: 1 / -1; justify-content: flex-end; } }
+
     .draft-badge {
       background: #E11D48;
       color: #FFFFFF;
@@ -4197,6 +4503,166 @@ import { dishPortionsAvailable, isMultiStock, portionsAvailable } from '../../co
     }
 
     /* The bill number: a reference to read back, not a headline. */
+    /* Customer typed at payment */
+    .pay-cust {
+      display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 14px;
+      border: 1px solid var(--card-border, #E9D5FF); background: var(--bg-app, #FAF5FF);
+    }
+    .pay-cust.is-attached { flex-direction: row; align-items: center; font-size: 13px; color: var(--text-main, #2E1065); }
+    .pay-cust.is-attached .material-symbols-outlined { color: #10B981; }
+    .pay-cust-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-main, #2E1065); }
+    .pay-cust-head .material-symbols-outlined { font-size: 17px; color: var(--primary, #7E22CE); }
+    .pay-cust-head strong { text-transform: uppercase; letter-spacing: 0.04em; font-size: 11.5px; }
+    .pay-cust-head small { font-size: 11px; color: var(--text-muted, #6B7280); }
+    .pay-cust-phone, .pay-cust-name { position: relative; display: flex; align-items: center; }
+    .pay-cust-suggest {
+      display: flex; flex-direction: column; margin-top: -4px; border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--card-border, #E9D5FF); background: var(--card-bg, #FFFFFF);
+      box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.5);
+    }
+    .pay-cust-suggest button {
+      display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: none; background: transparent;
+      font-family: inherit; text-align: left; cursor: pointer;
+    }
+    .pay-cust-suggest button + button { border-top: 1px solid var(--card-border, #E9D5FF); }
+    .pay-cust-suggest button:hover { background: color-mix(in srgb, var(--primary, #7E22CE) 10%, transparent); }
+    .pay-cust-suggest span:last-child { display: flex; flex-direction: column; line-height: 1.25; }
+    .pay-cust-suggest strong { font-size: 12.5px; color: var(--text-main, #2E1065); }
+    .pay-cust-suggest small { font-size: 11px; color: var(--text-muted, #6B7280); font-variant-numeric: tabular-nums; }
+    .pay-cust-avatar {
+      width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900; color: #FFFFFF; background: linear-gradient(135deg, var(--primary, #7E22CE), var(--primary-hover, #9333EA));
+    }
+    .pay-cust-phone > .material-symbols-outlined:first-child {
+      position: absolute; left: 10px; font-size: 17px; color: var(--text-muted, #6B7280); pointer-events: none;
+    }
+    .pay-cust-phone input { padding-left: 34px !important; padding-right: 150px !important; }
+    .pay-cust-phone input.is-invalid { border-color: var(--danger, #EF4444) !important; }
+    .pay-cust-state {
+      position: absolute; right: 8px; display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 800; white-space: nowrap; pointer-events: none;
+    }
+    .pay-cust-state .material-symbols-outlined { font-size: 15px; }
+    .pay-cust-state.is-checking { color: var(--text-muted, #6B7280); }
+    .pay-cust-state.is-found { color: #10B981; }
+    .pay-cust-state.is-new { color: var(--primary, #7E22CE); }
+    .pay-cust-name.is-locked input { padding-right: 34px !important; opacity: 0.9; cursor: not-allowed; }
+    .pay-cust-name > .material-symbols-outlined { position: absolute; right: 10px; font-size: 16px; color: #10B981; }
+    .pay-cust-save {
+      display: flex; align-items: flex-start; gap: 9px; margin: 0 !important; padding: 8px 10px; border-radius: 12px; cursor: pointer;
+      border: 1px dashed var(--card-border, #E9D5FF); text-transform: none !important; letter-spacing: 0 !important;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .pay-cust-save input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--primary, #7E22CE); cursor: pointer; flex-shrink: 0; }
+    .pay-cust-save span { display: flex; flex-direction: column; line-height: 1.3; }
+    .pay-cust-save strong { font-size: 13px; color: var(--text-main, #2E1065); }
+    .pay-cust-save small { font-size: 11px; font-weight: 500; color: var(--text-muted, #6B7280); }
+    .pay-cust-save.is-on { border-style: solid; border-color: var(--primary, #7E22CE); background: color-mix(in srgb, var(--primary, #7E22CE) 9%, transparent); }
+    .pay-cust-match, .pay-cust-error { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 11.5px; font-weight: 600; }
+    .pay-cust-match { color: #10B981; }
+    .pay-cust-error { color: var(--danger, #EF4444); }
+    .pay-cust-match .material-symbols-outlined, .pay-cust-error .material-symbols-outlined { font-size: 15px; }
+    @media (max-width: 560px) { .pay-cust-phone input { padding-right: 12px !important; } .pay-cust-state { position: static; margin-left: 6px; } }
+
+    /* Linked booking strip in the cart */
+    .cart-booking-strip {
+      --cb-tone: #F59E0B;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 7px 10px; border-radius: 12px;
+      font-size: 11.5px; color: var(--cart-text, var(--text-main, #2E1065));
+      background: color-mix(in srgb, var(--cb-tone) 13%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cb-tone) 45%, transparent);
+    }
+    .cart-booking-strip.is-dining { --cb-tone: #10B981; }
+    .cart-booking-strip.needs-table { --cb-tone: var(--danger, #EF4444); }
+    .cart-booking-strip > .material-symbols-outlined { font-size: 17px; color: var(--cb-tone); }
+    .cart-booking-text { flex: 1; min-width: 0; line-height: 1.35; }
+    .cart-booking-text strong { color: var(--cb-tone); }
+    .cart-booking-unlink {
+      width: 26px; height: 26px; border-radius: 8px; border: none; background: transparent; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; color: var(--cart-text-soft, #6B7280);
+    }
+    .cart-booking-unlink:hover { color: var(--danger, #EF4444); background: color-mix(in srgb, var(--danger, #EF4444) 12%, transparent); }
+    .cart-booking-unlink .material-symbols-outlined { font-size: 16px; }
+
+    /* Live stock chip in the cart header */
+    .cart-stock-chip {
+      display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.12rem 0.55rem; border-radius: 9999px;
+      border: 1px solid color-mix(in srgb, #10B981 45%, var(--cart-line, #E9D5FF));
+      background: color-mix(in srgb, #10B981 14%, transparent); color: #10B981;
+      font-family: inherit; font-size: 0.7rem; font-weight: 800; cursor: pointer;
+      transition: filter 0.15s ease, transform 0.15s ease;
+    }
+    .cart-stock-chip .material-symbols-outlined { font-size: 14px; }
+    .cart-stock-chip:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .cart-stock-chip.is-tight { color: #F59E0B; border-color: color-mix(in srgb, #F59E0B 50%, transparent); background: color-mix(in srgb, #F59E0B 14%, transparent); }
+    .cart-stock-chip.is-over { color: var(--danger, #EF4444); border-color: color-mix(in srgb, var(--danger, #EF4444) 55%, transparent); background: color-mix(in srgb, var(--danger, #EF4444) 14%, transparent); animation: sp-pulse 1.4s infinite; }
+    @keyframes sp-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); } 50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); } }
+
+    /* Live stock preview dialog */
+    .sp-modal { width: min(480px, calc(100vw - 32px)); }
+    .sp-head { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--card-border, #E9D5FF); }
+    .sp-head > div { flex: 1; min-width: 0; }
+    .sp-head h3 { margin: 0; font-size: 1.05rem; font-weight: 900; color: var(--text-main, #2E1065); }
+    .sp-head p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted, #6B7280); }
+    .sp-head-icon {
+      width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+      color: var(--primary, #7E22CE); background: color-mix(in srgb, var(--primary, #7E22CE) 14%, transparent);
+    }
+    .sp-live { padding: 0 8px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #10B981; background: color-mix(in srgb, #10B981 16%, transparent); }
+    .sp-status {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px; border-radius: 12px;
+      font-size: 12.5px; color: var(--text-main, #2E1065);
+      --sp-tone: #10B981; background: color-mix(in srgb, var(--sp-tone) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--sp-tone) 40%, transparent);
+    }
+    .sp-status .material-symbols-outlined { font-size: 18px; color: var(--sp-tone); }
+    .sp-status.is-tight { --sp-tone: #F59E0B; }
+    .sp-status.is-over { --sp-tone: var(--danger, #EF4444); }
+
+    .sp-list { display: flex; flex-direction: column; gap: 10px; max-height: min(58vh, 480px); overflow-y: auto; padding-right: 2px; }
+    .sp-item {
+      display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px;
+      border: 1px solid var(--card-border, #E9D5FF); background: var(--bg-app, #FAF5FF); --sp-tone: #10B981;
+    }
+    .sp-item.is-empty { --sp-tone: #F59E0B; }
+    .sp-item.is-over { --sp-tone: var(--danger, #EF4444); border-color: color-mix(in srgb, var(--danger, #EF4444) 50%, var(--card-border, #E9D5FF)); }
+    .sp-item-head { display: flex; align-items: baseline; gap: 6px; }
+    .sp-item-head strong { font-size: 14px; font-weight: 900; color: var(--text-main, #2E1065); }
+    .sp-unit { font-size: 11px; font-weight: 700; color: var(--text-muted, #6B7280); }
+
+    .sp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .sp-stats > div {
+      display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border-radius: 10px;
+      background: var(--card-bg, #FFFFFF); border: 1px solid var(--card-border, #E9D5FF);
+    }
+    .sp-stats small { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted, #6B7280); }
+    .sp-stats b { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--text-main, #2E1065); }
+    .sp-stats b.sp-stat-use { color: var(--primary, #7E22CE); }
+    .sp-stats b.sp-stat-left { color: var(--sp-tone); }
+
+    .sp-bar { height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--text-muted, #6B7280) 20%, transparent); overflow: hidden; }
+    .sp-bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--sp-tone); transition: width 0.25s ease; }
+
+    .sp-lines { display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; border: 1px solid var(--card-border, #E9D5FF); }
+    .sp-line {
+      display: grid; grid-template-columns: minmax(0, 1fr) 44px 78px; align-items: center; gap: 8px;
+      padding: 6px 10px; background: var(--card-bg, #FFFFFF); font-size: 12px;
+    }
+    .sp-line + .sp-line { border-top: 1px solid var(--card-border, #E9D5FF); }
+    .sp-line-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+    .sp-line-name span { font-weight: 700; color: var(--text-main, #2E1065); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sp-line-name small { font-size: 10.5px; color: var(--text-muted, #6B7280); overflow-wrap: anywhere; }
+    .sp-line-name em { font-style: normal; font-weight: 700; color: #3B82F6; }
+    .sp-line-qty { text-align: right; font-weight: 800; color: var(--text-muted, #6B7280); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .sp-line-amt { text-align: right; font-weight: 800; color: var(--text-main, #2E1065); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .sp-note { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 11.5px; font-weight: 800; color: var(--danger, #EF4444); }
+    .sp-note .material-symbols-outlined { font-size: 15px; }
+    .sp-note-tight { color: #F59E0B; }
+
+    .sp-foot { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 11px; color: var(--text-muted, #6B7280); }
+    .sp-foot .material-symbols-outlined { font-size: 14px; }
+
     .order-id-tag {
       padding: 0.12rem 0.5rem;
       border-radius: 9999px;
@@ -6118,6 +6584,185 @@ export class PosComponent implements OnInit, AfterViewInit {
    * floor map - load that table's open tab into the cart. Leaving Dine-In or
    * the table drops the sent lines; new lines stay in the cart.
    */
+  /**
+   * Live stock check: whenever the cart changes, ask the server (same rule as
+   * checkout) for current balances, so the cart's limits reflect what other
+   * tills have sold in the meantime. Debounced; online only; an over-limit
+   * line (e.g. a combo, which only the server can price in stock) is flagged.
+   */
+  private stockCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // ─── Today's bookings on the POS ───
+  private bookingRouter = inject(Router);
+  public showBookings = false;
+  public todayBookings: ReservationRow[] = [];
+  private bookingsLoadedAt = Date.now();
+  private readonly bookingsPoll = (() => {
+    const id = setInterval(() => this.loadBookings(), 60000);
+    inject(DestroyRef).onDestroy(() => clearInterval(id));
+    return id;
+  })();
+
+  /** Today's confirmed bookings, soonest first - also drives the toolbar badge. */
+  loadBookings(): void {
+    const d = new Date();
+    const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    this.diningService.listReservations({ from: day, to: day, status: 'CONFIRMED' }).subscribe({
+      next: (res) => {
+        if (!res.success) return;
+        this.bookingsLoadedAt = Date.now();
+        this.todayBookings = [...(res.data.rows || [])].sort((a, b) => String(a.reservation_time).localeCompare(String(b.reservation_time)));
+      },
+      error: () => {},
+    });
+  }
+
+  openBookings(): void {
+    this.showBookings = true;
+    this.loadBookings();
+  }
+
+  /** Due within 30 minutes (or already late) - turns the toolbar badge amber. */
+  get bookingsDueSoon(): number {
+    return this.todayBookings.filter((b) => this.bookingMinutes(b) <= 30).length;
+  }
+
+  private bookingMinutes(b: ReservationRow): number {
+    return (Number(b.minutes_until) || 0) - Math.floor((Date.now() - this.bookingsLoadedAt) / 60000);
+  }
+
+  bookingTime(b: ReservationRow): string {
+    const m = String(b.reservation_time || '').match(/(\d{2}):(\d{2})/);
+    if (!m) return '';
+    const h = Number(m[1]);
+    return ((h % 12) || 12) + ':' + m[2] + (h < 12 ? ' AM' : ' PM');
+  }
+
+  bookingWhen(b: ReservationRow): string {
+    const mins = this.bookingMinutes(b);
+    if (mins < 0) return 'Late ' + this.shortSpan(-mins);
+    if (mins === 0) return 'Now';
+    return 'In ' + this.shortSpan(mins);
+  }
+
+  private shortSpan(mins: number): string {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm';
+  }
+
+  bookingItemCount(b: ReservationRow): number {
+    return (b.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+  }
+
+  /**
+   * A pickup booked with dishes: put them in this cart as a Takeaway order.
+   * Paying takes the stock and marks the booking picked up (checkout gets its id).
+   */
+  collectBooking(b: ReservationRow): void {
+    const run = () => {
+      this.cartService.clearCart();
+      this.cartService.orderType.set('TAKEAWAY');
+      const missing: string[] = [];
+      let added = 0;
+      for (const it of b.items || []) {
+        const product = this.products.find((p) => p.id === it.product_id);
+        const variant = product?.variants?.find((v) => v.id === it.variant_id) || null;
+        if (product && this.cartService.addItem(product, variant, it.quantity, it.notes || undefined)) added++;
+        else missing.push(it.product_name);
+      }
+      if (!added) {
+        this.notify.error('None of the booked dishes can be sold right now');
+        return;
+      }
+      if (missing.length) this.notify.warning('Left out (not available): ' + missing.join(', '));
+      this.cartService.bookingRef.set({ reservationId: b.id, code: b.reservation_code, customerName: b.customer_name });
+      this.cartService.prefillCustomer.set({ name: b.customer_name, phone: b.customer_phone });
+      this.cartService.orderNotes.set('Pickup booking ' + b.reservation_code + ' - ' + b.customer_name);
+      this.showBookings = false;
+      this.notify.info('Pay the bill to mark ' + b.reservation_code + ' as picked up');
+    };
+    if (this.cartService.items().length) {
+      this.notify.confirm({
+        title: 'Replace the cart?',
+        message: 'The current cart will be cleared and replaced with ' + b.customer_name + "'s booked dishes.",
+        confirmText: 'Replace cart',
+        onConfirm: run,
+      });
+    } else {
+      run();
+    }
+  }
+
+  markBookingPickedUp(b: ReservationRow): void {
+    this.diningService.markReservationPickedUp(b.id).subscribe({
+      next: () => {
+        this.notify.success(b.customer_name + ' - pickup collected');
+        this.loadBookings();
+      },
+      error: () => {},
+    });
+  }
+
+  /** Seating (table choice, start order) lives on the Reservations page. */
+  seatBooking(): void {
+    this.showBookings = false;
+    this.bookingRouter.navigate(['/dining/reservations']);
+  }
+
+  /** Live stock preview (cart header chip). */
+  public showStockPreview = false;
+
+  get cartStock() {
+    return this.cartService.stockBreakdown();
+  }
+
+  /** over: a stock item is short; tight: one is fully used or under 20% left. */
+  get cartStockState(): 'ok' | 'tight' | 'over' {
+    const rows = this.cartStock;
+    if (rows.some((s) => s.left < 0)) return 'over';
+    if (rows.some((s) => s.left === 0 || (s.total > 0 && s.left / s.total < 0.2))) return 'tight';
+    return 'ok';
+  }
+
+  /** "1 item" / "2 items" - how many stock items this cart is short of. */
+  get shortLabel(): string {
+    const n = this.cartStock.filter((s) => s.left < 0).length;
+    return n + (n === 1 ? ' item' : ' items');
+  }
+
+  /** How much of the stock item this cart uses, 0-100. */
+  stockBarWidth(s: { total: number; left: number }): number {
+    if (!(s.total > 0)) return s.left < 0 ? 100 : 0;
+    return Math.min(100, Math.max(0, ((s.total - s.left) / s.total) * 100));
+  }
+  private readonly liveStockCheck = effect(() => {
+    const items = this.cartService.items();
+    const tab = this.cartService.openTab();
+    untracked(() => {
+      if (this.stockCheckTimer) clearTimeout(this.stockCheckTimer);
+      const pending = items.filter((i) => !i.sentToKitchen);
+      if (!pending.length || !this.offlinePos.isOnline()) return;
+      this.stockCheckTimer = setTimeout(() => {
+        this.checkoutService.stockCheck(pending.map((i) => this.toCheckoutLine(i)), tab?.orderId ?? null).subscribe({
+          next: (res) => {
+            if (!res.success) return;
+            this.cartService.setStockBalances(res.data.stocks);
+            const over = res.data.lines.filter((l) => !l.ok);
+            if (over.length) {
+              const names = over.map((l) => {
+                const it = pending[l.index];
+                return (it?.variant ? it.product.name + ' (' + it.variant.name + ')' : it?.product.name) + ' - max ' + (l.max ?? 0);
+              });
+              this.notify.warning('Not enough stock now for: ' + names.join(', '));
+            }
+          },
+          error: () => {},
+        });
+      }, 350);
+    });
+  });
+
   private readonly tabSync = effect(() => {
     const table = this.cartService.selectedTable();
     const dining = this.cartService.orderType() === 'DINING';
@@ -6204,6 +6849,7 @@ export class PosComponent implements OnInit, AfterViewInit {
   public printerSettings: PrinterConfig = this.printerService.loadConfig();
 
   ngOnInit(): void {
+    this.loadBookings();
     // Opening the POS from the menu always starts an empty ticket. Screens that
     // hand a cart over (a Dining table, a resumed held bill, a customer) pass
     // keepCart in the navigation state. A table's tab is safe on the server
@@ -6775,7 +7421,7 @@ export class PosComponent implements OnInit, AfterViewInit {
       (success ? added : failed).push(qty > 1 ? `${qty} x ${label}` : label);
     }
 
-    if (failed.length > 0) {
+    if (failed.length > 0 && !this.cartService.consumeStockBlock()) {
       this.notify.error(`Cannot add ${failed.join(', ')} (Out of Stock / Inactive)`);
     }
     if (added.length === 1) {
@@ -6938,7 +7584,8 @@ export class PosComponent implements OnInit, AfterViewInit {
     const success = this.cartService.addItem(product, variant, 1);
     const label = variant ? `${product.name} (${variant.name})` : product.name;
     if (!success) {
-      this.notify.error(`Cannot add "${label}" (Out of Stock / Inactive)`);
+      // The cart's stock guard has already said how many are left.
+      if (!this.cartService.consumeStockBlock()) this.notify.error(`Cannot add "${label}" (Out of Stock / Inactive)`);
     } else {
       this.notify.info(`Added "${label}" to cart`);
     }
@@ -7513,9 +8160,51 @@ export class PosComponent implements OnInit, AfterViewInit {
             this.printerService.printKot(res.data.kot);
           }
           this.notify.success(`KOT ${res.data.round} sent to kitchen for Table ${table.table_number}`);
+          this.fulfilLinkedBooking('DINING', table.id, table.table_number);
         },
         error: () => (this.isSendingKot = false),
       });
+  }
+
+  /**
+   * The cart came from a booking (Collect & bill) and is now being served:
+   * close the booking the way it is actually served. Dining on a table
+   * seats it there (a pickup that turned into dining in); the paid bill does
+   * the same server-side as a safety net.
+   */
+  private fulfilLinkedBooking(servedAs: 'DINING' | 'TAKEAWAY', tableId: number | null, tableLabel?: string): void {
+    const ref = this.cartService.bookingRef();
+    if (!ref) return;
+    this.diningService.fulfilReservation(ref.reservationId, servedAs, tableId).subscribe({
+      next: (res) => {
+        if (!res.success) return;
+        this.cartService.bookingRef.set(null);
+        this.notify.info(
+          'Booking ' + ref.code + ' - ' + (res.data.status === 'SEATED' ? 'seated at Table ' + (tableLabel || '') : 'picked up')
+        );
+        this.loadBookings();
+      },
+      // Still confirmed (or already closed): the paid bill will settle it.
+      error: () => {},
+    });
+  }
+
+  /** The strip in the cart that says what will happen to the linked booking. */
+  get bookingStripText(): string {
+    const table = this.cartService.selectedTable();
+    if (this.cartService.orderType() === 'DINING') {
+      return table
+        ? 'will be seated at Table ' + table.table_number + ' when sent to the kitchen or paid'
+        : 'pick a table to seat this booking';
+    }
+    return 'will be marked picked up when paid';
+  }
+
+  unlinkBooking(): void {
+    const ref = this.cartService.bookingRef();
+    if (!ref) return;
+    this.cartService.bookingRef.set(null);
+    this.notify.info('Booking ' + ref.code + ' unlinked - it stays confirmed on the Reservations page');
   }
 
   /** Takes a line that was already sent off the tab. */
@@ -7682,6 +8371,8 @@ export class PosComponent implements OnInit, AfterViewInit {
       serviceChargeAmount: this.cartService.serviceChargeAmount(),
       surchargeAmount: this.cartService.surchargeAmount(),
       couponCode: this.cartService.couponCode(),
+      reservationId: this.cartService.bookingRef()?.reservationId ?? null,
+      ...this.typedCustomerFields(),
       ...this.paymentFields(),
       items: pending.map((i) => this.toCheckoutLine(i)),
     };
@@ -7691,6 +8382,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.isCheckingOut = false;
         this.showPaymentModal = false;
         this.notify.success(`Bill #${res.data.bill_number} settled for ${tab.orderNumber}`);
+        this.afterTypedCustomer((res.data as any)?.customer_link);
 
         // The kitchen already has every earlier round; only unsent lines need a ticket.
         if (pending.length && this.autoPrintKot && this.printerSettings.kitchenPrinter.enabled) {
@@ -7808,7 +8500,183 @@ export class PosComponent implements OnInit, AfterViewInit {
     this.calcChange();
   }
 
+  // ─── Customer typed at payment (phone first) ───
+  public payCustName = '';
+  public payCustPhone = '';
+  public payCustSave = false;
+  /** idle: nothing to check yet; checking; found: already a customer; new: not one yet. */
+  public payCustLookup: 'idle' | 'checking' | 'found' | 'new' = 'idle';
+  public payCustMatch: { id: number; name: string; phone: string } | null = null;
+  private payCustTimer: ReturnType<typeof setTimeout> | null = null;
+  private payCustSeq = 0;
+
+  private payPhoneDigits(): string {
+    return (this.payCustPhone || '').replace(/\D/g, '');
+  }
+
+  get payCustPhoneError(): string | null {
+    if (!this.payCustPhone.trim()) return null;
+    const d = this.payPhoneDigits();
+    return d.length < 7 || d.length > 15 ? 'Enter a valid phone number (7 to 15 digits)' : null;
+  }
+
+  /** Why the typed customer cannot be used yet, or null. */
+  get payCustError(): string | null {
+    if (this.cartService.selectedCustomer()) return null;
+    if (this.payCustPhoneError) return this.payCustPhoneError;
+    if (this.payCustLookup === 'checking') return 'Checking the phone number…';
+    if (this.payCustLookup === 'new' && this.payCustSave && !this.payCustName.trim()) {
+      return 'Enter the customer name to save the customer';
+    }
+    if (!this.payCustPhone.trim() && this.payCustName.trim()) return null; // a name alone is fine for this bill
+    return null;
+  }
+
+  /**
+   * Phone typed: once it is a valid number, ask the server whether it is
+   * already a customer. Found - fill in and lock their name, no Save option.
+   * Not found - the name is typed, and Save Customer is offered.
+   */
+  onPayCustPhone(): void {
+    this.suggestPayPhones();
+    if (this.payCustTimer) clearTimeout(this.payCustTimer);
+    // Leaving a matched number: its name was filled in for it, so clear it.
+    if (this.payCustMatch) {
+      this.payCustMatch = null;
+      this.payCustName = '';
+    }
+    this.payCustSave = false;
+    const digits = this.payPhoneDigits();
+    if (digits.length < 7 || digits.length > 15) {
+      this.payCustLookup = 'idle';
+      return;
+    }
+    this.payCustLookup = 'checking';
+    const seq = ++this.payCustSeq;
+    this.payCustTimer = setTimeout(() => {
+      this.customerService.lookupPhone(this.payCustPhone).subscribe({
+        next: (res) => {
+          if (seq !== this.payCustSeq || !res.success) return;
+          if (res.data.found && res.data.customer) {
+            this.payCustMatch = res.data.customer;
+            this.payCustName = res.data.customer.name;
+            this.payCustLookup = 'found';
+          } else {
+            this.payCustLookup = 'new';
+          }
+        },
+        error: () => {
+          // Could not check: treat as new; the server still refuses duplicates on save.
+          if (seq === this.payCustSeq) this.payCustLookup = 'new';
+        },
+      });
+    }, 300);
+  }
+
+  // Phone suggestions in the payment dialog
+  public payPhoneSuggestions: { id: number; name: string; phone: string }[] = [];
+  public payPhoneSuggestOpen = false;
+  private payPhoneSuggestTimer: ReturnType<typeof setTimeout> | null = null;
+  private payPhoneSuggestSeq = 0;
+
+  private suggestPayPhones(): void {
+    if (this.payPhoneSuggestTimer) clearTimeout(this.payPhoneSuggestTimer);
+    const digits = this.payPhoneDigits();
+    if (digits.length < 3) {
+      this.payPhoneSuggestions = [];
+      this.payPhoneSuggestOpen = false;
+      return;
+    }
+    const seq = ++this.payPhoneSuggestSeq;
+    this.payPhoneSuggestTimer = setTimeout(() => {
+      this.customerService.suggestPhone(digits).subscribe({
+        next: (res) => {
+          if (seq !== this.payPhoneSuggestSeq || !res.success) return;
+          this.payPhoneSuggestions = (res.data.customers || []).filter((c) => (c.phone || '').replace(/\D/g, '') !== digits);
+          this.payPhoneSuggestOpen = this.payPhoneSuggestions.length > 0;
+        },
+        error: () => {},
+      });
+    }, 200);
+  }
+
+  pickPayPhoneSuggestion(c: { id: number; name: string; phone: string }): void {
+    this.payPhoneSuggestOpen = false;
+    this.payPhoneSuggestions = [];
+    if (this.payCustTimer) clearTimeout(this.payCustTimer);
+    this.payCustSeq++;
+    this.payCustPhone = c.phone;
+    this.payCustName = c.name;
+    this.payCustMatch = c;
+    this.payCustLookup = 'found';
+    this.payCustSave = false;
+  }
+
+  closePayPhoneSuggestSoon(): void {
+    setTimeout(() => (this.payPhoneSuggestOpen = false), 150);
+  }
+
+  /** What goes to checkout: only when no customer is attached to the cart. */
+  private typedCustomerFields() {
+    if (this.cartService.selectedCustomer()) return {};
+    if (this.payCustLookup === 'found' && this.payCustMatch) return { customerId: this.payCustMatch.id };
+    const name = this.payCustName.trim();
+    const phone = this.payCustPhone.trim();
+    if (!name && !phone) return {};
+    return { customerName: name || null, customerPhone: phone || null, saveCustomer: this.payCustLookup === 'new' && this.payCustSave };
+  }
+
+  /** After a paid bill: say what happened to the typed customer, then clear it. */
+  private afterTypedCustomer(link: string | null | undefined): void {
+    if (this.payCustMatch) this.notify.info('Bill linked to customer ' + this.payCustMatch.name);
+    else if (link === 'CREATED') this.notify.info('Customer saved - ' + this.payCustName.trim());
+    else if (link === 'EXISTING') this.notify.info('Bill linked to the existing customer with this number');
+    this.payCustName = '';
+    this.payCustPhone = '';
+    this.payCustSave = false;
+    this.payCustMatch = null;
+    this.payCustLookup = 'idle';
+  }
+
+  /** Start the payment dialog's customer with this name and phone, unless one is already there. */
+  private prefillPayCustomer(pre: { name?: string | null; phone?: string | null }): void {
+    if (this.cartService.selectedCustomer() || this.payCustPhone.trim() || this.payCustName.trim()) return;
+    this.payCustName = pre.name || '';
+    this.payCustPhone = pre.phone || '';
+    if (this.payCustPhone) this.onPayCustPhone();
+  }
+
+  /**
+   * A dining bill for a table whose party came with a booking: the booking's
+   * name and phone. The table picked in the POS may not carry the booking, so
+   * it is read fresh.
+   */
+  private prefillFromBookedTable(): void {
+    const table = this.cartService.selectedTable();
+    if (this.cartService.orderType() !== 'DINING' || !table?.id) return;
+    const use = (t: DiningTable | null | undefined) => {
+      if (t?.seated_booking_id && t.id === this.cartService.selectedTable()?.id) {
+        this.prefillPayCustomer({ name: t.seated_booking_customer, phone: t.seated_booking_phone });
+      }
+    };
+    if (table.seated_booking_id) {
+      use(table);
+      return;
+    }
+    this.diningService.getTableById(table.id).subscribe({
+      next: (res) => {
+        if (res.success && this.showPaymentModal) use(res.data);
+      },
+      error: () => {},
+    });
+  }
+
   openPaymentModal(): void {
+    // The cart came from a booking: start with its name and phone, checked
+    // against Customers - an existing one is linked, a new one can be saved.
+    const pre = this.cartService.prefillCustomer();
+    if (pre) this.prefillPayCustomer(pre);
+    else this.prefillFromBookedTable();
     this.selectedMethods = [this.selectedPaymentMethod && this.selectedPaymentMethod !== 'SPLIT' ? this.selectedPaymentMethod : 'CASH'];
     this.resetSplit();
     this.changeDue = 0;
@@ -7980,6 +8848,9 @@ export class PosComponent implements OnInit, AfterViewInit {
       serviceChargeAmount: this.cartService.serviceChargeAmount(),
       surchargeAmount: this.cartService.surchargeAmount(),
       couponCode: this.cartService.couponCode(),
+      // A pickup booking being collected: paying this bill marks it picked up.
+      reservationId: this.cartService.bookingRef()?.reservationId ?? null,
+      ...this.typedCustomerFields(),
       ...this.paymentFields(),
       items: this.cartService.items().map((i) => ({
         productId: i.product.id,
@@ -8000,6 +8871,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.isCheckingOut = false;
         this.showPaymentModal = false;
         this.notify.success(`Bill #${res.data.bill_number} Settled Successfully!`);
+        this.afterTypedCustomer((res.data as any)?.customer_link);
 
         // Trigger KOT print
         if (this.autoPrintKot && this.printerSettings.kitchenPrinter.enabled) {
@@ -8033,6 +8905,7 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.loadProducts(); // refresh stock numbers
         this.loadRecentOrders(); // refresh bottom order reports
         this.loadCurrentShiftSummary(); // refresh shift order numbers
+        this.loadBookings(); // a paid pickup booking drops off the list
       },
       error: () => {
         this.isCheckingOut = false;

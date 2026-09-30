@@ -104,6 +104,17 @@ export interface ProductVariantStock {
 
 export type VariantStockMode = 'COMMON' | 'EACH' | 'MULTI';
 
+/** A dish booked with a reservation. Stock is taken when it is paid at the POS. */
+export interface ReservationDish {
+  product_id: number;
+  variant_id: number | null;
+  product_name: string;
+  variant_name: string | null;
+  quantity: number;
+  unit_price: number;
+  notes?: string | null;
+}
+
 export interface Product {
   id: number;
   category_id: number;
@@ -240,6 +251,11 @@ export interface DiningTable {
   reservation_customer?: string | null;
   reservation_time?: string | null;
   reservation_guests?: number | null;
+  /** Occupied by a booking that was seated here (null = walk-in). */
+  seated_booking_id?: number | null;
+  seated_booking_code?: string | null;
+  seated_booking_customer?: string | null;
+  seated_booking_phone?: string | null;
   elapsed_minutes?: number;
   cleaning_minutes?: number;
   order_current_total?: number;
@@ -264,7 +280,18 @@ export interface TableReservation {
   reservation_time: string;
   preferred_section?: string;
   special_requests?: string;
-  status: 'CONFIRMED' | 'SEATED' | 'CANCELLED' | 'NO_SHOW';
+  status: 'CONFIRMED' | 'SEATED' | 'PICKED_UP' | 'EXPIRED' | 'CANCELLED' | 'NO_SHOW';
+  /** Hours after reservation_time the booking stays open before it expires. */
+  valid_hours?: number;
+  /** reservation_time + valid_hours, as the list endpoint returns it. */
+  expires_at?: string;
+  /** Seconds from the list load until expiry, by the database clock. */
+  seconds_to_expiry?: number;
+  /** Dishes booked ahead (optional) and their total at booking-time prices. */
+  items?: ReservationDish[];
+  items_total?: number;
+  /** TABLE - guests come to dine; PICKUP - the customer books a time and collects. */
+  booking_type?: 'TABLE' | 'PICKUP';
   created_at?: string;
 }
 

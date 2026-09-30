@@ -576,6 +576,10 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                 <td>
                   <div *ngIf="table.status === 'OCCUPIED'" class="flex items-center gap-1.5">
                     <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(table)">⏱️ {{ tableElapsedMinutes(table) }}m</span>
+                    <span class="arrival-chip" [class.is-booked]="table.seated_booking_id" [title]="table.seated_booking_id ? 'Booking ' + table.seated_booking_code : 'No booking'">
+                      <span class="material-symbols-outlined">{{ table.seated_booking_id ? 'event_available' : 'directions_walk' }}</span>
+                      {{ table.seated_booking_id ? 'Booked' : 'Walk-in' }}
+                    </span>
                     <span class="text-xs text-slate-500">({{ table.active_guest_count || table.capacity }} guests)</span>
                   </div>
                   <div *ngIf="table.status === 'CLEANING'">
@@ -681,8 +685,16 @@ import { ActionLoadingDirective } from '../../shared/directives/action-loading.d
                     <span class="timer-pill" [ngClass]="'timer-' + turnoverTier(table)">
                       <span class="material-symbols-outlined">timer</span>{{ tableElapsedMinutes(table) }}m seated
                     </span>
+                    <span
+                      class="arrival-chip"
+                      [class.is-booked]="table.seated_booking_id"
+                      [title]="table.seated_booking_id ? 'Came with booking ' + table.seated_booking_code + ' - ' + table.seated_booking_customer : 'Came in without a booking'"
+                    >
+                      <span class="material-symbols-outlined">{{ table.seated_booking_id ? 'event_available' : 'directions_walk' }}</span>
+                      {{ table.seated_booking_id ? 'Booked · ' + table.seated_booking_code : 'Walk-in' }}
+                    </span>
                     <span class="cardlist-note">
-                      {{ table.customer_name ? 'Party: ' + table.customer_name : 'Party of ' + (table.active_guest_count || table.capacity) }}
+                      {{ table.customer_name || table.seated_booking_customer ? 'Party: ' + (table.customer_name || table.seated_booking_customer) : 'Party of ' + (table.active_guest_count || table.capacity) }}
                     </span>
                   </ng-container>
                   <ng-container *ngSwitchCase="'CLEANING'">
@@ -3133,6 +3145,10 @@ export class DiningComponent implements OnInit, OnDestroy {
   }
 
   startOrderForTable(table: DiningTable, guestCount?: number): void {
+    // Start from an empty cart: the POS then loads this table's tab, so the
+    // cart shows only what this table ordered - not lines left over from
+    // whatever ticket was on the till before (which loadTab would keep).
+    this.cartService.clearCart();
     this.cartService.orderType.set('DINING');
     this.cartService.selectedTable.set({
       ...table,

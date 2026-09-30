@@ -10,12 +10,102 @@ import {
   normalizeOrderType,
 } from '../models';
 import { SettingsService } from './settings.service';
+import { NotificationService } from './notification.service';
+import { maxUnits, snapshotBalances, stockLimitMessage, stockUseOf, stockUsed } from '../utils/stock-limit.util';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CartService {
   private settingsService = inject(SettingsService);
+  private notify = inject(NotificationService);
+
+  // ─── Live stock limit ───
+  /** Fresh balances from the live stock check; they win over the dishes' loaded snapshot. */
+  private freshBalances = new Map<number, number>();
+  private stockBlocked = false;
+
+  /** Latest balances from POST /checkout/stock-check. */
+  public setStockBalances(stocks: { stock_id: number; available: number }[]): void {
+    for (const s of stocks) this.freshBalances.set(Number(s.stock_id), Number(s.available) || 0);
+  }
+
+  /**
+   * Live stock for the cart: each stock item its dish lines draw on, what is
+   * in stock, what every line takes, and what is left - e.g. Chicken 66 -
+   * Full x 1 (4) - Half x 1 (2) = 60. Sent tab rounds count too (nothing on
+   * a tab has left stock yet). Combo and add-on lines are checked by the
+   * server and are not listed.
+   */
+  public stockBreakdown(): {
+    stockId: number; name: string; unit: string; total: number;
+    uses: { dish: string; portion: string | null; qty: number; sent: boolean; amount: number }[]; left: number;
+  }[] {
+    const lines = this.itemsSignal().filter((i) => (i.itemType || 'PRODUCT') === 'PRODUCT');
+    const balances = snapshotBalances(lines.map((i) => i.product));
+    for (const [id, qty] of this.freshBalances) balances.set(id, qty);
+    const rows = new Map<number, {
+      stockId: number; name: string; unit: string; total: number;
+      uses: { dish: string; portion: string | null; qty: number; sent: boolean; amount: number }[]; left: number;
+    }>();
+    for (const i of lines) {
+      const use = stockUseOf(i.product, i.variant);
+      if (!use) continue;
+      for (const u of use) {
+        let row = rows.get(u.stockId);
+        if (!row) {
+          const info = (i.variant?.stocks || []).find((s) => Number(s.stock_id) === u.stockId);
+          const total = balances.get(u.stockId) ?? 0;
+          row = {
+            stockId: u.stockId,
+            name: info?.stock_name || (i.product.stock_id === u.stockId ? i.product.name : 'Stock #' + u.stockId),
+            unit: info?.unit_type || i.product.linked_unit_type || '',
+            total,
+            uses: [],
+            left: total,
+          };
+          rows.set(u.stockId, row);
+        }
+        const amount = u.perUnit * i.quantity;
+        row.uses.push({
+          dish: i.product.name,
+          portion: i.variant && (i.product.variants || []).length > 1 ? i.variant.name : null,
+          qty: i.quantity,
+          sent: !!i.sentToKitchen,
+          amount,
+        });
+        row.left -= amount;
+      }
+    }
+    return [...rows.values()].sort((a, b) => a.left - b.left);
+  }
+
+  /** True once after a line was held back by stock (the guard already told the user). */
+  public consumeStockBlock(): boolean {
+    const was = this.stockBlocked;
+    this.stockBlocked = false;
+    return was;
+  }
+
+  /**
+   * Can this dish line reach `targetQty`? Every other line drawing on the
+   * same stock items (other portions, dishes; sent tab rounds too - nothing on
+   * a tab has left stock yet) takes its share first. Combo and add-on lines are
+   * checked by the server. Warns and returns false when it would not fit.
+   */
+  private fitsStock(product: Product, variant: ProductVariant | null | undefined, targetQty: number, lineId?: string): boolean {
+    const use = stockUseOf(product, variant);
+    if (!use) return true;
+    const others = this.itemsSignal().filter((i) => i.lineId !== lineId && (i.itemType || 'PRODUCT') === 'PRODUCT');
+    const used = stockUsed(others.map((i) => ({ use: stockUseOf(i.product, i.variant), quantity: i.quantity })));
+    const balances = snapshotBalances([product, ...others.map((i) => i.product)]);
+    for (const [id, qty] of this.freshBalances) balances.set(id, qty);
+    const max = maxUnits(use, balances, used);
+    if (max === null || targetQty <= max) return true;
+    this.stockBlocked = true;
+    this.notify.warning(stockLimitMessage(variant ? product.name + ' (' + variant.name + ')' : product.name, max));
+    return false;
+  }
   private itemsSignal = signal<CartItem[]>([]);
   public items = this.itemsSignal.asReadonly();
 
@@ -37,6 +127,19 @@ export class CartService {
    * the cart marked sentToKitchen; everything else is still to be sent.
    */
   public openTab = signal<{ orderId: number; orderNumber: string; rounds: number; tableId: number } | null>(null);
+
+  /**
+   * Set when the POS was opened from a pickup booking's "Collect & bill":
+   * checkout sends its id, and paying marks that pickup as picked up.
+   */
+  public bookingRef = signal<{ reservationId: number; code: string; customerName: string } | null>(null);
+
+  /**
+   * Name and phone from the booking this cart came from. The payment dialog
+   * starts with them (phone checked against Customers), so staff can link or
+   * save the customer when they actually buy. Nothing is saved from a booking.
+   */
+  public prefillCustomer = signal<{ name: string; phone: string } | null>(null);
 
   /** Lines not yet sent to the kitchen - what Send to Kitchen sends. */
   public pendingItems = computed(() => this.itemsSignal().filter((i) => !i.sentToKitchen));
@@ -156,6 +259,8 @@ export class CartService {
     const currentItems = [...this.itemsSignal()];
     // A sent line is closed: another portion of the same dish is a new line.
     const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
+    const target = (index >= 0 ? currentItems[index].quantity : 0) + quantity;
+    if (!this.fitsStock(product, variant, target, index >= 0 ? currentItems[index].lineId : undefined)) return false;
 
     if (index >= 0) {
       const existing = currentItems[index];
@@ -211,6 +316,10 @@ export class CartService {
 
     const currentItems = [...this.itemsSignal()];
     const index = currentItems.findIndex((i) => i.lineId === lineId && !i.sentToKitchen);
+    if (itemType === 'PRODUCT') {
+      const target = (index >= 0 ? currentItems[index].quantity : 0) + quantity;
+      if (!this.fitsStock(product, variant, target, index >= 0 ? currentItems[index].lineId : undefined)) return false;
+    }
 
     if (index >= 0) {
       const existing = currentItems[index];
@@ -281,6 +390,10 @@ export class CartService {
 
     if (index >= 0) {
       const item = currentItems[index];
+      if (quantity > item.quantity && (item.itemType || 'PRODUCT') === 'PRODUCT'
+        && !this.fitsStock(item.product, item.variant, quantity, item.lineId)) {
+        return;
+      }
       currentItems[index] = {
         ...item,
         quantity,
@@ -392,6 +505,8 @@ export class CartService {
     this.selectedCustomer.set(null);
     this.selectedTable.set(null);
     this.openTab.set(null);
+    this.bookingRef.set(null);
+    this.prefillCustomer.set(null);
     this.orderType.set('TAKEAWAY');
   }
 

@@ -713,6 +713,20 @@ export const DINING_LAYOUT_CSS = `
     font-weight: 700;
     color: var(--dining-text-muted, var(--text-muted, #64748B));
   }
+  /* Walk-in or booked: how the party at an occupied table came in */
+  .arrival-chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; white-space: nowrap; line-height: 1.2;
+    color: var(--dining-text-muted, var(--text-muted, #64748B));
+    background: color-mix(in srgb, var(--text-muted, #64748B) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text-muted, #64748B) 28%, transparent);
+  }
+  .arrival-chip .material-symbols-outlined { font-size: 14px; }
+  .arrival-chip.is-booked {
+    color: var(--primary, #7E22CE);
+    background: color-mix(in srgb, var(--primary, #7E22CE) 14%, transparent);
+    border-color: color-mix(in srgb, var(--primary, #7E22CE) 34%, transparent);
+  }
   .cardlist-note {
     font-size: 12px;
     color: var(--dining-text-muted, var(--text-muted, #64748B));

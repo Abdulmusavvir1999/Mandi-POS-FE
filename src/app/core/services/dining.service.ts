@@ -69,6 +69,11 @@ export interface ReservationFilters {
 }
 
 export interface ReservationInput {
+  bookingType?: 'TABLE' | 'PICKUP';
+  /** Hours after the booking time it stays open; then it expires. Default 24. */
+  validHours?: number;
+  /** Dishes booked ahead - optional. */
+  items?: { productId: number; variantId: number | null; quantity: number; notes?: string }[];
   customerName: string;
   customerPhone: string;
   reservationTime: string;
@@ -82,7 +87,10 @@ export type ReservationRow = TableReservation & { table_status?: TableStatus; mi
 
 export interface ReservationList {
   rows: ReservationRow[];
-  counts: { total: number; confirmed: number; seated: number; cancelled: number; no_show: number; covers: number; late: number };
+  counts: {
+    total: number; confirmed: number; seated: number; picked_up?: number; pickups?: number; expired?: number;
+    cancelled: number; no_show: number; covers: number; late: number;
+  };
   today: { bookings: number; covers: number; pending: number; seated: number };
 }
 
@@ -201,8 +209,53 @@ export class DiningService {
     return this.http.post<ApiResponse<DiningTable>>(`${this.API_URL}/reservations/seat`, { reservationId, tableId });
   }
 
+  /** Cancel several bookings; only CONFIRMED ones change, the rest come back in `skipped`. */
+  public cancelReservationsBulk(
+    reservationIds: number[]
+  ): Observable<ApiResponse<{ cancelled: number; skipped: string[]; missing: number }>> {
+    return this.http.post<ApiResponse<{ cancelled: number; skipped: string[]; missing: number }>>(
+      `${this.API_URL}/reservations/cancel-bulk`,
+      { reservationIds }
+    );
+  }
+
   public cancelReservationPost(reservationId: number): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(`${this.API_URL}/reservations/cancel`, { reservationId });
+  }
+
+  /** Pickup -> dine-in: becomes a table booking (optionally holding a table), still CONFIRMED. */
+  public convertPickupToTable(
+    reservationId: number,
+    guestCount: number,
+    tableId?: number | null
+  ): Observable<ApiResponse<ReservationRow>> {
+    return this.http.post<ApiResponse<ReservationRow>>(`${this.API_URL}/reservations/convert-to-table`, {
+      reservationId,
+      guestCount,
+      tableId: tableId ?? null,
+    });
+  }
+
+  /** Table -> pickup: releases any held table; code, time and dishes stay. */
+  public convertTableToPickup(reservationId: number): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/reservations/convert-to-pickup`, { reservationId });
+  }
+
+  /** Close a booking by how the POS served it: DINING on a table -> seated, otherwise picked up. */
+  public fulfilReservation(
+    reservationId: number,
+    servedAs: 'DINING' | 'TAKEAWAY',
+    tableId?: number | null
+  ): Observable<ApiResponse<{ status: string }>> {
+    return this.http.post<ApiResponse<{ status: string }>>(`${this.API_URL}/reservations/fulfil`, {
+      reservationId,
+      servedAs,
+      tableId: tableId ?? null,
+    });
+  }
+
+  public markReservationPickedUp(reservationId: number): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.API_URL}/reservations/picked-up`, { reservationId });
   }
 
   public markReservationNoShow(reservationId: number): Observable<ApiResponse<any>> {

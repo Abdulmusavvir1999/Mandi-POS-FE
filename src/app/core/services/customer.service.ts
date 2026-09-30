@@ -19,6 +19,22 @@ export class CustomerService {
     return this.http.get<ApiResponse<Customer[]>>(this.API_URL, { params });
   }
 
+  /** Is this phone already a customer? Phone is the customer's unique key (punctuation ignored). */
+  public lookupPhone(phone: string): Observable<ApiResponse<{ found: boolean; valid: boolean; customer: { id: number; name: string; phone: string } | null }>> {
+    return this.http.post<ApiResponse<{ found: boolean; valid: boolean; customer: { id: number; name: string; phone: string } | null }>>(
+      `${this.API_URL}/lookup-phone`,
+      { phone }
+    );
+  }
+
+  /** Customers whose phone contains these digits - for suggestions while typing. */
+  public suggestPhone(phone: string): Observable<ApiResponse<{ customers: { id: number; name: string; phone: string }[] }>> {
+    return this.http.post<ApiResponse<{ customers: { id: number; name: string; phone: string }[] }>>(
+      `${this.API_URL}/suggest-phone`,
+      { phone }
+    );
+  }
+
   public getCrmSummary(): Observable<ApiResponse<CustomerSummaryKpis>> {
     return this.http.get<ApiResponse<CustomerSummaryKpis>>(`${this.API_URL}/summary`);
   }
